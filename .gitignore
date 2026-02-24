@@ -3,3 +3,5 @@ __pycache__/
 chroma_db/
 *.db
 *.sqlite3
+.env
+.DS_Store
