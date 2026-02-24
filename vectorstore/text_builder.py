@@ -8,7 +8,7 @@ def build_combined_text(row) -> str:
         parts.append(f"Bảng {row['heading']}.")
 
     if row.get("item_name"):
-        parts.append(f"Nội dung {row['item_name']}.")
+        parts.append(f"{row['item_name']}.")
 
     if row.get("value"):
         parts.append(f"Giá trị {row['value']}.")

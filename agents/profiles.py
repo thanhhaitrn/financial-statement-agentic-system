@@ -16,8 +16,6 @@ AGENT_PROFILES = {
                     - NEVER use Chinese or English.
                     - If unsure, still answer in Vietnamese.
 
-
-
                 ---
 
                 Sample Session Example:
@@ -31,7 +29,7 @@ AGENT_PROFILES = {
                 [Tool results come back]
 
                 THOUGHT: The retrieved context does not provides the process to open account. I should now check the websearch.
-                ACTION: websearch
+                ACTION: web_search
                 ARGUMENTS: {{"query": "open Current Account"}}
                 [Tool results come back]
 
@@ -41,6 +39,7 @@ AGENT_PROFILES = {
                 ---""",
         "tool_list": build_tools_list("agent_main")
     },
+
     "agent_loan": {
         "role": "Loan Expert Agent",
         "system_instruction": """Instructions:

@@ -1,9 +1,4 @@
 import chromadb
-from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
-from chromadb.config import Settings
-
-# vectorstore/chroma_store.py
-import chromadb
 from chromadb.config import Settings
 from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 import os

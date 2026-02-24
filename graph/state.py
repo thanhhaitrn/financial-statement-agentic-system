@@ -6,4 +6,3 @@ class AgentState(TypedDict):
     last_agent: str
     tool_observations: list
     num_steps: int
-    user_location: str  

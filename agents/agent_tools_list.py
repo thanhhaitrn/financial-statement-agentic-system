@@ -1,5 +1,3 @@
-from tools.tools import get_related_info, web_search, calculate_dti
-
 AGENT_TOOLS_LIST = {
     "agent_main": [
         {
@@ -34,3 +32,5 @@ Description: {tool['description']}
 Arguments: {tool['args']}
 """
         )
+
+    return "\n".join(tool_lines)
