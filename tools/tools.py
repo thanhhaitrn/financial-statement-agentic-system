@@ -1,5 +1,6 @@
-def get_related_info(query: str, collection):
-    results = collection.query(query_texts=[query], n_results=5)
+def get_related_info(query: str, table: str, collection):
+    where = {"heading": table}
+    results = collection.query(query_texts=[query], n_results=5, where = where)
     context = "\n".join(results["documents"][0])
     return {"context": context, "source": "document.md"}
 

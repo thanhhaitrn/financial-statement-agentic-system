@@ -1,6 +1,6 @@
 DATA_FILE = 'data/document.md'
 
-COMPANY_NAME = "Công ty Cổ phần Sông Đà 7.02"
+COMPANY_NAME = "Công ty Cổ phần Sông Đà"
 
 CHROMA_COLLECTION = "financial_statement"
 BATCH_SIZE = 500

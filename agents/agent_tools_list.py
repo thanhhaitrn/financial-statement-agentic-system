@@ -1,23 +1,18 @@
 AGENT_TOOLS_LIST = {
-    "agent_main": [
-        {
-            "name": "get_related_info",
-            "description": "Retrieve relevant information in knowledge base.",
-            "args": "query (string)"
-        },
-        {
-            "name": "web_search",
-            "description": "Perform a web search.",
-            "args": "query (string)"
-        }
+    "agent_planner": [],
+    "agent_bs": [
+    {"name": "get_related_info", "description": "Retrieve relevant info in the balance sheet.", "args": "query (string)"}
     ],
-    "agent_loan": [
-        {
-            "name": "calculate_dti",
-            "description": "Calculate the DTI",
-            "args": "None"
-        },
-    ]
+     "agent_is": [
+    {"name": "get_related_info", "description": "Retrieve relevant info in the income statement.", "args": "query (string)"}
+    ],
+     "agent_cf": [
+    {"name": "get_related_info", "description": "Retrieve relevant info in cash flow.", "args": "query (string)"}
+    ],
+    "agent_web": [
+    {"name": "web_search", "description": "Perform a web search.", "args": "query (string)"}
+    ],
+    "agent_synth": []  # Agent5: tổng hợp
 }
 
 def build_tools_list(agent_name: str) -> str:

@@ -1,26 +1,66 @@
+import re
+
+r"""def should_continue(state: dict) -> str:
+    raw = state.get("last_agent_response", "")
+
+    if hasattr(raw, "content"):
+        response = raw.content
+    else:
+        response = "\n".join(map(str, raw)) if isinstance(raw, list) else str(raw)
+
+    # hard stop safety
+    if state.get("num_steps", 0) >= 15:
+        return "collect"
+
+    if re.search(r"^\s*ACTION:\s*", response, flags=re.MULTILINE):
+        return "tools"
+    
+    if re.search(r"^\s*ANSWER:\s*", response, flags=re.MULTILINE):
+        return "collect"
+
+    return "tools"""
+
+import re
+
 def should_continue(state: dict) -> str:
     raw = state.get("last_agent_response", "")
-    if isinstance(raw, list):
-        response = "\n".join(map(str, raw))
-    else:
-        response = str(raw)
+    response = raw.content if hasattr(raw, "content") else (
+        "\n".join(map(str, raw)) if isinstance(raw, list) else str(raw)
+    )
 
-    response = response.upper()
+    action_match = bool(re.search(r"^\s*ACTION:\s*", response, flags=re.MULTILINE))
+    answer_match = bool(re.search(r"^\s*ANSWER:\s*", response, flags=re.MULTILINE))
 
-    if state.get("num_steps", 0) >= 3:
-        return "end"
+    tool_obs_len = len(state.get("tool_observations", []))
+    last_ctx = ((state.get("last_tool_results") or {}).get("context") or "").strip()
+    has_tool_ctx = bool(last_ctx)
 
-    if "HANDOFF" in response:
-        return "handoff"
+    # hard stop safety
+    if state.get("num_steps", 0) >= 8:
+        print("-> collect (cap)")
+        return "collect"
 
-    if "ANSWER" in response:
-        return "end"
+    # if we already got tool output and the model STILL asks for tools, stop looping
+    if action_match and (tool_obs_len > 0 or has_tool_ctx):
+        print("-> collect (stop after tool)")
+        return "collect"
 
-    if "ACTION" in response:
-        return "continue"
+    if action_match:
+        print("-> tools")
+        return "tools"
 
-    return "end"
+    if answer_match:
+        print("-> collect")
+        return "collect"
+
+    print("-> tools (fallback)")
+    return "tools"
 
 def which_agents(state: dict) -> str:
     response = state.get("last_agent", "")
     return response
+
+def ready_to_synthesize(state: dict) -> str:
+    expected = set(state.get("expected_workers", []))
+    done = set(state.get("done_workers", []))
+    return "synth" if expected and expected.issubset(done) else "wait"
