@@ -1,26 +1,5 @@
 import re
-
-r"""def should_continue(state: dict) -> str:
-    raw = state.get("last_agent_response", "")
-
-    if hasattr(raw, "content"):
-        response = raw.content
-    else:
-        response = "\n".join(map(str, raw)) if isinstance(raw, list) else str(raw)
-
-    # hard stop safety
-    if state.get("num_steps", 0) >= 15:
-        return "collect"
-
-    if re.search(r"^\s*ACTION:\s*", response, flags=re.MULTILINE):
-        return "tools"
-    
-    if re.search(r"^\s*ANSWER:\s*", response, flags=re.MULTILINE):
-        return "collect"
-
-    return "tools"""
-
-import re
+from graph.logger import log_step
 
 def should_continue(state: dict) -> str:
     raw = state.get("last_agent_response", "")
@@ -53,8 +32,8 @@ def should_continue(state: dict) -> str:
         print("-> collect")
         return "collect"
 
-    print("-> tools (fallback)")
-    return "tools"
+    print("-> collect (fallback)")
+    return "collect"
 
 def which_agents(state: dict) -> str:
     response = state.get("last_agent", "")
@@ -63,4 +42,27 @@ def which_agents(state: dict) -> str:
 def ready_to_synthesize(state: dict) -> str:
     expected = set(state.get("expected_workers", []))
     done = set(state.get("done_workers", []))
-    return "synth" if expected and expected.issubset(done) else "wait"
+
+    decision = "synth" if expected and expected.issubset(done) else "wait"
+
+    log_step(
+        state,
+        "barrier",
+        decision=decision,
+        expected_n=len(expected),
+        done_n=len(done),
+        expected=sorted(expected),
+        done=sorted(done),
+    )
+
+    return decision
+
+def synth_route(state: dict) -> str:
+    d = state.get("synth_decision", {}) or {}
+    rounds = state.get("followup_rounds", 0)
+
+    if d.get("status") == "need_more" and rounds < 2:
+        state["followup_rounds"] = rounds + 1
+        return "followup"
+
+    return "end"
