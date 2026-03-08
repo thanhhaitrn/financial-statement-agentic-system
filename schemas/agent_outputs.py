@@ -9,12 +9,10 @@ TABLE_NAME = Literal[
 
 METRIC_TYPE = Literal["value", "difference", "ratio", "growth"]
 
-# ---------- Planner (tables only) ----------
-class TableTarget(BaseModel):
-    table: TABLE_NAME 
+# ---------- Planner (tables only) ---------
 
 class PlannerTablesOnly(BaseModel):
-    tables: List[TableTarget] = Field(default_factory=list)
+    tables: List[TABLE_NAME] = Field(default_factory=list)
     company: str = ""
     time_hint: str = ""
     need_web: bool = False
