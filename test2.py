@@ -5,6 +5,7 @@ from vectorstore.chroma_store import create_collection
 from kb.sqlite_repo import init_db, sqlite_has_facts
 from vectorstore.index_builder import build_vector_store
 from graph.workflow2 import agentic_graph
+import uuid
 
 def ensure_built():
     conn = init_db(DB_PATH)
@@ -40,7 +41,11 @@ def main():
         "worker_results": {},
         "web_summary": "",
         "expected_workers": [],
-        "done_workers": []
+        "done_workers": [],
+        "seen_tool_calls": [],
+        "followup_rounds": 0,
+        "run_id": str(uuid.uuid4())[:8],
+        "trace": []
     }
 
     final_state = agentic_graph.invoke(initial_state)
