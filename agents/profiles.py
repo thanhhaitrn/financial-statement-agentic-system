@@ -46,7 +46,7 @@ AGENT_PROFILES = {
                 4) keywords phải là cụm chỉ tiêu/khoản mục tiếng Việt có thể match vào KB (heading/item_name). Tránh từ khái niệm mơ hồ nếu không kèm khoản mục cụ thể.
                 5) Với câu hỏi “chỉ số/hệ số/tỷ lệ”, phải map CONCEPT → LINE ITEMS (components) và dùng chính line items đó làm keywords.
                 Ví dụ:
-                - "hệ số thanh toán hiện hành" -> keywords/components: ["tài sản ngắn hạn","nợ ngắn hạn"] (BCĐKT)
+                - "hệ số thanh toán" -> keywords/components: ["tài sản ngắn hạn","nợ ngắn hạn"] (BCĐKT)
                 - "thanh toán nhanh" -> ["tài sản ngắn hạn","hàng tồn kho","nợ ngắn hạn"] (BCĐKT)
                 - "ROE" -> ["lợi nhuận sau thuế","vốn chủ sở hữu"] (KQHĐKD + BCĐKT nếu cần)
                 6) Nếu user_query là “A trừ B/chênh lệch”, metrics.type="difference" và components phải liệt kê đúng khoản mục (vd "tiền và tương đương tiền").
@@ -58,6 +58,13 @@ AGENT_PROFILES = {
                 OUTPUT:
                 - Chỉ xuất đúng theo schema KeywordPlan (targets, metrics). Không giải thích thêm.
                 - Ngôn ngữ: tiếng Việt.
+                OUTPUT FORMAT (BẮT BUỘC):
+                - "metrics" phải là MỘT DANH SÁCH (list), dù chỉ có 1 metric.
+                - Mỗi metric phải có đủ: "name", "type", "components".
+                Ví dụ:
+                "metrics": [
+                {"name":"Hệ số thanh toán","type":"ratio","components":["tài sản ngắn hạn","nợ ngắn hạn"]}
+]
             """,
                 "tool_list": ""
     },
