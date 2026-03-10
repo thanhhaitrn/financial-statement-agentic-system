@@ -48,8 +48,8 @@ class FollowupRequest(BaseModel):
     ]
     query: str
 
-class SynthDecision(BaseModel):
+"""class SynthDecision(BaseModel):
     status: Literal["answer", "need_more"]
     answer: str = ""
     followups: List[FollowupRequest] = Field(default_factory=list)
-    missing: List[str] = Field(default_factory=list)
+    missing: List[str] = Field(default_factory=list)"""

@@ -8,7 +8,7 @@ from graph.logger import log_step
 
 DEFAULT_DECISION = {"status": "answer", "answer": "Chưa đủ dữ liệu để trả lời.", "followups": [], "missing": []}
 
-synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision)
+synth_chain = PROMPT_TEMPLATE | llm
 
 def run_synth(state: dict) -> dict:
     state["last_agent"] = "agent_synth"
