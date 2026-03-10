@@ -7,7 +7,7 @@ from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import log_step
 from schemas.keyword_guard import validate_keywords
 
-DEFAULT_KEYWORD_PLAN = {"targets": [], "metrics": []}
+DEFAULT_KEYWORD_PLAN = {"targets": []}
 
 keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
 

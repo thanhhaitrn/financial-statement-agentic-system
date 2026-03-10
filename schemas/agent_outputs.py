@@ -7,7 +7,7 @@ TABLE_NAME = Literal[
     "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
 ]
 
-METRIC_TYPE = Literal["value", "difference", "ratio", "growth"]
+#METRIC_TYPE = Literal["value", "difference", "ratio", "growth"]
 
 # ---------- Planner (tables only) ---------
 
@@ -23,14 +23,13 @@ class Target(BaseModel):
     table: TABLE_NAME
     keywords: List[str] = Field(default_factory=list)
 
-class Metric(BaseModel):
+"""class Metric(BaseModel):
     name: str
     type: METRIC_TYPE
-    components: List[str] = Field(default_factory=list)
+    components: List[str] = Field(default_factory=list)"""
 
 class KeywordPlan(BaseModel):
     targets: List[Target] = Field(default_factory=list)
-    metrics: List[Metric] = Field(default_factory=list)
 
 
 # ---------- Tools ----------

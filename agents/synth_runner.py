@@ -8,6 +8,7 @@ synth_chain = PROMPT_TEMPLATE | llm
 
 def run_synth(state: dict) -> dict:
     state["last_agent"] = "agent_synth"
+    metrics = (state.get("plan", {}) or {}).get("metrics", []) or []
     log_step(state, "synth:start",
              followup_rounds=state.get("followup_rounds", 0),
              expected=state.get("expected_workers", []),
