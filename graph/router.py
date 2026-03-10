@@ -31,7 +31,7 @@ def dispatch_workers(state: dict):
     time_hint = plan_tables.get("time_hint", "") or ""
     need_web = bool(plan_tables.get("need_web", False) or plan.get("need_web", False))
 
-    # ✅ group keywords by table to avoid spawning same worker twice
+    # group keywords by table to avoid spawning same worker twice
     grouped = defaultdict(list)
     for t in targets:
         table = str(t.get("table", "")).strip()
@@ -75,7 +75,7 @@ def dispatch_workers(state: dict):
         child = copy.deepcopy(state)
         child["expected_workers"] = state["expected_workers"]
         child["done_workers"] = []
-        child["seen_tool_calls"] = []  # ✅ reset
+        child["seen_tool_calls"] = []  
 
         child["query"] = build_worker_query(table, kws, company, time_hint)
         child["user_query"] = state.get("user_query", state.get("query", ""))

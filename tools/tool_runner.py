@@ -69,19 +69,28 @@ def call_tool(state: dict) -> dict:
         args["collection"] = _COLLECTION
         args["table"] = WORKER_TO_TABLE.get(agent_name, args.get("table", ""))
 
-        # ✅ only override query if missing (do NOT override if worker already supplied)
-        if not args.get("query"):
-            plan = state.get("plan", {}) or {}
-            targets = plan.get("targets", []) or []
-            table = args["table"]
-            matching = next(
-                (t for t in targets
-                 if str(t.get("table", "")).strip().upper() == str(table).strip().upper()),
-                None
+        # Deterministic: ALWAYS override query from plan keywords (do not trust worker query)
+        plan = state.get("plan", {}) or {}
+        targets = plan.get("targets", []) or []
+        table = args["table"]
+
+        matching = next(
+            (t for t in targets
+            if str(t.get("table", "")).strip().upper() == str(table).strip().upper()),
+            None
+        )
+        kws = (matching.get("keywords", []) if matching else []) or []
+
+        log_step(state, "tool:using_keywords", agent=agent_name, table=table, kws=kws[:4])
+
+        if not kws:
+            state.setdefault("tool_observations", []).append(
+                f"[Tool blocked: no keywords in plan for table={table}]"
             )
-            kws = (matching.get("keywords", []) if matching else []) or []
-            if kws:
-                args["query"] = kws[0]
+            log_step(state, "tool:blocked_no_keywords", agent=agent_name, table=table)
+            return state
+        
+        args["query"] = kws[0]
 
     # Repeat-call block signature (avoid collection)
     sig = (agent_name, tool_name, args.get("table", ""), args.get("query", ""))

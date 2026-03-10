@@ -16,23 +16,23 @@ def should_continue(state: dict) -> str:
 
     # hard stop safety
     if state.get("num_steps", 0) >= 8:
-        print("-> collect (cap)")
+        # print("-> collect (cap)")
         return "collect"
 
     # if we already got tool output and the model STILL asks for tools, stop looping
     if action_match and (tool_obs_len > 0 or has_tool_ctx):
-        print("-> collect (stop after tool)")
+        # print("-> collect (stop after tool)")
         return "collect"
 
     if action_match:
-        print("-> tools")
+        # print("-> tools")
         return "tools"
 
     if answer_match:
-        print("-> collect")
+        # print("-> collect")
         return "collect"
 
-    print("-> collect (fallback)")
+    # print("-> collect (fallback)")
     return "collect"
 
 def which_agents(state: dict) -> str:
