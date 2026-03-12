@@ -2,7 +2,7 @@ import copy
 
 # những key worker-local cần reset mỗi child
 WORKER_LOCAL_KEYS = {
-    "worker_query",
+    "w_worker_query",
     "w_last_agent_response",
     "w_last_agent",
     "w_num_steps",
@@ -22,7 +22,7 @@ def make_child_state(parent: dict) -> dict:
         child.pop(k, None)
 
     # reset worker-local keys
-    child["worker_query"] = ""  # will be set by router
+    child["w_worker_query"] = ""  # will be set by router
     child["w_last_agent_response"] = ""
     child["w_last_agent"] = ""
     child["w_num_steps"] = 0

@@ -18,7 +18,7 @@ def call_agent(state: dict, agent_name: str) -> dict:
 
     is_worker = agent_name in WORKER_AGENTS
 
-    query_text = state.get("worker_query", "") if is_worker else state.get("query", "")
+    query_text = state.get("w_worker_query", "") if is_worker else state.get("query", "")
     user_q = state.get("user_query", state.get("query", ""))
 
     # use worker-local context only for workers

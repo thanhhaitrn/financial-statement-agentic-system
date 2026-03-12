@@ -3,13 +3,14 @@ from typing import TypedDict, List, Dict, Any
 class AgentState(TypedDict, total=False):
     # input (global)
     user_query: str
-    worker_query: str
 
     # planning (global)
     plan_tables: Dict[str, Any]
     plan: Dict[str, Any]
 
     # worker-local (IMPORTANT)
+    w_worker_query: str
+    
     w_last_agent_response: Any
     w_last_agent: str
     w_num_steps: int
