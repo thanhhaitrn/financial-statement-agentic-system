@@ -11,20 +11,30 @@ DEFAULT = {"status": "answer", "answer": "Chưa đủ dữ liệu để trả l�
 synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision)
 
 def run_synth(state: dict) -> dict:
-    state["last_agent"] = "agent_synth"
     log_step(state, "synth:start")
 
     profile = AGENT_PROFILES["agent_synth"]
+
+    # Provide synth with stable global sources
     payload = {
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
-        "query": state.get("query", ""),
+
+        # keep original question
+        "query": state.get("query", state.get("user_query", "")),
         "user_query": state.get("user_query", state.get("query", "")),
+
+        # plan + results
         "plan_json": json.dumps(state.get("plan", {}), ensure_ascii=False),
         "worker_results_json": json.dumps(state.get("worker_results", {}), ensure_ascii=False),
         "web_summary": state.get("web_summary", ""),
-        "last_agent_response": state.get("last_agent_response", ""),
-        "tool_observations": "\n".join(state.get("tool_observations", [])),
+
+        # Use worker_messages (ordered) as the "previous response"
+        "last_agent_response": json.dumps(state.get("worker_messages", []), ensure_ascii=False),
+
+        # Do NOT rely on global tool_observations anymore
+        "tool_observations": "",
+
         "tools_list": "",
     }
 
@@ -38,7 +48,9 @@ def run_synth(state: dict) -> dict:
     state["synth_decision"] = d
     state["followup_requests"] = d.get("followups", [])
     state["missing_components"] = d.get("missing", [])
-    state["num_steps"] = state.get("num_steps", 0) + 1
+
+    # store final answer (pick one canonical key)
+    state["final_answer"] = d.get("answer", DEFAULT["answer"])
 
     log_step(state, "synth:done", status=d.get("status"), followups_n=len(state["followup_requests"]))
     return state
