@@ -34,10 +34,10 @@ def main():
     initial_state = {
         "user_query": user_input,
         "query": user_input,
-        "last_agent_response": "",
-        "last_agent": "",
+        "w_last_agent_response": "",
+        "w_last_agent": "",
         "tool_observations": [],
-        "num_steps": 0,
+        "w_num_steps": 0,
         "plan": {},
         "worker_results": {},
         "web_summary": "",

@@ -8,7 +8,7 @@ GLOBAL_KEYS = {
     "trace",
     "run_step",
     "run_id",
-    "plan_tables",
+    "plan_tables"
 }
 
 def make_child_state(parent: dict) -> dict:

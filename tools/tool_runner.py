@@ -15,15 +15,14 @@ WORKER_TO_TABLE = {
     "agent_cf": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
 }
 
-import json
-
 def call_tool(state: dict) -> dict:
-    raw = state.get("last_agent_response", "")
+    #  worker-local read
+    raw = state.get("w_last_agent_response", "")
     action_text = raw.content if hasattr(raw, "content") else str(raw or "")
-    agent_name = state.get("last_agent", "")
+    agent_name = state.get("w_last_agent", "") or state.get("last_agent", "")
 
     if "ACTION:" not in action_text:
-        state.setdefault("tool_observations", []).append(
+        state.setdefault("w_tool_observations", []).append(
             f"[No action found by {agent_name}: {action_text}]"
         )
         log_step(state, "tool:skip_no_action", agent=agent_name, preview=action_text[:120])
@@ -33,7 +32,7 @@ def call_tool(state: dict) -> dict:
 
     allowed_tools = {tool["name"] for tool in AGENT_TOOLS_LIST.get(agent_name, [])}
     if tool_name not in allowed_tools:
-        state.setdefault("tool_observations", []).append(
+        state.setdefault("w_tool_observations", []).append(
             f"[Tool '{tool_name}' NOT allowed for {agent_name}]"
         )
         log_step(state, "tool:blocked_not_allowed", agent=agent_name, tool=tool_name)
@@ -45,7 +44,7 @@ def call_tool(state: dict) -> dict:
         try:
             args = json.loads(args_text)
         except json.JSONDecodeError:
-            state.setdefault("tool_observations", []).append(
+            state.setdefault("w_tool_observations", []).append(
                 f"[Failed to parse arguments: {args_text}]"
             )
             log_step(state, "tool:blocked_bad_args", agent=agent_name, tool=tool_name, args_preview=args_text[:200])
@@ -53,14 +52,14 @@ def call_tool(state: dict) -> dict:
 
     tool_func = TOOLS_MAPPING_2_FUNCTIONS.get(tool_name)
     if not tool_func:
-        state.setdefault("tool_observations", []).append(f"[Unknown tool: {tool_name}]")
+        state.setdefault("w_tool_observations", []).append(f"[Unknown tool: {tool_name}]")
         log_step(state, "tool:blocked_unknown_tool", agent=agent_name, tool=tool_name)
         return state
 
-    # Inject collection + table (do NOT log collection object)
+    # Inject collection + table
     if tool_name == "get_related_info":
         if _COLLECTION is None:
-            state.setdefault("tool_observations", []).append(
+            state.setdefault("w_tool_observations", []).append(
                 "[Tool error: collection not set. Call set_collection(collection) before running workflow.]"
             )
             log_step(state, "tool:error_no_collection", agent=agent_name)
@@ -69,14 +68,14 @@ def call_tool(state: dict) -> dict:
         args["collection"] = _COLLECTION
         args["table"] = WORKER_TO_TABLE.get(agent_name, args.get("table", ""))
 
-        # Deterministic: ALWAYS override query from plan keywords (do not trust worker query)
+        # Deterministic: ALWAYS override query from plan keywords
         plan = state.get("plan", {}) or {}
         targets = plan.get("targets", []) or []
         table = args["table"]
 
         matching = next(
             (t for t in targets
-            if str(t.get("table", "")).strip().upper() == str(table).strip().upper()),
+             if str(t.get("table", "")).strip().upper() == str(table).strip().upper()),
             None
         )
         kws = (matching.get("keywords", []) if matching else []) or []
@@ -84,58 +83,41 @@ def call_tool(state: dict) -> dict:
         log_step(state, "tool:using_keywords", agent=agent_name, table=table, kws=kws[:4])
 
         if not kws:
-            state.setdefault("tool_observations", []).append(
+            state.setdefault("w_tool_observations", []).append(
                 f"[Tool blocked: no keywords in plan for table={table}]"
             )
             log_step(state, "tool:blocked_no_keywords", agent=agent_name, table=table)
             return state
-        
+
         args["query"] = kws[0]
 
-    # Repeat-call block signature (avoid collection)
+    # seen signatures must be worker-local
     sig = (agent_name, tool_name, args.get("table", ""), args.get("query", ""))
-    seen = set(state.get("seen_tool_calls", []))
+    seen = set(state.get("w_seen_tool_calls", []) or [])
     if sig in seen:
-        state.setdefault("tool_observations", []).append(
+        state.setdefault("w_tool_observations", []).append(
             f"[Tool call blocked: repeated identical call: {tool_name} query={args.get('query','')}]"
         )
         log_step(state, "tool:blocked_repeat", agent=agent_name, tool=tool_name, table=args.get("table",""), query=args.get("query",""))
         return state
     seen.add(sig)
-    state["seen_tool_calls"] = list(seen)
+    state["w_seen_tool_calls"] = list(seen)
 
-    # Log start (without collection)
-    log_step(
-        state,
-        "tool:start",
-        agent=agent_name,
-        tool=tool_name,
-        table=args.get("table", ""),
-        query=args.get("query", ""),
-    )
+    log_step(state, "tool:start", agent=agent_name, tool=tool_name, table=args.get("table", ""), query=args.get("query", ""))
 
-    # Run tool
     results = tool_func(**args)
 
     ctx = (results.get("context") or "").strip()
     src = results.get("source", "")
     ctx_short = ctx[:1200]
 
-    state.setdefault("tool_observations", []).append(
+    state.setdefault("w_tool_observations", []).append(
         f"[{tool_name} source={src} table={args.get('table','')} query={args.get('query','')}]\n"
         + (ctx_short if ctx_short else "<EMPTY_CONTEXT>")
     )
 
-    log_step(
-        state,
-        "tool:done",
-        agent=agent_name,
-        tool=tool_name,
-        table=args.get("table", ""),
-        query=args.get("query", ""),
-        context_len=len(ctx),
-        empty=(len(ctx) == 0),
-    )
+    log_step(state, "tool:done", agent=agent_name, tool=tool_name, table=args.get("table", ""), query=args.get("query", ""),
+            context_len=len(ctx), empty=(len(ctx) == 0))
 
     # Deterministic follow-up: keyword2
     if tool_name == "get_related_info":
@@ -155,12 +137,11 @@ def call_tool(state: dict) -> dict:
             follow_args = dict(args)
             follow_args["query"] = follow_query
 
-            # Follow-up block signature
             follow_sig = (agent_name, tool_name, table, follow_query)
-            seen = set(state.get("seen_tool_calls", []))
+            seen = set(state.get("w_seen_tool_calls", []) or [])
             if follow_sig not in seen:
                 seen.add(follow_sig)
-                state["seen_tool_calls"] = list(seen)
+                state["w_seen_tool_calls"] = list(seen)
 
                 log_step(state, "tool:followup_start", agent=agent_name, table=table, query=follow_query)
 
@@ -168,20 +149,14 @@ def call_tool(state: dict) -> dict:
                 follow_ctx = (follow_results.get("context") or "").strip()
                 follow_ctx_short = follow_ctx[:1200]
 
-                state.setdefault("tool_observations", []).append(
+                state.setdefault("w_tool_observations", []).append(
                     f"[AUTO_FOLLOWUP table={table} query={follow_query}]\n"
                     + (follow_ctx_short if follow_ctx_short else "<EMPTY_CONTEXT>")
                 )
 
-                log_step(
-                    state,
-                    "tool:followup_done",
-                    agent=agent_name,
-                    table=table,
-                    query=follow_query,
-                    context_len=len(follow_ctx),
-                    empty=(len(follow_ctx) == 0),
-                )
+                log_step(state, "tool:followup_done", agent=agent_name, table=table, query=follow_query,
+                        context_len=len(follow_ctx), empty=(len(follow_ctx) == 0))
 
-    state["last_tool_results"] = results
+    # store worker-local last tool results
+    state["w_last_tool_results"] = results
     return state

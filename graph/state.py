@@ -1,39 +1,38 @@
 from typing import TypedDict, List, Dict, Any
 
 class AgentState(TypedDict, total=False):
-    # input
+    # input (global)
     user_query: str
-    worker_query: str # Query for retrieval
+    worker_query: str
 
-    # last step
-    last_agent_response: Any   # can be str or ChatMessage
-    last_agent: str
-    num_steps: int
+    # planning (global)
+    plan_tables: Dict[str, Any]
+    plan: Dict[str, Any]
 
-    # planning
-    plan_tables: Dict[str, Any]   # tables-only planner output
-    plan: Dict[str, Any]          # keyworder output (targets/metrics)
+    # worker-local (IMPORTANT)
+    w_last_agent_response: Any
+    w_last_agent: str
+    w_num_steps: int
 
-    # tools
-    tool_observations: List[str]
-    last_tool_results: Dict[str, Any]
-    seen_tool_calls: List[Any]
+    w_tool_observations: List[str]
+    w_last_tool_results: Dict[str, Any]
+    w_seen_tool_calls: List[Any]
 
-    # worker outputs
-    worker_results: Dict[str, Any]     # keyed by agent name
-    worker_messages: List[Dict[str, Any]]  # ordered history list
+    # worker outputs (global)
+    worker_results: Dict[str, Any]
+    worker_messages: List[Dict[str, Any]]
     web_summary: str
 
-    # barrier / orchestration
+    # orchestration (global)
     expected_workers: List[str]
     done_workers: List[str]
 
-    # synth follow-up
+    # synth/follow-up (global)
     synth_decision: Dict[str, Any]
     followup_requests: List[Dict[str, Any]]
     missing_components: List[str]
     followup_rounds: int
 
-    # debug
+    # debug (global)
     run_id: str
     trace: List[Dict[str, Any]]

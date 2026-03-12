@@ -5,6 +5,11 @@ TABLE_NAME = Literal[
     "BẢNG CÂN ĐỐI KẾ TOÁN",
     "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
     "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "bcdkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "bcđkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "kqhđkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "kqhdkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
 ]
 
 TABLE_CANON = {

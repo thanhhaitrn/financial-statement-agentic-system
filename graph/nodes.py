@@ -1,5 +1,5 @@
 from agents.agent_runner import call_agent
-from tools.tool_runner import call_tool
+from tools.tool_runner import call_tool, WORKER_TO_TABLE
 import re, json
 from agents.planner_runner import run_planner
 from agents.synth_runner import run_synth
@@ -32,12 +32,10 @@ def tools_node(state: dict) -> dict:
 def agent_synth_node(state: dict) -> dict:
     return run_synth(state)
 
-import re, json
-from graph.logger import log_step
 
 def collect_worker_answer(state: dict) -> dict:
-    agent = state.get("last_agent", "")
-    text_obj = state.get("last_agent_response", "")
+    agent = state.get("w_last_agent", "") or state.get("last_agent", "")
+    text_obj = state.get("w_last_agent_response", "")
     text = text_obj.content if hasattr(text_obj, "content") else str(text_obj or "")
 
     m = re.search(r"^\s*ANSWER:\s*(.*)$", text, flags=re.MULTILINE | re.DOTALL)
@@ -47,9 +45,9 @@ def collect_worker_answer(state: dict) -> dict:
         kind = "answer"
         preview = payload[:140]
     else:
-        obs = state.get("tool_observations") or []
+        # ✅ use worker-local tool obs
+        obs = state.get("w_tool_observations") or state.get("tool_observations") or []
         obs_tail = obs[-2:] if len(obs) >= 2 else obs[:]
-
         payload = json.dumps(
             {
                 "error": "worker did not return ANSWER",
@@ -61,21 +59,22 @@ def collect_worker_answer(state: dict) -> dict:
         kind = "fallback"
         preview = text[:140]
 
-    # mark done
-    done = set(state.get("done_workers", []))
-    done.add(agent)
-    state["done_workers"] = list(done)
+    # mark done (only if agent is known)
+    if agent:
+        done = set(state.get("done_workers", []))
+        done.add(agent)
+        state["done_workers"] = list(done)
 
-    # store ordered history
+    # ordered history
     state.setdefault("worker_messages", []).append({
         "agent": agent,
         "kind": kind,
-        "table": TABLE_TO_AGENT.get(agent, ""),   
-        "round": state.get("followup_rounds", 0), 
-        "payload": payload,                       
+        "table": WORKER_TO_TABLE.get(agent, ""),  
+        "round": state.get("followup_rounds", 0),
+        "payload": payload,
     })
 
-    # store latest per agent
+    # latest per agent
     if agent == "agent_web":
         state["web_summary"] = payload
     else:
@@ -88,9 +87,9 @@ def collect_worker_answer(state: dict) -> dict:
         "collect",
         agent=agent,
         kind=kind,
-        done_n=len(state["done_workers"]),
+        done_n=len(state.get("done_workers", [])),
         expected_n=len(expected),
-        done=state["done_workers"],
+        done=state.get("done_workers", []),
         expected=expected,
         preview=preview,
     )

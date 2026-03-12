@@ -28,7 +28,7 @@ def call_agent(state: dict, agent_name: str) -> dict:
     })
 
     text = extract_text(response)
-    state["last_agent_response"] = text
-    state["last_agent"] = agent_name
-    state["num_steps"] = state.get("num_steps", 0) + 1
+    state["w_last_agent_response"] = text
+    state["w_last_agent"] = agent_name
+    state["w_num_steps"] = state.get("w_num_steps", 0) + 1
     return state

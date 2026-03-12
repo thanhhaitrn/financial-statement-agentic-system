@@ -12,7 +12,7 @@ planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerTablesOnly)
 
 def run_planner(state: dict) -> dict:
     state["last_agent"] = "agent_planner"
-    log_step(state, "planner:start", query=state.get("query", ""))
+    log_step(state, "planner:start", query=state.get("query",""), user_query=state.get("user_query",""), worker_query=state.get("worker_query",""))
 
     profile = AGENT_PROFILES["agent_planner"]
 
@@ -21,7 +21,7 @@ def run_planner(state: dict) -> dict:
         "system_instruction": profile["system_instruction"],
         "query": state.get("query", ""),
         "user_query": state.get("user_query", state.get("query", "")),
-        "plan_json": json.dumps(state.get("plan_tables", {}), ensure_ascii=False),  
+        "plan_json": "{}",  
         "worker_results_json": json.dumps(state.get("worker_results", {}), ensure_ascii=False),
         "web_summary": state.get("web_summary", ""),
         "last_agent_response": state.get("last_agent_response", ""),
