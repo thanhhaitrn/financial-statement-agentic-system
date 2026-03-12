@@ -2,6 +2,7 @@ import copy
 
 GLOBAL_KEYS = {
     "user_query",
+    "query", 
     "expected_workers",
     "done_workers",
     "trace",

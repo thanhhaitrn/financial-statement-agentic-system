@@ -3,7 +3,7 @@ from typing import TypedDict, List, Dict, Any
 class AgentState(TypedDict, total=False):
     # input
     user_query: str
-    query: str # Query for retrieval
+    worker_query: str # Query for retrieval
 
     # last step
     last_agent_response: Any   # can be str or ChatMessage
@@ -21,7 +21,7 @@ class AgentState(TypedDict, total=False):
 
     # worker outputs
     worker_results: Dict[str, Any]     # keyed by agent name
-    worker_messages: List[Dict[str, Any]]  # ✅ ordered history list
+    worker_messages: List[Dict[str, Any]]  # ordered history list
     web_summary: str
 
     # barrier / orchestration

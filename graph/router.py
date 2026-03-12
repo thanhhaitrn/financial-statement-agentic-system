@@ -69,12 +69,12 @@ def dispatch_workers(state: dict):
     jobs = []
     for worker, table, kws in resolved:
         child = make_child_state(state)  
-        child["query"] = build_worker_query(table, kws, company, time_hint)
+        child["worker_query"] = build_worker_query(table, kws, company, time_hint)
         jobs.append(Send(worker, child))
 
     if need_web:
         child = make_child_state(state)  
-        child["query"] = state.get("user_query", state.get("query", ""))
+        child["worker_query"] = state.get("user_query", state.get("query", ""))
         jobs.append(Send("agent_web", child))
 
     return jobs

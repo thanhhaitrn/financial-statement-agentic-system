@@ -33,6 +33,7 @@ def dispatch_followups(state: dict):
 
         # overwrite plan for deterministic tool queries
         child["plan"] = {"targets": new_targets}
+        child["worker_query"] = child.get("root_query", "")
 
         jobs.append(Send(agent, child))
 
