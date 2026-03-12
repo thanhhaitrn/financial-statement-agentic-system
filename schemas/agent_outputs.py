@@ -4,18 +4,18 @@ from typing import List, Literal, Dict, Any, Optional
 TABLE_NAME = Literal[
     "BẢNG CÂN ĐỐI KẾ TOÁN",
     "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    "bcdkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "bcđkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "kqhđkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "kqhdkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
 ]
 
 TABLE_CANON = {
     "bảng cân đối kế toán": "BẢNG CÂN ĐỐI KẾ TOÁN",
     "báo cáo kết quả hoạt động kinh doanh": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
     "báo cáo lưu chuyển tiền tệ": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "bcdkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "bcđkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "kqhđkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "kqhdkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
 }
 
 AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
