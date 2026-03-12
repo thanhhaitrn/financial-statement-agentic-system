@@ -1,7 +1,8 @@
 # graph/router.py
-import copy
+from collections import defaultdict
 from langgraph.types import Send
 from graph.logger import log_step
+from graph.state_utils import make_child_state  
 
 TABLE_TO_AGENT = {
     "BẢNG CÂN ĐỐI KẾ TOÁN": "agent_bs",
@@ -17,11 +18,6 @@ def build_worker_query(table: str, keywords: list[str], company: str = "", time_
         parts.append(time_hint)
     return " | ".join(parts)
 
-from collections import defaultdict
-import copy
-from langgraph.types import Send
-from graph.logger import log_step
-
 def dispatch_workers(state: dict):
     plan = state.get("plan", {}) or {}
     targets = plan.get("targets", []) or []
@@ -31,7 +27,6 @@ def dispatch_workers(state: dict):
     time_hint = plan_tables.get("time_hint", "") or ""
     need_web = bool(plan_tables.get("need_web", False) or plan.get("need_web", False))
 
-    # group keywords by table to avoid spawning same worker twice
     grouped = defaultdict(list)
     for t in targets:
         table = str(t.get("table", "")).strip()
@@ -44,6 +39,7 @@ def dispatch_workers(state: dict):
         worker = TABLE_TO_AGENT.get(table)
         if not worker:
             continue
+
         # de-dup keywords
         seen = set()
         kws_unique = []
@@ -72,32 +68,13 @@ def dispatch_workers(state: dict):
 
     jobs = []
     for worker, table, kws in resolved:
-        child = copy.deepcopy(state)
-        child["expected_workers"] = state["expected_workers"]
-        child["done_workers"] = []
-        child["seen_tool_calls"] = []  
-
+        child = make_child_state(state)  
         child["query"] = build_worker_query(table, kws, company, time_hint)
-        child["user_query"] = state.get("user_query", state.get("query", ""))
-
-        child["last_agent_response"] = ""
-        child["tool_observations"] = []
-        child["num_steps"] = 0
-
         jobs.append(Send(worker, child))
 
     if need_web:
-        child = copy.deepcopy(state)
-        child["expected_workers"] = state["expected_workers"]
-        child["done_workers"] = []
-        child["seen_tool_calls"] = []
-
+        child = make_child_state(state)  
         child["query"] = state.get("user_query", state.get("query", ""))
-        child["user_query"] = state.get("user_query", state.get("query", ""))
-
-        child["last_agent_response"] = ""
-        child["tool_observations"] = []
-        child["num_steps"] = 0
         jobs.append(Send("agent_web", child))
 
     return jobs
