@@ -30,3 +30,36 @@ def should_continue(state: dict) -> str:
         return "collect"
 
     return "collect"
+
+def which_agents(state: dict) -> str:
+    response = state.get("last_agent", "")
+    return response
+
+def ready_to_synthesize(state: dict) -> str:
+    expected = set(state.get("expected_workers", []))
+    done = set(state.get("done_workers", []))
+
+    decision = "synth" if expected and expected.issubset(done) else "wait"
+
+    log_step(
+        state,
+        "barrier",
+        decision=decision,
+        expected_n=len(expected),
+        done_n=len(done),
+        expected=sorted(expected),
+        done=sorted(done),
+    )
+
+    return decision
+
+def synth_route(state: dict) -> str:
+    d = state.get("synth_decision", {}) or {}
+    rounds = state.get("followup_rounds", 0)
+
+    if d.get("status") == "need_more" and rounds < 2:
+        state["followup_rounds"] = rounds + 1
+        return "followup"
+
+    return "end"
+    return "collect"
