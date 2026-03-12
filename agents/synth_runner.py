@@ -1,21 +1,20 @@
 import json
+from pydantic import ValidationError
+from schemas.agent_outputs import SynthDecision
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import log_step
 
-synth_chain = PROMPT_TEMPLATE | llm
+DEFAULT = {"status": "answer", "answer": "Chưa đủ dữ liệu để trả lời.", "missing": [], "followups": []}
+
+synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision)
 
 def run_synth(state: dict) -> dict:
     state["last_agent"] = "agent_synth"
-    metrics = (state.get("plan", {}) or {}).get("metrics", []) or []
-    log_step(state, "synth:start",
-             followup_rounds=state.get("followup_rounds", 0),
-             expected=state.get("expected_workers", []),
-             done=state.get("done_workers", []))
+    log_step(state, "synth:start")
 
     profile = AGENT_PROFILES["agent_synth"]
-
     payload = {
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
@@ -30,20 +29,16 @@ def run_synth(state: dict) -> dict:
     }
 
     try:
-        resp = synth_chain.invoke(payload)
-        text = resp.content if hasattr(resp, "content") else str(resp)
-    except Exception as e:
-        text = "ANSWER: Chưa đủ dữ liệu để trả lời."
-        log_step(state, "synth:error", error_type=type(e).__name__, error=str(e)[:200])
+        dec: SynthDecision = synth_chain.invoke(payload)
+        d = dec.model_dump()
+    except (ValidationError, Exception) as e:
+        d = DEFAULT
+        log_step(state, "synth:error", error_type=type(e).__name__, error=str(e)[:250])
 
-    state["final_answer"] = text
-    state["last_agent_response"] = text
-    state["synth_decision"] = {"status": "answer", "answer": text, "followups": [], "missing": []}
-
-    state["followup_requests"] = []
-    state["missing_components"] = []
-
+    state["synth_decision"] = d
+    state["followup_requests"] = d.get("followups", [])
+    state["missing_components"] = d.get("missing", [])
     state["num_steps"] = state.get("num_steps", 0) + 1
-    log_step(state, "synth:done", answer_preview=text[:160])
 
+    log_step(state, "synth:done", status=d.get("status"), followups_n=len(state["followup_requests"]))
     return state

@@ -4,8 +4,9 @@ from ingestion.pipeline import build_knowledge_base
 from vectorstore.chroma_store import create_collection
 from kb.sqlite_repo import init_db, sqlite_has_facts
 from vectorstore.index_builder import build_vector_store
-from graph.workflow2 import agentic_graph
+from graph.workflow import agentic_graph
 import uuid
+from output_formatter import format_final_answer
 
 def ensure_built():
     conn = init_db(DB_PATH)
@@ -51,18 +52,11 @@ def main():
     final_state = agentic_graph.invoke(initial_state)
 
     print("\n=== FINAL ANSWER ===")
-    print(final_state.get("last_agent_response", ""))
+    print(format_final_answer(final_state))
 
-    #print("\n=== PLAN ===")
-    #print(final_state.get("plan"))
-
-    print("\n=== WORKER RESULTS ===")
-    print(final_state.get("worker_results"))
-
-    #print("LAST_AGENT:", final_state.get("last_agent"))
-    #print("LAST_AGENT_RESPONSE:", final_state.get("last_agent_response"))
-    #print("DONE:", final_state.get("done_workers"))
-    #print("EXPECTED:", final_state.get("expected_workers"))
+    print("\n=== TRACE ===")
+    for e in final_state.get("trace", []):
+        print(e)
 
 if __name__ == "__main__":
     main()

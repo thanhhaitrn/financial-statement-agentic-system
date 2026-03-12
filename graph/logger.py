@@ -11,8 +11,7 @@ def log_step(state: dict, event: str, **data: Any) -> dict:
         "ts": datetime.utcnow().isoformat(timespec="seconds") + "Z",
         "run_id": state["run_id"],
         "event": event,
-        "agent": state.get("last_agent", ""),
-        "num_steps": state.get("num_steps", 0),
+        "agent": state.get("last_agent", "")
     }
     entry.update(data)
     state["trace"].append(entry)

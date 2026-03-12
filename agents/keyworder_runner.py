@@ -17,6 +17,7 @@ def run_keyworder(state: dict) -> dict:
 
     profile = AGENT_PROFILES["agent_keyworder"]
     plan_tables = state.get("plan_tables", {}) or {}
+    selected_tables = [str(t).strip() for t in (plan_tables.get("tables", []) or [])]
 
     payload = {
         "role": profile["role"],
@@ -35,38 +36,48 @@ def run_keyworder(state: dict) -> dict:
         kp: KeywordPlan = keyworder_chain.invoke(payload)
         plan = kp.model_dump()
 
-        # ---- ENFORCE ALLOWED KEYWORDS (hard gate) ----
+        # ---- ENFORCE TABLE COVERAGE + KEYWORD WHITELIST (REPAIR, NOT DROP) ----
+        targets_in = plan.get("targets", []) or []
+        by_table = {str(t.get("table", "")).strip(): (t.get("keywords", []) or []) for t in targets_in}
+
         cleaned_targets = []
         invalid_all = []
+        repaired_all = []
 
-        for t in plan.get("targets", []) or []:
-            table = (t.get("table") or "").strip()
-            kws = t.get("keywords", []) or []
+        # ensure we have exactly 1 target per selected table
+        for table in selected_tables:
+            kws = by_table.get(table, []) or []
 
             valid_kws, invalid = validate_keywords(table, kws, fuzzy=True, cutoff=0.88)
-            invalid_all.extend([{"table": table, **x} for x in invalid])
+            # collect invalid samples for logging
+            invalid_all.extend([{"table": table, **x} for x in (invalid or [])])
 
-            # hard rule: if no valid keywords, drop this target
-            if not valid_kws:
-                continue
+            # try repair using suggested canonical keywords (if validate_keywords provides it)
+            suggested = [x.get("suggested") for x in (invalid or []) if x.get("suggested")]
+            # add suggested if not already present
+            for s in suggested:
+                if s and s not in valid_kws:
+                    valid_kws.append(s)
+                    repaired_all.append({"table": table, "from": x.get("raw") if "x" in locals() else "", "to": s})
 
+            # HARD RULE: never drop table; if still empty, keep empty and let tools block/log
             cleaned_targets.append({
                 "table": table,
                 "keywords": valid_kws
             })
 
         plan["targets"] = cleaned_targets
-
-        # If planner selected tables but keyworder produced nothing usable -> treat as failure
-        selected_tables = plan_tables.get("tables", []) or []
-        if selected_tables and not plan["targets"]:
-            raise ValueError("Keyworder produced no valid targets after whitelist validation")
-
         state["plan"] = plan
         state["last_agent_response"] = json.dumps(state["plan"], ensure_ascii=False)
 
         if invalid_all:
             log_step(state, "keyworder:invalid_keywords", invalid_count=len(invalid_all), samples=invalid_all[:5])
+        if repaired_all:
+            log_step(state, "keyworder:repaired_keywords", repaired_count=len(repaired_all), samples=repaired_all[:5])
+
+        # if *all* tables have empty keywords -> treat as failure
+        if selected_tables and all(not t["keywords"] for t in plan["targets"]):
+            raise ValueError("Keyworder produced no valid keywords for all selected tables after whitelist/repair")
 
     except (ValidationError, Exception) as e:
         state["plan"] = DEFAULT_KEYWORD_PLAN

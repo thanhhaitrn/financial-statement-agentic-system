@@ -111,11 +111,14 @@ ALIASES: Dict[str, str] = {
     "tiền và tương đương tiền": "tiền và các khoản tương đương tiền",
     "phải thu khách hàng ngắn hạn": "phải thu ngắn hạn của khách hàng",
     "chi phí qldn": "chi phí quản lý doanh nghiệp",
-    "lnst": "lợi nhuận sau thuế thu nhập doanh nghiệp",  # IS
+    "lnst": "lợi nhuận sau thuế thu nhập doanh nghiệp",  
+    # IS
     "doanh thu thuần": "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+    "lợi nhuận sau thuế": "lợi nhuận sau thuế thu nhập doanh nghiệp",
 
     # CF
     "tiền cuối kỳ": "tiền và tương đương tiền cuối kỳ",
     "tiền đầu kỳ": "tiền và tương đương tiền đầu kỳ",
     "lctt hđkd": "lưu chuyển tiền thuần từ hoạt động kinh doanh",
+
 }
