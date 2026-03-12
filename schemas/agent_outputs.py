@@ -22,11 +22,29 @@ AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
 
 # ---------- Planner (tables only) ---------
 
+
 class PlannerTablesOnly(BaseModel):
     tables: List[TABLE_NAME] = Field(default_factory=list)
     company: str = ""
     time_hint: str = ""
     need_web: bool = False
+
+    @field_validator("tables", mode="before")
+    @classmethod
+    def normalize_tables(cls, v):
+        if v is None:
+            return []
+        # LLM có thể trả list[str] hoặc list[dict]
+        out = []
+        for item in v:
+            if isinstance(item, dict) and "table" in item:
+                item = item["table"]
+            if isinstance(item, str):
+                key = item.strip().lower()
+                out.append(TABLE_CANON.get(key, item))
+            else:
+                out.append(item)
+        return out
 
 
 # ---------- Keyworder / Detailed plan (optional next step) ----------
@@ -62,6 +80,14 @@ class FollowupRequest(BaseModel):
     table: Optional[TABLE_NAME] = None
     keywords: List[str] = Field(default_factory=list)
     reason: str = ""
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_followup_table(cls, v):
+        if v is None or not isinstance(v, str):
+            return v
+        key = v.strip().lower()
+        return TABLE_CANON.get(key, v)
 
 class SynthDecision(BaseModel):
     status: Literal["answer", "need_more"] = "answer"
