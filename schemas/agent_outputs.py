@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Dict, Any, Optional
 
 TABLE_NAME = Literal[
@@ -6,6 +6,13 @@ TABLE_NAME = Literal[
     "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
     "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
 ]
+
+TABLE_CANON = {
+    "bảng cân đối kế toán": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "báo cáo kết quả hoạt động kinh doanh": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "báo cáo lưu chuyển tiền tệ": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+}
+
 AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
 
 # ---------- Planner (tables only) ---------
@@ -19,8 +26,20 @@ class PlannerTablesOnly(BaseModel):
 
 # ---------- Keyworder / Detailed plan (optional next step) ----------
 class Target(BaseModel):
-    table: TABLE_NAME
+    table: Literal[
+        "BẢNG CÂN ĐỐI KẾ TOÁN",
+        "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+        "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    ]
     keywords: List[str] = Field(default_factory=list)
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_table(cls, v):
+        if not isinstance(v, str):
+            return v
+        key = v.strip().lower()
+        return TABLE_CANON.get(key, v)
 
 class KeywordPlan(BaseModel):
     targets: List[Target] = Field(default_factory=list)
