@@ -7,8 +7,6 @@ from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import log_step
 from schemas.keyword_guard import validate_keywords
 
-DEFAULT_KEYWORD_PLAN = {"targets": []}
-
 keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
 
 def run_keyworder(state: dict) -> dict:
@@ -16,20 +14,21 @@ def run_keyworder(state: dict) -> dict:
 
     profile = AGENT_PROFILES["agent_keyworder"]
     plan_tables = state.get("plan_tables", {}) or {}
-    selected_tables = [str(t).strip() for t in (plan_tables.get("tables", []) or [])]
+
+    selected_tables = []
+    seen = set()
+    for t in (plan_tables.get("tables", []) or []):
+        name = str(t).strip()
+        if name and name not in seen:
+            selected_tables.append(name)
+            seen.add(name)
 
     payload = {
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
-
-        # keyworder uses global query/user_query
-        "query": state.get("query", ""),
-        "user_query": state.get("user_query", state.get("query", "")),
-
-        # give chosen tables in plan_json
+        "user_query": state.get("user_query", ""),
+        "w_worker_query": "",
         "plan_json": json.dumps(plan_tables, ensure_ascii=False),
-
-        # keep others minimal (avoid legacy keys)
         "worker_results_json": "{}",
         "web_summary": "",
         "last_agent_response": "",
@@ -41,39 +40,47 @@ def run_keyworder(state: dict) -> dict:
         kp: KeywordPlan = keyworder_chain.invoke(payload)
         plan = kp.model_dump()
 
-        # ---- ENFORCE TABLE COVERAGE + KEYWORD WHITELIST (REPAIR, NOT DROP) ----
         targets_in = plan.get("targets", []) or []
-        by_table = {
-            str(t.get("table", "")).strip(): (t.get("keywords", []) or [])
-            for t in targets_in
-        }
+
+        by_table = {}
+        for t in targets_in:
+            table = str(t.get("table", "")).strip()
+            kws = t.get("keywords", []) or []
+            if not table:
+                continue
+            by_table.setdefault(table, [])
+            by_table[table].extend(kws)
 
         cleaned_targets = []
         invalid_all = []
         repaired_all = []
 
         for table in selected_tables:
-            kws = by_table.get(table, []) or []
-
+            kws = by_table.get(table, [])
             valid_kws, invalid = validate_keywords(table, kws, fuzzy=True, cutoff=0.88)
-            invalid_all.extend([{"table": table, **x} for x in (invalid or [])])
 
-            # ✅ repair: add suggested canonical keywords
-            for x in (invalid or []):
+            invalid = invalid or []
+            invalid_all.extend([{"table": table, **x} for x in invalid])
+
+            for x in invalid:
                 s = x.get("suggested")
                 if s and s not in valid_kws:
                     valid_kws.append(s)
-                    repaired_all.append({"table": table, "from": x.get("raw", ""), "to": s})
+                    repaired_all.append({
+                        "table": table,
+                        "from": x.get("raw", ""),
+                        "to": s
+                    })
 
+            valid_kws = list(dict.fromkeys(valid_kws))
             cleaned_targets.append({"table": table, "keywords": valid_kws})
 
         plan["targets"] = cleaned_targets
 
-        # if all tables have empty keywords -> fail
-        if selected_tables and all(not t["keywords"] for t in plan["targets"]):
-            raise ValueError("Keyworder produced no valid keywords for all selected tables after whitelist/repair")
+        if selected_tables and all(not t["keywords"] for t in cleaned_targets):
+            raise ValueError("Keyworder produced no valid keywords for selected tables after repair")
 
-        state["plan"] = plan  # ✅ only write global plan
+        state["plan"] = plan
 
         if invalid_all:
             log_step(state, "keyworder:invalid_keywords", invalid_count=len(invalid_all), samples=invalid_all[:5])
@@ -83,8 +90,10 @@ def run_keyworder(state: dict) -> dict:
         log_step(state, "keyworder:done", plan=state.get("plan", {}))
         return state
 
-    except (ValidationError, Exception) as e:
-        state["plan"] = DEFAULT_KEYWORD_PLAN
+    except Exception as e:
+        state["plan"] = {
+            "targets": [{"table": t, "keywords": []} for t in selected_tables]
+        }
         log_step(state, "keyworder:error", error_type=type(e).__name__, error=str(e)[:250])
         log_step(state, "keyworder:done", plan=state.get("plan", {}))
         return state

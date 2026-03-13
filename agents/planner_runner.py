@@ -10,10 +10,11 @@ DEFAULT_PLAN_TABLES = {"tables": [], "company": "", "time_hint": "", "need_web":
 planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerTablesOnly)
 
 def run_planner(state: dict) -> dict:
+    state["last_agent"] = "agent_planner"
+
     log_step(
         state,
         "planner:start",
-        query=state.get("query",""),
         user_query=state.get("user_query",""),
     )
 
@@ -23,9 +24,8 @@ def run_planner(state: dict) -> dict:
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
 
-        # planner reads global query/user_query
-        "query": state.get("query", ""),
-        "user_query": state.get("user_query", state.get("query", "")),
+        "user_query": state.get("user_query",""),
+        "w_worker_query": "",   # optional
 
         # planner does NOT need these, keep minimal
         "plan_json": "{}",
@@ -44,4 +44,5 @@ def run_planner(state: dict) -> dict:
         state["plan_tables"] = DEFAULT_PLAN_TABLES
         log_step(state, "planner:error", error_type=type(e).__name__, error=str(e)[:200])
 
+    state["num_steps"] = state.get("num_steps", 0) + 1
     return state

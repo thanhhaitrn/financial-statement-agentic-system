@@ -33,7 +33,6 @@ def main():
 
     initial_state = {
         "user_query": user_input,
-        "query": user_input,
         "w_last_agent_response": "",
         "w_last_agent": "",
         "tool_observations": [],

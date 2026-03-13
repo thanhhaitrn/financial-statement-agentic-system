@@ -74,7 +74,7 @@ def dispatch_workers(state: dict):
 
     if need_web:
         child = make_child_state(state)  
-        child["w_worker_query"] = state.get("user_query", state.get("query", ""))
+        child["w_worker_query"] = state.get("user_query")
         jobs.append(Send("agent_web", child))
 
     return jobs
