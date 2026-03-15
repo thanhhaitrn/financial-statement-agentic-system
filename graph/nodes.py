@@ -49,6 +49,10 @@ def tools_web_node(state: dict) -> dict:
     return call_tool_for_agent(state, "agent_web")
 
 
+def agent_synth_node(state: dict) -> dict:
+    return run_synth(state, "agent_synth")
+
+
 def _mark_done(agent_name: str):
     def node(state: dict) -> dict:
         make_log(state, "worker:done", agent=agent_name)
