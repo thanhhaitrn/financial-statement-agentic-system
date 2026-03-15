@@ -1,16 +1,20 @@
 import json
-from pydantic import ValidationError
 from schemas.agent_outputs import KeywordPlan
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
-from graph.logger import log_step
+from graph.logger import make_log
 from schemas.keyword_guard import validate_keywords
 
 keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
 
+
 def run_keyworder(state: dict) -> dict:
-    log_step(state, "keyworder:start", plan_tables=state.get("plan_tables", {}))
+    start_log = make_log(
+        state,
+        "keyworder:start",
+        plan_tables=state.get("plan_tables", {}),
+    )
 
     profile = AGENT_PROFILES["agent_keyworder"]
     plan_tables = state.get("plan_tables", {}) or {}
@@ -34,6 +38,11 @@ def run_keyworder(state: dict) -> dict:
         "last_agent_response": "",
         "tool_observations": "",
         "tools_list": profile.get("tool_list", ""),
+    }
+
+    updates = {
+        "last_agent": "agent_keyworder",
+        "trace": [start_log],
     }
 
     try:
@@ -69,7 +78,7 @@ def run_keyworder(state: dict) -> dict:
                     repaired_all.append({
                         "table": table,
                         "from": x.get("raw", ""),
-                        "to": s
+                        "to": s,
                     })
 
             valid_kws = list(dict.fromkeys(valid_kws))
@@ -80,20 +89,54 @@ def run_keyworder(state: dict) -> dict:
         if selected_tables and all(not t["keywords"] for t in cleaned_targets):
             raise ValueError("Keyworder produced no valid keywords for selected tables after repair")
 
-        state["plan"] = plan
+        updates["plan"] = plan
 
         if invalid_all:
-            log_step(state, "keyworder:invalid_keywords", invalid_count=len(invalid_all), samples=invalid_all[:5])
-        if repaired_all:
-            log_step(state, "keyworder:repaired_keywords", repaired_count=len(repaired_all), samples=repaired_all[:5])
+            updates["trace"].append(
+                make_log(
+                    state,
+                    "keyworder:invalid_keywords",
+                    invalid_count=len(invalid_all),
+                    samples=invalid_all[:5],
+                )
+            )
 
-        log_step(state, "keyworder:done", plan=state.get("plan", {}))
-        return state
+        if repaired_all:
+            updates["trace"].append(
+                make_log(
+                    state,
+                    "keyworder:repaired_keywords",
+                    repaired_count=len(repaired_all),
+                    samples=repaired_all[:5],
+                )
+            )
+
+        updates["trace"].append(
+            make_log(
+                state,
+                "keyworder:done",
+                plan=plan,
+            )
+        )
+        return updates
 
     except Exception as e:
-        state["plan"] = {
+        updates["plan"] = {
             "targets": [{"table": t, "keywords": []} for t in selected_tables]
         }
-        log_step(state, "keyworder:error", error_type=type(e).__name__, error=str(e)[:250])
-        log_step(state, "keyworder:done", plan=state.get("plan", {}))
-        return state
+        updates["trace"].append(
+            make_log(
+                state,
+                "keyworder:error",
+                error_type=type(e).__name__,
+                error=str(e)[:250],
+            )
+        )
+        updates["trace"].append(
+            make_log(
+                state,
+                "keyworder:done",
+                plan=updates["plan"],
+            )
+        )
+        return updates

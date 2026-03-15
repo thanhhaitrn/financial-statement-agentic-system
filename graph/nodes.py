@@ -6,7 +6,7 @@ from tools.tool_runner import call_tool_for_agent, WORKER_TO_TABLE
 from agents.planner_runner import run_planner
 from agents.synth_runner import run_synth
 from agents.keyworder_runner import run_keyworder
-from graph.logger import log_step
+from graph.logger import make_log
 
 
 def agent_planner(state: dict) -> dict:
@@ -82,19 +82,33 @@ def collect_all_workers(state: dict) -> dict:
     round_n = state.get("followup_rounds", 0)
     collected_rounds = set(state.get("collected_rounds", []) or [])
 
+    updates = {
+        "trace": [],
+    }
+
     if not expected or not expected.issubset(done):
-        log_step(
-            state,
-            "collect:skip_not_ready",
-            round=round_n,
-            expected=sorted(expected),
-            done=sorted(done),
+        updates["trace"].append(
+            make_log(
+                state,
+                "collect:skip_not_ready",
+                round=round_n,
+                expected=sorted(expected),
+                done=sorted(done),
+            )
         )
-        return {"collect_decision": "stop"}
+        updates["collect_decision"] = "stop"
+        return updates
 
     if round_n in collected_rounds:
-        log_step(state, "collect:skip_already_collected", round=round_n)
-        return {"collect_decision": "stop"}
+        updates["trace"].append(
+            make_log(
+                state,
+                "collect:skip_already_collected",
+                round=round_n,
+            )
+        )
+        updates["collect_decision"] = "stop"
+        return updates
 
     worker_results = {}
     web_summary = state.get("web_summary", "")
@@ -123,23 +137,23 @@ def collect_all_workers(state: dict) -> dict:
         else:
             worker_results[agent] = payload
 
-        log_step(
-            state,
-            "collect",
-            agent=agent,
-            round=round_n,
-            kind=kind,
-            preview=preview,
+        updates["trace"].append(
+            make_log(
+                state,
+                "collect",
+                agent=agent,
+                round=round_n,
+                kind=kind,
+                preview=preview,
+            )
         )
 
-    return {
+    updates.update({
         "worker_results": worker_results,
         "web_summary": web_summary,
         "last_agent": "collector",
         "collected_rounds": [round_n],
         "collect_decision": "synth",
-    }
+    })
 
-
-def agent_synth_node(state: dict) -> dict:
-    return run_synth(state)
+    return updates

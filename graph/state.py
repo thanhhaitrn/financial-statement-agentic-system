@@ -37,3 +37,4 @@ class GraphState(TypedDict, total=False):
     worker_results: Annotated[dict[str, Any], merge_dicts]
     done_workers: Annotated[list[str], operator.add]
     collected_rounds: Annotated[list[int], operator.add]
+    trace: Annotated[list[dict], operator.add]

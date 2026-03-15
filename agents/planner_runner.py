@@ -1,9 +1,8 @@
-from pydantic import ValidationError
 from agents.profiles import AGENT_PROFILES
 from schemas.agent_outputs import PlannerTablesOnly
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
-from graph.logger import log_step
+from graph.logger import make_log
 
 DEFAULT_PLAN_TABLES = {"tables": []}
 
@@ -11,7 +10,7 @@ planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerTablesOnly)
 
 
 def run_planner(state: dict) -> dict:
-    log_step(
+    start_log = make_log(
         state,
         "planner:start",
         user_query=state.get("user_query", ""),
@@ -34,14 +33,28 @@ def run_planner(state: dict) -> dict:
 
     updates = {
         "last_agent": "agent_planner",
+        "trace": [start_log],
     }
 
     try:
         plan_obj: PlannerTablesOnly = planner_chain.invoke(payload)
         updates["plan_tables"] = plan_obj.model_dump()
-        log_step(state, "planner:done", plan_tables=updates["plan_tables"])
+        updates["trace"].append(
+            make_log(
+                state,
+                "planner:done",
+                plan_tables=updates["plan_tables"],
+            )
+        )
     except Exception as e:
         updates["plan_tables"] = DEFAULT_PLAN_TABLES
-        log_step(state, "planner:error", error_type=type(e).__name__, error=str(e)[:200])
+        updates["trace"].append(
+            make_log(
+                state,
+                "planner:error",
+                error_type=type(e).__name__,
+                error=str(e)[:250],
+            )
+        )
 
     return updates

@@ -2,6 +2,7 @@ import json
 from agents.prompts import PROMPT_TEMPLATE
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
+from graph.logger import make_log
 
 WORKER_AGENTS = {"agent_bs", "agent_is", "agent_cf", "agent_web"}
 
@@ -45,6 +46,14 @@ def call_agent(state: dict, agent_name: str) -> dict:
 
     resp = chain.invoke(payload)
     text = extract_text(resp)
+    log_entry = make_log(
+        state,
+        "agent:done",
+        agent_name=agent_name,
+        is_worker=is_worker,
+        response_preview=text[:160],
+    )
+
 
     if is_worker:
         return {
@@ -53,12 +62,14 @@ def call_agent(state: dict, agent_name: str) -> dict:
                     "agent": agent_name,
                     "kind": "agent_response",
                     "round": state.get("followup_rounds", 0),
-                    "response": text,
+                    "response": text
                 }
-            ]
+            ],
+            "trace": [log_entry]
         }
 
     return {
         "last_agent": agent_name,
         "last_agent_response": text,
+        "trace": [log_entry]
     }

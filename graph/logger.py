@@ -1,18 +1,14 @@
-# graph/logger.py
 from __future__ import annotations
 from datetime import datetime
 from typing import Any, Dict
 
-def log_step(state: dict, event: str, **data: Any) -> dict:
-    state.setdefault("trace", [])
-    state.setdefault("run_id", "run_unknown")
 
+def make_log(state: dict, event: str, **data: Any) -> dict:
     entry: Dict[str, Any] = {
         "ts": datetime.utcnow().isoformat(timespec="seconds") + "Z",
-        "run_id": state["run_id"],
+        "run_id": state.get("run_id", "run_unknown"),
         "event": event,
-        "agent": state.get("last_agent", "")
+        "agent": state.get("last_agent", ""),
     }
     entry.update(data)
-    state["trace"].append(entry)
-    return state
+    return entry

@@ -2,7 +2,7 @@ import json
 import re
 
 from schemas.agent_outputs import SynthDecision
-from graph.logger import log_step
+from graph.logger import make_log
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
@@ -30,7 +30,7 @@ def _fallback_from_text(text: str) -> dict:
 
 
 def run_synth(state: dict) -> dict:
-    log_step(
+    start_log = make_log(
         state,
         "synth:start",
         followup_rounds=state.get("followup_rounds", 0),
@@ -56,6 +56,11 @@ def run_synth(state: dict) -> dict:
         "tools_list": "",
     }
 
+    updates = {
+        "last_agent": "agent_synth",
+        "trace": [start_log],
+    }
+
     try:
         dec = synth_chain.invoke(payload)
 
@@ -68,29 +73,32 @@ def run_synth(state: dict) -> dict:
             d = _fallback_from_text(text)
 
     except Exception as e:
-        log_step(
-            state,
-            "synth:error",
-            error_type=type(e).__name__,
-            error=str(e)[:250],
+        updates["trace"].append(
+            make_log(
+                state,
+                "synth:error",
+                error_type=type(e).__name__,
+                error=str(e)[:250],
+            )
         )
         d = DEFAULT.copy()
 
-    updates = {
-        "last_agent": "agent_synth",
+    updates.update({
         "synth_decision": d,
         "followup_requests": d.get("followups") or [],
         "missing_components": d.get("missing") or [],
         "final_answer": d.get("answer") or DEFAULT["answer"],
         "last_agent_response": d.get("answer") or DEFAULT["answer"],
-    }
+    })
 
-    log_step(
-        state,
-        "synth:done",
-        status=d.get("status"),
-        followups_n=len(updates["followup_requests"]),
-        answer_preview=(updates["final_answer"] or "")[:160],
+    updates["trace"].append(
+        make_log(
+            state,
+            "synth:done",
+            status=d.get("status"),
+            followups_n=len(updates["followup_requests"]),
+            answer_preview=(updates["final_answer"] or "")[:160],
+        )
     )
 
     return updates
