@@ -51,7 +51,7 @@ def tools_web_node(state: dict) -> dict:
 
 def _mark_done(agent_name: str):
     def node(state: dict) -> dict:
-        log_step(state, "worker:done", agent=agent_name)
+        make_log(state, "worker:done", agent=agent_name)
         return {"done_workers": [agent_name]}
     return node
 
