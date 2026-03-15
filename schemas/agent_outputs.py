@@ -23,10 +23,13 @@ AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
 # ---------- Planner (tables only) ---------
 
 
+from typing import List, Optional
+from pydantic import BaseModel, Field, field_validator
+
 class PlannerTablesOnly(BaseModel):
     tables: List[TABLE_NAME] = Field(default_factory=list)
-    company: str = ""
-    time_hint: str = ""
+    company: Optional[str] = ""
+    time_hint: Optional[str] = ""
     need_web: bool = False
 
     @field_validator("tables", mode="before")
@@ -34,7 +37,6 @@ class PlannerTablesOnly(BaseModel):
     def normalize_tables(cls, v):
         if v is None:
             return []
-        # LLM có thể trả list[str] hoặc list[dict]
         out = []
         for item in v:
             if isinstance(item, dict) and "table" in item:
@@ -45,6 +47,13 @@ class PlannerTablesOnly(BaseModel):
             else:
                 out.append(item)
         return out
+
+    @field_validator("company", "time_hint", mode="before")
+    @classmethod
+    def normalize_nullable_str(cls, v):
+        if v is None:
+            return ""
+        return str(v).strip()
 
 
 # ---------- Keyworder / Detailed plan (optional next step) ----------
