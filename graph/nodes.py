@@ -50,13 +50,17 @@ def tools_web_node(state: dict) -> dict:
 
 
 def agent_synth_node(state: dict) -> dict:
-    return run_synth(state, agent_name="agent_synth")
+    return run_synth(state)
 
 
 def _mark_done(agent_name: str):
     def node(state: dict) -> dict:
-        make_log(state, "worker:done", agent=agent_name)
-        return {"done_workers": [agent_name]}
+        return {
+            "done_workers": [agent_name],
+            "trace": [
+                make_log(state, "worker:done", agent=agent_name)
+            ],
+        }
     return node
 
 
@@ -89,6 +93,86 @@ def collect_all_workers(state: dict) -> dict:
     updates = {
         "trace": [],
     }
+
+    if not expected or not expected.issubset(done):
+        updates["trace"].append(
+            make_log(
+                state,
+                "collect:skip_not_ready",
+                round=round_n,
+                expected=sorted(expected),
+                done=sorted(done),
+            )
+        )
+        updates["collect_decision"] = "stop"
+        return updates
+
+    if round_n in collected_rounds:
+        updates["trace"].append(
+            make_log(
+                state,
+                "collect:skip_already_collected",
+                round=round_n,
+            )
+        )
+        updates["collect_decision"] = "stop"
+        return updates
+
+    worker_results = {}
+    web_summary = state.get("web_summary", "")
+
+    for agent in sorted(expected):
+        text = _latest_agent_response_for(state, agent)
+
+        m = re.search(r"^\s*ANSWER:\s*(.*)$", text, flags=re.MULTILINE | re.DOTALL)
+        if m:
+            payload = m.group(1).strip()
+            kind = "answer"
+            preview = payload[:140]
+        else:
+            payload = json.dumps(
+                {
+                    "error": "worker did not return ANSWER",
+                    "raw": text[:300],
+                },
+                ensure_ascii=False,
+            )
+            kind = "fallback"
+            preview = text[:140]
+
+        if agent == "agent_web":
+            web_summary = payload
+        else:
+            worker_results[agent] = payload
+
+        updates["trace"].append(
+            make_log(
+                state,
+                "collect",
+                agent=agent,
+                round=round_n,
+                kind=kind,
+                preview=preview,
+            )
+        )
+
+    updates.update({
+        "worker_results": worker_results,
+        "web_summary": web_summary,
+        "last_agent": "collector",
+        "collected_rounds": [round_n],
+        "collect_decision": "synth",
+    })
+
+    return updates
+
+def collect_all_workers(state: dict) -> dict:
+    expected = set(state.get("expected_workers", []) or [])
+    done = set(state.get("done_workers", []) or [])
+    round_n = state.get("followup_rounds", 0)
+    collected_rounds = set(state.get("collected_rounds", []) or [])
+
+    updates = {"trace": []}
 
     if not expected or not expected.issubset(done):
         updates["trace"].append(

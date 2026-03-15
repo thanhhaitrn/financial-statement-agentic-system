@@ -57,6 +57,7 @@ def call_agent(state: dict, agent_name: str) -> dict:
 
     if is_worker:
         return {
+            "last_agent": agent_name,
             "worker_messages": [
                 {
                     "agent": agent_name,

@@ -1,6 +1,9 @@
 from graph.logger import make_log
 from graph.router import TABLE_TO_AGENT, _group_targets_by_table
 
+from graph.logger import make_log
+from graph.router import TABLE_TO_AGENT, _group_targets_by_table
+
 def prepare_dispatch_state(state: dict) -> dict:
     plan = state.get("plan", {}) or {}
     plan_tables = state.get("plan_tables", {}) or {}
@@ -20,16 +23,18 @@ def prepare_dispatch_state(state: dict) -> dict:
     updates = {
         "expected_workers": sorted(expected),
         "done_workers": [],
+        "trace": [
+            make_log(
+                state,
+                "dispatch:prepare",
+                expected=sorted(expected),
+                targets_n=len(plan.get("targets", []) or []),
+                tables=list(grouped.keys()),
+                need_web=need_web,
+            )
+        ],
     }
 
-    make_log(
-        state,
-        "dispatch:prepare",
-        expected=updates["expected_workers"],
-        targets_n=len(plan.get("targets", []) or []),
-        tables=list(grouped.keys()),
-        need_web=need_web,
-    )
     return updates
 
 
@@ -59,19 +64,20 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         "expected_workers": sorted(expected),
         "done_workers": [],
         "followup_rounds": state.get("followup_rounds", 0) + 1,
+        "trace": [
+            make_log(
+                state,
+                "followup:prepare",
+                expected=sorted(expected),
+                targets=new_targets[:3],
+                rounds=state.get("followup_rounds", 0) + 1,
+            )
+        ],
     }
 
     if new_targets:
         next_plan = dict(state.get("plan", {}) or {})
         next_plan["targets"] = new_targets
         updates["plan"] = next_plan
-
-    make_log(
-        state,
-        "followup:prepare",
-        expected=updates["expected_workers"],
-        targets=new_targets[:3],
-        rounds=updates["followup_rounds"],
-    )
 
     return updates
