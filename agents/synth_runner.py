@@ -47,7 +47,7 @@ def run_synth(state: dict) -> dict:
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
         "user_query": state.get("user_query", ""),
-        "w_worker_query": "",
+        "worker_query": "",
         "plan_json": json.dumps(state.get("plan", {}), ensure_ascii=False),
         "worker_results_json": json.dumps(worker_bundle, ensure_ascii=False),
         "web_summary": state.get("web_summary", ""),

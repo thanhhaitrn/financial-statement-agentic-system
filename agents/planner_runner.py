@@ -23,7 +23,7 @@ def run_planner(state: dict) -> dict:
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
         "user_query": state.get("user_query", ""),
-        "w_worker_query": "",
+        "worker_query": "",
         "plan_json": "{}",
         "worker_results_json": "{}",
         "web_summary": "",
