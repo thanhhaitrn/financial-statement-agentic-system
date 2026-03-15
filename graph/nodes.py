@@ -50,7 +50,7 @@ def tools_web_node(state: dict) -> dict:
 
 
 def agent_synth_node(state: dict) -> dict:
-    return run_synth(state, "agent_synth")
+    return run_synth(state, agent_name="agent_synth")
 
 
 def _mark_done(agent_name: str):
