@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
-from graph.logger import log_step
+from graph.logger import make_log
 
 
 _COLLECTION = None
@@ -125,7 +125,7 @@ def _prepare_get_related_info_args(
     table = prepared.get("table", "")
     keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
 
-    log_step(state, "tool:using_keywords", agent=agent_name, table=table, kws=keywords[:4])
+    make_log(state, "tool:using_keywords", agent=agent_name, table=table, kws=keywords[:4])
 
     if not keywords:
         return None, f"no keywords in plan for table={table}"
@@ -153,28 +153,28 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     action_text = _latest_agent_response_for(state, agent_name)
 
     if not action_text.strip():
-        log_step(state, "tool:skip_empty_response", agent=agent_name)
+        make_log(state, "tool:skip_empty_response", agent=agent_name)
         return {
             "tool_observations": [{"agent": agent_name, "text": f"[No worker response found for {agent_name}]"}]
         }
 
     tool_name, args, parse_error = _parse_action_block(action_text)
     if parse_error:
-        log_step(state, "tool:skip_no_action", agent=agent_name, preview=action_text[:120], reason=parse_error)
+        make_log(state, "tool:skip_no_action", agent=agent_name, preview=action_text[:120], reason=parse_error)
         return {
             "tool_observations": [{"agent": agent_name, "text": f"[No valid tool action by {agent_name}: {parse_error}]"}]
         }
 
     allowed_tools = _get_allowed_tools(agent_name)
     if tool_name not in allowed_tools:
-        log_step(state, "tool:blocked_not_allowed", agent=agent_name, tool=tool_name)
+        make_log(state, "tool:blocked_not_allowed", agent=agent_name, tool=tool_name)
         return {
             "tool_observations": [{"agent": agent_name, "text": f"[Tool '{tool_name}' NOT allowed for {agent_name}]"}]
         }
 
     tool_func = TOOLS_MAPPING_2_FUNCTIONS.get(tool_name)
     if not tool_func:
-        log_step(state, "tool:blocked_unknown_tool", agent=agent_name, tool=tool_name)
+        make_log(state, "tool:blocked_unknown_tool", agent=agent_name, tool=tool_name)
         return {
             "tool_observations": [{"agent": agent_name, "text": f"[Unknown tool: {tool_name}]"}]
         }
@@ -184,18 +184,18 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     if tool_name == "get_related_info":
         prepared_args, prep_error = _prepare_get_related_info_args(state, agent_name, prepared_args)
         if prep_error:
-            log_step(state, "tool:blocked_prepare", agent=agent_name, tool=tool_name, error=prep_error)
+            make_log(state, "tool:blocked_prepare", agent=agent_name, tool=tool_name, error=prep_error)
             return {
                 "tool_observations": [{"agent": agent_name, "text": f"[Tool blocked: {prep_error}]"}]
             }
 
     if _already_called(state, agent_name, tool_name, prepared_args):
-        log_step(state, "tool:blocked_repeat", agent=agent_name, tool=tool_name, args_preview=_safe_json_dumps(prepared_args)[:200])
+        make_log(state, "tool:blocked_repeat", agent=agent_name, tool=tool_name, args_preview=_safe_json_dumps(prepared_args)[:200])
         return {
             "tool_observations": [{"agent": agent_name, "text": f"[Tool call blocked: repeated identical call: {tool_name}]"}]
         }
 
-    log_step(
+    make_log(
         state,
         "tool:start",
         agent=agent_name,
@@ -208,7 +208,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         raw_results = tool_func(**prepared_args)
         results = _normalize_tool_result(raw_results)
     except Exception as e:
-        log_step(state, "tool:error_runtime", agent=agent_name, tool=tool_name, error_type=type(e).__name__, error=str(e)[:250])
+        make_log(state, "tool:error_runtime", agent=agent_name, tool=tool_name, error_type=type(e).__name__, error=str(e)[:250])
         return {
             "tool_observations": [{"agent": agent_name, "text": f"[Tool error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]"}]
         }
@@ -228,7 +228,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         }]
     }
 
-    log_step(
+    make_log(
         state,
         "tool:done",
         agent=agent_name,
@@ -263,12 +263,12 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                         "args": follow_args,
                         "results": follow_results,
                     })
-                    log_step(state, "tool:followup_done", agent=agent_name, tool=tool_name, table=follow_args.get("table", ""), query=follow_args.get("query", ""), context_len=len(follow_ctx), empty=(len(follow_ctx) == 0))
+                    make_log(state, "tool:followup_done", agent=agent_name, tool=tool_name, table=follow_args.get("table", ""), query=follow_args.get("query", ""), context_len=len(follow_ctx), empty=(len(follow_ctx) == 0))
                 except Exception as e:
                     updates["tool_observations"].append({
                         "agent": agent_name,
                         "text": f"[Tool followup error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]"
                     })
-                    log_step(state, "tool:error_runtime", agent=agent_name, tool=tool_name, error_type=type(e).__name__, error=str(e)[:250])
+                    make_log(state, "tool:error_runtime", agent=agent_name, tool=tool_name, error_type=type(e).__name__, error=str(e)[:250])
 
     return updates

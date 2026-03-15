@@ -1,6 +1,6 @@
 from collections import defaultdict
 from langgraph.types import Send
-from graph.logger import log_step
+from graph.logger import make_log
 
 
 TABLE_TO_AGENT = {
@@ -92,7 +92,7 @@ def dispatch_workers(state: dict):
             )
         )
 
-    log_step(
+    make_log(
         state,
         "dispatch",
         targets_n=len(plan.get("targets", []) or []),

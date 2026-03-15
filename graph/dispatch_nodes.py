@@ -1,4 +1,4 @@
-from graph.logger import log_step
+from graph.logger import make_log
 from graph.router import TABLE_TO_AGENT, _group_targets_by_table
 
 def prepare_dispatch_state(state: dict) -> dict:
@@ -22,7 +22,7 @@ def prepare_dispatch_state(state: dict) -> dict:
         "done_workers": [],
     }
 
-    log_step(
+    make_log(
         state,
         "dispatch:prepare",
         expected=updates["expected_workers"],
@@ -66,7 +66,7 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         next_plan["targets"] = new_targets
         updates["plan"] = next_plan
 
-    log_step(
+    make_log(
         state,
         "followup:prepare",
         expected=updates["expected_workers"],

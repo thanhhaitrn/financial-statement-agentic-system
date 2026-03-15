@@ -1,5 +1,5 @@
 import re
-from graph.logger import log_step
+from graph.logger import make_log
 import json
 
 def _latest_agent_response_for(state: dict, agent_name: str) -> str:
@@ -31,7 +31,7 @@ def collect_all_workers(state: dict) -> dict:
 
     # not ready yet
     if not expected or not expected.issubset(done):
-        log_step(
+        make_log(
             state,
             "collect:skip_not_ready",
             round=round_n,
@@ -42,7 +42,7 @@ def collect_all_workers(state: dict) -> dict:
 
     # already collected this round
     if round_n in collected_rounds:
-        log_step(state, "collect:skip_already_collected", round=round_n)
+        make_log(state, "collect:skip_already_collected", round=round_n)
         return {"collect_decision": "stop"}
 
     worker_results = {}
@@ -72,7 +72,7 @@ def collect_all_workers(state: dict) -> dict:
         else:
             worker_results[agent] = payload
 
-        log_step(
+        make_log(
             state,
             "collect",
             agent=agent,
