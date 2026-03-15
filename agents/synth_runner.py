@@ -1,11 +1,12 @@
 import json
 import re
-from pydantic import ValidationError
+
 from schemas.agent_outputs import SynthDecision
 from graph.logger import log_step
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
+
 
 synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision)
 
@@ -15,6 +16,7 @@ DEFAULT = {
     "missing": [],
     "followups": [],
 }
+
 
 def _fallback_from_text(text: str) -> dict:
     m = re.search(r"^\s*ANSWER:\s*(.*)$", text, flags=re.MULTILINE | re.DOTALL)
@@ -26,9 +28,13 @@ def _fallback_from_text(text: str) -> dict:
         "followups": [],
     }
 
+
 def run_synth(state: dict) -> dict:
-    state["last_agent"] = "agent_synth"
-    log_step(state, "synth:start", followup_rounds=state.get("followup_rounds", 0))
+    log_step(
+        state,
+        "synth:start",
+        followup_rounds=state.get("followup_rounds", 0),
+    )
 
     profile = AGENT_PROFILES["agent_synth"]
 
@@ -70,17 +76,21 @@ def run_synth(state: dict) -> dict:
         )
         d = DEFAULT.copy()
 
-    state["synth_decision"] = d
-    state["followup_requests"] = d.get("followups") or []
-    state["missing_components"] = d.get("missing") or []
-    state["final_answer"] = d.get("answer") or DEFAULT["answer"]
-    state["last_agent_response"] = state["final_answer"]
+    updates = {
+        "last_agent": "agent_synth",
+        "synth_decision": d,
+        "followup_requests": d.get("followups") or [],
+        "missing_components": d.get("missing") or [],
+        "final_answer": d.get("answer") or DEFAULT["answer"],
+        "last_agent_response": d.get("answer") or DEFAULT["answer"],
+    }
 
     log_step(
         state,
         "synth:done",
         status=d.get("status"),
-        followups_n=len(state["followup_requests"]),
-        answer_preview=(state["final_answer"] or "")[:160],
+        followups_n=len(updates["followup_requests"]),
+        answer_preview=(updates["final_answer"] or "")[:160],
     )
-    return state
+
+    return updates

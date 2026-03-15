@@ -1,65 +1,104 @@
 import re
 from graph.logger import log_step
+import json
 
-def should_continue(state: dict) -> str:
-    raw = state.get("w_last_agent_response", "")
-    response = raw.content if hasattr(raw, "content") else (
-        "\n".join(map(str, raw)) if isinstance(raw, list) else str(raw)
-    )
+def _latest_agent_response_for(state: dict, agent_name: str) -> str:
+    items = state.get("worker_messages", []) or []
+    current_round = state.get("followup_rounds", 0)
 
-    action_match = bool(re.search(r"^\s*ACTION:\s*", response, flags=re.MULTILINE))
-    answer_match = bool(re.search(r"^\s*ANSWER:\s*", response, flags=re.MULTILINE))
+    for item in reversed(items):
+        if (
+            str(item.get("agent", "")).strip() == agent_name
+            and str(item.get("kind", "")) == "agent_response"
+            and item.get("round", 0) == current_round
+        ):
+            return str(item.get("response", "") or "")
+    return ""
 
-    # worker-local tool state
-    tool_obs_len = len(state.get("w_tool_observations", []) or [])
-    last_ctx = ((state.get("w_last_tool_results") or {}).get("context") or "").strip()
-    has_tool_ctx = bool(last_ctx)
 
-    # worker-local step counter
-    if state.get("w_num_steps", 0) >= 8:
-        return "collect"
+def make_should_continue(agent_name: str):
+    def route(state: dict) -> str:
+        text = _latest_agent_response_for(state, agent_name)
+        return "tools" if re.search(r"\bACTION\s*:", text) else "collect"
+    return route
 
-    # if we already got tool output and the model STILL asks for tools, stop looping
-    if action_match and (tool_obs_len > 0 or has_tool_ctx):
-        return "collect"
 
-    if action_match:
-        return "tools"
+def collect_all_workers(state: dict) -> dict:
+    expected = set(state.get("expected_workers", []) or [])
+    done = set(state.get("done_workers", []) or [])
+    round_n = state.get("followup_rounds", 0)
+    collected_rounds = set(state.get("collected_rounds", []) or [])
 
-    if answer_match:
-        return "collect"
+    # not ready yet
+    if not expected or not expected.issubset(done):
+        log_step(
+            state,
+            "collect:skip_not_ready",
+            round=round_n,
+            expected=sorted(expected),
+            done=sorted(done),
+        )
+        return {"collect_decision": "stop"}
 
-    return "collect"
+    # already collected this round
+    if round_n in collected_rounds:
+        log_step(state, "collect:skip_already_collected", round=round_n)
+        return {"collect_decision": "stop"}
 
-def which_agents(state: dict) -> str:
-    response = state.get("last_agent", "")
-    return response
+    worker_results = {}
+    web_summary = state.get("web_summary", "")
 
-def ready_to_synthesize(state: dict) -> str:
-    expected = set(state.get("expected_workers", []))
-    done = set(state.get("done_workers", []))
+    for agent in expected:
+        text = _latest_agent_response_for(state, agent)
 
-    decision = "synth" if expected and expected.issubset(done) else "wait"
+        m = re.search(r"^\s*ANSWER:\s*(.*)$", text, flags=re.MULTILINE | re.DOTALL)
+        if m:
+            payload = m.group(1).strip()
+            kind = "answer"
+            preview = payload[:140]
+        else:
+            payload = json.dumps(
+                {
+                    "error": "worker did not return ANSWER",
+                    "raw": text[:300],
+                },
+                ensure_ascii=False,
+            )
+            kind = "fallback"
+            preview = text[:140]
 
-    log_step(
-        state,
-        "barrier",
-        decision=decision,
-        expected_n=len(expected),
-        done_n=len(done),
-        expected=sorted(expected),
-        done=sorted(done),
-    )
+        if agent == "agent_web":
+            web_summary = payload
+        else:
+            worker_results[agent] = payload
 
-    return decision
+        log_step(
+            state,
+            "collect",
+            agent=agent,
+            round=round_n,
+            kind=kind,
+            preview=preview,
+        )
+
+    return {
+        "worker_results": worker_results,
+        "web_summary": web_summary,
+        "last_agent": "collector",
+        "collected_rounds": [round_n],
+        "collect_decision": "synth",
+    }
+
+
+def should_synthesize_after_collect(state: dict) -> str:
+    return state.get("collect_decision", "stop")
+
 
 def synth_route(state: dict) -> str:
     d = state.get("synth_decision", {}) or {}
     rounds = state.get("followup_rounds", 0)
 
     if d.get("status") == "need_more" and rounds < 2:
-        state["followup_rounds"] = rounds + 1
         return "followup"
 
     return "end"
-    return "collect"

@@ -5,12 +5,24 @@ from llm.client import llm
 
 WORKER_AGENTS = {"agent_bs", "agent_is", "agent_cf", "agent_web"}
 
+
 def extract_text(resp):
     if isinstance(resp, str):
         return resp
     if hasattr(resp, "content"):
-        return resp.content
-    return str(resp)
+        return str(resp.content or "")
+    return str(resp or "")
+
+
+def _tool_obs_for_agent(state: dict, agent_name: str) -> str:
+    items = state.get("tool_observations", []) or []
+    lines = [
+        str(x.get("text", ""))
+        for x in items
+        if str(x.get("agent", "")).strip() == agent_name
+    ]
+    return "\n".join(lines)
+
 
 def call_agent(state: dict, agent_name: str) -> dict:
     profile = AGENT_PROFILES[agent_name]
@@ -18,29 +30,16 @@ def call_agent(state: dict, agent_name: str) -> dict:
 
     is_worker = agent_name in WORKER_AGENTS
 
-    user_q = state.get("user_query", "")
-    wq = state.get("w_worker_query", "") if is_worker else ""
-
-    # worker-local context only for workers
-    last_resp = state.get("w_last_agent_response", "") if is_worker else state.get("last_agent_response", "")
-    tool_obs_list = state.get("w_tool_observations", []) if is_worker else state.get("tool_observations", [])
-    tool_obs = "\n".join(tool_obs_list or [])
-
     payload = {
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
-
-        # no more `query`
-        "user_query": user_q,
-        "w_worker_query": wq,
-
+        "user_query": state.get("user_query", ""),
+        "worker_query": state.get("worker_query", "") if is_worker else "",
         "plan_json": json.dumps(state.get("plan", {}), ensure_ascii=False),
         "worker_results_json": json.dumps(state.get("worker_results", {}), ensure_ascii=False),
         "web_summary": state.get("web_summary", ""),
-
-        "last_agent_response": last_resp,
-        "tool_observations": tool_obs,
-
+        "last_agent_response": state.get("last_agent_response", "") if not is_worker else "",
+        "tool_observations": _tool_obs_for_agent(state, agent_name) if is_worker else "",
         "tools_list": profile.get("tool_list", ""),
     }
 
@@ -48,14 +47,18 @@ def call_agent(state: dict, agent_name: str) -> dict:
     text = extract_text(resp)
 
     if is_worker:
-        # worker-local writes (safe under parallel fan-out)
-        state["w_last_agent_response"] = text
-        state["w_last_agent"] = agent_name
-        state["w_num_steps"] = state.get("w_num_steps", 0) + 1
-    else:
-        # global writes (planner/keyworder/synth are sequential)
-        state["last_agent_response"] = text
-        state["last_agent"] = agent_name
-        state["num_steps"] = state.get("num_steps", 0) + 1
+        return {
+            "worker_messages": [
+                {
+                    "agent": agent_name,
+                    "kind": "agent_response",
+                    "round": state.get("followup_rounds", 0),
+                    "response": text,
+                }
+            ]
+        }
 
-    return state
+    return {
+        "last_agent": agent_name,
+        "last_agent_response": text,
+    }

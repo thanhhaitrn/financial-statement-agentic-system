@@ -1,39 +1,39 @@
-from typing import TypedDict, List, Dict, Any
+from typing import TypedDict, Any, Annotated
+import operator
 
-class AgentState(TypedDict, total=False):
-    # input (global)
+
+def merge_dicts(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
+    out = dict(left or {})
+    out.update(right or {})
+    return out
+
+class GraphState(TypedDict, total=False):
+    # input
     user_query: str
 
-    # planning (global)
-    plan_tables: Dict[str, Any]
-    plan: Dict[str, Any]
+    # branch-specific input injected by Send(...)
+    worker_query: str
 
-    # worker-local (IMPORTANT)
-    w_worker_query: str
-    
-    w_last_agent_response: Any
-    w_last_agent: str
-    w_num_steps: int
-
-    w_tool_observations: List[str]
-    w_last_tool_results: Dict[str, Any]
-    w_seen_tool_calls: List[Any]
-
-    # worker outputs (global)
-    worker_results: Dict[str, Any]
-    worker_messages: List[Dict[str, Any]]
-    web_summary: str
-
-    # orchestration (global)
-    expected_workers: List[str]
-    done_workers: List[str]
-
-    # synth/follow-up (global)
-    synth_decision: Dict[str, Any]
-    followup_requests: List[Dict[str, Any]]
-    missing_components: List[str]
+    # sequential/global
+    last_agent: str
+    last_agent_response: str
+    plan_tables: dict
+    plan: dict
+    expected_workers: list[str]
     followup_rounds: int
+    followup_requests: list[str]
+    missing_components: list[str]
+    web_summary: str
+    synth_decision: dict
+    final_answer: str
 
-    # debug (global)
-    run_id: str
-    trace: List[Dict[str, Any]]
+    # collector / routing control
+    collect_decision: str
+
+    # parallel / mergeable
+    worker_messages: Annotated[list[dict], operator.add]
+    tool_observations: Annotated[list[dict], operator.add]
+    tool_results: Annotated[list[dict], operator.add]
+    worker_results: Annotated[dict[str, Any], merge_dicts]
+    done_workers: Annotated[list[str], operator.add]
+    collected_rounds: Annotated[list[int], operator.add]

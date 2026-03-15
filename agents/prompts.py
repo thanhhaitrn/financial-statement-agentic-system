@@ -2,9 +2,9 @@ from langchain_core.prompts import ChatPromptTemplate
 
 PROMPT_TEMPLATE = ChatPromptTemplate.from_messages([
     ("system", "You are {role}"),
-    ("system", "You can access to these actions:\n{tools_list}"),
+    ("system", "You can access these actions:\n{tools_list}"),
     ("human", "User query: {user_query}"),
-    ("system", "Worker retrieval query (if any):\n{w_worker_query}"),
+    ("system", "Worker query:\n{worker_query}"),
     ("system", "Planner plan (JSON):\n{plan_json}"),
     ("system", "Worker results (JSON):\n{worker_results_json}"),
     ("system", "Web summary:\n{web_summary}"),

@@ -1,21 +1,20 @@
-import json
 from pydantic import ValidationError
-from schemas.agent_outputs import PlannerTablesOnly
 from agents.profiles import AGENT_PROFILES
+from schemas.agent_outputs import PlannerTablesOnly
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import log_step
 
-DEFAULT_PLAN_TABLES = {"tables": [], "company": "", "time_hint": "", "need_web": False}
+DEFAULT_PLAN_TABLES = {"tables": []}
+
 planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerTablesOnly)
 
-def run_planner(state: dict) -> dict:
-    state["last_agent"] = "agent_planner"
 
+def run_planner(state: dict) -> dict:
     log_step(
         state,
         "planner:start",
-        user_query=state.get("user_query",""),
+        user_query=state.get("user_query", ""),
     )
 
     profile = AGENT_PROFILES["agent_planner"]
@@ -23,11 +22,8 @@ def run_planner(state: dict) -> dict:
     payload = {
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
-
-        "user_query": state.get("user_query",""),
-        "w_worker_query": "",   # optional
-
-        # planner does NOT need these, keep minimal
+        "user_query": state.get("user_query", ""),
+        "w_worker_query": "",
         "plan_json": "{}",
         "worker_results_json": "{}",
         "web_summary": "",
@@ -36,13 +32,16 @@ def run_planner(state: dict) -> dict:
         "tools_list": profile.get("tool_list", ""),
     }
 
+    updates = {
+        "last_agent": "agent_planner",
+    }
+
     try:
         plan_obj: PlannerTablesOnly = planner_chain.invoke(payload)
-        state["plan_tables"] = plan_obj.model_dump()
-        log_step(state, "planner:done", plan_tables=state["plan_tables"])
-    except (ValidationError, Exception) as e:
-        state["plan_tables"] = DEFAULT_PLAN_TABLES
+        updates["plan_tables"] = plan_obj.model_dump()
+        log_step(state, "planner:done", plan_tables=updates["plan_tables"])
+    except Exception as e:
+        updates["plan_tables"] = DEFAULT_PLAN_TABLES
         log_step(state, "planner:error", error_type=type(e).__name__, error=str(e)[:200])
 
-    state["num_steps"] = state.get("num_steps", 0) + 1
-    return state
+    return updates

@@ -1,5 +1,8 @@
 import os
 from langchain_ollama import ChatOllama
+from dotenv import load_dotenv
+
+load_dotenv()
 
 """def create_llm():
     return ChatOllama(
@@ -17,8 +20,6 @@ from langchain_ollama import ChatOllama
     base_url="http://localhost:11434",
 )"""
 
-import os
-from langchain_ollama import ChatOllama
 
 OLLAMA_API_KEY = os.getenv("OLLAMA_API_KEY", "")
 if not OLLAMA_API_KEY:

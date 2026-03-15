@@ -1,40 +1,32 @@
 from langgraph.types import Send
-from graph.logger import log_step
-from graph.state_utils import make_child_state  
+
 
 def dispatch_followups(state: dict):
     reqs = state.get("followup_requests", []) or []
     jobs = []
-    expected = set()
-
-    # build plan.targets for followup run (so tool_runner can override query by kws)
-    new_targets = []
-    for r in reqs:
-        agent = r.get("agent")
-        table = r.get("table", "")
-        kws = r.get("keywords", []) or []
-        if not agent:
-            continue
-        expected.add(agent)
-        if table and kws:
-            new_targets.append({"table": table, "keywords": kws})
-
-    # parent holds expected/done for barrier
-    state["expected_workers"] = list(expected)
-    state["done_workers"] = []
-    log_step(state, "followup:dispatch", expected=state["expected_workers"], targets=new_targets[:3])
+    seen = set()
 
     for r in reqs:
-        agent = r.get("agent")
-        if not agent:
+        if not isinstance(r, dict):
             continue
 
-        child = make_child_state(state)  # stripped global keys + reset worker-local
+        agent = str(r.get("agent", "")).strip()
+        if not agent or agent in seen:
+            continue
 
-        # overwrite plan for deterministic tool queries
-        child["plan"] = {"targets": new_targets}
-        child["w_worker_query"] = child.get("root_query", "")
+        worker_query = str(r.get("query", "") or "").strip()
+        if not worker_query:
+            worker_query = state.get("user_query", "")
 
-        jobs.append(Send(agent, child))
+        jobs.append(
+            Send(
+                agent,
+                {
+                    "worker_query": worker_query,
+                    "followup_rounds": state.get("followup_rounds", 0),
+                },
+            )
+        )
+        seen.add(agent)
 
     return jobs
