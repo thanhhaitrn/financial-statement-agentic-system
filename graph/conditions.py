@@ -16,6 +16,14 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
 
 def make_should_continue(agent_name: str):
     def route(state: dict) -> str:
+        forced = set(state.get("force_collect_agents", []) or [])
+        if agent_name in forced:
+            return "collect"
+
+        count = int((state.get("tool_call_counts", {}) or {}).get(agent_name, 0))
+        if count >= 2:
+            return "collect"
+
         text = _latest_agent_response_for(state, agent_name)
         return "tools" if re.search(r"\bACTION\s*:", text) else "collect"
     return route

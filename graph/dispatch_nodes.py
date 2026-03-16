@@ -23,6 +23,8 @@ def prepare_dispatch_state(state: dict) -> dict:
     updates = {
         "expected_workers": sorted(expected),
         "done_workers": [],
+        "tool_call_counts" : {},
+        "force_collect_agents" : [],
         "trace": [
             make_log(
                 state,
@@ -64,6 +66,8 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         "expected_workers": sorted(expected),
         "done_workers": [],
         "followup_rounds": state.get("followup_rounds", 0) + 1,
+        "tool_call_counts": {},
+        "force_collect_agents": [],
         "trace": [
             make_log(
                 state,
