@@ -7,7 +7,7 @@ from agents.planner_runner import run_planner
 from agents.synth_runner import run_synth
 from agents.keyworder_runner import run_keyworder
 from graph.logger import make_log
-from schemas.agent_outputs import parse_answer_block, WorkerOutput
+from schemas.agent_outputs import parse_worker_output, WorkerOutput
 
 
 def agent_planner(state: dict) -> dict:
@@ -124,7 +124,7 @@ def collect_all_workers(state: dict) -> dict:
         text = _latest_agent_response_for(state, agent)
 
         try:
-            data = parse_answer_block(text)
+            data = parse_worker_output(text)
             kind = "answer"
             preview = json.dumps(data, ensure_ascii=False)[:140]
 
