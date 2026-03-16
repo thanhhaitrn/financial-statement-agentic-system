@@ -1,5 +1,6 @@
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Literal, Dict, Any, Optional
+import re, json
 
 TABLE_NAME = Literal[
     "BẢNG CÂN ĐỐI KẾ TOÁN",
@@ -81,6 +82,29 @@ class KeywordPlan(BaseModel):
 class ToolCall(BaseModel):
     action: Literal["get_related_info", "web_search", "calculate_dti"]
     arguments: Dict[str, Any] = Field(default_factory=dict)
+
+class WorkerFact(BaseModel):
+    item_name: str
+    value: str
+    source: str
+
+class WorkerOutput(BaseModel):
+    table: str
+    facts: list[WorkerFact] = Field(default_factory=list)
+    missing: list[str] = Field(default_factory=list)
+    notes: str = ""
+
+
+def extract_answer_json(text: str) -> dict:
+    m = re.search(r"ANSWER:\s*(\{.*\})\s*$", text, flags=re.DOTALL)
+    if not m:
+        raise ValueError("Không tìm thấy JSON sau ANSWER:")
+    return json.loads(m.group(1))
+
+
+def parse_worker_output(text: str):
+    data = extract_answer_json(text)
+    return WorkerOutput.model_validate(data)
 
 
 # ---------- Synth ----------

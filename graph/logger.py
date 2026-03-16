@@ -5,8 +5,7 @@ from typing import Any, Dict
 
 def make_log(state: dict, event: str, **data: Any) -> dict:
     entry: Dict[str, Any] = {
-        "event": event,
-        "agent": state.get("last_agent", ""),
+        "event": event
     }
     entry.update(data)
     return entry

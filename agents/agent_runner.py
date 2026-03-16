@@ -1,8 +1,9 @@
-import json
+import json, re
 from agents.prompts import PROMPT_TEMPLATE
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from graph.logger import make_log
+from schemas.agent_outputs import WorkerOutput, parse_worker_output, extract_answer_json
 
 WORKER_AGENTS = {"agent_bs", "agent_is", "agent_cf", "agent_web"}
 
@@ -46,6 +47,7 @@ def call_agent(state: dict, agent_name: str) -> dict:
 
     resp = chain.invoke(payload)
     text = extract_text(resp)
+
     log_entry = make_log(
         state,
         "agent:done",
@@ -54,15 +56,24 @@ def call_agent(state: dict, agent_name: str) -> dict:
         response_preview=text[:160],
     )
 
-
     if is_worker:
+        parsed_output = None
+        parse_error = ""
+
+        try:
+            parsed_output = parse_worker_output(text).model_dump()
+        except Exception as e:
+            parse_error = str(e)
+
         return {
             "worker_messages": [
                 {
                     "agent": agent_name,
                     "kind": "agent_response",
                     "round": state.get("followup_rounds", 0),
-                    "response": text
+                    "response": text,
+                    "parsed_output": parsed_output,
+                    "parse_error": parse_error,
                 }
             ],
             "trace": [log_entry]

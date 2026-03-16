@@ -37,11 +37,7 @@ def run_synth(state: dict) -> dict:
     )
 
     profile = AGENT_PROFILES["agent_synth"]
-
-    worker_bundle = {
-        "worker_results": state.get("worker_results", {}),
-        "worker_messages": state.get("worker_messages", []),
-    }
+    worker_results = state.get("worker_results", {})
 
     payload = {
         "role": profile["role"],
@@ -49,7 +45,7 @@ def run_synth(state: dict) -> dict:
         "user_query": state.get("user_query", ""),
         "worker_query": "",
         "plan_json": json.dumps(state.get("plan", {}), ensure_ascii=False),
-        "worker_results_json": json.dumps(worker_bundle, ensure_ascii=False),
+        "worker_results_json": json.dumps(worker_results, ensure_ascii=False),
         "web_summary": state.get("web_summary", ""),
         "last_agent_response": "",
         "tool_observations": "",

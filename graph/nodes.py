@@ -7,6 +7,7 @@ from agents.planner_runner import run_planner
 from agents.synth_runner import run_synth
 from agents.keyworder_runner import run_keyworder
 from graph.logger import make_log
+from schemas.agent_outputs import parse_answer_block, WorkerOutput
 
 
 def agent_planner(state: dict) -> dict:
@@ -90,88 +91,6 @@ def collect_all_workers(state: dict) -> dict:
     round_n = state.get("followup_rounds", 0)
     collected_rounds = set(state.get("collected_rounds", []) or [])
 
-    updates = {
-        "trace": [],
-    }
-
-    if not expected or not expected.issubset(done):
-        updates["trace"].append(
-            make_log(
-                state,
-                "collect:skip_not_ready",
-                round=round_n,
-                expected=sorted(expected),
-                done=sorted(done),
-            )
-        )
-        updates["collect_decision"] = "stop"
-        return updates
-
-    if round_n in collected_rounds:
-        updates["trace"].append(
-            make_log(
-                state,
-                "collect:skip_already_collected",
-                round=round_n,
-            )
-        )
-        updates["collect_decision"] = "stop"
-        return updates
-
-    worker_results = {}
-    web_summary = state.get("web_summary", "")
-
-    for agent in sorted(expected):
-        text = _latest_agent_response_for(state, agent)
-
-        m = re.search(r"^\s*ANSWER:\s*(.*)$", text, flags=re.MULTILINE | re.DOTALL)
-        if m:
-            payload = m.group(1).strip()
-            kind = "answer"
-            preview = payload[:140]
-        else:
-            payload = json.dumps(
-                {
-                    "error": "worker did not return ANSWER",
-                    "raw": text[:300],
-                },
-                ensure_ascii=False,
-            )
-            kind = "fallback"
-            preview = text[:140]
-
-        if agent == "agent_web":
-            web_summary = payload
-        else:
-            worker_results[agent] = payload
-
-        updates["trace"].append(
-            make_log(
-                state,
-                "collect",
-                agent=agent,
-                round=round_n,
-                kind=kind,
-                preview=preview,
-            )
-        )
-
-    updates.update({
-        "worker_results": worker_results,
-        "web_summary": web_summary,
-        "last_agent": "collector",
-        "collected_rounds": [round_n],
-        "collect_decision": "synth",
-    })
-
-    return updates
-
-def collect_all_workers(state: dict) -> dict:
-    expected = set(state.get("expected_workers", []) or [])
-    done = set(state.get("done_workers", []) or [])
-    round_n = state.get("followup_rounds", 0)
-    collected_rounds = set(state.get("collected_rounds", []) or [])
-
     updates = {"trace": []}
 
     if not expected or not expected.issubset(done):
@@ -204,26 +123,36 @@ def collect_all_workers(state: dict) -> dict:
     for agent in sorted(expected):
         text = _latest_agent_response_for(state, agent)
 
-        m = re.search(r"^\s*ANSWER:\s*(.*)$", text, flags=re.MULTILINE | re.DOTALL)
-        if m:
-            payload = m.group(1).strip()
+        try:
+            data = parse_answer_block(text)
             kind = "answer"
-            preview = payload[:140]
-        else:
-            payload = json.dumps(
-                {
-                    "error": "worker did not return ANSWER",
-                    "raw": text[:300],
-                },
-                ensure_ascii=False,
-            )
+            preview = json.dumps(data, ensure_ascii=False)[:140]
+
+            if agent == "agent_web":
+                web_summary = json.dumps(data, ensure_ascii=False)
+            else:
+                parsed = WorkerOutput.model_validate(data)
+                worker_results[agent] = parsed.model_dump()
+
+        except Exception as e:
+            fallback = {
+                "table": "",
+                "facts": [],
+                "notes": f"Parse lỗi từ {agent}: {str(e)}"
+            }
             kind = "fallback"
             preview = text[:140]
 
-        if agent == "agent_web":
-            web_summary = payload
-        else:
-            worker_results[agent] = payload
+            if agent == "agent_web":
+                web_summary = json.dumps(
+                    {
+                        "error": "worker did not return valid ANSWER",
+                        "raw": text[:300],
+                    },
+                    ensure_ascii=False,
+                )
+            else:
+                worker_results[agent] = fallback
 
         updates["trace"].append(
             make_log(

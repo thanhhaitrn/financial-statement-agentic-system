@@ -156,12 +156,17 @@ AGENT_PROFILES = {
             ACTION: get_related_info
             ARGUMENTS: {"query": "..."}
 
-            B) Trả kết quả cuối:
             ANSWER: {
-            "table": "BẢNG CÂN ĐỐI KẾ TOÁN",
-            "found": {"<keyword_1>": "<value_or_empty>", "<keyword_2>": "<value_or_empty>"},
-            "missing": ["<keyword_missing_...>"],
-            "evidence": ["...","..."],
+            "table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+            "facts": [
+                {
+                "item_name": "...",
+                "time_hint": "...",
+                "value": "...",
+                "source": "..."
+                }
+            ],
+            "missing": [],
             "notes": ""
             }
 
@@ -205,12 +210,17 @@ AGENT_PROFILES = {
                 ACTION: get_related_info
                 ARGUMENTS: {"query": "..."}
 
-                B) Trả kết quả cuối (JSON sau ANSWER:):
                 ANSWER: {
-                "table": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+                "table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
                 "facts": [
-                    {"item_name":"...","value":"...","source":"..."}
+                    {
+                    "item_name": "...",
+                    "time_hint": "...",
+                    "value": "...",
+                    "source": "..."
+                    }
                 ],
+                "missing": [],
                 "notes": ""
                 }
 
@@ -246,12 +256,17 @@ AGENT_PROFILES = {
             ACTION: get_related_info
             ARGUMENTS: {"query": "..."}
 
-            B) Trả kết quả cuối (JSON sau ANSWER:):
             ANSWER: {
             "table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
             "facts": [
-                {"item_name":"...","value":"...","source":"..."}
+                {
+                "item_name": "...",
+                "time_hint": "...",
+                "value": "...",
+                "source": "..."
+                }
             ],
+            "missing": [],
             "notes": ""
             }
 
