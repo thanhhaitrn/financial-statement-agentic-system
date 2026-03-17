@@ -60,7 +60,13 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         expected.add(agent)
 
         if table and kws:
-            new_targets.append({"table": table, "keywords": kws})
+            new_targets.append(
+                {
+                    "table": table,
+                    "keywords": [str(k).strip() for k in kws if str(k).strip()],
+                    "source": "followup",
+                }
+            )
 
     updates = {
         "expected_workers": sorted(expected),

@@ -4,7 +4,7 @@ from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
-from schemas.keyword_guard import validate_keywords
+from schemas.keyword_guard import repair_keywords, validate_keywords
 
 keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
 
@@ -83,6 +83,20 @@ def run_keyworder(state: dict) -> dict:
                         "from": x.get("raw", ""),
                         "to": s,
                     })
+
+            if not valid_kws and kws:
+                fallback_repairs, fallback_details = repair_keywords(table, kws)
+                for repaired_kw in fallback_repairs:
+                    if repaired_kw not in valid_kws:
+                        valid_kws.append(repaired_kw)
+                for x in fallback_details:
+                    repaired_all.append(
+                        {
+                            "table": table,
+                            "from": x.get("raw", ""),
+                            "to": x.get("suggested", ""),
+                        }
+                    )
 
             valid_kws = list(dict.fromkeys(valid_kws))
             cleaned_targets.append({"table": table, "keywords": valid_kws})

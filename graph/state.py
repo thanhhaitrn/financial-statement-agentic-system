@@ -22,7 +22,7 @@ class GraphState(TypedDict, total=False):
     plan: dict
     expected_workers: list[str]
     followup_rounds: int
-    followup_requests: list[str]
+    followup_requests: list[dict]
     missing_components: list[str]
     web_summary: str
     synth_decision: dict

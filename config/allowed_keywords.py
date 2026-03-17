@@ -109,6 +109,7 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
 ALIASES: Dict[str, str] = {
     # BS
     "tiền và tương đương tiền": "tiền và các khoản tương đương tiền",
+    "tổng tài sản": "tổng cộng tài sản",
     "phải thu khách hàng ngắn hạn": "phải thu ngắn hạn của khách hàng",
     "chi phí qldn": "chi phí quản lý doanh nghiệp",
     "lnst": "lợi nhuận sau thuế thu nhập doanh nghiệp",  

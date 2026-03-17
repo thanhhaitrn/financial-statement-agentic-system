@@ -378,6 +378,7 @@ def run_synth(state: dict) -> dict:
 
     return {
         "synth_decision": decision,
+        "followup_requests": decision.get("followups", []) or [],
         "last_agent_response": decision.get("answer", ""),
         "normalized_worker_results": normalized_worker_results,
         "trace": [*trace, *normalize_logs, done_log],

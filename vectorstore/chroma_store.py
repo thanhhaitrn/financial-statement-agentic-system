@@ -1,5 +1,5 @@
 import chromadb
-from chromadb.config import Settings
+from chromadb.config import settings
 from chromadb.utils.embedding_functions import ONNXMiniLM_L6_V2
 import os
 

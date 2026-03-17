@@ -1,11 +1,12 @@
 from __future__ import annotations
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 import re
 from difflib import get_close_matches
 
 from config.allowed_keywords import ALLOWED_KEYWORDS, ALIASES
 
 _SPACE_RE = re.compile(r"\s+")
+_TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
 
 def normalize_keyword(k: str) -> str:
     k = (k or "").strip().lower()
@@ -63,3 +64,74 @@ def validate_keywords(
         invalid_details.append({"raw": raw, "normalized": nk, "suggested": None})
 
     return valid, invalid_details
+
+
+def _best_effort_suggestion(table: str, keyword: str) -> Optional[str]:
+    allowed = ALLOWED_KEYWORDS.get(table, set())
+    nk = normalize_keyword(keyword)
+    if not nk or not allowed:
+        return None
+
+    if nk in allowed:
+        return nk
+
+    tokens = set(_TOKEN_RE.findall(nk))
+    if len(tokens) < 3:
+        return None
+
+    substring_matches = [
+        candidate
+        for candidate in allowed
+        if nk in candidate or candidate in nk
+    ]
+    if substring_matches:
+        substring_matches.sort(key=lambda item: (abs(len(item) - len(nk)), len(item), item))
+        return substring_matches[0]
+
+    loose_matches = get_close_matches(nk, list(allowed), n=1, cutoff=0.6)
+    if loose_matches:
+        return loose_matches[0]
+
+    scored: List[Tuple[float, str]] = []
+    for candidate in allowed:
+        candidate_tokens = set(_TOKEN_RE.findall(candidate))
+        if not candidate_tokens:
+            continue
+        overlap = len(tokens & candidate_tokens)
+        if overlap == 0:
+            continue
+        score = overlap / max(len(tokens), len(candidate_tokens))
+        scored.append((score, candidate))
+
+    if not scored:
+        return None
+
+    scored.sort(key=lambda item: (-item[0], abs(len(item[1]) - len(nk)), item[1]))
+    best_score, best_candidate = scored[0]
+    if best_score >= 0.6:
+        return best_candidate
+
+    return None
+
+
+def repair_keywords(table: str, keywords: List[str]) -> Tuple[List[str], List[Dict]]:
+    repaired: List[str] = []
+    details: List[Dict] = []
+    seen = set()
+
+    for raw in (keywords or []):
+        suggestion = _best_effort_suggestion(table, raw)
+        if not suggestion:
+            continue
+        if suggestion not in seen:
+            repaired.append(suggestion)
+            seen.add(suggestion)
+        details.append(
+            {
+                "raw": raw,
+                "normalized": normalize_keyword(raw),
+                "suggested": suggestion,
+            }
+        )
+
+    return repaired, details

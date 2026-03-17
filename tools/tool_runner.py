@@ -114,6 +114,8 @@ def _prepare_get_related_info_args(
 
     table = prepared.get("table", "")
     keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
+    requested_query = str(args.get("query", "")).strip()
+    is_followup_round = int(state.get("followup_rounds", 0) or 0) > 0
 
     log_entry = make_debug_log(
         state,
@@ -124,6 +126,9 @@ def _prepare_get_related_info_args(
     )
 
     if not keywords:
+        if is_followup_round and requested_query:
+            prepared["query"] = requested_query
+            return prepared, None, log_entry
         return None, f"no keywords in plan for table={table}", log_entry
 
     prepared["query"] = keywords[0]
