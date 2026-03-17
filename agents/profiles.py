@@ -152,12 +152,12 @@ AGENT_PROFILES = {
             - Không truy xuất bảng khác, không HANDOFF.
 
             ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2, không thêm chữ nào khác)
-            A) Gọi tool:
+            A) 
             ACTION: get_related_info
             ARGUMENTS: {"query": "..."}
 
-            ANSWER: {
-            "table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+            B) 
+            {"table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
             "facts": [
                 {
                 "item_name": "...",
@@ -206,12 +206,12 @@ AGENT_PROFILES = {
                 3) Không bịa số liệu, không suy đoán theo kiến thức chung.
 
                 ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2)
-                A) Gọi tool:
+                A) 
                 ACTION: get_related_info
                 ARGUMENTS: {"query": "..."}
 
-                ANSWER: {
-                "table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+                B) 
+                {"table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
                 "facts": [
                     {
                     "item_name": "...",
@@ -252,12 +252,12 @@ AGENT_PROFILES = {
             2) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
 
             ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2)
-            A) Gọi tool:
+            A) 
             ACTION: get_related_info
             ARGUMENTS: {"query": "..."}
 
-            ANSWER: {
-            "table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+            B) 
+            {"table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
             "facts": [
                 {
                 "item_name": "...",
