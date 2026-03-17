@@ -8,7 +8,7 @@ from pydantic import ValidationError
 
 from agents.profiles import AGENT_PROFILES
 from agents.prompts import PROMPT_TEMPLATE
-from graph.logger import make_log
+from graph.logger import debug_enabled, make_debug_log, make_log
 from llm.client import llm
 from schemas.agent_outputs import SynthDecision
 
@@ -228,6 +228,8 @@ def _normalize_worker_result(raw: Any, agent_name: str = "") -> Tuple[Normalized
 
 def _normalize_all_worker_results(
     worker_results: Dict[str, Any],
+    *,
+    emit_debug_logs: bool = False,
 ) -> Tuple[Dict[str, NormalizedWorkerResult], List[Dict[str, Any]]]:
     normalized: Dict[str, NormalizedWorkerResult] = {}
     logs: List[Dict[str, Any]] = []
@@ -235,15 +237,18 @@ def _normalize_all_worker_results(
     for agent_name, raw in (worker_results or {}).items():
         item, kind = _normalize_worker_result(raw, agent_name=agent_name)
         normalized[agent_name] = item
-        logs.append(
-            {
+        should_log = emit_debug_logs or kind != "structured" or item["action_pending"] or len(item["facts"]) == 0
+        if should_log:
+            entry = {
                 "event": "synth:normalize_worker_result",
                 "agent": agent_name,
                 "kind": kind,
                 "facts_n": len(item["facts"]),
                 "action_pending": item["action_pending"],
             }
-        )
+            if emit_debug_logs:
+                entry["debug"] = True
+            logs.append(entry)
 
     return normalized, logs
 
@@ -341,15 +346,22 @@ def _invoke_synth(payload: SynthPayload) -> Dict[str, Any]:
 
 
 def run_synth(state: dict) -> dict:
-    start_log = make_log(
+    profile = AGENT_PROFILES["agent_synth"]
+    raw_worker_results = state.get("worker_results", {}) or {}
+    trace = []
+
+    start_log = make_debug_log(
         state,
         "synth:start",
         followup_rounds=state.get("followup_rounds", 0),
     )
+    if start_log:
+        trace.append(start_log)
 
-    profile = AGENT_PROFILES["agent_synth"]
-    raw_worker_results = state.get("worker_results", {}) or {}
-    normalized_worker_results, normalize_logs = _normalize_all_worker_results(raw_worker_results)
+    normalized_worker_results, normalize_logs = _normalize_all_worker_results(
+        raw_worker_results,
+        emit_debug_logs=debug_enabled(state),
+    )
     facts = _flatten_facts(normalized_worker_results)
     facts_summary = _build_facts_summary(normalized_worker_results)
     payload = _build_payload(state, profile, normalized_worker_results, facts_summary)
@@ -368,5 +380,5 @@ def run_synth(state: dict) -> dict:
         "synth_decision": decision,
         "last_agent_response": decision.get("answer", ""),
         "normalized_worker_results": normalized_worker_results,
-        "trace": [start_log, *normalize_logs, done_log],
+        "trace": [*trace, *normalize_logs, done_log],
     }

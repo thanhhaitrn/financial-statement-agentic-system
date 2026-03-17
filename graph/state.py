@@ -10,6 +10,7 @@ def merge_dicts(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
 class GraphState(TypedDict, total=False):
     # input
     user_query: str
+    debug_trace: bool
 
     # branch-specific input injected by Send(...)
     worker_query: str

@@ -3,21 +3,24 @@ from schemas.agent_outputs import KeywordPlan
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
-from graph.logger import make_log
+from graph.logger import make_debug_log, make_log
 from schemas.keyword_guard import validate_keywords
 
 keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
 
 
 def run_keyworder(state: dict) -> dict:
-    start_log = make_log(
+    profile = AGENT_PROFILES["agent_keyworder"]
+    plan_tables = state.get("plan_tables", {}) or {}
+    trace = []
+
+    start_log = make_debug_log(
         state,
         "keyworder:start",
         plan_tables=state.get("plan_tables", {}),
     )
-
-    profile = AGENT_PROFILES["agent_keyworder"]
-    plan_tables = state.get("plan_tables", {}) or {}
+    if start_log:
+        trace.append(start_log)
 
     selected_tables = []
     seen = set()
@@ -42,7 +45,7 @@ def run_keyworder(state: dict) -> dict:
 
     updates = {
         "last_agent": "agent_keyworder",
-        "trace": [start_log],
+        "trace": trace,
     }
 
     try:

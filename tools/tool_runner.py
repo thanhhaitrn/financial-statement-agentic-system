@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
-from graph.logger import make_log
+from graph.logger import make_debug_log, make_log
 
 
 _COLLECTION = None
@@ -115,7 +115,7 @@ def _prepare_get_related_info_args(
     table = prepared.get("table", "")
     keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
 
-    log_entry = make_log(
+    log_entry = make_debug_log(
         state,
         "tool:using_keywords",
         agent=agent_name,

@@ -6,7 +6,7 @@ from tools.tool_runner import call_tool_for_agent, WORKER_TO_TABLE
 from agents.planner_runner import run_planner
 from agents.synth_runner import run_synth
 from agents.keyworder_runner import run_keyworder
-from graph.logger import make_log
+from graph.logger import make_debug_log, make_log
 from schemas.agent_outputs import parse_worker_output
 
 
@@ -56,11 +56,13 @@ def agent_synth_node(state: dict) -> dict:
 
 def _mark_done(agent_name: str):
     def node(state: dict) -> dict:
+        trace = []
+        log_entry = make_debug_log(state, "worker:done", agent=agent_name)
+        if log_entry:
+            trace.append(log_entry)
         return {
             "done_workers": [agent_name],
-            "trace": [
-                make_log(state, "worker:done", agent=agent_name)
-            ],
+            "trace": trace,
         }
     return node
 
@@ -127,7 +129,11 @@ def collect_all_workers(state: dict) -> dict:
             parsed = parse_worker_output(text)
             data = parsed.model_dump()
             kind = "answer"
-            preview = json.dumps(data, ensure_ascii=False)[:140]
+            summary = {
+                "table": data.get("table", ""),
+                "facts_n": len(data.get("facts", []) or []),
+                "missing_n": len(data.get("missing", []) or []),
+            }
 
             if agent == "agent_web":
                 web_summary = json.dumps(data, ensure_ascii=False)
@@ -141,7 +147,10 @@ def collect_all_workers(state: dict) -> dict:
                 "notes": f"Parse lỗi từ {agent}: {str(e)}"
             }
             kind = "fallback"
-            preview = text[:140]
+            summary = {
+                "error": "fallback",
+                "preview": text[:140],
+            }
 
             if agent == "agent_web":
                 web_summary = json.dumps(
@@ -161,7 +170,7 @@ def collect_all_workers(state: dict) -> dict:
                 agent=agent,
                 round=round_n,
                 kind=kind,
-                preview=preview,
+                **summary,
             )
         )
 

@@ -2,7 +2,7 @@ from agents.profiles import AGENT_PROFILES
 from schemas.agent_outputs import PlannerTablesOnly
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
-from graph.logger import make_log
+from graph.logger import make_debug_log, make_log
 
 DEFAULT_PLAN_TABLES = {"tables": []}
 
@@ -10,13 +10,16 @@ planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerTablesOnly)
 
 
 def run_planner(state: dict) -> dict:
-    start_log = make_log(
+    profile = AGENT_PROFILES["agent_planner"]
+    trace = []
+
+    start_log = make_debug_log(
         state,
         "planner:start",
         user_query=state.get("user_query", ""),
     )
-
-    profile = AGENT_PROFILES["agent_planner"]
+    if start_log:
+        trace.append(start_log)
 
     payload = {
         "role": profile["role"],
@@ -33,7 +36,7 @@ def run_planner(state: dict) -> dict:
 
     updates = {
         "last_agent": "agent_planner",
-        "trace": [start_log],
+        "trace": trace,
     }
 
     try:
