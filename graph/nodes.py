@@ -7,7 +7,7 @@ from agents.planner_runner import run_planner
 from agents.synth_runner import run_synth
 from agents.keyworder_runner import run_keyworder
 from graph.logger import make_log
-from schemas.agent_outputs import parse_worker_output, WorkerOutput
+from schemas.agent_outputs import parse_worker_output
 
 
 def agent_planner(state: dict) -> dict:
@@ -124,15 +124,15 @@ def collect_all_workers(state: dict) -> dict:
         text = _latest_agent_response_for(state, agent)
 
         try:
-            data = parse_worker_output(text)
+            parsed = parse_worker_output(text)
+            data = parsed.model_dump()
             kind = "answer"
             preview = json.dumps(data, ensure_ascii=False)[:140]
 
             if agent == "agent_web":
                 web_summary = json.dumps(data, ensure_ascii=False)
             else:
-                parsed = WorkerOutput.model_validate(data)
-                worker_results[agent] = parsed.model_dump()
+                worker_results[agent] = data
 
         except Exception as e:
             fallback = {

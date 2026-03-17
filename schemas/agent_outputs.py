@@ -85,6 +85,7 @@ class ToolCall(BaseModel):
 
 class WorkerFact(BaseModel):
     item_name: str
+    time_hint: str = ""
     value: str
     source: str
 
@@ -95,11 +96,71 @@ class WorkerOutput(BaseModel):
     notes: str = ""
 
 
+def _extract_first_json_object(text: str) -> Optional[str]:
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    start = cleaned.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for idx in range(start, len(cleaned)):
+        ch = cleaned[idx]
+
+        if escape:
+            escape = False
+            continue
+
+        if ch == "\\":
+            escape = True
+            continue
+
+        if ch == '"':
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return cleaned[start:idx + 1]
+
+    return None
+
+
 def extract_answer_json(text: str) -> dict:
-    m = re.search(r"ANSWER:\s*(\{.*\})\s*$", text, flags=re.DOTALL)
-    if not m:
-        raise ValueError("Không tìm thấy JSON sau ANSWER:")
-    return json.loads(m.group(1))
+    answer_match = re.search(r"ANSWER:\s*(\{.*\})\s*$", text, flags=re.DOTALL)
+    candidates = []
+
+    if answer_match:
+        candidates.append(answer_match.group(1))
+
+    candidates.append(text)
+    candidates.append(_extract_first_json_object(text))
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            parsed = json.loads(candidate)
+        except Exception:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
+    raise ValueError("Không tìm thấy JSON hợp lệ trong phản hồi worker.")
 
 
 def parse_worker_output(text: str):
