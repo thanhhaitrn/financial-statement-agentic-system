@@ -1,6 +1,7 @@
 import pandas as pd
 from ingestion.table_parser import markdown_table_to_df
 import re
+from schemas.table_names import normalize_table_heading
 
 LABEL_PREFIX = re.compile(
     r"""
@@ -77,7 +78,7 @@ def df_to_facts(df, heading, company, source):
 
                 facts.append({
                     "company": company,
-                    "heading": clean_label(heading),
+                    "heading": normalize_table_heading(clean_label(heading)),
                     "item_code": row.get("Mã số") if "Mã số" in df.columns else None,
                     "item_name": f"{row_label} | {col_name}",
                     "value": cell,
