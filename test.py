@@ -2,19 +2,7 @@ import argparse
 import sys
 import uuid
 
-from config.settings import (
-    AUDIT_STATUS,
-    COMPANY_NAME,
-    DATA_FILE,
-    DATASET_ID,
-    FISCAL_QUARTER,
-    FISCAL_YEAR,
-    INDUSTRY,
-    INGESTION_VERSION,
-    REPORT_SCOPE,
-    REPORT_TYPE,
-    TICKER,
-)
+from config.settings import DEFAULT_DATASET, DEFAULT_DATA_FILE
 from datasets.registry import (
     build_dataset_record,
     describe_dataset,
@@ -51,17 +39,17 @@ def parse_args():
 
 def ensure_default_dataset():
     dataset = build_dataset_record(
-        file_path=DATA_FILE,
-        company=COMPANY_NAME,
-        dataset_id=DATASET_ID,
-        ticker=TICKER,
-        industry=INDUSTRY,
-        report_type=REPORT_TYPE,
-        fiscal_year=FISCAL_YEAR,
-        fiscal_quarter=FISCAL_QUARTER,
-        scope=REPORT_SCOPE,
-        audit_status=AUDIT_STATUS,
-        ingestion_version=INGESTION_VERSION,
+        file_path=DEFAULT_DATA_FILE,
+        company=DEFAULT_DATASET["company"],
+        dataset_id=DEFAULT_DATASET["dataset_id"],
+        ticker=DEFAULT_DATASET["ticker"],
+        industry=DEFAULT_DATASET["industry"],
+        report_type=DEFAULT_DATASET["report_type"],
+        fiscal_year=DEFAULT_DATASET["fiscal_year"],
+        fiscal_quarter=DEFAULT_DATASET["fiscal_quarter"],
+        scope=DEFAULT_DATASET["scope"],
+        audit_status=DEFAULT_DATASET["audit_status"],
+        ingestion_version=DEFAULT_DATASET["ingestion_version"],
     )
     return save_dataset(dataset)
 
@@ -109,19 +97,27 @@ def resolve_dataset(args):
     )
 
     if args.file_path:
-        company = args.company or COMPANY_NAME
+        company = args.company or DEFAULT_DATASET["company"]
         dataset = build_dataset_record(
             file_path=args.file_path,
             company=company,
             dataset_id=args.dataset_id,
             ticker=args.ticker,
             industry=args.industry,
-            report_type=args.report_type or REPORT_TYPE,
-            fiscal_year=args.fiscal_year if args.fiscal_year is not None else FISCAL_YEAR,
-            fiscal_quarter=args.fiscal_quarter if args.fiscal_quarter is not None else FISCAL_QUARTER,
-            scope=args.scope or REPORT_SCOPE,
-            audit_status=args.audit_status or AUDIT_STATUS,
-            ingestion_version=INGESTION_VERSION,
+            report_type=args.report_type or DEFAULT_DATASET["report_type"],
+            fiscal_year=(
+                args.fiscal_year
+                if args.fiscal_year is not None
+                else DEFAULT_DATASET["fiscal_year"]
+            ),
+            fiscal_quarter=(
+                args.fiscal_quarter
+                if args.fiscal_quarter is not None
+                else DEFAULT_DATASET["fiscal_quarter"]
+            ),
+            scope=args.scope or DEFAULT_DATASET["scope"],
+            audit_status=args.audit_status or DEFAULT_DATASET["audit_status"],
+            ingestion_version=DEFAULT_DATASET["ingestion_version"],
         )
         return save_dataset(dataset)
 

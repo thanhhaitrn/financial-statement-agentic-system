@@ -1,21 +1,16 @@
-DATA_FILE = 'data/document.md'
+DEFAULT_DATA_FILE = "data/document.md"
 
-COMPANY_NAME = "Công ty Cổ phần Sông Đà"
-TICKER = ""
-INDUSTRY = ""
-REPORT_TYPE = "financial_statement"
-FISCAL_YEAR = 2024
-FISCAL_QUARTER = None
-REPORT_SCOPE = "unknown"
-AUDIT_STATUS = "unknown"
-DATASET_ID = ""
-INGESTION_VERSION = "v1"
+DEFAULT_DATASET = {
+    "dataset_id": "",
+    "company": "Công ty Cổ phần Sông Đà",
+    "ticker": "",
+    "industry": "",
+    "report_type": "financial_statement",
+    "fiscal_year": 2024,
+    "fiscal_quarter": None,
+    "scope": "unknown",
+    "audit_status": "unknown",
+    "ingestion_version": "v1",
+}
 
-CHROMA_COLLECTION = "financial_statement"
-BATCH_SIZE = 500
-
-OLLAMA_MODEL = "qwen3-vl:235b"
-OLLAMA_BASE_URL = "https://ollama.com"
-OLLAMA_TEMPERATURE = 0.2
-
-DB_PATH = "financial_kb.db" 
+VECTOR_BATCH_SIZE = 500
