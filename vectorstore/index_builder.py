@@ -1,9 +1,9 @@
-from config.settings import BATCH_SIZE, CHROMA_COLLECTION
+from config.settings import BATCH_SIZE
 from vectorstore.chroma_store import add_in_batches, create_collection
 from vectorstore.text_builder import build_documents_and_metadata
 import pandas as pd
 
-def build_vector_store(conn):
+def build_vector_store(conn, collection_name: str):
     print("\n=== BUILDING VECTOR STORE ===")
 
     df = pd.read_sql("""
@@ -13,7 +13,7 @@ def build_vector_store(conn):
 
     documents, metadatas, ids = build_documents_and_metadata(df)
 
-    collection = create_collection(CHROMA_COLLECTION)
+    collection = create_collection(collection_name)
 
     add_in_batches(
         collection,
@@ -23,4 +23,4 @@ def build_vector_store(conn):
         batch_size=BATCH_SIZE
     )
     print(f"Added {len(documents)} documents to vector store")
-    return collection
+    return collection, len(documents)

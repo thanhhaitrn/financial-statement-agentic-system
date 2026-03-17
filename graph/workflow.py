@@ -163,9 +163,3 @@ workflow.add_conditional_edges(
 )
 
 agentic_graph = workflow.compile()
-
-print(agentic_graph)
-
-
-g = agentic_graph.get_graph()
-print(g.draw_mermaid())

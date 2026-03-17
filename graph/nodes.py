@@ -128,11 +128,11 @@ def collect_all_workers(state: dict) -> dict:
         try:
             parsed = parse_worker_output(text)
             data = parsed.model_dump()
+            data["missing"] = []
             kind = "answer"
             summary = {
                 "table": data.get("table", ""),
                 "facts_n": len(data.get("facts", []) or []),
-                "missing_n": len(data.get("missing", []) or []),
             }
 
             if agent == "agent_web":

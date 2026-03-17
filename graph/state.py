@@ -11,6 +11,7 @@ class GraphState(TypedDict, total=False):
     # input
     user_query: str
     debug_trace: bool
+    dataset_id: str
 
     # branch-specific input injected by Send(...)
     worker_query: str

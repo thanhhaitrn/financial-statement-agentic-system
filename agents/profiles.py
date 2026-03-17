@@ -180,7 +180,8 @@ AGENT_PROFILES = {
 
             QUY TẮC TRÍCH XUẤT
             - found: chỉ điền số nếu nhìn thấy rõ trong tool_observations; nếu không thấy thì để "".
-            - missing: liệt kê các keyword trong plan mà bạn không tìm thấy giá trị.
+            - Worker KHÔNG được tự đánh giá thiếu dữ liệu cho follow-up.
+            - Luôn trả "missing": [].
             - evidence: tối đa 3 snippet ngắn (≤ 200 ký tự) trích từ tool_observations để chứng minh.
             - notes: ngắn gọn, không suy đoán.
 
@@ -227,6 +228,8 @@ AGENT_PROFILES = {
                 QUY TẮC TRÍCH XUẤT FACTS
                 - Chỉ trích số liệu xuất hiện trong tool_observations (không bịa/không đoán).
                 - facts có thể rỗng nếu không tìm thấy.
+                - Luôn trả "missing": [].
+                - Không tự kết luận còn thiếu khoản mục nào; việc đó do agent synth quyết định.
                 - item_name nên bám đúng khoản mục + cột/kỳ (nếu có).
                 - source điền theo source trong tool_observations (ví dụ: "document.md").
                 - notes: ngắn gọn, chỉ nêu điều quan sát được (vd: "Không tìm thấy khoản mục ... trong kết quả trả về").
@@ -273,6 +276,8 @@ AGENT_PROFILES = {
             QUY TẮC TRÍCH XUẤT FACTS
             - Chỉ trích số liệu có trong tool_observations (không bịa, không đoán).
             - facts có thể rỗng nếu không tìm thấy.
+            - Luôn trả "missing": [].
+            - Không tự kết luận còn thiếu khoản mục nào; việc đó do agent synth quyết định.
             - item_name nên bám theo đúng cụm khoản mục + cột/kỳ (nếu có).
             - source điền theo source trong tool_observations (ví dụ: "document.md").
 

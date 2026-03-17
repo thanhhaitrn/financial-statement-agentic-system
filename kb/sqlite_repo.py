@@ -43,3 +43,9 @@ def sqlite_has_facts(conn) -> bool:
     cur = conn.cursor()
     cur.execute("SELECT COUNT(*) FROM financial_facts")
     return cur.fetchone()[0] > 0
+
+
+def sqlite_count_facts(conn) -> int:
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM financial_facts")
+    return int(cur.fetchone()[0] or 0)
