@@ -1,12 +1,20 @@
 from agents.profiles import AGENT_PROFILES
-from schemas.agent_outputs import PlannerTablesOnly
+from schemas.agent_outputs import PlannerEvidencePlan
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
 
-DEFAULT_PLAN_TABLES = {"tables": []}
+DEFAULT_PLAN_TABLES = {
+    "question_type": "lookup",
+    "tables": [],
+    "analysis_axes": [],
+    "required_components": [],
+    "company": "",
+    "time_hint": "",
+    "need_web": False,
+}
 
-planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerTablesOnly)
+planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerEvidencePlan)
 
 
 def run_planner(state: dict) -> dict:
@@ -28,6 +36,7 @@ def run_planner(state: dict) -> dict:
         "worker_query": "",
         "plan_json": "{}",
         "worker_results_json": "{}",
+        "allowed_keywords_json": "{}",
         "web_summary": "",
         "last_agent_response": "",
         "tool_observations": "",
@@ -40,7 +49,7 @@ def run_planner(state: dict) -> dict:
     }
 
     try:
-        plan_obj: PlannerTablesOnly = planner_chain.invoke(payload)
+        plan_obj: PlannerEvidencePlan = planner_chain.invoke(payload)
         updates["plan_tables"] = plan_obj.model_dump()
         updates["trace"].append(
             make_log(

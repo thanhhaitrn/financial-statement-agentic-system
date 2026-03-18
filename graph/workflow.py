@@ -17,6 +17,7 @@ from graph.nodes import (
     finalize_cf_node,
     finalize_web_node,
     collect_all_workers,
+    prepare_synth_context_node,
     agent_synth_node,
 )
 from graph.dispatch_nodes import (
@@ -61,6 +62,7 @@ workflow.add_node("finalize_web", finalize_web_node)
 
 # Collector / synth
 workflow.add_node("collect_all", collect_all_workers)
+workflow.add_node("prepare_synth_context", prepare_synth_context_node)
 workflow.add_node("agent_synth", agent_synth_node)
 
 # Follow-up prep
@@ -135,10 +137,12 @@ workflow.add_conditional_edges(
     "collect_all",
     should_synthesize_after_collect,
     {
-        "synth": "agent_synth",
+        "synth": "prepare_synth_context",
         "stop": END,
     },
 )
+
+workflow.add_edge("prepare_synth_context", "agent_synth")
 
 # synth -> follow-up or end
 workflow.add_conditional_edges(
@@ -163,3 +167,5 @@ workflow.add_conditional_edges(
 )
 
 agentic_graph = workflow.compile()
+#graph = agentic_graph.get_graph()
+#print(graph.draw_mermaid())

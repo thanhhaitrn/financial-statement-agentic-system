@@ -22,6 +22,9 @@ DEFAULT_DECISION = {
     "followups": [],
 }
 
+MAX_SYNTH_FACTS_PER_TABLE = 6
+MAX_SYNTH_WEB_CHARS = 1200
+
 
 class NormalizedFact(TypedDict):
     item_name: str
@@ -47,9 +50,15 @@ class SynthPayload(TypedDict):
     worker_query: str
     plan_json: str
     worker_results_json: str
+    allowed_keywords_json: str
     web_summary: str
     last_agent_response: str
     tool_observations: str
+
+
+class CompactWorkerResult(TypedDict):
+    table: str
+    facts: List[NormalizedFact]
 
 
 def _to_text(raw: Any) -> str:
@@ -260,35 +269,145 @@ def _flatten_facts(normalized_results: Dict[str, NormalizedWorkerResult]) -> Lis
     return facts
 
 
-def _facts_by_table(
+def _dedupe_facts(facts: List[NormalizedFact]) -> List[NormalizedFact]:
+    deduped: List[NormalizedFact] = []
+    seen = set()
+
+    for fact in facts:
+        key = (
+            str(fact.get("table", "")).strip(),
+            str(fact.get("item_name", "")).strip(),
+            str(fact.get("time_hint", "")).strip(),
+            str(fact.get("value", "")).strip(),
+            str(fact.get("source", "")).strip(),
+        )
+        if key in seen:
+            continue
+        deduped.append(fact)
+        seen.add(key)
+
+    return deduped
+
+
+def _cap_facts(facts: List[NormalizedFact], limit: int = MAX_SYNTH_FACTS_PER_TABLE) -> List[NormalizedFact]:
+    if limit <= 0 or len(facts) <= limit:
+        return facts
+    return facts[:limit]
+
+
+def _build_compact_worker_results(
     normalized_results: Dict[str, NormalizedWorkerResult],
-) -> Dict[str, List[NormalizedFact]]:
-    grouped: Dict[str, List[NormalizedFact]] = {}
+) -> Tuple[Dict[str, CompactWorkerResult], Dict[str, int]]:
+    compact: Dict[str, CompactWorkerResult] = {}
+    stats = {
+        "tables_n": 0,
+        "facts_n_raw": 0,
+        "facts_n_kept": 0,
+        "tables_trimmed": 0,
+    }
 
-    for fact in _flatten_facts(normalized_results):
-        table = _normalize_table_name(fact.get("table", ""))
-        grouped.setdefault(table, []).append(fact)
+    for agent_name, item in (normalized_results or {}).items():
+        table = str(item.get("table", "")).strip()
+        facts = _dedupe_facts(item.get("facts", []))
+        facts_raw_n = len(facts)
+        facts = _cap_facts(facts)
 
-    return grouped
+        if facts_raw_n > len(facts):
+            stats["tables_trimmed"] += 1
+
+        compact[agent_name] = {
+            "table": table,
+            "facts": facts,
+        }
+
+        if table:
+            stats["tables_n"] += 1
+        stats["facts_n_raw"] += facts_raw_n
+        stats["facts_n_kept"] += len(facts)
+
+    return compact, stats
 
 
-def _build_facts_summary(normalized_results: Dict[str, NormalizedWorkerResult]) -> str:
-    lines: List[str] = []
+def _truncate_text(value: str, limit: int) -> str:
+    text = " ".join(str(value or "").split())
+    if limit <= 0 or len(text) <= limit:
+        return text
+    return f"{text[:limit].rstrip()}..."
 
-    for table, facts in _facts_by_table(normalized_results).items():
-        lines.append(f"[{table}]")
-        for fact in facts:
-            lines.append(
-                (
-                    f"- item_name={fact.get('item_name', '')}; "
-                    f"time_hint={fact.get('time_hint', '')}; "
-                    f"value={fact.get('value', '')}; "
-                    f"source={fact.get('source', '')}"
+
+def _compact_web_summary(value: Any, limit: int = MAX_SYNTH_WEB_CHARS) -> Tuple[str, bool]:
+    if value is None:
+        return "", False
+
+    data = value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if not stripped:
+            return "", False
+        try:
+            data = json.loads(stripped)
+        except Exception:
+            compact_text = _truncate_text(stripped, limit)
+            return compact_text, len(compact_text) < len(stripped)
+
+    if isinstance(data, dict):
+        compact: Dict[str, Any] = {}
+        trimmed = False
+        if "table" in data:
+            compact["table"] = data.get("table", "")
+        if isinstance(data.get("facts"), list):
+            facts = _dedupe_facts(
+                _normalize_facts(
+                    data.get("facts", []),
+                    fallback_table=str(data.get("table", "")).strip(),
                 )
             )
-        lines.append("")
+            compact_facts = _cap_facts(facts, limit=4)
+            compact["facts"] = compact_facts
+            if len(compact_facts) < len(facts):
+                trimmed = True
+        for key in ("answer", "summary", "notes", "error"):
+            if key in data and data.get(key):
+                raw_text = str(data.get(key, ""))
+                compact_text = _truncate_text(raw_text, 240)
+                compact[key] = compact_text
+                if compact_text != " ".join(raw_text.split()):
+                    trimmed = True
+        text = _safe_json_dumps(compact or data)
+        compact_text = _truncate_text(text, limit)
+        if compact_text != text:
+            trimmed = True
+        return compact_text, trimmed
 
-    return "\n".join(lines).strip()
+    text = _safe_json_dumps(data)
+    compact_text = _truncate_text(text, limit)
+    return compact_text, compact_text != text
+
+
+def prepare_synth_context(state: dict) -> dict:
+    raw_worker_results = state.get("worker_results", {}) or {}
+    normalized_worker_results, normalize_logs = _normalize_all_worker_results(
+        raw_worker_results,
+        emit_debug_logs=debug_enabled(state),
+    )
+    compact_worker_results, stats = _build_compact_worker_results(normalized_worker_results)
+    compact_web_summary, web_trimmed = _compact_web_summary(state.get("web_summary", ""))
+
+    prepared_log = make_log(
+        state,
+        "synth_context:prepared",
+        tables_n=stats["tables_n"],
+        facts_n_raw=stats["facts_n_raw"],
+        facts_n_kept=stats["facts_n_kept"],
+        tables_trimmed=stats["tables_trimmed"],
+        web_trimmed=web_trimmed,
+    )
+
+    return {
+        "synth_context": compact_worker_results,
+        "synth_web_summary": compact_web_summary,
+        "trace": [*normalize_logs, prepared_log],
+    }
 
 
 def _coerce_decision(value: Any) -> Dict[str, Any]:
@@ -310,7 +429,6 @@ def _build_payload(
     state: dict,
     profile: Dict[str, Any],
     normalized_worker_results: Dict[str, NormalizedWorkerResult],
-    facts_summary: str,
 ) -> SynthPayload:
     return {
         "role": profile["role"],
@@ -320,9 +438,10 @@ def _build_payload(
         "worker_query": "",
         "plan_json": _safe_json_dumps(state.get("plan", {})),
         "worker_results_json": _safe_json_dumps(normalized_worker_results),
-        "web_summary": state.get("web_summary", "") or "",
+        "allowed_keywords_json": "{}",
+        "web_summary": state.get("synth_web_summary", state.get("web_summary", "")) or "",
         "last_agent_response": state.get("last_agent_response", "") or "",
-        "tool_observations": facts_summary,
+        "tool_observations": "",
     }
 
 
@@ -347,7 +466,7 @@ def _invoke_synth(payload: SynthPayload) -> Dict[str, Any]:
 
 def run_synth(state: dict) -> dict:
     profile = AGENT_PROFILES["agent_synth"]
-    raw_worker_results = state.get("worker_results", {}) or {}
+    raw_worker_results = state.get("synth_context", state.get("worker_results", {})) or {}
     trace = []
 
     start_log = make_debug_log(
@@ -358,13 +477,21 @@ def run_synth(state: dict) -> dict:
     if start_log:
         trace.append(start_log)
 
-    normalized_worker_results, normalize_logs = _normalize_all_worker_results(
-        raw_worker_results,
-        emit_debug_logs=debug_enabled(state),
-    )
+    normalized_worker_results: Dict[str, NormalizedWorkerResult] = {}
+    normalize_logs: List[Dict[str, Any]] = []
+
+    if state.get("synth_context") is not None:
+        for agent_name, raw in (raw_worker_results or {}).items():
+            item, _ = _normalize_worker_result(raw, agent_name=agent_name)
+            normalized_worker_results[agent_name] = item
+    else:
+        normalized_worker_results, normalize_logs = _normalize_all_worker_results(
+            raw_worker_results,
+            emit_debug_logs=debug_enabled(state),
+        )
+
     facts = _flatten_facts(normalized_worker_results)
-    facts_summary = _build_facts_summary(normalized_worker_results)
-    payload = _build_payload(state, profile, normalized_worker_results, facts_summary)
+    payload = _build_payload(state, profile, normalized_worker_results)
     decision = _invoke_synth(payload)
 
     done_log = make_log(

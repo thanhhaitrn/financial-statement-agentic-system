@@ -7,6 +7,7 @@ PROMPT_TEMPLATE = ChatPromptTemplate.from_messages([
     ("system", "Worker query:\n{worker_query}"),
     ("system", "Planner plan (JSON):\n{plan_json}"),
     ("system", "Worker results (JSON):\n{worker_results_json}"),
+    ("system", "Allowed keywords by table (JSON):\n{allowed_keywords_json}"),
     ("system", "Web summary:\n{web_summary}"),
     ("system", "Previous agent response:\n{last_agent_response}"),
     ("system", "Past tool observations:\n{tool_observations}"),

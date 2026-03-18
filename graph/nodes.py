@@ -1,10 +1,9 @@
 import json
-import re
 
 from agents.agent_runner import call_agent
-from tools.tool_runner import call_tool_for_agent, WORKER_TO_TABLE
+from tools.tool_runner import call_tool_for_agent
 from agents.planner_runner import run_planner
-from agents.synth_runner import run_synth
+from agents.synth_runner import prepare_synth_context, run_synth
 from agents.keyworder_runner import run_keyworder
 from graph.logger import make_debug_log, make_log
 from schemas.agent_outputs import parse_worker_output
@@ -54,14 +53,19 @@ def agent_synth_node(state: dict) -> dict:
     return run_synth(state)
 
 
+def prepare_synth_context_node(state: dict) -> dict:
+    return prepare_synth_context(state)
+
+
 def _mark_done(agent_name: str):
     def node(state: dict) -> dict:
         trace = []
         log_entry = make_debug_log(state, "worker:done", agent=agent_name)
         if log_entry:
             trace.append(log_entry)
+        round_n = int((state or {}).get("followup_rounds", 0) or 0)
         return {
-            "done_workers": [agent_name],
+            "done_workers": {agent_name: round_n},
             "trace": trace,
         }
     return node
@@ -89,9 +93,18 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
 
 def collect_all_workers(state: dict) -> dict:
     expected = set(state.get("expected_workers", []) or [])
-    done = set(state.get("done_workers", []) or [])
     round_n = state.get("followup_rounds", 0)
     collected_rounds = set(state.get("collected_rounds", []) or [])
+    done_state = state.get("done_workers", {}) or {}
+
+    if isinstance(done_state, dict):
+        done = {
+            agent_name
+            for agent_name, marked_round in done_state.items()
+            if int(marked_round) == round_n
+        }
+    else:
+        done = set(done_state or [])
 
     updates = {"trace": []}
 

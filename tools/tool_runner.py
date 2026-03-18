@@ -48,6 +48,42 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
     return ""
 
 
+def _current_round(state: dict) -> int:
+    return int((state or {}).get("followup_rounds", 0) or 0)
+
+
+def _tool_call_count_for_round(state: dict, agent_name: str) -> int:
+    current_round = _current_round(state)
+    counts = state.get("tool_call_counts", {}) or {}
+    value = counts.get(agent_name)
+
+    if isinstance(value, dict):
+        try:
+            if int(value.get("round", -1)) == current_round:
+                return int(value.get("count", 0) or 0)
+        except (TypeError, ValueError):
+            return 0
+        return 0
+
+    if current_round == 0 and isinstance(value, int):
+        return value
+
+    return 0
+
+
+def _round_count_update(state: dict, agent_name: str, count: int) -> dict:
+    return {
+        agent_name: {
+            "round": _current_round(state),
+            "count": int(count),
+        }
+    }
+
+
+def _force_collect_update(state: dict, agent_name: str) -> dict:
+    return {agent_name: _current_round(state)}
+
+
 def _get_keywords_for_table(plan: dict, table: str) -> List[str]:
     targets = plan.get("targets", []) or []
     normalized_target = _normalize_table_name(table)
@@ -137,8 +173,14 @@ def _prepare_get_related_info_args(
 
 def _already_called(state: dict, agent_name: str, tool_name: str, args: dict) -> bool:
     items = state.get("tool_results", []) or []
+    current_round = _current_round(state)
     sig = _safe_json_dumps({"agent": agent_name, "tool": tool_name, "args": args})
     for item in items:
+        item_round = item.get("round")
+        if item_round is None and current_round > 0:
+            continue
+        if item_round is not None and int(item_round) != current_round:
+            continue
         existing_sig = _safe_json_dumps({
             "agent": item.get("agent", ""),
             "tool": item.get("tool", ""),
@@ -151,7 +193,8 @@ def _already_called(state: dict, agent_name: str, tool_name: str, args: dict) ->
 
 def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     action_text = _latest_agent_response_for(state, agent_name)
-    count = int((state.get("tool_call_counts", {}) or {}).get(agent_name, 0))
+    current_round = _current_round(state)
+    count = _tool_call_count_for_round(state, agent_name)
 
     if count >= 2:
         return {
@@ -161,8 +204,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                     "text": "[Tool loop cap reached. Stop calling tools and answer with available evidence.]"
                 }
             ],
-            "tool_call_counts": {agent_name: count},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": [
                 make_log(
                     state,
@@ -178,8 +221,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "tool_observations": [
                 {"agent": agent_name, "text": f"[No worker response found for {agent_name}]"}
             ],
-            "tool_call_counts": {agent_name: count + 1},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": [
                 make_log(state, "tool:skip_empty_response", agent=agent_name)
             ],
@@ -191,8 +234,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "tool_observations": [
                 {"agent": agent_name, "text": f"[No valid tool action by {agent_name}: {parse_error}]"}
             ],
-            "tool_call_counts": {agent_name: count + 1},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": [
                 make_log(
                     state,
@@ -210,8 +253,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "tool_observations": [
                 {"agent": agent_name, "text": f"[Tool '{tool_name}' NOT allowed for {agent_name}]"}
             ],
-            "tool_call_counts": {agent_name: count + 1},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": [
                 make_log(
                     state,
@@ -228,8 +271,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "tool_observations": [
                 {"agent": agent_name, "text": f"[Unknown tool: {tool_name}]"}
             ],
-            "tool_call_counts": {agent_name: count + 1},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": [
                 make_log(
                     state,
@@ -262,8 +305,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                 "tool_observations": [
                     {"agent": agent_name, "text": f"[Tool blocked: {prep_error}]"}
                 ],
-                "tool_call_counts": {agent_name: count + 1},
-                "force_collect_agents": [agent_name],
+                "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+                "force_collect_agents": _force_collect_update(state, agent_name),
                 "trace": trace_logs,
             }
 
@@ -281,8 +324,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "tool_observations": [
                 {"agent": agent_name, "text": f"[Tool call blocked: repeated identical call: {tool_name}]"}
             ],
-            "tool_call_counts": {agent_name: count + 1},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": trace_logs,
         }
 
@@ -315,8 +358,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "tool_observations": [
                 {"agent": agent_name, "text": f"[Tool error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]"}
             ],
-            "tool_call_counts": {agent_name: count + 1},
-            "force_collect_agents": [agent_name],
+            "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+            "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": trace_logs,
         }
 
@@ -349,12 +392,13 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             {
                 "agent": agent_name,
                 "kind": "primary",
+                "round": current_round,
                 "tool": tool_name,
                 "args": prepared_args,
                 "results": results,
             }
         ],
-        "tool_call_counts": {agent_name: count + 1},
+        "tool_call_counts": _round_count_update(state, agent_name, count + 1),
         "trace": trace_logs,
     }
 
@@ -385,6 +429,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                         {
                             "agent": agent_name,
                             "kind": "followup",
+                            "round": current_round,
                             "tool": tool_name,
                             "args": follow_args,
                             "results": follow_results,

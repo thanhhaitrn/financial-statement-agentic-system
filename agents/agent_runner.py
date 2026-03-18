@@ -39,6 +39,7 @@ def call_agent(state: dict, agent_name: str) -> dict:
         "worker_query": state.get("worker_query", "") if is_worker else "",
         "plan_json": json.dumps(state.get("plan", {}), ensure_ascii=False),
         "worker_results_json": json.dumps(state.get("worker_results", {}), ensure_ascii=False),
+        "allowed_keywords_json": "{}",
         "web_summary": state.get("web_summary", ""),
         "last_agent_response": state.get("last_agent_response", "") if not is_worker else "",
         "tool_observations": _tool_obs_for_agent(state, agent_name) if is_worker else "",

@@ -121,5 +121,7 @@ ALIASES: Dict[str, str] = {
     "tiền cuối kỳ": "tiền và tương đương tiền cuối kỳ",
     "tiền đầu kỳ": "tiền và tương đương tiền đầu kỳ",
     "lctt hđkd": "lưu chuyển tiền thuần từ hoạt động kinh doanh",
+    "mua sắm tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
+    "chi đầu tư tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
 
 }

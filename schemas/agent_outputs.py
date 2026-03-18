@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 from typing import List, Literal, Dict, Any, Optional
 import re, json
 
@@ -21,14 +21,58 @@ TABLE_CANON = {
 
 AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
 
-# ---------- Planner (tables only) ---------
+PLANNER_QUESTION_TYPE = Literal[
+    "lookup",
+    "calculation",
+    "comparison",
+    "evaluation",
+    "risk_assessment",
+]
 
 
-from typing import List, Optional
-from pydantic import BaseModel, Field, field_validator
-
-class PlannerTablesOnly(BaseModel):
+# ---------- Planner evidence plan ---------
+class PlannerAnalysisAxis(BaseModel):
+    axis: str
     tables: List[TABLE_NAME] = Field(default_factory=list)
+    components: List[str] = Field(default_factory=list)
+    objective: str = ""
+
+    @field_validator("tables", mode="before")
+    @classmethod
+    def normalize_axis_tables(cls, v):
+        if v is None:
+            return []
+        out = []
+        for item in v:
+            if isinstance(item, dict) and "table" in item:
+                item = item["table"]
+            if isinstance(item, str):
+                key = item.strip().lower()
+                out.append(TABLE_CANON.get(key, item))
+            else:
+                out.append(item)
+        return out
+
+    @field_validator("axis", "objective", mode="before")
+    @classmethod
+    def normalize_axis_strings(cls, v):
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator("components", mode="before")
+    @classmethod
+    def normalize_components(cls, v):
+        if v is None:
+            return []
+        return [str(item).strip() for item in v if str(item).strip()]
+
+
+class PlannerEvidencePlan(BaseModel):
+    question_type: PLANNER_QUESTION_TYPE = "lookup"
+    tables: List[TABLE_NAME] = Field(default_factory=list)
+    analysis_axes: List[PlannerAnalysisAxis] = Field(default_factory=list)
+    required_components: List[str] = Field(default_factory=list)
     company: Optional[str] = ""
     time_hint: Optional[str] = ""
     need_web: bool = False
@@ -55,6 +99,62 @@ class PlannerTablesOnly(BaseModel):
         if v is None:
             return ""
         return str(v).strip()
+
+    @field_validator("required_components", mode="before")
+    @classmethod
+    def normalize_required_components(cls, v):
+        if v is None:
+            return []
+        return [str(item).strip() for item in v if str(item).strip()]
+
+    @model_validator(mode="after")
+    def consolidate_plan(self):
+        tables = []
+        seen_tables = set()
+
+        for table in self.tables:
+            if table not in seen_tables:
+                tables.append(table)
+                seen_tables.add(table)
+
+        required_components = []
+        seen_components = set()
+
+        for component in self.required_components:
+            if component not in seen_components:
+                required_components.append(component)
+                seen_components.add(component)
+
+        normalized_axes = []
+        for axis in self.analysis_axes:
+            axis_tables = []
+            axis_seen_tables = set()
+            for table in axis.tables:
+                if table not in axis_seen_tables:
+                    axis_tables.append(table)
+                    axis_seen_tables.add(table)
+                if table not in seen_tables:
+                    tables.append(table)
+                    seen_tables.add(table)
+
+            axis_components = []
+            axis_seen_components = set()
+            for component in axis.components:
+                if component not in axis_seen_components:
+                    axis_components.append(component)
+                    axis_seen_components.add(component)
+                if component not in seen_components:
+                    required_components.append(component)
+                    seen_components.add(component)
+
+            axis.tables = axis_tables
+            axis.components = axis_components
+            normalized_axes.append(axis)
+
+        self.tables = tables
+        self.analysis_axes = normalized_axes
+        self.required_components = required_components
+        return self
 
 
 # ---------- Keyworder / Detailed plan (optional next step) ----------

@@ -26,6 +26,8 @@ class GraphState(TypedDict, total=False):
     followup_requests: list[dict]
     missing_components: list[str]
     web_summary: str
+    synth_context: dict
+    synth_web_summary: str
     synth_decision: dict
     final_answer: str
 
@@ -37,8 +39,8 @@ class GraphState(TypedDict, total=False):
     tool_observations: Annotated[list[dict], operator.add]
     tool_results: Annotated[list[dict], operator.add]
     worker_results: Annotated[dict[str, Any], merge_dicts]
-    done_workers: Annotated[list[str], operator.add]
+    done_workers: Annotated[dict[str, int], merge_dicts]
     collected_rounds: Annotated[list[int], operator.add]
     trace: Annotated[list[dict], operator.add]
-    tool_call_counts: Annotated[dict[str, int], merge_dicts]
-    force_collect_agents: Annotated[list[str], operator.add]
+    tool_call_counts: Annotated[dict[str, dict[str, int]], merge_dicts]
+    force_collect_agents: Annotated[dict[str, int], merge_dicts]
