@@ -8,6 +8,7 @@ from graph.logger import make_debug_log, make_log
 
 
 _COLLECTION = None
+MAX_KEYWORDS_PER_TOOL_RUN = 4
 
 
 def set_collection(collection):
@@ -169,6 +170,22 @@ def _prepare_get_related_info_args(
 
     prepared["query"] = keywords[0]
     return prepared, None, log_entry
+
+
+def _keywords_to_fetch(keywords: List[str], *, limit: int = MAX_KEYWORDS_PER_TOOL_RUN) -> List[str]:
+    seen = set()
+    out = []
+
+    for keyword in (keywords or []):
+        text = str(keyword).strip()
+        if not text or text in seen:
+            continue
+        out.append(text)
+        seen.add(text)
+        if len(out) >= limit:
+            break
+
+    return out
 
 
 def _already_called(state: dict, agent_name: str, tool_name: str, args: dict) -> bool:
@@ -404,65 +421,75 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
 
     if tool_name == "get_related_info":
         keywords = _get_keywords_for_table(state.get("plan", {}) or {}, prepared_args.get("table", ""))
-        if len(keywords) >= 2:
+        followup_keywords = [
+            kw
+            for kw in _keywords_to_fetch(keywords)
+            if kw != str(prepared_args.get("query", "")).strip()
+        ]
+
+        for follow_index, keyword in enumerate(followup_keywords, start=1):
             follow_args = dict(prepared_args)
-            follow_args["query"] = keywords[1]
+            follow_args["query"] = keyword
 
-            if not _already_called(state, agent_name, tool_name, follow_args):
-                try:
-                    raw_follow = tool_func(**follow_args)
-                    follow_results = _normalize_tool_result(raw_follow)
-                    follow_ctx = (follow_results.get("context") or "").strip()
-                    follow_src = follow_results.get("source", "")
+            if _already_called(state, agent_name, tool_name, follow_args):
+                continue
 
-                    updates["tool_observations"].append(
-                        {
-                            "agent": agent_name,
-                            "text": (
-                                f"[AUTO_FOLLOWUP source={follow_src} table={follow_args.get('table','')} "
-                                f"query={follow_args.get('query','')}]\n"
-                                f"{follow_ctx[:1200] if follow_ctx else '<EMPTY_CONTEXT>'}"
-                            ),
-                        }
+            try:
+                raw_follow = tool_func(**follow_args)
+                follow_results = _normalize_tool_result(raw_follow)
+                follow_ctx = (follow_results.get("context") or "").strip()
+                follow_src = follow_results.get("source", "")
+
+                updates["tool_observations"].append(
+                    {
+                        "agent": agent_name,
+                        "text": (
+                            f"[AUTO_FOLLOWUP source={follow_src} table={follow_args.get('table','')} "
+                            f"query={follow_args.get('query','')}]\n"
+                            f"{follow_ctx[:1200] if follow_ctx else '<EMPTY_CONTEXT>'}"
+                        ),
+                    }
+                )
+                updates["tool_results"].append(
+                    {
+                        "agent": agent_name,
+                        "kind": "followup",
+                        "round": current_round,
+                        "tool": tool_name,
+                        "args": follow_args,
+                        "results": follow_results,
+                    }
+                )
+                updates["trace"].append(
+                    make_log(
+                        state,
+                        "tool:followup_done",
+                        agent=agent_name,
+                        tool=tool_name,
+                        table=follow_args.get("table", ""),
+                        query=follow_args.get("query", ""),
+                        followup_index=follow_index,
+                        context_len=len(follow_ctx),
+                        empty=(len(follow_ctx) == 0),
                     )
-                    updates["tool_results"].append(
-                        {
-                            "agent": agent_name,
-                            "kind": "followup",
-                            "round": current_round,
-                            "tool": tool_name,
-                            "args": follow_args,
-                            "results": follow_results,
-                        }
+                )
+            except Exception as e:
+                updates["tool_observations"].append(
+                    {
+                        "agent": agent_name,
+                        "text": f"[Tool followup error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]",
+                    }
+                )
+                updates["trace"].append(
+                    make_log(
+                        state,
+                        "tool:error_runtime",
+                        agent=agent_name,
+                        tool=tool_name,
+                        error_type=type(e).__name__,
+                        error=str(e)[:250],
                     )
-                    updates["trace"].append(
-                        make_log(
-                            state,
-                            "tool:followup_done",
-                            agent=agent_name,
-                            tool=tool_name,
-                            table=follow_args.get("table", ""),
-                            query=follow_args.get("query", ""),
-                            context_len=len(follow_ctx),
-                            empty=(len(follow_ctx) == 0),
-                        )
-                    )
-                except Exception as e:
-                    updates["tool_observations"].append(
-                        {
-                            "agent": agent_name,
-                            "text": f"[Tool followup error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]",
-                        }
-                    )
-                    updates["trace"].append(
-                        make_log(
-                            state,
-                            "tool:error_runtime",
-                            agent=agent_name,
-                            tool=tool_name,
-                            error_type=type(e).__name__,
-                            error=str(e)[:250],
-                        )
-                    )
+                )
+                break
 
     return updates

@@ -319,7 +319,7 @@ AGENT_PROFILES = {
             ARGUMENTS: {"query": "..."}
 
             B) 
-            {"table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+            {"table": "BẢNG CÂN ĐỐI KẾ TOÁN",
             "facts": [
                 {
                 "item_name": "...",
@@ -334,7 +334,8 @@ AGENT_PROFILES = {
 
             QUY TẮC HOẠT ĐỘNG (STOP CONDITION)
             1) Nếu tool_observations đã có ít nhất 1 kết quả không rỗng từ get_related_info, bạn PHẢI trả ANSWER ngay. Không được gọi lại tool.
-            2) Nếu chưa có tool_observations, bạn gọi tool theo format (A).
+            2) Khi đã trả ANSWER, bạn PHẢI đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và trích hết các facts liên quan, không chỉ lấy kết quả đầu tiên.
+            3) Nếu chưa có tool_observations, bạn gọi tool theo format (A).
 
             QUY TẮC QUERY
             - ARGUMENTS.query phải là 1 khoản mục/khoản mục ngắn tiếng Việt lấy từ keywords của plan cho bảng này (ví dụ: "tiền", "hàng tồn kho", "nợ ngắn hạn"...).
@@ -342,6 +343,7 @@ AGENT_PROFILES = {
 
             QUY TẮC TRÍCH XUẤT
             - found: chỉ điền số nếu nhìn thấy rõ trong tool_observations; nếu không thấy thì để "".
+            - Nếu tool_observations chứa nhiều query khác nhau, hãy gộp tất cả facts liên quan vào cùng một output.
             - Worker KHÔNG được tự đánh giá thiếu dữ liệu cho follow-up.
             - Luôn trả "missing": [].
             - evidence: tối đa 3 snippet ngắn (≤ 200 ký tự) trích từ tool_observations để chứng minh.
@@ -365,8 +367,9 @@ AGENT_PROFILES = {
 
                 QUY TẮC HOẠT ĐỘNG
                 1) Nếu tool_observations đã có kết quả từ get_related_info (không rỗng), bạn PHẢI trả ANSWER ngay. Không được gọi lại tool.
-                2) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
-                3) Không bịa số liệu, không suy đoán theo kiến thức chung.
+                2) Khi đã trả ANSWER, bạn PHẢI đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và trích hết các facts liên quan, không chỉ lấy kết quả đầu tiên.
+                3) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
+                4) Không bịa số liệu, không suy đoán theo kiến thức chung.
 
                 ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2)
                 A) 
@@ -374,7 +377,7 @@ AGENT_PROFILES = {
                 ARGUMENTS: {"query": "..."}
 
                 B) 
-                {"table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+                {"table": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
                 "facts": [
                     {
                     "item_name": "...",
@@ -389,6 +392,7 @@ AGENT_PROFILES = {
 
                 QUY TẮC TRÍCH XUẤT FACTS
                 - Chỉ trích số liệu xuất hiện trong tool_observations (không bịa/không đoán).
+                - Nếu tool_observations chứa nhiều query khác nhau, hãy gộp tất cả facts liên quan vào cùng một output.
                 - facts có thể rỗng nếu không tìm thấy.
                 - Luôn trả "missing": [].
                 - Không tự kết luận còn thiếu khoản mục nào; việc đó do agent synth quyết định.
@@ -414,7 +418,8 @@ AGENT_PROFILES = {
 
             QUY TẮC HOẠT ĐỘNG
             1) Nếu tool_observations đã có kết quả từ get_related_info (không rỗng), bạn PHẢI trả ANSWER ngay. Không được gọi lại tool.
-            2) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
+            2) Khi đã trả ANSWER, bạn PHẢI đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và trích hết các facts liên quan, không chỉ lấy kết quả đầu tiên.
+            3) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
 
             ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2)
             A) 
@@ -437,6 +442,7 @@ AGENT_PROFILES = {
 
             QUY TẮC TRÍCH XUẤT FACTS
             - Chỉ trích số liệu có trong tool_observations (không bịa, không đoán).
+            - Nếu tool_observations chứa nhiều query khác nhau, hãy gộp tất cả facts liên quan vào cùng một output.
             - facts có thể rỗng nếu không tìm thấy.
             - Luôn trả "missing": [].
             - Không tự kết luận còn thiếu khoản mục nào; việc đó do agent synth quyết định.

@@ -91,6 +91,51 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
     return ""
 
 
+def _dedupe_worker_facts(facts: list[dict]) -> list[dict]:
+    deduped = []
+    seen = set()
+
+    for fact in (facts or []):
+        if not isinstance(fact, dict):
+            continue
+        key = (
+            str(fact.get("item_name", "")).strip(),
+            str(fact.get("time_hint", "")).strip(),
+            str(fact.get("value", "")).strip(),
+            str(fact.get("source", "")).strip(),
+            str(fact.get("table", "")).strip(),
+        )
+        if key in seen:
+            continue
+        deduped.append(fact)
+        seen.add(key)
+
+    return deduped
+
+
+def _merge_worker_output(previous: dict, current: dict) -> dict:
+    prev = dict(previous or {})
+    curr = dict(current or {})
+
+    table = str(curr.get("table", "")).strip() or str(prev.get("table", "")).strip()
+    facts = _dedupe_worker_facts(
+        list(prev.get("facts", []) or []) + list(curr.get("facts", []) or [])
+    )
+
+    notes_parts = []
+    for note in (prev.get("notes", ""), curr.get("notes", "")):
+        text = str(note or "").strip()
+        if text and text not in notes_parts:
+            notes_parts.append(text)
+
+    return {
+        "table": table,
+        "facts": facts,
+        "missing": [],
+        "notes": " | ".join(notes_parts),
+    }
+
+
 def collect_all_workers(state: dict) -> dict:
     expected = set(state.get("expected_workers", []) or [])
     round_n = state.get("followup_rounds", 0)
@@ -134,6 +179,7 @@ def collect_all_workers(state: dict) -> dict:
 
     worker_results = {}
     web_summary = state.get("web_summary", "")
+    existing_worker_results = state.get("worker_results", {}) or {}
 
     for agent in sorted(expected):
         text = _latest_agent_response_for(state, agent)
@@ -151,7 +197,13 @@ def collect_all_workers(state: dict) -> dict:
             if agent == "agent_web":
                 web_summary = json.dumps(data, ensure_ascii=False)
             else:
-                worker_results[agent] = data
+                previous = existing_worker_results.get(agent, {})
+                merged = _merge_worker_output(previous, data)
+                worker_results[agent] = merged
+                summary = {
+                    "table": merged.get("table", ""),
+                    "facts_n": len(merged.get("facts", []) or []),
+                }
 
         except Exception as e:
             fallback = {
@@ -159,13 +211,14 @@ def collect_all_workers(state: dict) -> dict:
                 "facts": [],
                 "notes": f"Parse lỗi từ {agent}: {str(e)}"
             }
-            kind = "fallback"
-            summary = {
-                "error": "fallback",
-                "preview": text[:140],
-            }
+            previous = existing_worker_results.get(agent, {})
 
             if agent == "agent_web":
+                kind = "fallback"
+                summary = {
+                    "error": "fallback",
+                    "preview": text[:140],
+                }
                 web_summary = json.dumps(
                     {
                         "error": "worker did not return valid ANSWER",
@@ -174,7 +227,21 @@ def collect_all_workers(state: dict) -> dict:
                     ensure_ascii=False,
                 )
             else:
-                worker_results[agent] = fallback
+                if previous:
+                    kind = "fallback_keep_previous"
+                    worker_results[agent] = previous
+                    summary = {
+                        "table": previous.get("table", ""),
+                        "facts_n": len(previous.get("facts", []) or []),
+                        "error": "fallback_keep_previous",
+                    }
+                else:
+                    kind = "fallback"
+                    worker_results[agent] = fallback
+                    summary = {
+                        "error": "fallback",
+                        "preview": text[:140],
+                    }
 
         updates["trace"].append(
             make_log(
