@@ -142,19 +142,20 @@ AGENT_PROFILES = {
 
             NHIỆM VỤ:
             - Tạo KeywordPlan chỉ gồm "targets" để worker dùng truy vấn KB.
-            - Với mỗi bảng trong plan_json.tables, chọn ra các keyword phù hợp nhất từ allowed_keywords_by_table của chính bảng đó.
-            - Bạn phải map required_components và analysis_axes của planner sang keyword retrieval cụ thể.
+            - Với mỗi bảng trong plan_json.tables, chọn ra 1-2 seed keywords phù hợp nhất từ allowed_keywords_by_table của chính bảng đó.
+            - Bạn phải map required_components và analysis_axes của planner sang seed keyword retrieval cụ thể.
+            - Không cần cố bao phủ toàn bộ mọi khoản mục; worker/tool layer sẽ mở rộng thêm trong phạm vi guard.
 
             MỤC TIÊU:
             - Keyword phải là khoản mục / chỉ tiêu / line item tiếng Việt có khả năng xuất hiện trực tiếp trong KB.
             - Keyword phải phục vụ truy vấn dữ liệu, không phải diễn giải dài dòng.
-            - Chọn ít nhưng đúng, ưu tiên retrieval chính xác hơn bao phủ rộng.
+            - Chọn ít nhưng đúng, ưu tiên seed retrieval chính xác hơn bao phủ rộng.
 
             QUY TẮC BẮT BUỘC:
             1) Nếu plan_json.tables có N bảng thì output "targets" PHẢI có đúng N phần tử.
             2) Mỗi bảng trong plan_json.tables phải xuất hiện đúng 1 lần trong targets.
             3) KHÔNG ĐƯỢC để targets rỗng nếu plan_json.tables không rỗng.
-            4) Mỗi target.keywords phải có ít nhất 1 keyword và tối đa 3 keywords.
+            4) Mỗi target.keywords phải có ít nhất 1 keyword và tối đa 2 keywords.
             5) KHÔNG BAO GIỜ trả null.
             6) KHÔNG BAO GIỜ trả object rỗng.
             7) KHÔNG BAO GIỜ tạo keyword ngoài allowed_keywords_by_table của bảng tương ứng.
@@ -170,7 +171,7 @@ AGENT_PROFILES = {
             13) Ưu tiên line item cụ thể hơn là khái niệm mơ hồ.
             14) Không chọn các từ quá chung như: "thanh toán", "dòng tiền", "lợi nhuận", "chi phí" nếu allowed list có khoản mục cụ thể hơn.
             15) Với câu hỏi về chỉ số / hệ số / tỷ lệ, không chọn tên chỉ số làm keyword nếu KB không chứa trực tiếp chỉ số đó; hãy chọn các khoản mục cần thiết để tính chỉ số.
-            16) Với câu hỏi rộng hoặc mang tính đánh giá, chỉ chọn 1-3 khoản mục cốt lõi nhất cho mỗi bảng, không cố bao phủ mọi khía cạnh.
+            16) Với câu hỏi rộng hoặc mang tính đánh giá, chỉ chọn 1-2 khoản mục cốt lõi nhất cho mỗi bảng, không cố bao phủ mọi khía cạnh.
             17) Không lặp keyword trong cùng một target.
             18) Ưu tiên keyword có xác suất xuất hiện nguyên văn trong heading hoặc item_name của KB.
             19) Nếu required_components hoặc analysis_axes dùng từ gần nghĩa với allowed list, hãy chọn keyword allowed gần nhất nhưng vẫn đúng bản chất.
@@ -179,7 +180,7 @@ AGENT_PROFILES = {
             - Bước 1: đọc user_query để xác định người dùng thật sự cần dữ liệu gì.
             - Bước 2: đọc plan_json.required_components và plan_json.analysis_axes để hiểu planner đang cần bằng chứng gì.
             - Bước 3: nhìn plan_json.tables để biết chỉ được chọn keyword trong những bảng nào.
-            - Bước 4: với từng bảng, chọn 1-3 keyword từ allowed_keywords_by_table sao cho bám sát nhất với components của planner.
+            - Bước 4: với từng bảng, chọn 1-2 seed keyword từ allowed_keywords_by_table sao cho bám sát nhất với components của planner.
             - Bước 5: nếu query là chỉ số / tỷ lệ, suy ra các thành phần cần để tính rồi chọn các thành phần đó.
             - Bước 6: nếu query rộng hoặc mơ hồ, chọn keyword phổ biến, cụ thể, và giàu thông tin nhất trong KB.
 

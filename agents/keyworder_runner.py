@@ -8,6 +8,7 @@ from graph.logger import make_debug_log, make_log
 from schemas.keyword_guard import repair_keywords, validate_keywords
 
 keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
+MAX_SEED_KEYWORDS_PER_TABLE = 2
 
 
 def _dedupe_keep_order(items: list[str]) -> list[str]:
@@ -73,6 +74,12 @@ def _allowed_keywords_payload(selected_tables: list[str]) -> str:
     return json.dumps(allowed, ensure_ascii=False)
 
 
+def _limit_seed_keywords(items: list[str], limit: int = MAX_SEED_KEYWORDS_PER_TABLE) -> list[str]:
+    if limit <= 0:
+        return []
+    return _dedupe_keep_order(items)[:limit]
+
+
 def _fallback_plan_from_components(plan_tables: dict, selected_tables: list[str]) -> dict:
     component_map = _plan_components_by_table(plan_tables, selected_tables)
     targets = []
@@ -91,7 +98,7 @@ def _fallback_plan_from_components(plan_tables: dict, selected_tables: list[str]
         targets.append(
             {
                 "table": table,
-                "keywords": _dedupe_keep_order(repairs),
+                "keywords": _limit_seed_keywords(repairs),
             }
         )
 
@@ -216,7 +223,7 @@ def run_keyworder(state: dict) -> dict:
                         }
                     )
 
-            valid_kws = list(dict.fromkeys(valid_kws))
+            valid_kws = _limit_seed_keywords(valid_kws)
             cleaned_targets.append({"table": table, "keywords": valid_kws})
 
         plan["targets"] = cleaned_targets

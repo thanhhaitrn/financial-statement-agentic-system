@@ -2,6 +2,7 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from schemas.keyword_guard import validate_keywords
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
 from graph.logger import make_debug_log, make_log
@@ -9,6 +10,8 @@ from graph.logger import make_debug_log, make_log
 
 _COLLECTION = None
 MAX_KEYWORDS_PER_TOOL_RUN = 4
+SEED_KEYWORD_CUTOFF = 0.88
+PLANNER_COMPONENT_CUTOFF = 0.93
 
 
 def set_collection(collection):
@@ -104,6 +107,113 @@ def _get_keywords_for_table(plan: dict, table: str) -> List[str]:
     return []
 
 
+def _dedupe_keep_order(items: List[str]) -> List[str]:
+    seen = set()
+    out = []
+    for item in items or []:
+        text = str(item).strip()
+        if not text or text in seen:
+            continue
+        out.append(text)
+        seen.add(text)
+    return out
+
+
+def _plan_components_for_table(plan_tables: dict, table: str) -> List[str]:
+    normalized_target = _normalize_table_name(table)
+    specific_components: List[str] = []
+    global_components = _dedupe_keep_order(plan_tables.get("required_components", []) or [])
+
+    for axis in (plan_tables.get("analysis_axes", []) or []):
+        if not isinstance(axis, dict):
+            continue
+
+        tables = [
+            _normalize_table_name(item)
+            for item in (axis.get("tables", []) or [])
+            if str(item).strip()
+        ]
+        if normalized_target not in tables:
+            continue
+
+        specific_components.extend(
+            [
+                str(item).strip()
+                for item in (axis.get("components", []) or [])
+                if str(item).strip()
+            ]
+        )
+
+    specific_components = _dedupe_keep_order(specific_components)
+    return specific_components or global_components
+
+
+def _guarded_keywords_for_table(
+    table: str,
+    candidates: List[str],
+    *,
+    cutoff: float,
+) -> List[str]:
+    valid, details = validate_keywords(
+        table,
+        candidates,
+        fuzzy=True,
+        cutoff=cutoff,
+    )
+    out = list(valid or [])
+    for item in details or []:
+        suggestion = item.get("suggested")
+        if suggestion and suggestion not in out:
+            out.append(suggestion)
+    return _dedupe_keep_order(out)
+
+
+def _refine_keywords_for_table(
+    state: dict,
+    table: str,
+    requested_query: str = "",
+) -> Tuple[List[str], List[str], List[str], bool]:
+    raw_seed_keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
+    seed_keywords = _guarded_keywords_for_table(
+        table,
+        raw_seed_keywords,
+        cutoff=SEED_KEYWORD_CUTOFF,
+    )
+    planner_components = _plan_components_for_table(state.get("plan_tables", {}) or {}, table)
+
+    refined_keywords = _dedupe_keep_order(seed_keywords)
+    for keyword in _guarded_keywords_for_table(
+        table,
+        planner_components,
+        cutoff=PLANNER_COMPONENT_CUTOFF,
+    ):
+        if keyword not in refined_keywords:
+            refined_keywords.append(keyword)
+
+    direct_requested = False
+    requested_query = str(requested_query or "").strip()
+    if requested_query:
+        requested_refined = _guarded_keywords_for_table(
+            table,
+            [requested_query],
+            cutoff=PLANNER_COMPONENT_CUTOFF,
+        )
+        for keyword in requested_refined:
+            if keyword not in refined_keywords:
+                refined_keywords.insert(0, keyword)
+
+        if not requested_refined and int(state.get("followup_rounds", 0) or 0) > 0 and not refined_keywords:
+            refined_keywords = [requested_query]
+            direct_requested = True
+
+    return (
+        seed_keywords,
+        planner_components,
+        _keywords_to_fetch(refined_keywords),
+        direct_requested,
+    )
+
+
 def _parse_action_block(action_text: str) -> Tuple[Optional[str], Dict[str, Any], Optional[str]]:
     action_match = re.search(r"(?mi)^\s*ACTION:\s*([^\n]+?)\s*$", action_text)
     if not action_match:
@@ -139,37 +249,45 @@ def _prepare_get_related_info_args(
     state: dict,
     agent_name: str,
     args: dict,
-) -> Tuple[Optional[dict], Optional[str], Optional[dict]]:
+) -> Tuple[Optional[dict], Optional[str], Optional[dict], List[str]]:
     global _COLLECTION
 
     if _COLLECTION is None:
-        return None, "collection not set. Call set_collection(collection) before running workflow.", None
+        return None, "collection not set. Call set_collection(collection) before running workflow.", None, []
 
     prepared = dict(args)
     prepared["collection"] = _COLLECTION
     prepared["table"] = WORKER_TO_TABLE.get(agent_name, prepared.get("table", ""))
 
     table = prepared.get("table", "")
-    keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
     requested_query = str(args.get("query", "")).strip()
-    is_followup_round = int(state.get("followup_rounds", 0) or 0) > 0
-
-    log_entry = make_debug_log(
+    seed_keywords, planner_components, refined_keywords, direct_requested = _refine_keywords_for_table(
         state,
-        "tool:using_keywords",
-        agent=agent_name,
-        table=table,
-        kws=keywords[:4],
+        table,
+        requested_query=requested_query,
     )
 
-    if not keywords:
-        if is_followup_round and requested_query:
-            prepared["query"] = requested_query
-            return prepared, None, log_entry
-        return None, f"no keywords in plan for table={table}", log_entry
+    log_data = {
+        "agent": agent_name,
+        "table": table,
+        "seed_keywords": seed_keywords[:4],
+        "planner_components": planner_components[:4],
+        "refined_keywords": refined_keywords[:4],
+    }
+    if direct_requested:
+        log_data["requested_query"] = requested_query
+        log_data["direct_requested"] = True
 
-    prepared["query"] = keywords[0]
-    return prepared, None, log_entry
+    if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested:
+        log_entry = make_log(state, "tool:keyword_refined", **log_data)
+    else:
+        log_entry = make_debug_log(state, "tool:keyword_refined", **log_data)
+
+    if not refined_keywords:
+        return None, f"no guarded keywords available for table={table}", log_entry, []
+
+    prepared["query"] = refined_keywords[0]
+    return prepared, None, log_entry, refined_keywords
 
 
 def _keywords_to_fetch(keywords: List[str], *, limit: int = MAX_KEYWORDS_PER_TOOL_RUN) -> List[str]:
@@ -302,9 +420,14 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
 
     prepared_args = dict(args)
     trace_logs = []
+    refined_keywords: List[str] = []
 
     if tool_name == "get_related_info":
-        prepared_args, prep_error, prep_log = _prepare_get_related_info_args(state, agent_name, prepared_args)
+        prepared_args, prep_error, prep_log, refined_keywords = _prepare_get_related_info_args(
+            state,
+            agent_name,
+            prepared_args,
+        )
         if prep_log:
             trace_logs.append(prep_log)
 
@@ -420,10 +543,9 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     }
 
     if tool_name == "get_related_info":
-        keywords = _get_keywords_for_table(state.get("plan", {}) or {}, prepared_args.get("table", ""))
         followup_keywords = [
             kw
-            for kw in _keywords_to_fetch(keywords)
+            for kw in refined_keywords
             if kw != str(prepared_args.get("query", "")).strip()
         ]
 
