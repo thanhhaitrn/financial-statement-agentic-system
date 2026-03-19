@@ -1,4 +1,6 @@
+from agents.planner_hints import infer_time_hint
 from agents.profiles import AGENT_PROFILES
+from datasets.registry import get_dataset
 from schemas.agent_outputs import PlannerEvidencePlan
 from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
@@ -6,15 +8,33 @@ from graph.logger import make_debug_log, make_log
 
 DEFAULT_PLAN_TABLES = {
     "question_type": "lookup",
-    "tables": [],
     "analysis_axes": [],
-    "required_components": [],
     "company": "",
     "time_hint": "",
     "need_web": False,
 }
 
 planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerEvidencePlan)
+
+
+def _enrich_plan_fields(state: dict, plan: dict) -> dict:
+    enriched = dict(plan or {})
+    dataset = None
+    dataset_id = str((state or {}).get("dataset_id", "") or "").strip()
+    if dataset_id:
+        dataset = get_dataset(dataset_id)
+
+    if not str(enriched.get("company", "") or "").strip() and dataset is not None:
+        enriched["company"] = dataset.company
+
+    if not str(enriched.get("time_hint", "") or "").strip():
+        enriched["time_hint"] = infer_time_hint(
+            str((state or {}).get("user_query", "") or ""),
+            dataset_fiscal_year=getattr(dataset, "fiscal_year", None),
+            dataset_fiscal_quarter=getattr(dataset, "fiscal_quarter", None),
+        )
+
+    return enriched
 
 
 def run_planner(state: dict) -> dict:
@@ -50,7 +70,7 @@ def run_planner(state: dict) -> dict:
 
     try:
         plan_obj: PlannerEvidencePlan = planner_chain.invoke(payload)
-        updates["plan_tables"] = plan_obj.model_dump()
+        updates["plan_tables"] = _enrich_plan_fields(state, plan_obj.model_dump())
         updates["trace"].append(
             make_log(
                 state,
@@ -59,7 +79,7 @@ def run_planner(state: dict) -> dict:
             )
         )
     except Exception as e:
-        updates["plan_tables"] = DEFAULT_PLAN_TABLES
+        updates["plan_tables"] = _enrich_plan_fields(state, DEFAULT_PLAN_TABLES)
         updates["trace"].append(
             make_log(
                 state,

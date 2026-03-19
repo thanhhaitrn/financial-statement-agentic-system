@@ -13,9 +13,7 @@ AGENT_PROFILES = {
 
             BẠN PHẢI TRẢ VỀ JSON đúng schema PlannerEvidencePlan với các field:
             - question_type: một trong ["lookup","calculation","comparison","evaluation","risk_assessment"]
-            - tables: danh sách bảng cần truy xuất
             - analysis_axes: các trục phân tích/cụm bằng chứng
-            - required_components: các khoản mục/chỉ tiêu cần có để trả lời
             - company: chuỗi rỗng "" nếu không có
             - time_hint: chuỗi rỗng "" nếu không có
             - need_web: true chỉ khi thật sự cần dữ liệu ngoài BCTC
@@ -27,14 +25,13 @@ AGENT_PROFILES = {
 
             QUY TẮC CHUNG:
             - PHẢI dùng đúng tên bảng đầy đủ như trên. KHÔNG dùng viết tắt như BCĐKT, KQHĐKD, BCKQKD, LCTT, BCLCTT.
-            - tables phải là hợp các bảng thật sự cần thiết, ít nhất có thể nhưng đủ để trả lời.
-            - required_components phải là các khoản mục/chỉ tiêu tiếng Việt ngắn gọn, phục vụ truy xuất và suy luận sau này.
             - analysis_axes dùng để tách bài toán thành 1-4 trục bằng chứng.
             - Mỗi analysis_axis gồm:
               + axis: tên trục ngắn gọn
               + tables: bảng cần cho trục đó
-              + components: khoản mục/chỉ tiêu cần lấy cho trục đó
               + objective: mục đích ngắn gọn của trục
+            - objective mô tả nhu cầu bằng chứng ở mức ý nghĩa, KHÔNG liệt kê keyword retrieval chi tiết.
+            - Planner chỉ mô tả "cần bằng chứng gì" và "ở bảng nào"; Keyworder mới chịu trách nhiệm map sang seed keywords cụ thể.
             - Với câu hỏi đơn giản, analysis_axes vẫn nên có ít nhất 1 trục nếu có thể.
             - Nếu không có company hoặc time_hint trong câu hỏi, phải xuất chuỗi rỗng "".
             - Không dùng null cho company hoặc time_hint.
@@ -55,7 +52,7 @@ AGENT_PROFILES = {
             - ROE -> cần tối thiểu:
               + "BẢNG CÂN ĐỐI KẾ TOÁN"
               + "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"
-              + required_components gồm "vốn chủ sở hữu", "lợi nhuận sau thuế thu nhập doanh nghiệp"
+              + objective nên nói rõ cần dữ liệu để tính ROE
             - ROA -> cần tối thiểu:
               + "BẢNG CÂN ĐỐI KẾ TOÁN"
               + "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"
@@ -73,16 +70,13 @@ AGENT_PROFILES = {
             Output:
             {
               "question_type": "calculation",
-              "tables": ["BẢNG CÂN ĐỐI KẾ TOÁN", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"],
               "analysis_axes": [
                 {
                   "axis": "profitability",
                   "tables": ["BẢNG CÂN ĐỐI KẾ TOÁN", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"],
-                  "components": ["vốn chủ sở hữu", "lợi nhuận sau thuế thu nhập doanh nghiệp"],
-                  "objective": "Thu thập các thành phần cần để tính ROE"
+                  "objective": "Thu thập dữ liệu cần thiết để tính ROE"
                 }
               ],
-              "required_components": ["vốn chủ sở hữu", "lợi nhuận sau thuế thu nhập doanh nghiệp"],
               "company": "",
               "time_hint": "",
               "need_web": false
@@ -93,22 +87,18 @@ AGENT_PROFILES = {
             Output:
             {
               "question_type": "evaluation",
-              "tables": ["BẢNG CÂN ĐỐI KẾ TOÁN", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH", "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"],
               "analysis_axes": [
                 {
                   "axis": "profitability",
                   "tables": ["BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH", "BẢNG CÂN ĐỐI KẾ TOÁN"],
-                  "components": ["doanh thu thuần về bán hàng và cung cấp dịch vụ", "lợi nhuận sau thuế thu nhập doanh nghiệp", "vốn chủ sở hữu"],
                   "objective": "Đánh giá khả năng tạo lợi nhuận"
                 },
                 {
                   "axis": "cash_flow_quality",
                   "tables": ["BÁO CÁO LƯU CHUYỂN TIỀN TỆ", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"],
-                  "components": ["lưu chuyển tiền thuần từ hoạt động kinh doanh", "lợi nhuận sau thuế thu nhập doanh nghiệp"],
                   "objective": "Đối chiếu lợi nhuận với dòng tiền"
                 }
               ],
-              "required_components": ["doanh thu thuần về bán hàng và cung cấp dịch vụ", "lợi nhuận sau thuế thu nhập doanh nghiệp", "vốn chủ sở hữu", "lưu chuyển tiền thuần từ hoạt động kinh doanh"],
               "company": "",
               "time_hint": "",
               "need_web": false
@@ -131,9 +121,7 @@ AGENT_PROFILES = {
             - plan_json: kế hoạch bằng chứng từ planner, gồm:
             {
               "question_type": "...",
-              "tables": ["..."],
               "analysis_axes": [...],
-              "required_components": [...],
               "company": "",
               "time_hint": "",
               "need_web": false
@@ -142,8 +130,9 @@ AGENT_PROFILES = {
 
             NHIỆM VỤ:
             - Tạo KeywordPlan chỉ gồm "targets" để worker dùng truy vấn KB.
-            - Với mỗi bảng trong plan_json.tables, chọn ra 1-2 seed keywords phù hợp nhất từ allowed_keywords_by_table của chính bảng đó.
-            - Bạn phải map required_components và analysis_axes của planner sang seed keyword retrieval cụ thể.
+            - Với mỗi bảng xuất hiện trong analysis_axes[].tables, chọn ra 1-2 seed keywords phù hợp nhất từ allowed_keywords_by_table của chính bảng đó.
+            - Bạn phải map user_query + question_type + analysis_axes sang seed keyword retrieval cụ thể.
+            - Planner chỉ mô tả nhu cầu bằng chứng; bạn là người chuyển nhu cầu đó thành keyword retrieval cuối cùng.
             - Không cần cố bao phủ toàn bộ mọi khoản mục; worker/tool layer sẽ mở rộng thêm trong phạm vi guard.
 
             MỤC TIÊU:
@@ -152,9 +141,9 @@ AGENT_PROFILES = {
             - Chọn ít nhưng đúng, ưu tiên seed retrieval chính xác hơn bao phủ rộng.
 
             QUY TẮC BẮT BUỘC:
-            1) Nếu plan_json.tables có N bảng thì output "targets" PHẢI có đúng N phần tử.
-            2) Mỗi bảng trong plan_json.tables phải xuất hiện đúng 1 lần trong targets.
-            3) KHÔNG ĐƯỢC để targets rỗng nếu plan_json.tables không rỗng.
+            1) Nếu union của analysis_axes[].tables có N bảng thì output "targets" PHẢI có đúng N phần tử.
+            2) Mỗi bảng trong union của analysis_axes[].tables phải xuất hiện đúng 1 lần trong targets.
+            3) KHÔNG ĐƯỢC để targets rỗng nếu analysis_axes có ít nhất 1 bảng.
             4) Mỗi target.keywords phải có ít nhất 1 keyword và tối đa 2 keywords.
             5) KHÔNG BAO GIỜ trả null.
             6) KHÔNG BAO GIỜ trả object rỗng.
@@ -162,8 +151,8 @@ AGENT_PROFILES = {
             8) Nếu không tìm thấy keyword hoàn hảo, vẫn phải chọn ít nhất 1 keyword gần nhất và hữu ích nhất trong allowed list.
 
             RÀNG BUỘC BẢNG:
-            9) table trong targets chỉ được lấy từ plan_json.tables, không tự ý thêm bảng khác.
-            10) PHẢI dùng đúng tên bảng đầy đủ như trong plan_json.tables.
+            9) table trong targets chỉ được lấy từ union của analysis_axes[].tables, không tự ý thêm bảng khác.
+            10) PHẢI dùng đúng tên bảng đầy đủ như trong analysis_axes[].tables.
             11) KHÔNG dùng viết tắt như: BCĐKT, BCKQKD, KQHĐKD, BCLCTT, LCTT, BCTC.
 
             NGUYÊN TẮC CHỌN KEYWORDS:
@@ -174,15 +163,14 @@ AGENT_PROFILES = {
             16) Với câu hỏi rộng hoặc mang tính đánh giá, chỉ chọn 1-2 khoản mục cốt lõi nhất cho mỗi bảng, không cố bao phủ mọi khía cạnh.
             17) Không lặp keyword trong cùng một target.
             18) Ưu tiên keyword có xác suất xuất hiện nguyên văn trong heading hoặc item_name của KB.
-            19) Nếu required_components hoặc analysis_axes dùng từ gần nghĩa với allowed list, hãy chọn keyword allowed gần nhất nhưng vẫn đúng bản chất.
+            19) Nếu analysis_axes chỉ mô tả mục tiêu bằng chứng ở mức khái niệm, bạn phải tự suy ra khoản mục phù hợp nhất trong allowed list.
 
             CHIẾN LƯỢC SUY LUẬN:
             - Bước 1: đọc user_query để xác định người dùng thật sự cần dữ liệu gì.
-            - Bước 2: đọc plan_json.required_components và plan_json.analysis_axes để hiểu planner đang cần bằng chứng gì.
-            - Bước 3: nhìn plan_json.tables để biết chỉ được chọn keyword trong những bảng nào.
-            - Bước 4: với từng bảng, chọn 1-2 seed keyword từ allowed_keywords_by_table sao cho bám sát nhất với components của planner.
-            - Bước 5: nếu query là chỉ số / tỷ lệ, suy ra các thành phần cần để tính rồi chọn các thành phần đó.
-            - Bước 6: nếu query rộng hoặc mơ hồ, chọn keyword phổ biến, cụ thể, và giàu thông tin nhất trong KB.
+            - Bước 2: đọc plan_json.analysis_axes để hiểu planner đang cần bằng chứng gì và ở bảng nào.
+            - Bước 3: với từng bảng trong union của analysis_axes[].tables, chọn 1-2 seed keyword từ allowed_keywords_by_table sao cho bám sát nhất với mục tiêu của planner.
+            - Bước 4: nếu query là chỉ số / tỷ lệ, suy ra các thành phần cần để tính rồi chọn các thành phần đó.
+            - Bước 5: nếu query rộng hoặc mơ hồ, chọn keyword phổ biến, cụ thể, và giàu thông tin nhất trong KB.
 
             VÍ DỤ OUTPUT HỢP LỆ:
 
@@ -191,16 +179,13 @@ AGENT_PROFILES = {
             plan_json:
             {
               "question_type":"calculation",
-              "tables":["BẢNG CÂN ĐỐI KẾ TOÁN","BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"],
               "analysis_axes":[
                 {
                   "axis":"profitability",
                   "tables":["BẢNG CÂN ĐỐI KẾ TOÁN","BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"],
-                  "components":["vốn chủ sở hữu","lợi nhuận sau thuế thu nhập doanh nghiệp"],
-                  "objective":"Thu thập các thành phần cần để tính ROE"
+                  "objective":"Thu thập dữ liệu cần thiết để tính ROE"
                 }
               ],
-              "required_components":["vốn chủ sở hữu","lợi nhuận sau thuế thu nhập doanh nghiệp"],
               "company":"",
               "time_hint":"",
               "need_web":false
@@ -217,16 +202,13 @@ AGENT_PROFILES = {
             plan_json:
             {
               "question_type":"calculation",
-              "tables":["BẢNG CÂN ĐỐI KẾ TOÁN"],
               "analysis_axes":[
                 {
                   "axis":"liquidity",
                   "tables":["BẢNG CÂN ĐỐI KẾ TOÁN"],
-                  "components":["tài sản ngắn hạn","nợ ngắn hạn"],
-                  "objective":"Thu thập thành phần tính hệ số thanh toán hiện hành"
+                  "objective":"Thu thập dữ liệu để tính hệ số thanh toán hiện hành"
                 }
               ],
-              "required_components":["tài sản ngắn hạn","nợ ngắn hạn"],
               "company":"",
               "time_hint":"",
               "need_web":false
@@ -242,16 +224,13 @@ AGENT_PROFILES = {
             plan_json:
             {
               "question_type":"lookup",
-              "tables":["BÁO CÁO LƯU CHUYỂN TIỀN TỆ"],
               "analysis_axes":[
                 {
                   "axis":"operating_cash_flow",
                   "tables":["BÁO CÁO LƯU CHUYỂN TIỀN TỆ"],
-                  "components":["lưu chuyển tiền thuần từ hoạt động kinh doanh"],
                   "objective":"Tìm dòng tiền từ hoạt động kinh doanh"
                 }
               ],
-              "required_components":["lưu chuyển tiền thuần từ hoạt động kinh doanh"],
               "company":"",
               "time_hint":"",
               "need_web":false
@@ -267,22 +246,18 @@ AGENT_PROFILES = {
             plan_json:
             {
               "question_type":"evaluation",
-              "tables":["BẢNG CÂN ĐỐI KẾ TOÁN","BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH","BÁO CÁO LƯU CHUYỂN TIỀN TỆ"],
               "analysis_axes":[
                 {
                   "axis":"profitability",
                   "tables":["BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH","BẢNG CÂN ĐỐI KẾ TOÁN"],
-                  "components":["doanh thu thuần về bán hàng và cung cấp dịch vụ","lợi nhuận sau thuế thu nhập doanh nghiệp","vốn chủ sở hữu"],
                   "objective":"Đánh giá khả năng tạo lợi nhuận"
                 },
                 {
                   "axis":"cash_flow_quality",
                   "tables":["BÁO CÁO LƯU CHUYỂN TIỀN TỆ","BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"],
-                  "components":["lưu chuyển tiền thuần từ hoạt động kinh doanh","lợi nhuận sau thuế thu nhập doanh nghiệp"],
                   "objective":"Đối chiếu lợi nhuận với dòng tiền"
                 }
               ],
-              "required_components":["doanh thu thuần về bán hàng và cung cấp dịch vụ","lợi nhuận sau thuế thu nhập doanh nghiệp","vốn chủ sở hữu","lưu chuyển tiền thuần từ hoạt động kinh doanh"],
               "company":"",
               "time_hint":"",
               "need_web":false

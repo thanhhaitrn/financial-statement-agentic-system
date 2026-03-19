@@ -2,6 +2,7 @@ import json
 import re
 from typing import Any, Dict, List, Optional, Tuple
 
+from agents.planner_hints import infer_table_keywords, infer_table_query_hints
 from schemas.keyword_guard import validate_keywords
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
@@ -119,33 +120,24 @@ def _dedupe_keep_order(items: List[str]) -> List[str]:
     return out
 
 
-def _plan_components_for_table(plan_tables: dict, table: str) -> List[str]:
-    normalized_target = _normalize_table_name(table)
-    specific_components: List[str] = []
-    global_components = _dedupe_keep_order(plan_tables.get("required_components", []) or [])
+def _planner_hints_for_table(state: dict, table: str) -> List[str]:
+    plan_tables = state.get("plan_tables", {}) or {}
+    analysis_axes = plan_tables.get("analysis_axes", []) or []
+    return infer_table_keywords(
+        table,
+        str(state.get("user_query", "") or ""),
+        analysis_axes,
+    )
 
-    for axis in (plan_tables.get("analysis_axes", []) or []):
-        if not isinstance(axis, dict):
-            continue
 
-        tables = [
-            _normalize_table_name(item)
-            for item in (axis.get("tables", []) or [])
-            if str(item).strip()
-        ]
-        if normalized_target not in tables:
-            continue
-
-        specific_components.extend(
-            [
-                str(item).strip()
-                for item in (axis.get("components", []) or [])
-                if str(item).strip()
-            ]
-        )
-
-    specific_components = _dedupe_keep_order(specific_components)
-    return specific_components or global_components
+def _planner_query_hints_for_table(state: dict, table: str) -> List[str]:
+    plan_tables = state.get("plan_tables", {}) or {}
+    analysis_axes = plan_tables.get("analysis_axes", []) or []
+    return infer_table_query_hints(
+        table,
+        str(state.get("user_query", "") or ""),
+        analysis_axes,
+    )
 
 
 def _guarded_keywords_for_table(
@@ -172,19 +164,20 @@ def _refine_keywords_for_table(
     state: dict,
     table: str,
     requested_query: str = "",
-) -> Tuple[List[str], List[str], List[str], bool]:
+) -> Tuple[List[str], List[str], List[str], List[str], str, bool]:
     raw_seed_keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
     seed_keywords = _guarded_keywords_for_table(
         table,
         raw_seed_keywords,
         cutoff=SEED_KEYWORD_CUTOFF,
     )
-    planner_components = _plan_components_for_table(state.get("plan_tables", {}) or {}, table)
+    planner_hints = _planner_hints_for_table(state, table)
+    planner_queries = _planner_query_hints_for_table(state, table)
 
     refined_keywords = _dedupe_keep_order(seed_keywords)
     for keyword in _guarded_keywords_for_table(
         table,
-        planner_components,
+        planner_hints,
         cutoff=PLANNER_COMPONENT_CUTOFF,
     ):
         if keyword not in refined_keywords:
@@ -206,10 +199,20 @@ def _refine_keywords_for_table(
             refined_keywords = [requested_query]
             direct_requested = True
 
+    fallback_query = ""
+    if not refined_keywords:
+        fallback_candidates = _dedupe_keep_order(
+            ([requested_query] if requested_query else []) + planner_queries
+        )
+        if fallback_candidates:
+            fallback_query = fallback_candidates[0]
+
     return (
         seed_keywords,
-        planner_components,
+        planner_hints,
+        planner_queries,
         _keywords_to_fetch(refined_keywords),
+        fallback_query,
         direct_requested,
     )
 
@@ -261,7 +264,7 @@ def _prepare_get_related_info_args(
 
     table = prepared.get("table", "")
     requested_query = str(args.get("query", "")).strip()
-    seed_keywords, planner_components, refined_keywords, direct_requested = _refine_keywords_for_table(
+    seed_keywords, planner_hints, planner_queries, refined_keywords, fallback_query, direct_requested = _refine_keywords_for_table(
         state,
         table,
         requested_query=requested_query,
@@ -271,23 +274,30 @@ def _prepare_get_related_info_args(
         "agent": agent_name,
         "table": table,
         "seed_keywords": seed_keywords[:4],
-        "planner_components": planner_components[:4],
+        "planner_hints": planner_hints[:4],
+        "planner_queries": planner_queries[:3],
         "refined_keywords": refined_keywords[:4],
     }
     if direct_requested:
         log_data["requested_query"] = requested_query
         log_data["direct_requested"] = True
+    if fallback_query:
+        log_data["fallback_query"] = fallback_query
 
-    if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested:
+    if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested or fallback_query:
         log_entry = make_log(state, "tool:keyword_refined", **log_data)
     else:
         log_entry = make_debug_log(state, "tool:keyword_refined", **log_data)
 
-    if not refined_keywords:
-        return None, f"no guarded keywords available for table={table}", log_entry, []
+    if refined_keywords:
+        prepared["query"] = refined_keywords[0]
+        return prepared, None, log_entry, refined_keywords
 
-    prepared["query"] = refined_keywords[0]
-    return prepared, None, log_entry, refined_keywords
+    if fallback_query:
+        prepared["query"] = fallback_query
+        return prepared, None, log_entry, [fallback_query]
+
+    return None, f"no usable query available for table={table}", log_entry, []
 
 
 def _keywords_to_fetch(keywords: List[str], *, limit: int = MAX_KEYWORDS_PER_TOOL_RUN) -> List[str]:

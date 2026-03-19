@@ -1,4 +1,4 @@
-import json, re
+import json
 from agents.prompts import PROMPT_TEMPLATE
 from agents.profiles import AGENT_PROFILES
 from llm.client import llm

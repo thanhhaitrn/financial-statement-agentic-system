@@ -19,6 +19,18 @@ TABLE_CANON = {
     "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
 }
 
+
+def _dedupe_keep_order(items: List[str]) -> List[str]:
+    seen = set()
+    out = []
+    for item in items or []:
+        text = str(item).strip()
+        if not text or text in seen:
+            continue
+        out.append(text)
+        seen.add(text)
+    return out
+
 AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
 
 PLANNER_QUESTION_TYPE = Literal[
@@ -34,7 +46,7 @@ PLANNER_QUESTION_TYPE = Literal[
 class PlannerAnalysisAxis(BaseModel):
     axis: str
     tables: List[TABLE_NAME] = Field(default_factory=list)
-    components: List[str] = Field(default_factory=list)
+    components: List[str] = Field(default_factory=list, exclude=True)
     objective: str = ""
 
     @field_validator("tables", mode="before")
@@ -70,9 +82,9 @@ class PlannerAnalysisAxis(BaseModel):
 
 class PlannerEvidencePlan(BaseModel):
     question_type: PLANNER_QUESTION_TYPE = "lookup"
-    tables: List[TABLE_NAME] = Field(default_factory=list)
+    tables: List[TABLE_NAME] = Field(default_factory=list, exclude=True)
     analysis_axes: List[PlannerAnalysisAxis] = Field(default_factory=list)
-    required_components: List[str] = Field(default_factory=list)
+    required_components: List[str] = Field(default_factory=list, exclude=True)
     company: Optional[str] = ""
     time_hint: Optional[str] = ""
     need_web: bool = False
@@ -111,21 +123,8 @@ class PlannerEvidencePlan(BaseModel):
     def consolidate_plan(self):
         tables = []
         seen_tables = set()
-
-        for table in self.tables:
-            if table not in seen_tables:
-                tables.append(table)
-                seen_tables.add(table)
-
-        required_components = []
-        seen_components = set()
-
-        for component in self.required_components:
-            if component not in seen_components:
-                required_components.append(component)
-                seen_components.add(component)
-
         normalized_axes = []
+
         for axis in self.analysis_axes:
             axis_tables = []
             axis_seen_tables = set()
@@ -143,17 +142,29 @@ class PlannerEvidencePlan(BaseModel):
                 if component not in axis_seen_components:
                     axis_components.append(component)
                     axis_seen_components.add(component)
-                if component not in seen_components:
-                    required_components.append(component)
-                    seen_components.add(component)
 
             axis.tables = axis_tables
             axis.components = axis_components
             normalized_axes.append(axis)
 
+        if not normalized_axes and self.tables:
+            normalized_axes.append(
+                PlannerAnalysisAxis(
+                    axis="core",
+                    tables=tables or list(self.tables),
+                    components=list(self.required_components),
+                    objective="",
+                )
+            )
+        elif self.tables:
+            for table in self.tables:
+                if table not in seen_tables:
+                    tables.append(table)
+                    seen_tables.add(table)
+
         self.tables = tables
         self.analysis_axes = normalized_axes
-        self.required_components = required_components
+        self.required_components = _dedupe_keep_order(self.required_components)
         return self
 
 

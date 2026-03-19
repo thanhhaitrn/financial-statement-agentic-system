@@ -1,4 +1,10 @@
 import json
+import re
+from typing import Any, Optional
+
+from pydantic import ValidationError
+
+from agents.planner_hints import infer_table_keywords
 from config.allowed_keywords import ALLOWED_KEYWORDS
 from schemas.agent_outputs import KeywordPlan
 from agents.profiles import AGENT_PROFILES
@@ -7,7 +13,7 @@ from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
 from schemas.keyword_guard import repair_keywords, validate_keywords
 
-keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan)
+keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan, include_raw=True)
 MAX_SEED_KEYWORDS_PER_TABLE = 2
 
 
@@ -42,28 +48,12 @@ def _selected_tables(plan_tables: dict) -> list[str]:
     return _dedupe_keep_order(selected)
 
 
-def _plan_components_by_table(plan_tables: dict, selected_tables: list[str]) -> dict[str, list[str]]:
-    by_table = {table: [] for table in selected_tables}
-    global_components = _dedupe_keep_order(plan_tables.get("required_components", []) or [])
-
-    for axis in (plan_tables.get("analysis_axes", []) or []):
-        if not isinstance(axis, dict):
-            continue
-        tables = _dedupe_keep_order(axis.get("tables", []) or [])
-        components = _dedupe_keep_order(axis.get("components", []) or [])
-        for table in tables:
-            if table not in by_table:
-                by_table[table] = []
-            by_table[table].extend(components)
-
-    for table in list(by_table.keys()):
-        specific_components = _dedupe_keep_order(by_table[table])
-        if specific_components:
-            by_table[table] = specific_components
-        else:
-            by_table[table] = global_components
-
-    return by_table
+def _planner_hints_by_table(plan_tables: dict, selected_tables: list[str], user_query: str) -> dict[str, list[str]]:
+    analysis_axes = plan_tables.get("analysis_axes", []) or []
+    return {
+        table: infer_table_keywords(table, user_query, analysis_axes)
+        for table in selected_tables
+    }
 
 
 def _allowed_keywords_payload(selected_tables: list[str]) -> str:
@@ -80,14 +70,141 @@ def _limit_seed_keywords(items: list[str], limit: int = MAX_SEED_KEYWORDS_PER_TA
     return _dedupe_keep_order(items)[:limit]
 
 
-def _fallback_plan_from_components(plan_tables: dict, selected_tables: list[str]) -> dict:
-    component_map = _plan_components_by_table(plan_tables, selected_tables)
+def _to_text(raw: Any) -> str:
+    if raw is None:
+        return ""
+    if isinstance(raw, str):
+        return raw
+    content = getattr(raw, "content", None)
+    if isinstance(content, str):
+        return content
+    if content is not None:
+        try:
+            return json.dumps(content, ensure_ascii=False)
+        except Exception:
+            return str(content)
+    return str(raw)
+
+
+def _extract_first_json_object(text: str) -> Optional[str]:
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    start = cleaned.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for idx in range(start, len(cleaned)):
+        ch = cleaned[idx]
+
+        if escape:
+            escape = False
+            continue
+
+        if ch == "\\":
+            escape = True
+            continue
+
+        if ch == '"':
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return cleaned[start:idx + 1]
+
+    return None
+
+
+def _try_parse_json_object(value: Any) -> Optional[dict]:
+    if isinstance(value, dict):
+        if isinstance(value.get("targets"), list):
+            return value
+
+        content = value.get("content")
+        if content is not None:
+            return _try_parse_json_object(content)
+        return None
+
+    text = _to_text(value).strip()
+    if not text:
+        return None
+
+    for candidate in (text, _extract_first_json_object(text)):
+        if not candidate:
+            continue
+        try:
+            parsed = json.loads(candidate)
+        except Exception:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
+    return None
+
+
+def _coerce_keyword_plan(result: Any) -> tuple[KeywordPlan, Optional[str], Optional[str]]:
+    if isinstance(result, KeywordPlan):
+        return result, None, None
+
+    parsing_error = None
+    recovered_from = None
+
+    if isinstance(result, dict):
+        parsed = result.get("parsed")
+        if isinstance(parsed, KeywordPlan):
+            return parsed, None, None
+
+        if result.get("parsing_error") is not None:
+            parsing_error = str(result.get("parsing_error"))[:250]
+
+        candidates = [
+            ("parsed_dict", parsed if isinstance(parsed, dict) else None),
+            ("parsed_text", parsed),
+            ("raw", result.get("raw")),
+            ("content", result.get("content")),
+        ]
+    else:
+        parsed = result
+        candidates = [("result", result)]
+
+    for source, candidate in candidates:
+        payload = _try_parse_json_object(candidate)
+        if payload is None:
+            continue
+        try:
+            return KeywordPlan.model_validate(payload), parsing_error, source
+        except ValidationError:
+            continue
+
+    if parsing_error:
+        raise ValueError(parsing_error)
+
+    raise ValueError("Keyworder did not return a valid KeywordPlan payload.")
+
+
+def _fallback_plan_from_hints(plan_tables: dict, selected_tables: list[str], user_query: str) -> dict:
+    hint_map = _planner_hints_by_table(plan_tables, selected_tables, user_query)
     targets = []
 
     for table in selected_tables:
         repairs, details = validate_keywords(
             table,
-            component_map.get(table, []),
+            hint_map.get(table, []),
             fuzzy=True,
             cutoff=0.93,
         )
@@ -119,8 +236,16 @@ def run_keyworder(state: dict) -> dict:
         trace.append(start_log)
 
     selected_tables = _selected_tables(plan_tables)
-    plan_components_by_table = _plan_components_by_table(plan_tables, selected_tables)
-    fallback_plan = _fallback_plan_from_components(plan_tables, selected_tables)
+    planner_hints_by_table = _planner_hints_by_table(
+        plan_tables,
+        selected_tables,
+        state.get("user_query", ""),
+    )
+    fallback_plan = _fallback_plan_from_hints(
+        plan_tables,
+        selected_tables,
+        state.get("user_query", ""),
+    )
 
     payload = {
         "role": profile["role"],
@@ -142,7 +267,8 @@ def run_keyworder(state: dict) -> dict:
     }
 
     try:
-        kp: KeywordPlan = keyworder_chain.invoke(payload)
+        raw_result = keyworder_chain.invoke(payload)
+        kp, parse_warning, recovered_from = _coerce_keyword_plan(raw_result)
         plan = kp.model_dump()
 
         targets_in = plan.get("targets", []) or []
@@ -159,7 +285,7 @@ def run_keyworder(state: dict) -> dict:
         cleaned_targets = []
         invalid_all = []
         repaired_all = []
-        planner_component_repairs = []
+        planner_hint_repairs = []
 
         for table in selected_tables:
             kws = by_table.get(table, [])
@@ -193,17 +319,17 @@ def run_keyworder(state: dict) -> dict:
                         }
                     )
 
-            if not valid_kws and plan_components_by_table.get(table):
-                component_valid, component_details = validate_keywords(
+            if not valid_kws and planner_hints_by_table.get(table):
+                hint_valid, hint_details = validate_keywords(
                     table,
-                    plan_components_by_table.get(table, []),
+                    planner_hints_by_table.get(table, []),
                     fuzzy=True,
                     cutoff=0.93,
                 )
-                for repaired_kw in component_valid:
+                for repaired_kw in hint_valid:
                     if repaired_kw not in valid_kws:
                         valid_kws.append(repaired_kw)
-                for x in component_details:
+                for x in hint_details:
                     suggestion = x.get("suggested")
                     if not suggestion:
                         continue
@@ -212,10 +338,10 @@ def run_keyworder(state: dict) -> dict:
                             "table": table,
                             "from": x.get("raw", ""),
                             "to": suggestion,
-                            "source": "planner_component",
+                            "source": "planner_hint",
                         }
                     )
-                    planner_component_repairs.append(
+                    planner_hint_repairs.append(
                         {
                             "table": table,
                             "from": x.get("raw", ""),
@@ -242,13 +368,27 @@ def run_keyworder(state: dict) -> dict:
                 if not target["keywords"]:
                     target["keywords"] = fallback_by_table.get(target["table"], [])
 
-        if selected_tables and any(not t["keywords"] for t in cleaned_targets):
-            missing_tables = [t["table"] for t in cleaned_targets if not t["keywords"]]
-            raise ValueError(
-                f"Keyworder produced no valid keywords for tables: {', '.join(missing_tables)}"
-            )
-
         updates["plan"] = plan
+
+        if parse_warning and recovered_from:
+            debug_log = make_debug_log(
+                state,
+                "keyworder:recovered_from_raw",
+                source=recovered_from,
+                parsing_error=parse_warning,
+            )
+            if debug_log:
+                updates["trace"].append(debug_log)
+
+        empty_tables = [t["table"] for t in cleaned_targets if not t["keywords"]]
+        if empty_tables:
+            debug_log = make_debug_log(
+                state,
+                "keyworder:empty_keyword_targets",
+                tables=empty_tables,
+            )
+            if debug_log:
+                updates["trace"].append(debug_log)
 
         if invalid_all:
             updates["trace"].append(
@@ -270,12 +410,12 @@ def run_keyworder(state: dict) -> dict:
                 )
             )
 
-        if planner_component_repairs:
+        if planner_hint_repairs:
             debug_log = make_debug_log(
                 state,
-                "keyworder:planner_component_repairs",
-                repaired_count=len(planner_component_repairs),
-                samples=planner_component_repairs[:5],
+                "keyworder:planner_hint_repairs",
+                repaired_count=len(planner_hint_repairs),
+                samples=planner_hint_repairs[:5],
             )
             if debug_log:
                 updates["trace"].append(debug_log)
