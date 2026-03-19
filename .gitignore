@@ -6,4 +6,5 @@ chroma_db/
 .env
 .DS_Store
 data/
+dataset_store/
 .DS_Store
