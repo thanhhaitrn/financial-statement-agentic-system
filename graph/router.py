@@ -23,8 +23,8 @@ def build_worker_query(
     return " | ".join(parts)
 
 
-def _group_targets_by_table(plan: dict) -> dict[str, list[str]]:
-    targets = plan.get("targets", []) or []
+def _group_targets_by_table(worker_plan: dict) -> dict[str, list[str]]:
+    targets = worker_plan.get("targets", []) or []
     grouped = defaultdict(list)
 
     for t in targets:
@@ -50,14 +50,14 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
 
 
 def dispatch_workers(state: dict):
-    plan = state.get("plan", {}) or {}
-    plan_tables = state.get("plan_tables", {}) or {}
+    worker_plan = state.get("worker_plan", {}) or {}
+    planner_plan = state.get("planner_plan", {}) or {}
 
-    company = plan_tables.get("company", "") or ""
-    time_hint = plan_tables.get("time_hint", "") or ""
-    need_web = bool(plan_tables.get("need_web", False) or plan.get("need_web", False))
+    company = planner_plan.get("company", "") or ""
+    time_hint = planner_plan.get("time_hint", "") or ""
+    need_web = bool(planner_plan.get("need_web", False) or worker_plan.get("need_web", False))
 
-    grouped = _group_targets_by_table(plan)
+    grouped = _group_targets_by_table(worker_plan)
 
     jobs = []
     for table, kws in grouped.items():

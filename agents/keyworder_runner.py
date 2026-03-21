@@ -29,15 +29,15 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
     return out
 
 
-def _selected_tables(plan_tables: dict) -> list[str]:
+def _selected_tables(planner_plan: dict) -> list[str]:
     selected = []
 
-    for table in (plan_tables.get("tables", []) or []):
+    for table in (planner_plan.get("tables", []) or []):
         text = str(table).strip()
         if text:
             selected.append(text)
 
-    for axis in (plan_tables.get("analysis_axes", []) or []):
+    for axis in (planner_plan.get("analysis_axes", []) or []):
         if not isinstance(axis, dict):
             continue
         for table in (axis.get("tables", []) or []):
@@ -48,8 +48,8 @@ def _selected_tables(plan_tables: dict) -> list[str]:
     return _dedupe_keep_order(selected)
 
 
-def _planner_hints_by_table(plan_tables: dict, selected_tables: list[str], user_query: str) -> dict[str, list[str]]:
-    analysis_axes = plan_tables.get("analysis_axes", []) or []
+def _planner_hints_by_table(planner_plan: dict, selected_tables: list[str], user_query: str) -> dict[str, list[str]]:
+    analysis_axes = planner_plan.get("analysis_axes", []) or []
     return {
         table: infer_table_keywords(table, user_query, analysis_axes)
         for table in selected_tables
@@ -162,7 +162,6 @@ def _coerce_keyword_plan(result: Any) -> tuple[KeywordPlan, Optional[str], Optio
         return result, None, None
 
     parsing_error = None
-    recovered_from = None
 
     if isinstance(result, dict):
         parsed = result.get("parsed")
@@ -197,8 +196,8 @@ def _coerce_keyword_plan(result: Any) -> tuple[KeywordPlan, Optional[str], Optio
     raise ValueError("Keyworder did not return a valid KeywordPlan payload.")
 
 
-def _fallback_plan_from_hints(plan_tables: dict, selected_tables: list[str], user_query: str) -> dict:
-    hint_map = _planner_hints_by_table(plan_tables, selected_tables, user_query)
+def _fallback_worker_plan_from_hints(planner_plan: dict, selected_tables: list[str], user_query: str) -> dict:
+    hint_map = _planner_hints_by_table(planner_plan, selected_tables, user_query)
     targets = []
 
     for table in selected_tables:
@@ -224,25 +223,25 @@ def _fallback_plan_from_hints(plan_tables: dict, selected_tables: list[str], use
 
 def run_keyworder(state: dict) -> dict:
     profile = AGENT_PROFILES["agent_keyworder"]
-    plan_tables = state.get("plan_tables", {}) or {}
+    planner_plan = state.get("planner_plan", {}) or {}
     trace = []
 
     start_log = make_debug_log(
         state,
         "keyworder:start",
-        plan_tables=state.get("plan_tables", {}),
+        planner_plan=state.get("planner_plan", {}),
     )
     if start_log:
         trace.append(start_log)
 
-    selected_tables = _selected_tables(plan_tables)
+    selected_tables = _selected_tables(planner_plan)
     planner_hints_by_table = _planner_hints_by_table(
-        plan_tables,
+        planner_plan,
         selected_tables,
         state.get("user_query", ""),
     )
-    fallback_plan = _fallback_plan_from_hints(
-        plan_tables,
+    fallback_worker_plan = _fallback_worker_plan_from_hints(
+        planner_plan,
         selected_tables,
         state.get("user_query", ""),
     )
@@ -252,7 +251,7 @@ def run_keyworder(state: dict) -> dict:
         "system_instruction": profile["system_instruction"],
         "user_query": state.get("user_query", ""),
         "worker_query": "",
-        "plan_json": json.dumps(plan_tables, ensure_ascii=False),
+        "plan_json": json.dumps(planner_plan, ensure_ascii=False),
         "worker_results_json": "{}",
         "allowed_keywords_json": _allowed_keywords_payload(selected_tables),
         "web_summary": "",
@@ -269,9 +268,9 @@ def run_keyworder(state: dict) -> dict:
     try:
         raw_result = keyworder_chain.invoke(payload)
         kp, parse_warning, recovered_from = _coerce_keyword_plan(raw_result)
-        plan = kp.model_dump()
+        worker_plan = kp.model_dump()
 
-        targets_in = plan.get("targets", []) or []
+        targets_in = worker_plan.get("targets", []) or []
 
         by_table = {}
         for t in targets_in:
@@ -352,7 +351,7 @@ def run_keyworder(state: dict) -> dict:
             valid_kws = _limit_seed_keywords(valid_kws)
             cleaned_targets.append({"table": table, "keywords": valid_kws})
 
-        plan["targets"] = cleaned_targets
+        worker_plan["targets"] = cleaned_targets
 
         empty_tables = {
             target["table"]
@@ -362,13 +361,13 @@ def run_keyworder(state: dict) -> dict:
         if empty_tables:
             fallback_by_table = {
                 target["table"]: target["keywords"]
-                for target in fallback_plan.get("targets", [])
+                for target in fallback_worker_plan.get("targets", [])
             }
             for target in cleaned_targets:
                 if not target["keywords"]:
                     target["keywords"] = fallback_by_table.get(target["table"], [])
 
-        updates["plan"] = plan
+        updates["worker_plan"] = worker_plan
 
         if parse_warning and recovered_from:
             debug_log = make_debug_log(
@@ -424,13 +423,13 @@ def run_keyworder(state: dict) -> dict:
             make_log(
                 state,
                 "keyworder:done",
-                plan=plan,
+                worker_plan=worker_plan,
             )
         )
         return updates
 
     except Exception as e:
-        updates["plan"] = fallback_plan
+        updates["worker_plan"] = fallback_worker_plan
         updates["trace"].append(
             make_log(
                 state,
@@ -443,7 +442,7 @@ def run_keyworder(state: dict) -> dict:
             make_log(
                 state,
                 "keyworder:done",
-                plan=updates["plan"],
+                worker_plan=updates["worker_plan"],
             )
         )
         return updates

@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field, field_validator, model_validator
-from typing import List, Literal, Dict, Any, Optional
+from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
+from typing import Annotated, List, Literal, Dict, Any, Optional, Union
 import re, json
 
 TABLE_NAME = Literal[
@@ -189,9 +189,12 @@ class KeywordPlan(BaseModel):
     targets: List[Target] = Field(default_factory=list)
 
 
+WORKER_TOOL_ACTION = Literal["get_related_info", "web_search"]
+
+
 # ---------- Tools ----------
 class ToolCall(BaseModel):
-    action: Literal["get_related_info", "web_search", "calculate_dti"]
+    action: WORKER_TOOL_ACTION
     arguments: Dict[str, Any] = Field(default_factory=dict)
 
 class WorkerFact(BaseModel):
@@ -205,6 +208,25 @@ class WorkerOutput(BaseModel):
     facts: list[WorkerFact] = Field(default_factory=list)
     missing: list[str] = Field(default_factory=list)
     notes: str = ""
+
+
+class WorkerAction(BaseModel):
+    kind: Literal["action"] = "action"
+    action: WORKER_TOOL_ACTION
+    arguments: Dict[str, Any] = Field(default_factory=dict)
+
+
+class WorkerAnswer(WorkerOutput):
+    kind: Literal["answer"] = "answer"
+
+
+WorkerResponse = Annotated[
+    Union[WorkerAction, WorkerAnswer],
+    Field(discriminator="kind"),
+]
+
+WORKER_RESPONSE_ADAPTER = TypeAdapter(WorkerResponse)
+WORKER_RESPONSE_JSON_SCHEMA = WORKER_RESPONSE_ADAPTER.json_schema()
 
 
 def _extract_first_json_object(text: str) -> Optional[str]:
@@ -274,9 +296,69 @@ def extract_answer_json(text: str) -> dict:
     raise ValueError("Không tìm thấy JSON hợp lệ trong phản hồi worker.")
 
 
+def extract_action_json(text: str) -> dict:
+    action_match = re.search(r"(?mi)^\s*ACTION:\s*([^\n]+?)\s*$", text)
+    if not action_match:
+        raise ValueError("Không tìm thấy ACTION hợp lệ trong phản hồi worker.")
+
+    action = action_match.group(1).strip()
+    arguments: Dict[str, Any] = {}
+
+    args_match = re.search(r"(?mis)^\s*ARGUMENTS:\s*(\{.*\})\s*$", text)
+    if args_match:
+        args_text = args_match.group(1).strip()
+        try:
+            parsed = json.loads(args_text)
+        except json.JSONDecodeError as exc:
+            raise ValueError(f"ARGUMENTS không phải JSON hợp lệ: {exc}") from exc
+
+        if not isinstance(parsed, dict):
+            raise ValueError("ARGUMENTS phải là JSON object.")
+        arguments = parsed
+
+    return {
+        "kind": "action",
+        "action": action,
+        "arguments": arguments,
+    }
+
+
+def parse_worker_response_payload(value: Any):
+    if isinstance(value, (WorkerAction, WorkerAnswer)):
+        return value
+
+    if not isinstance(value, dict):
+        raise ValueError("Worker payload phải là dict hoặc text hợp lệ.")
+
+    data = dict(value)
+    if "kind" not in data:
+        if data.get("action"):
+            data["kind"] = "action"
+        else:
+            data["kind"] = "answer"
+
+    return WORKER_RESPONSE_ADAPTER.validate_python(data)
+
+
+def parse_worker_response(text: str):
+    stripped = str(text or "").strip()
+    if not stripped:
+        raise ValueError("Worker response rỗng.")
+
+    if re.search(r"(?mi)^\s*ACTION\s*:", stripped):
+        return WORKER_RESPONSE_ADAPTER.validate_python(extract_action_json(stripped))
+
+    data = extract_answer_json(stripped)
+    if "kind" not in data:
+        data["kind"] = "answer"
+    return WORKER_RESPONSE_ADAPTER.validate_python(data)
+
+
 def parse_worker_output(text: str):
-    data = extract_answer_json(text)
-    return WorkerOutput.model_validate(data)
+    parsed = parse_worker_response(text)
+    if isinstance(parsed, WorkerAction):
+        raise ValueError("Worker đang trả action, chưa có answer để collect.")
+    return WorkerOutput.model_validate(parsed.model_dump(exclude={"kind"}))
 
 
 # ---------- Synth ----------

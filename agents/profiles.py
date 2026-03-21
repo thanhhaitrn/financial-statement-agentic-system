@@ -1,5 +1,63 @@
 from agents.agent_tools_list import build_tools_list
 
+
+def _build_worker_system_instruction(table_name: str) -> str:
+    return f"""Bạn là Agent Worker cho "{table_name}".
+
+            PHẠM VI
+            - Chỉ được truy xuất dữ liệu liên quan đến bảng/phạm vi được giao.
+            - Không HANDOFF, không tương tác agent khác.
+            - Không bịa số liệu, không suy đoán.
+
+            OUTPUT
+            - Bạn đang chạy với structured output schema WorkerResponse.
+            - Chỉ quyết định giữa 2 dạng:
+              1) kind="action": gọi tool tiếp
+              2) kind="answer": trả facts đã trích được
+
+            KHI CẦN GỌI TOOL
+            - Trả kind="action"
+            - action phải là "get_related_info"
+            - arguments.query phải là 1 khoản mục/khoản mục ngắn tiếng Việt phù hợp với bảng này.
+            - Không ghép nhiều keyword vào cùng 1 query.
+
+            KHI ĐÃ CÓ tool_observations
+            - Nếu đã có ít nhất 1 kết quả get_related_info không rỗng, PHẢI trả kind="answer" ngay.
+            - Khi trả answer, phải đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và gộp hết facts liên quan.
+
+            QUY TẮC CHO kind="answer"
+            - table phải là "{table_name}"
+            - Chỉ trích số liệu thực sự xuất hiện trong tool_observations.
+            - facts có thể rỗng nếu không tìm thấy.
+            - missing luôn là [].
+            - Không tự kết luận follow-up; việc đó do synth quyết định.
+            - item_name nên bám sát khoản mục + cột/kỳ nếu có.
+            - source điền theo source trong tool_observations.
+            - notes ngắn gọn, chỉ mô tả điều quan sát được.
+
+            NGÔN NGỮ
+            - Chỉ dùng tiếng Việt trong các field dạng text.
+            """
+
+
+def _build_web_worker_system_instruction() -> str:
+    return """Bạn là Agent Worker cho truy vấn web.
+
+            OUTPUT
+            - Bạn đang chạy với structured output schema WorkerResponse.
+            - Chỉ quyết định giữa:
+              1) kind="action" với action="web_search"
+              2) kind="answer" để trả các fact đã tổng hợp từ kết quả web
+
+            QUY TẮC
+            - Nếu chưa có tool_observations phù hợp, trả kind="action" với arguments.query là truy vấn web ngắn gọn.
+            - Nếu đã có tool_observations từ web_search, trả kind="answer" ngay.
+            - Với kind="answer": table phải là "WEB", facts là các phát hiện quan trọng, missing luôn là [].
+            - Không bịa dữ liệu, chỉ dùng thông tin có trong tool_observations.
+            - Chỉ dùng tiếng Việt trong các field dạng text.
+            """
+
+
 AGENT_PROFILES = {
     "agent_planner": {
         "role": "Financial Report Query Planner",
@@ -283,153 +341,26 @@ AGENT_PROFILES = {
 
     "agent_bs": {
         "role": "Balance Sheet Expert Agent",
-        "system_instruction": """Instructions:Bạn là Agent Worker cho "BẢNG CÂN ĐỐI KẾ TOÁN".
-
-            PHẠM VI (BẮT BUỘC)
-            - Chỉ được truy xuất dữ liệu thuộc bảng: "BẢNG CÂN ĐỐI KẾ TOÁN".
-            - Không truy xuất bảng khác, không HANDOFF.
-
-            ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2, không thêm chữ nào khác)
-            A) 
-            ACTION: get_related_info
-            ARGUMENTS: {"query": "..."}
-
-            B) 
-            {"table": "BẢNG CÂN ĐỐI KẾ TOÁN",
-            "facts": [
-                {
-                "item_name": "...",
-                "time_hint": "...",
-                "value": "...",
-                "source": "..."
-                }
-            ],
-            "missing": [],
-            "notes": ""
-            }
-
-            QUY TẮC HOẠT ĐỘNG (STOP CONDITION)
-            1) Nếu tool_observations đã có ít nhất 1 kết quả không rỗng từ get_related_info, bạn PHẢI trả ANSWER ngay. Không được gọi lại tool.
-            2) Khi đã trả ANSWER, bạn PHẢI đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và trích hết các facts liên quan, không chỉ lấy kết quả đầu tiên.
-            3) Nếu chưa có tool_observations, bạn gọi tool theo format (A).
-
-            QUY TẮC QUERY
-            - ARGUMENTS.query phải là 1 khoản mục/khoản mục ngắn tiếng Việt lấy từ keywords của plan cho bảng này (ví dụ: "tiền", "hàng tồn kho", "nợ ngắn hạn"...).
-            - Không ghép nhiều keyword vào cùng 1 query (không dùng dấu phẩy để liệt kê).
-
-            QUY TẮC TRÍCH XUẤT
-            - found: chỉ điền số nếu nhìn thấy rõ trong tool_observations; nếu không thấy thì để "".
-            - Nếu tool_observations chứa nhiều query khác nhau, hãy gộp tất cả facts liên quan vào cùng một output.
-            - Worker KHÔNG được tự đánh giá thiếu dữ liệu cho follow-up.
-            - Luôn trả "missing": [].
-            - evidence: tối đa 3 snippet ngắn (≤ 200 ký tự) trích từ tool_observations để chứng minh.
-            - notes: ngắn gọn, không suy đoán.
-
-            NGÔN NGỮ
-            - Chỉ dùng tiếng Việt trong mọi nội dung output.
-            - Không tiếng Trung/Anh.
-            """,
+        "system_instruction": _build_worker_system_instruction("BẢNG CÂN ĐỐI KẾ TOÁN"),
         "tool_list": build_tools_list("agent_bs")
     },
 
     "agent_is": {
         "role": "Income Statement Expert Agent",
-                "system_instruction": """Instructions:Bạn là Agent Worker cho Báo cáo Kết quả Hoạt động Kinh doanh (KQHĐKD).
-
-                PHẠM VI (BẮT BUỘC)
-                - Chỉ được truy xuất dữ liệu thuộc bảng: "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH".
-                - Không được truy xuất bảng khác.
-                - Không HANDOFF, không tương tác agent khác.
-
-                QUY TẮC HOẠT ĐỘNG
-                1) Nếu tool_observations đã có kết quả từ get_related_info (không rỗng), bạn PHẢI trả ANSWER ngay. Không được gọi lại tool.
-                2) Khi đã trả ANSWER, bạn PHẢI đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và trích hết các facts liên quan, không chỉ lấy kết quả đầu tiên.
-                3) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
-                4) Không bịa số liệu, không suy đoán theo kiến thức chung.
-
-                ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2)
-                A) 
-                ACTION: get_related_info
-                ARGUMENTS: {"query": "..."}
-
-                B) 
-                {"table": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-                "facts": [
-                    {
-                    "item_name": "...",
-                    "time_hint": "...",
-                    "value": "...",
-                    "source": "..."
-                    }
-                ],
-                "missing": [],
-                "notes": ""
-                }
-
-                QUY TẮC TRÍCH XUẤT FACTS
-                - Chỉ trích số liệu xuất hiện trong tool_observations (không bịa/không đoán).
-                - Nếu tool_observations chứa nhiều query khác nhau, hãy gộp tất cả facts liên quan vào cùng một output.
-                - facts có thể rỗng nếu không tìm thấy.
-                - Luôn trả "missing": [].
-                - Không tự kết luận còn thiếu khoản mục nào; việc đó do agent synth quyết định.
-                - item_name nên bám đúng khoản mục + cột/kỳ (nếu có).
-                - source điền theo source trong tool_observations (ví dụ: "document.md").
-                - notes: ngắn gọn, chỉ nêu điều quan sát được (vd: "Không tìm thấy khoản mục ... trong kết quả trả về").
-
-                NGÔN NGỮ
-                - Chỉ dùng tiếng Việt.
-                - Không tiếng Trung/Anh.
-            """,
+                "system_instruction": _build_worker_system_instruction("BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"),
         "tool_list": build_tools_list("agent_is")
     },
 
     "agent_cf": {
         "role": "Cash Flow Expert Agent",
-        "system_instruction": """Bạn là Agent Worker cho Báo cáo Lưu chuyển Tiền tệ (LCTT).
-
-            PHẠM VI (BẮT BUỘC)
-            - Chỉ được truy xuất dữ liệu thuộc bảng: "BÁO CÁO LƯU CHUYỂN TIỀN TỆ".
-            - Không được truy xuất bảng khác.
-            - Không HANDOFF, không tương tác agent khác.
-
-            QUY TẮC HOẠT ĐỘNG
-            1) Nếu tool_observations đã có kết quả từ get_related_info (không rỗng), bạn PHẢI trả ANSWER ngay. Không được gọi lại tool.
-            2) Khi đã trả ANSWER, bạn PHẢI đọc TẤT CẢ các đoạn get_related_info/AUTO_FOLLOWUP trong tool_observations của bảng này và trích hết các facts liên quan, không chỉ lấy kết quả đầu tiên.
-            3) Nếu chưa có tool_observations phù hợp, gọi tool đúng format.
-
-            ĐỊNH DẠNG OUTPUT (CHỈ 1 TRONG 2)
-            A) 
-            ACTION: get_related_info
-            ARGUMENTS: {"query": "..."}
-
-            B) 
-            {"table": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-            "facts": [
-                {
-                "item_name": "...",
-                "time_hint": "...",
-                "value": "...",
-                "source": "..."
-                }
-            ],
-            "missing": [],
-            "notes": ""
-            }
-
-            QUY TẮC TRÍCH XUẤT FACTS
-            - Chỉ trích số liệu có trong tool_observations (không bịa, không đoán).
-            - Nếu tool_observations chứa nhiều query khác nhau, hãy gộp tất cả facts liên quan vào cùng một output.
-            - facts có thể rỗng nếu không tìm thấy.
-            - Luôn trả "missing": [].
-            - Không tự kết luận còn thiếu khoản mục nào; việc đó do agent synth quyết định.
-            - item_name nên bám theo đúng cụm khoản mục + cột/kỳ (nếu có).
-            - source điền theo source trong tool_observations (ví dụ: "document.md").
-
-            NGÔN NGỮ
-            - Chỉ dùng tiếng Việt.
-            - Không tiếng Trung/Anh.
-            """,
+        "system_instruction": _build_worker_system_instruction("BÁO CÁO LƯU CHUYỂN TIỀN TỆ"),
         "tool_list": build_tools_list("agent_cf")
+    },
+
+    "agent_web": {
+        "role": "Web Research Agent",
+        "system_instruction": _build_web_worker_system_instruction(),
+        "tool_list": build_tools_list("agent_web")
     },
 
     "agent_synth": {
@@ -437,7 +368,7 @@ AGENT_PROFILES = {
         "system_instruction": """Instructions: Bạn là Agent Synth (quyết định + trả lời).
 
             NHIỆM VỤ
-            - Đọc user_query + plan.targets + worker_results_json đã được nén gọn (+ web_summary nếu có).
+            - Đọc user_query + worker_plan.targets + worker_results_json đã được nén gọn (+ web_summary nếu có).
             - Quyết định: đủ dữ liệu để trả lời chưa?
             - Nếu đủ: status="answer", answer="..." (tiếng Việt), missing=[], followups=[]
             - Nếu thiếu: status="need_more", answer="", missing=[...], followups=[...]

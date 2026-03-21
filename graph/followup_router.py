@@ -7,9 +7,9 @@ def dispatch_followups(state: dict):
     reqs = state.get("followup_requests", []) or []
     jobs = []
     seen = set()
-    plan_tables = state.get("plan_tables", {}) or {}
-    company = plan_tables.get("company", "") or ""
-    time_hint = plan_tables.get("time_hint", "") or ""
+    planner_plan = state.get("planner_plan", {}) or {}
+    company = planner_plan.get("company", "") or ""
+    time_hint = planner_plan.get("time_hint", "") or ""
 
     for r in reqs:
         if not isinstance(r, dict):

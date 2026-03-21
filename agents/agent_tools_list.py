@@ -12,7 +12,7 @@ AGENT_TOOLS_LIST = {
     "agent_web": [
     {"name": "web_search", "description": "Perform a web search.", "args": "query (string)"}
     ],
-    "agent_synth": []  # Agent5: tổng hợp
+    "agent_synth": []  
 }
 
 def build_tools_list(agent_name: str) -> str:

@@ -6,7 +6,7 @@ from llm.client import llm
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
 
-DEFAULT_PLAN_TABLES = {
+DEFAULT_PLANNER_PLAN = {
     "question_type": "lookup",
     "analysis_axes": [],
     "company": "",
@@ -17,8 +17,8 @@ DEFAULT_PLAN_TABLES = {
 planner_chain = PROMPT_TEMPLATE | llm.with_structured_output(PlannerEvidencePlan)
 
 
-def _enrich_plan_fields(state: dict, plan: dict) -> dict:
-    enriched = dict(plan or {})
+def _enrich_plan_fields(state: dict, planner_plan: dict) -> dict:
+    enriched = dict(planner_plan or {})
     dataset = None
     dataset_id = str((state or {}).get("dataset_id", "") or "").strip()
     if dataset_id:
@@ -70,16 +70,16 @@ def run_planner(state: dict) -> dict:
 
     try:
         plan_obj: PlannerEvidencePlan = planner_chain.invoke(payload)
-        updates["plan_tables"] = _enrich_plan_fields(state, plan_obj.model_dump())
+        updates["planner_plan"] = _enrich_plan_fields(state, plan_obj.model_dump())
         updates["trace"].append(
             make_log(
                 state,
                 "planner:done",
-                plan_tables=updates["plan_tables"],
+                planner_plan=updates["planner_plan"],
             )
         )
     except Exception as e:
-        updates["plan_tables"] = _enrich_plan_fields(state, DEFAULT_PLAN_TABLES)
+        updates["planner_plan"] = _enrich_plan_fields(state, DEFAULT_PLANNER_PLAN)
         updates["trace"].append(
             make_log(
                 state,

@@ -3,6 +3,7 @@ import re
 from typing import Any, Dict, List, Optional, Tuple
 
 from agents.planner_hints import infer_table_keywords, infer_table_query_hints
+from schemas.agent_outputs import WorkerAction, parse_worker_response, parse_worker_response_payload
 from schemas.keyword_guard import validate_keywords
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
@@ -53,6 +54,22 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
     return ""
 
 
+def _latest_parsed_output_for(state: dict, agent_name: str) -> dict:
+    items = state.get("worker_messages", []) or []
+    current_round = state.get("followup_rounds", 0)
+
+    for item in reversed(items):
+        if (
+            str(item.get("agent", "")).strip() == agent_name
+            and str(item.get("kind", "")) == "agent_response"
+            and item.get("round", 0) == current_round
+        ):
+            parsed = item.get("parsed_output")
+            if isinstance(parsed, dict):
+                return parsed
+    return {}
+
+
 def _current_round(state: dict) -> int:
     return int((state or {}).get("followup_rounds", 0) or 0)
 
@@ -89,8 +106,8 @@ def _force_collect_update(state: dict, agent_name: str) -> dict:
     return {agent_name: _current_round(state)}
 
 
-def _get_keywords_for_table(plan: dict, table: str) -> List[str]:
-    targets = plan.get("targets", []) or []
+def _get_keywords_for_table(worker_plan: dict, table: str) -> List[str]:
+    targets = worker_plan.get("targets", []) or []
     normalized_target = _normalize_table_name(table)
 
     for target in targets:
@@ -121,8 +138,8 @@ def _dedupe_keep_order(items: List[str]) -> List[str]:
 
 
 def _planner_hints_for_table(state: dict, table: str) -> List[str]:
-    plan_tables = state.get("plan_tables", {}) or {}
-    analysis_axes = plan_tables.get("analysis_axes", []) or []
+    planner_plan = state.get("planner_plan", {}) or {}
+    analysis_axes = planner_plan.get("analysis_axes", []) or []
     return infer_table_keywords(
         table,
         str(state.get("user_query", "") or ""),
@@ -131,8 +148,8 @@ def _planner_hints_for_table(state: dict, table: str) -> List[str]:
 
 
 def _planner_query_hints_for_table(state: dict, table: str) -> List[str]:
-    plan_tables = state.get("plan_tables", {}) or {}
-    analysis_axes = plan_tables.get("analysis_axes", []) or []
+    planner_plan = state.get("planner_plan", {}) or {}
+    analysis_axes = planner_plan.get("analysis_axes", []) or []
     return infer_table_query_hints(
         table,
         str(state.get("user_query", "") or ""),
@@ -165,7 +182,7 @@ def _refine_keywords_for_table(
     table: str,
     requested_query: str = "",
 ) -> Tuple[List[str], List[str], List[str], List[str], str, bool]:
-    raw_seed_keywords = _get_keywords_for_table(state.get("plan", {}) or {}, table)
+    raw_seed_keywords = _get_keywords_for_table(state.get("worker_plan", {}) or {}, table)
     seed_keywords = _guarded_keywords_for_table(
         table,
         raw_seed_keywords,
@@ -218,25 +235,30 @@ def _refine_keywords_for_table(
 
 
 def _parse_action_block(action_text: str) -> Tuple[Optional[str], Dict[str, Any], Optional[str]]:
-    action_match = re.search(r"(?mi)^\s*ACTION:\s*([^\n]+?)\s*$", action_text)
-    if not action_match:
-        return None, {}, "No ACTION block found"
+    try:
+        parsed = parse_worker_response(action_text)
+    except Exception as exc:
+        return None, {}, str(exc)
 
-    tool_name = action_match.group(1).strip()
-    args: Dict[str, Any] = {}
+    if not isinstance(parsed, WorkerAction):
+        return None, {}, "Latest worker response is not a tool action"
 
-    args_match = re.search(r"(?mis)^\s*ARGUMENTS:\s*(\{.*\})\s*$", action_text)
-    if args_match:
-        args_text = args_match.group(1).strip()
-        try:
-            parsed = json.loads(args_text)
-            if not isinstance(parsed, dict):
-                return tool_name, {}, "ARGUMENTS must decode to a JSON object"
-            args = parsed
-        except json.JSONDecodeError as e:
-            return tool_name, {}, f"Failed to parse ARGUMENTS JSON: {e}"
+    return parsed.action, dict(parsed.arguments or {}), None
 
-    return tool_name, args, None
+
+def _parse_action_payload(payload: Any) -> Tuple[Optional[str], Dict[str, Any], Optional[str]]:
+    if not payload:
+        return None, {}, "No parsed payload found"
+
+    try:
+        parsed = parse_worker_response_payload(payload)
+    except Exception as exc:
+        return None, {}, str(exc)
+
+    if not isinstance(parsed, WorkerAction):
+        return None, {}, "Latest worker response is not a tool action"
+
+    return parsed.action, dict(parsed.arguments or {}), None
 
 
 def _normalize_tool_result(raw_result: Any) -> dict:
@@ -338,6 +360,7 @@ def _already_called(state: dict, agent_name: str, tool_name: str, args: dict) ->
 
 def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     action_text = _latest_agent_response_for(state, agent_name)
+    parsed_payload = _latest_parsed_output_for(state, agent_name)
     current_round = _current_round(state)
     count = _tool_call_count_for_round(state, agent_name)
 
@@ -373,7 +396,9 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             ],
         }
 
-    tool_name, args, parse_error = _parse_action_block(action_text)
+    tool_name, args, parse_error = _parse_action_payload(parsed_payload)
+    if parse_error:
+        tool_name, args, parse_error = _parse_action_block(action_text)
     if parse_error:
         return {
             "tool_observations": [

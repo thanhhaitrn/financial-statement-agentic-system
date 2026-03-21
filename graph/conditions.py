@@ -19,6 +19,22 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
     return ""
 
 
+def _latest_parsed_output_for(state: dict, agent_name: str) -> dict:
+    items = state.get("worker_messages", []) or []
+    current_round = _current_round(state)
+
+    for item in reversed(items):
+        if (
+            str(item.get("agent", "")).strip() == agent_name
+            and str(item.get("kind", "")) == "agent_response"
+            and item.get("round", 0) == current_round
+        ):
+            parsed = item.get("parsed_output")
+            if isinstance(parsed, dict):
+                return parsed
+    return {}
+
+
 def _is_forced_collect(state: dict, agent_name: str) -> bool:
     current_round = _current_round(state)
     items = state.get("force_collect_agents", {}) or {}
@@ -55,6 +71,13 @@ def make_should_continue(agent_name: str):
 
         count = _tool_call_count_for_round(state, agent_name)
         if count >= 2:
+            return "collect"
+
+        parsed = _latest_parsed_output_for(state, agent_name)
+        kind = str(parsed.get("kind", "")).strip().lower()
+        if kind == "action":
+            return "tools"
+        if kind == "answer":
             return "collect"
 
         text = _latest_agent_response_for(state, agent_name)

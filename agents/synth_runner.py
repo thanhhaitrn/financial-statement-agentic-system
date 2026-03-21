@@ -436,7 +436,7 @@ def _build_payload(
         "system_instruction": profile["system_instruction"],
         "user_query": state.get("user_query", ""),
         "worker_query": "",
-        "plan_json": _safe_json_dumps(state.get("plan", {})),
+        "plan_json": _safe_json_dumps(state.get("worker_plan", {})),
         "worker_results_json": _safe_json_dumps(normalized_worker_results),
         "allowed_keywords_json": "{}",
         "web_summary": state.get("synth_web_summary", state.get("web_summary", "")) or "",

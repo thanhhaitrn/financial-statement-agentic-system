@@ -1,12 +1,12 @@
 import json
 
-from agents.agent_runner import call_agent
+from agents.agent_runner import call_worker_agent
 from tools.tool_runner import call_tool_for_agent
 from agents.planner_runner import run_planner
 from agents.synth_runner import prepare_synth_context, run_synth
 from agents.keyworder_runner import run_keyworder
 from graph.logger import make_debug_log, make_log
-from schemas.agent_outputs import parse_worker_output
+from schemas.agent_outputs import WorkerAction, parse_worker_output, parse_worker_response_payload
 
 
 def agent_planner(state: dict) -> dict:
@@ -18,19 +18,19 @@ def agent_keyworder(state: dict) -> dict:
 
 
 def agent_bs_node(state: dict) -> dict:
-    return call_agent(state, agent_name="agent_bs")
+    return call_worker_agent(state, agent_name="agent_bs")
 
 
 def agent_is_node(state: dict) -> dict:
-    return call_agent(state, agent_name="agent_is")
+    return call_worker_agent(state, agent_name="agent_is")
 
 
 def agent_cf_node(state: dict) -> dict:
-    return call_agent(state, agent_name="agent_cf")
+    return call_worker_agent(state, agent_name="agent_cf")
 
 
 def agent_web_node(state: dict) -> dict:
-    return call_agent(state, agent_name="agent_web")
+    return call_worker_agent(state, agent_name="agent_web")
 
 
 def tools_bs_node(state: dict) -> dict:
@@ -89,6 +89,22 @@ def _latest_agent_response_for(state: dict, agent_name: str) -> str:
         ):
             return str(item.get("response", "") or "")
     return ""
+
+
+def _latest_parsed_output_for(state: dict, agent_name: str) -> dict:
+    items = state.get("worker_messages", []) or []
+    current_round = state.get("followup_rounds", 0)
+
+    for item in reversed(items):
+        if (
+            str(item.get("agent", "")).strip() == agent_name
+            and str(item.get("kind", "")) == "agent_response"
+            and item.get("round", 0) == current_round
+        ):
+            parsed = item.get("parsed_output")
+            if isinstance(parsed, dict):
+                return parsed
+    return {}
 
 
 def _dedupe_worker_facts(facts: list[dict]) -> list[dict]:
@@ -183,10 +199,17 @@ def collect_all_workers(state: dict) -> dict:
 
     for agent in sorted(expected):
         text = _latest_agent_response_for(state, agent)
+        parsed_payload = _latest_parsed_output_for(state, agent)
 
         try:
-            parsed = parse_worker_output(text)
-            data = parsed.model_dump()
+            if parsed_payload:
+                parsed_response = parse_worker_response_payload(parsed_payload)
+                if isinstance(parsed_response, WorkerAction):
+                    raise ValueError("Worker đang trả action, chưa có answer để collect.")
+                data = parsed_response.model_dump(exclude={"kind"})
+            else:
+                parsed = parse_worker_output(text)
+                data = parsed.model_dump()
             data["missing"] = []
             kind = "answer"
             summary = {

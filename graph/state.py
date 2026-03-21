@@ -19,8 +19,8 @@ class GraphState(TypedDict, total=False):
     # sequential/global
     last_agent: str
     last_agent_response: str
-    plan_tables: dict
-    plan: dict
+    planner_plan: dict
+    worker_plan: dict
     expected_workers: list[str]
     followup_rounds: int
     followup_requests: list[dict]
