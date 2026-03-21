@@ -17,6 +17,19 @@ RAW_TABLES_DIR = DATASETS_DIR / "raw_tables"
 SQLITE_DIR = DATASETS_DIR / "sqlite"
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
+_BUILD_INPUT_FIELDS = (
+    "company",
+    "file_path",
+    "report_type",
+    "fiscal_year",
+    "fiscal_quarter",
+    "scope",
+    "audit_status",
+    "sqlite_db_path",
+    "vector_collection_name",
+    "raw_tables_path",
+    "ingestion_version",
+)
 
 
 def _utc_now() -> str:
@@ -131,6 +144,11 @@ def save_dataset(record: DatasetRecord) -> DatasetRecord:
     now = _utc_now()
 
     data = record.model_dump(mode="json")
+    data = _merge_preserved_build_fields(
+        current=current,
+        incoming=record,
+        payload=data,
+    )
     data["created_at"] = current.created_at if current and current.created_at else (record.created_at or now)
     data["updated_at"] = now
 
@@ -157,6 +175,34 @@ def get_dataset(dataset_id: str) -> Optional[DatasetRecord]:
 
 def _normalize_str(value: str) -> str:
     return str(value or "").strip().lower()
+
+
+def _same_build_inputs(current: DatasetRecord, incoming: DatasetRecord) -> bool:
+    return all(
+        getattr(current, field) == getattr(incoming, field)
+        for field in _BUILD_INPUT_FIELDS
+    )
+
+
+def _merge_preserved_build_fields(
+    *,
+    current: Optional[DatasetRecord],
+    incoming: DatasetRecord,
+    payload: dict,
+) -> dict:
+    if current is None or not _same_build_inputs(current, incoming):
+        return payload
+
+    if payload.get("status") == "registered":
+        payload["status"] = current.status
+
+    if int(payload.get("facts_count") or 0) == 0:
+        payload["facts_count"] = current.facts_count
+
+    if int(payload.get("vector_docs_count") or 0) == 0:
+        payload["vector_docs_count"] = current.vector_docs_count
+
+    return payload
 
 
 def find_datasets(

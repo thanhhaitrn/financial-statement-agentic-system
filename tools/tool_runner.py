@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional, Tuple
 
 from agents.planner_hints import infer_table_keywords, infer_table_query_hints
 from schemas.agent_outputs import WorkerAction, parse_worker_response, parse_worker_response_payload
-from schemas.keyword_guard import validate_keywords
+from schemas.keyword_guard import repair_keywords, validate_keywords
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
 from graph.logger import make_debug_log, make_log
@@ -14,6 +14,12 @@ _COLLECTION = None
 MAX_KEYWORDS_PER_TOOL_RUN = 4
 SEED_KEYWORD_CUTOFF = 0.88
 PLANNER_COMPONENT_CUTOFF = 0.93
+ANALYSIS_QUESTION_TYPES = {
+    "calculation",
+    "comparison",
+    "evaluation",
+    "risk_assessment",
+}
 
 
 def set_collection(collection):
@@ -157,6 +163,15 @@ def _planner_query_hints_for_table(state: dict, table: str) -> List[str]:
     )
 
 
+def _question_type(state: dict) -> str:
+    planner_plan = state.get("planner_plan", {}) or {}
+    return str(planner_plan.get("question_type", "") or "lookup").strip().lower()
+
+
+def _keyword_expansion_enabled(state: dict) -> bool:
+    return _question_type(state) in ANALYSIS_QUESTION_TYPES or _current_round(state) > 0
+
+
 def _guarded_keywords_for_table(
     table: str,
     candidates: List[str],
@@ -181,25 +196,23 @@ def _refine_keywords_for_table(
     state: dict,
     table: str,
     requested_query: str = "",
-) -> Tuple[List[str], List[str], List[str], List[str], str, bool]:
+) -> Tuple[List[str], List[str], List[str], List[str], List[str], bool]:
     raw_seed_keywords = _get_keywords_for_table(state.get("worker_plan", {}) or {}, table)
     seed_keywords = _guarded_keywords_for_table(
         table,
         raw_seed_keywords,
         cutoff=SEED_KEYWORD_CUTOFF,
     )
-    planner_hints = _planner_hints_for_table(state, table)
     planner_queries = _planner_query_hints_for_table(state, table)
+    planner_hints: List[str] = []
+    if _keyword_expansion_enabled(state):
+        planner_hints = _guarded_keywords_for_table(
+            table,
+            _planner_hints_for_table(state, table),
+            cutoff=PLANNER_COMPONENT_CUTOFF,
+        )
 
     refined_keywords = _dedupe_keep_order(seed_keywords)
-    for keyword in _guarded_keywords_for_table(
-        table,
-        planner_hints,
-        cutoff=PLANNER_COMPONENT_CUTOFF,
-    ):
-        if keyword not in refined_keywords:
-            refined_keywords.append(keyword)
-
     direct_requested = False
     requested_query = str(requested_query or "").strip()
     if requested_query:
@@ -216,20 +229,43 @@ def _refine_keywords_for_table(
             refined_keywords = [requested_query]
             direct_requested = True
 
-    fallback_query = ""
-    if not refined_keywords:
-        fallback_candidates = _dedupe_keep_order(
-            ([requested_query] if requested_query else []) + planner_queries
-        )
-        if fallback_candidates:
-            fallback_query = fallback_candidates[0]
+    for keyword in planner_hints:
+        if keyword not in refined_keywords:
+            refined_keywords.append(keyword)
+
+    refined_keywords = _keywords_to_fetch(refined_keywords)
+    empty_only_queries: List[str] = []
+
+    if not _keyword_expansion_enabled(state):
+        for keyword in _guarded_keywords_for_table(
+            table,
+            planner_queries,
+            cutoff=PLANNER_COMPONENT_CUTOFF,
+        ):
+            if keyword not in refined_keywords:
+                empty_only_queries.append(keyword)
+
+        if not empty_only_queries:
+            repaired_queries, _details = repair_keywords(table, planner_queries)
+            for keyword in repaired_queries:
+                if keyword not in refined_keywords:
+                    empty_only_queries.append(keyword)
+
+        if not empty_only_queries:
+            for candidate in planner_queries:
+                text = str(candidate or "").strip()
+                if text and text not in refined_keywords:
+                    empty_only_queries.append(text)
+                    break
+
+        empty_only_queries = _keywords_to_fetch(empty_only_queries, limit=1)
 
     return (
         seed_keywords,
         planner_hints,
         planner_queries,
-        _keywords_to_fetch(refined_keywords),
-        fallback_query,
+        refined_keywords,
+        empty_only_queries,
         direct_requested,
     )
 
@@ -274,11 +310,14 @@ def _prepare_get_related_info_args(
     state: dict,
     agent_name: str,
     args: dict,
-) -> Tuple[Optional[dict], Optional[str], Optional[dict], List[str]]:
+) -> Tuple[Optional[dict], Optional[str], Optional[dict], dict]:
     global _COLLECTION
 
     if _COLLECTION is None:
-        return None, "collection not set. Call set_collection(collection) before running workflow.", None, []
+        return None, "collection not set. Call set_collection(collection) before running workflow.", None, {
+            "standard_queries": [],
+            "empty_only_queries": [],
+        }
 
     prepared = dict(args)
     prepared["collection"] = _COLLECTION
@@ -286,15 +325,18 @@ def _prepare_get_related_info_args(
 
     table = prepared.get("table", "")
     requested_query = str(args.get("query", "")).strip()
-    seed_keywords, planner_hints, planner_queries, refined_keywords, fallback_query, direct_requested = _refine_keywords_for_table(
+    seed_keywords, planner_hints, planner_queries, refined_keywords, empty_only_queries, direct_requested = _refine_keywords_for_table(
         state,
         table,
         requested_query=requested_query,
     )
+    expansion_enabled = _keyword_expansion_enabled(state)
 
     log_data = {
         "agent": agent_name,
         "table": table,
+        "question_type": _question_type(state),
+        "expansion_enabled": expansion_enabled,
         "seed_keywords": seed_keywords[:4],
         "planner_hints": planner_hints[:4],
         "planner_queries": planner_queries[:3],
@@ -303,23 +345,36 @@ def _prepare_get_related_info_args(
     if direct_requested:
         log_data["requested_query"] = requested_query
         log_data["direct_requested"] = True
-    if fallback_query:
-        log_data["fallback_query"] = fallback_query
+    if empty_only_queries:
+        log_data["empty_only_queries"] = empty_only_queries[:2]
 
-    if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested or fallback_query:
+    if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested or empty_only_queries:
         log_entry = make_log(state, "tool:keyword_refined", **log_data)
     else:
         log_entry = make_debug_log(state, "tool:keyword_refined", **log_data)
 
     if refined_keywords:
         prepared["query"] = refined_keywords[0]
-        return prepared, None, log_entry, refined_keywords
+        return prepared, None, log_entry, {
+            "standard_queries": [
+                keyword
+                for keyword in refined_keywords
+                if keyword != str(prepared.get("query", "")).strip()
+            ],
+            "empty_only_queries": empty_only_queries,
+        }
 
-    if fallback_query:
-        prepared["query"] = fallback_query
-        return prepared, None, log_entry, [fallback_query]
+    if empty_only_queries:
+        prepared["query"] = empty_only_queries[0]
+        return prepared, None, log_entry, {
+            "standard_queries": empty_only_queries[1:],
+            "empty_only_queries": [],
+        }
 
-    return None, f"no usable query available for table={table}", log_entry, []
+    return None, f"no usable query available for table={table}", log_entry, {
+        "standard_queries": [],
+        "empty_only_queries": [],
+    }
 
 
 def _keywords_to_fetch(keywords: List[str], *, limit: int = MAX_KEYWORDS_PER_TOOL_RUN) -> List[str]:
@@ -455,10 +510,13 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
 
     prepared_args = dict(args)
     trace_logs = []
-    refined_keywords: List[str] = []
+    followup_plan = {
+        "standard_queries": [],
+        "empty_only_queries": [],
+    }
 
     if tool_name == "get_related_info":
-        prepared_args, prep_error, prep_log, refined_keywords = _prepare_get_related_info_args(
+        prepared_args, prep_error, prep_log, followup_plan = _prepare_get_related_info_args(
             state,
             agent_name,
             prepared_args,
@@ -578,15 +636,17 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     }
 
     if tool_name == "get_related_info":
-        followup_keywords = [
-            kw
-            for kw in refined_keywords
-            if kw != str(prepared_args.get("query", "")).strip()
-        ]
+        followup_keywords = list(followup_plan.get("standard_queries", []) or [])
+        empty_only_queries = list(followup_plan.get("empty_only_queries", []) or [])
+        if len(ctx) == 0:
+            for keyword in empty_only_queries:
+                if keyword not in followup_keywords:
+                    followup_keywords.append(keyword)
 
         for follow_index, keyword in enumerate(followup_keywords, start=1):
             follow_args = dict(prepared_args)
             follow_args["query"] = keyword
+            trigger = "empty_primary" if keyword in empty_only_queries else "standard"
 
             if _already_called(state, agent_name, tool_name, follow_args):
                 continue
@@ -626,6 +686,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                         table=follow_args.get("table", ""),
                         query=follow_args.get("query", ""),
                         followup_index=follow_index,
+                        trigger=trigger,
                         context_len=len(follow_ctx),
                         empty=(len(follow_ctx) == 0),
                     )

@@ -131,6 +131,13 @@ def infer_table_keywords(table: str, user_query: str, analysis_axes: list[dict])
         repaired, _details = repair_keywords(table, [text])
         candidates.extend(repaired)
 
+    # If we already found an exact alias/canonical/repaired keyword, do not
+    # expand with fuzzy semantic neighbors. This keeps planner hints focused
+    # and avoids noisy follow-up lookups like "tong tai san" -> fixed assets.
+    candidates = _dedupe_keep_order(candidates)
+    if candidates:
+        return candidates
+
     scored: List[tuple[float, str]] = []
     for keyword in allowed:
         keyword_norm = _normalize_text(keyword)
