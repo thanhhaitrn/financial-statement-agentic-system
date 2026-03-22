@@ -237,28 +237,21 @@ def _refine_keywords_for_table(
     empty_only_queries: List[str] = []
 
     if not _keyword_expansion_enabled(state):
+        fallback_candidates: List[str] = []
         for keyword in _guarded_keywords_for_table(
             table,
             planner_queries,
             cutoff=PLANNER_COMPONENT_CUTOFF,
         ):
-            if keyword not in refined_keywords:
-                empty_only_queries.append(keyword)
+            if keyword not in refined_keywords and keyword not in fallback_candidates:
+                fallback_candidates.append(keyword)
 
-        if not empty_only_queries:
-            repaired_queries, _details = repair_keywords(table, planner_queries)
-            for keyword in repaired_queries:
-                if keyword not in refined_keywords:
-                    empty_only_queries.append(keyword)
+        repaired_queries, _details = repair_keywords(table, planner_queries)
+        for keyword in repaired_queries:
+            if keyword not in refined_keywords and keyword not in fallback_candidates:
+                fallback_candidates.append(keyword)
 
-        if not empty_only_queries:
-            for candidate in planner_queries:
-                text = str(candidate or "").strip()
-                if text and text not in refined_keywords:
-                    empty_only_queries.append(text)
-                    break
-
-        empty_only_queries = _keywords_to_fetch(empty_only_queries, limit=1)
+        empty_only_queries = _keywords_to_fetch(fallback_candidates, limit=1)
 
     return (
         seed_keywords,
@@ -339,14 +332,15 @@ def _prepare_get_related_info_args(
         "expansion_enabled": expansion_enabled,
         "seed_keywords": seed_keywords[:4],
         "planner_hints": planner_hints[:4],
-        "planner_queries": planner_queries[:3],
         "refined_keywords": refined_keywords[:4],
     }
     if direct_requested:
         log_data["requested_query"] = requested_query
         log_data["direct_requested"] = True
     if empty_only_queries:
-        log_data["empty_only_queries"] = empty_only_queries[:2]
+        log_data["empty_primary_fallbacks"] = empty_only_queries[:2]
+    if bool((state or {}).get("debug_trace", False)):
+        log_data["planner_queries"] = planner_queries[:3]
 
     if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested or empty_only_queries:
         log_entry = make_log(state, "tool:keyword_refined", **log_data)

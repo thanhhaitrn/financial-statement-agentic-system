@@ -98,7 +98,8 @@ def test_lookup_uses_planner_fallback_only_when_primary_is_empty(monkeypatch):
     assert refine_log["question_type"] == "lookup"
     assert refine_log["expansion_enabled"] is False
     assert refine_log["planner_hints"] == []
-    assert refine_log["empty_only_queries"] == ["vốn chủ sở hữu"]
+    assert refine_log["empty_primary_fallbacks"] == ["vốn chủ sở hữu"]
+    assert "planner_queries" not in refine_log
 
     followup_log = next(item for item in updates["trace"] if item["event"] == "tool:followup_done")
     assert followup_log["trigger"] == "empty_primary"
@@ -158,3 +159,38 @@ def test_analysis_question_allows_keyword_expansion_followups(monkeypatch):
 
     followup_log = next(item for item in updates["trace"] if item["event"] == "tool:followup_done")
     assert followup_log["trigger"] == "standard"
+
+
+def test_lookup_does_not_fallback_to_raw_planner_objective_text():
+    state = {
+        "user_query": "Tổng tài sản của Hòa Phát tại ngày 30/06/2025 là bao nhiêu?",
+        "followup_rounds": 0,
+        "planner_plan": {
+            "question_type": "lookup",
+            "analysis_axes": [
+                {
+                    "axis": "total_assets",
+                    "tables": [TABLE_BS],
+                    "objective": "Xác định giá trị tổng tài sản tại thời điểm được yêu cầu",
+                }
+            ],
+        },
+        "worker_plan": {
+            "targets": [
+                {
+                    "table": TABLE_BS,
+                    "keywords": ["tổng cộng tài sản"],
+                }
+            ]
+        },
+    }
+
+    refined = tool_runner._refine_keywords_for_table(
+        state,
+        TABLE_BS,
+        requested_query="tổng cộng tài sản",
+    )
+
+    assert refined[1] == []
+    assert refined[3] == ["tổng cộng tài sản"]
+    assert refined[4] == []
