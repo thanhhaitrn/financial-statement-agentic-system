@@ -13,7 +13,7 @@ from llm.client import llm
 from schemas.agent_outputs import SynthDecision
 
 
-synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision)
+synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision, include_raw=True)
 
 DEFAULT_DECISION = {
     "status": "error",
@@ -59,6 +59,14 @@ class SynthPayload(TypedDict):
 class CompactWorkerResult(TypedDict):
     table: str
     facts: List[NormalizedFact]
+
+
+class SynthUsage(TypedDict, total=False):
+    input_tokens: Optional[int]
+    output_tokens: Optional[int]
+    total_tokens: Optional[int]
+    model: str
+    done_reason: str
 
 
 def _to_text(raw: Any) -> str:
@@ -425,6 +433,43 @@ def _coerce_decision(value: Any) -> Dict[str, Any]:
     return decision
 
 
+def _extract_synth_usage(raw: Any) -> Optional[SynthUsage]:
+    if raw is None:
+        return None
+
+    usage_metadata = getattr(raw, "usage_metadata", None) or {}
+    response_metadata = getattr(raw, "response_metadata", None) or {}
+
+    input_tokens = usage_metadata.get("input_tokens")
+    output_tokens = usage_metadata.get("output_tokens")
+    total_tokens = usage_metadata.get("total_tokens")
+
+    if input_tokens is None:
+        input_tokens = response_metadata.get("prompt_eval_count")
+    if output_tokens is None:
+        output_tokens = response_metadata.get("eval_count")
+    if total_tokens is None and input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+
+    usage: SynthUsage = {}
+    if input_tokens is not None:
+        usage["input_tokens"] = int(input_tokens)
+    if output_tokens is not None:
+        usage["output_tokens"] = int(output_tokens)
+    if total_tokens is not None:
+        usage["total_tokens"] = int(total_tokens)
+
+    model = str(response_metadata.get("model") or response_metadata.get("model_name") or "").strip()
+    if model:
+        usage["model"] = model
+
+    done_reason = str(response_metadata.get("done_reason") or "").strip()
+    if done_reason:
+        usage["done_reason"] = done_reason
+
+    return usage or None
+
+
 def _build_payload(
     state: dict,
     profile: Dict[str, Any],
@@ -445,23 +490,46 @@ def _build_payload(
     }
 
 
-def _invoke_synth(payload: SynthPayload) -> Dict[str, Any]:
+def _invoke_synth(payload: SynthPayload) -> Tuple[Dict[str, Any], Optional[SynthUsage]]:
     try:
-        return _coerce_decision(synth_chain.invoke(payload))
+        result = synth_chain.invoke(payload)
+        if not isinstance(result, dict):
+            return _coerce_decision(result), None
+
+        usage = _extract_synth_usage(result.get("raw"))
+        parsing_error = result.get("parsing_error")
+        if parsing_error is not None:
+            return (
+                {
+                    "status": "error",
+                    "answer": f"Synth trả về sai schema: {parsing_error}",
+                    "missing": [],
+                    "followups": [],
+                },
+                usage,
+            )
+
+        return _coerce_decision(result.get("parsed")), usage
     except ValidationError as exc:
-        return {
-            "status": "error",
-            "answer": f"Synth trả về sai schema: {exc}",
-            "missing": [],
-            "followups": [],
-        }
+        return (
+            {
+                "status": "error",
+                "answer": f"Synth trả về sai schema: {exc}",
+                "missing": [],
+                "followups": [],
+            },
+            None,
+        )
     except Exception as exc:
-        return {
-            "status": "error",
-            "answer": f"Lỗi khi chạy synth: {exc}",
-            "missing": [],
-            "followups": [],
-        }
+        return (
+            {
+                "status": "error",
+                "answer": f"Lỗi khi chạy synth: {exc}",
+                "missing": [],
+                "followups": [],
+            },
+            None,
+        )
 
 
 def run_synth(state: dict) -> dict:
@@ -492,7 +560,10 @@ def run_synth(state: dict) -> dict:
 
     facts = _flatten_facts(normalized_worker_results)
     payload = _build_payload(state, profile, normalized_worker_results)
-    decision = _invoke_synth(payload)
+    decision, usage = _invoke_synth(payload)
+
+    if usage:
+        trace.append(make_log(state, "synth:usage", **usage))
 
     done_log = make_log(
         state,
