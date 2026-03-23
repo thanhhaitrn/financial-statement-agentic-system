@@ -187,6 +187,7 @@ def test_lookup_does_not_fallback_to_raw_planner_objective_text():
 
     refined = tool_runner._refine_keywords_for_table(
         state,
+        "agent_bs",
         TABLE_BS,
         requested_query="tổng cộng tài sản",
     )
@@ -194,3 +195,54 @@ def test_lookup_does_not_fallback_to_raw_planner_objective_text():
     assert refined[1] == []
     assert refined[3] == ["tổng cộng tài sản"]
     assert refined[4] == []
+
+
+def test_followup_prefers_untried_queries_before_repeating_previous_round_query():
+    state = {
+        "user_query": "Tính hiệu suất sử dụng tài sản",
+        "followup_rounds": 1,
+        "planner_plan": {
+            "question_type": "calculation",
+            "analysis_axes": [
+                {
+                    "axis": "capital_efficiency",
+                    "tables": [TABLE_BS],
+                    "objective": "Thu thập dữ liệu để xác định thời điểm tổng tài sản phù hợp với doanh thu",
+                }
+            ],
+        },
+        "worker_plan": {
+            "targets": [
+                {
+                    "table": TABLE_BS,
+                    "keywords": [
+                        "tổng cộng tài sản",
+                        "ngày kết thúc kỳ báo cáo",
+                        "thời điểm tương ứng doanh thu",
+                    ],
+                    "source": "followup",
+                }
+            ]
+        },
+        "tool_results": [
+            {
+                "agent": "agent_bs",
+                "tool": "get_related_info",
+                "args": {
+                    "table": TABLE_BS,
+                    "query": "tổng cộng tài sản",
+                },
+                "round": 0,
+            }
+        ],
+    }
+
+    refined = tool_runner._refine_keywords_for_table(
+        state,
+        "agent_bs",
+        TABLE_BS,
+        requested_query="tổng cộng tài sản",
+    )
+
+    assert refined[3][:2] == ["ngày kết thúc kỳ báo cáo", "thời điểm tương ứng doanh thu"]
+    assert refined[3][-1] == "tổng cộng tài sản"

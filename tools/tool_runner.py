@@ -112,23 +112,28 @@ def _force_collect_update(state: dict, agent_name: str) -> dict:
     return {agent_name: _current_round(state)}
 
 
-def _get_keywords_for_table(worker_plan: dict, table: str) -> List[str]:
+def _get_target_for_table(worker_plan: dict, table: str) -> dict:
     targets = worker_plan.get("targets", []) or []
     normalized_target = _normalize_table_name(table)
 
     for target in targets:
         tname = _normalize_table_name(target.get("table", ""))
         if tname == normalized_target:
-            kws = target.get("keywords", []) or []
-            seen = set()
-            cleaned = []
-            for kw in kws:
-                s = str(kw).strip()
-                if s and s not in seen:
-                    cleaned.append(s)
-                    seen.add(s)
-            return cleaned
-    return []
+            return target
+    return {}
+
+
+def _get_keywords_for_table(worker_plan: dict, table: str) -> List[str]:
+    target = _get_target_for_table(worker_plan, table)
+    kws = target.get("keywords", []) or []
+    seen = set()
+    cleaned = []
+    for kw in kws:
+        s = str(kw).strip()
+        if s and s not in seen:
+            cleaned.append(s)
+            seen.add(s)
+    return cleaned
 
 
 def _dedupe_keep_order(items: List[str]) -> List[str]:
@@ -192,17 +197,45 @@ def _guarded_keywords_for_table(
     return _dedupe_keep_order(out)
 
 
+def _called_queries_for_agent_table(state: dict, agent_name: str, table: str) -> List[str]:
+    items = state.get("tool_results", []) or []
+    normalized_table = _normalize_table_name(table)
+    queries = []
+
+    for item in items:
+        if str(item.get("agent", "")).strip() != agent_name:
+            continue
+        if str(item.get("tool", "")).strip() != "get_related_info":
+            continue
+
+        args = item.get("args", {}) or {}
+        if _normalize_table_name(args.get("table", "")) != normalized_table:
+            continue
+
+        query = str(args.get("query", "") or "").strip()
+        if query and query not in queries:
+            queries.append(query)
+
+    return queries
+
+
 def _refine_keywords_for_table(
     state: dict,
+    agent_name: str,
     table: str,
     requested_query: str = "",
 ) -> Tuple[List[str], List[str], List[str], List[str], List[str], bool]:
-    raw_seed_keywords = _get_keywords_for_table(state.get("worker_plan", {}) or {}, table)
+    worker_plan = state.get("worker_plan", {}) or {}
+    target = _get_target_for_table(worker_plan, table)
+    raw_seed_keywords = _get_keywords_for_table(worker_plan, table)
+    target_source = str(target.get("source", "") or "").strip().lower()
+    followup_target = target_source == "followup"
     seed_keywords = _guarded_keywords_for_table(
         table,
         raw_seed_keywords,
         cutoff=SEED_KEYWORD_CUTOFF,
     )
+    exhausted_queries = _called_queries_for_agent_table(state, agent_name, table)
     planner_queries = _planner_query_hints_for_table(state, table)
     planner_hints: List[str] = []
     if _keyword_expansion_enabled(state):
@@ -232,6 +265,16 @@ def _refine_keywords_for_table(
     for keyword in planner_hints:
         if keyword not in refined_keywords:
             refined_keywords.append(keyword)
+
+    if followup_target:
+        exploratory_queries = [
+            keyword
+            for keyword in raw_seed_keywords
+            if keyword not in refined_keywords and keyword not in exhausted_queries
+        ]
+        unseen_refined = [keyword for keyword in refined_keywords if keyword not in exhausted_queries]
+        exhausted_refined = [keyword for keyword in refined_keywords if keyword in exhausted_queries]
+        refined_keywords = unseen_refined + exploratory_queries + exhausted_refined
 
     refined_keywords = _keywords_to_fetch(refined_keywords)
     empty_only_queries: List[str] = []
@@ -320,6 +363,7 @@ def _prepare_get_related_info_args(
     requested_query = str(args.get("query", "")).strip()
     seed_keywords, planner_hints, planner_queries, refined_keywords, empty_only_queries, direct_requested = _refine_keywords_for_table(
         state,
+        agent_name,
         table,
         requested_query=requested_query,
     )
@@ -337,6 +381,9 @@ def _prepare_get_related_info_args(
     if direct_requested:
         log_data["requested_query"] = requested_query
         log_data["direct_requested"] = True
+    exhausted_queries = _called_queries_for_agent_table(state, agent_name, table)
+    if exhausted_queries:
+        log_data["previous_queries"] = exhausted_queries[:4]
     if empty_only_queries:
         log_data["empty_primary_fallbacks"] = empty_only_queries[:2]
     if bool((state or {}).get("debug_trace", False)):
