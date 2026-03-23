@@ -174,7 +174,7 @@ def _question_type(state: dict) -> str:
 
 
 def _keyword_expansion_enabled(state: dict) -> bool:
-    return _question_type(state) in ANALYSIS_QUESTION_TYPES or _current_round(state) > 0
+    return _question_type(state) in ANALYSIS_QUESTION_TYPES
 
 
 def _guarded_keywords_for_table(

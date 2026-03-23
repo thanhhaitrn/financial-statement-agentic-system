@@ -152,6 +152,20 @@ def _merge_worker_output(previous: dict, current: dict) -> dict:
     }
 
 
+def _fact_briefs(facts: list[dict], limit: int = 6) -> list[dict]:
+    items = []
+    for fact in facts or []:
+        if not isinstance(fact, dict):
+            continue
+        items.append(
+            {
+                "item_name": str(fact.get("item_name", "") or "").strip(),
+                "time_hint": str(fact.get("time_hint", "") or "").strip(),
+            }
+        )
+    return items[:limit]
+
+
 def collect_all_workers(state: dict) -> dict:
     expected = set(state.get("expected_workers", []) or [])
     round_n = state.get("followup_rounds", 0)
@@ -215,6 +229,7 @@ def collect_all_workers(state: dict) -> dict:
             summary = {
                 "table": data.get("table", ""),
                 "facts_n": len(data.get("facts", []) or []),
+                "facts": _fact_briefs(data.get("facts", [])),
             }
 
             if agent == "agent_web":
@@ -226,6 +241,7 @@ def collect_all_workers(state: dict) -> dict:
                 summary = {
                     "table": merged.get("table", ""),
                     "facts_n": len(merged.get("facts", []) or []),
+                    "facts": _fact_briefs(merged.get("facts", [])),
                 }
 
         except Exception as e:
@@ -256,6 +272,7 @@ def collect_all_workers(state: dict) -> dict:
                     summary = {
                         "table": previous.get("table", ""),
                         "facts_n": len(previous.get("facts", []) or []),
+                        "facts": _fact_briefs(previous.get("facts", [])),
                         "error": "fallback_keep_previous",
                     }
                 else:
