@@ -338,7 +338,12 @@ def _collect_pipeline_errors(final_state: dict) -> list[str]:
     return _dedupe_keep_order(errors)
 
 
-def _run_graph_with_live_trace(agentic_graph, initial_state: dict) -> dict:
+def _print_trace_entry(entry: dict) -> None:
+    print(entry)
+    sys.stdout.flush()
+
+
+def _run_graph(agentic_graph, initial_state: dict, *, on_trace_entry=None) -> dict:
     final_state = dict(initial_state)
     printed_trace_count = 0
 
@@ -351,12 +356,20 @@ def _run_graph_with_live_trace(agentic_graph, initial_state: dict) -> dict:
         new_entries = trace_entries[printed_trace_count:]
 
         for entry in new_entries:
-            print(entry)
-            sys.stdout.flush()
+            if on_trace_entry is not None:
+                on_trace_entry(entry)
 
         printed_trace_count = len(trace_entries)
 
     return final_state
+
+
+def _run_graph_with_live_trace(agentic_graph, initial_state: dict) -> dict:
+    return _run_graph(
+        agentic_graph,
+        initial_state,
+        on_trace_entry=_print_trace_entry,
+    )
 
 
 def _build_run_trace_entry(final_state: dict, *, duration_ms: int) -> dict:
@@ -398,12 +411,19 @@ def _build_run_trace_entry(final_state: dict, *, duration_ms: int) -> dict:
     return summary
 
 
-def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
-    from graph.workflow import agentic_graph
+def extract_run_summary(final_state: dict) -> dict:
+    for entry in reversed(final_state.get("trace", []) or []):
+        if isinstance(entry, dict) and str(entry.get("event", "") or "").strip() == "run:done":
+            return dict(entry)
+    return {}
 
-    set_collection(collection)
 
-    initial_state = {
+def collect_pipeline_errors(final_state: dict) -> list[str]:
+    return _collect_pipeline_errors(final_state)
+
+
+def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> dict:
+    return {
         "user_query": query,
         "dataset_id": dataset.dataset_id,
         "debug_trace": debug_trace,
@@ -419,17 +439,40 @@ def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
         "trace": [],
     }
 
-    print(f"\n=== DATASET ===\n{describe_dataset(dataset)}")
-    print("\n=== TRACE ===")
-    sys.stdout.flush()
+
+def execute_query(dataset, collection, query: str, *, debug_trace: bool = False, on_trace_entry=None) -> dict:
+    from graph.workflow import agentic_graph
+
+    set_collection(collection)
+    initial_state = _build_initial_state(dataset, query, debug_trace=debug_trace)
     started_at = time.perf_counter()
-    final_state = _run_graph_with_live_trace(agentic_graph, initial_state)
+    final_state = _run_graph(
+        agentic_graph,
+        initial_state,
+        on_trace_entry=on_trace_entry,
+    )
     run_log = _build_run_trace_entry(
         final_state,
         duration_ms=int((time.perf_counter() - started_at) * 1000),
     )
     final_state = dict(final_state)
     final_state["trace"] = [*(final_state.get("trace", []) or []), run_log]
+
+    return final_state
+
+
+def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
+    print(f"\n=== DATASET ===\n{describe_dataset(dataset)}")
+    print("\n=== TRACE ===")
+    sys.stdout.flush()
+    final_state = execute_query(
+        dataset,
+        collection,
+        query,
+        debug_trace=debug_trace,
+        on_trace_entry=_print_trace_entry,
+    )
+    run_log = extract_run_summary(final_state)
     print(run_log)
     sys.stdout.flush()
     print("\n=== FINAL ANSWER ===")

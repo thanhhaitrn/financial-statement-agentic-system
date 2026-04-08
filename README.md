@@ -41,6 +41,14 @@ Liet ke dataset da dang ky:
 python test.py --list-datasets
 ```
 
+Chay batch tren tat ca dataset da dang ky va ghi output ra JSON:
+
+```bash
+python dataset_batch_runner.py \
+  --query "ROE là bao nhiêu?" \
+  --output batch_test_results.json
+```
+
 Xoa mot dataset da dang ky theo id:
 
 ```bash
@@ -96,6 +104,55 @@ Neu khong truyen `--company`, CLI se khong con fallback sang cong ty mac dinh. N
 - `--file-path`: dang ky/build dataset tu file tai lieu
 - `--query`: chay query khong tuong tac
 - `--debug-trace`: hien them log trace noi bo
+
+## Batch test JSON
+
+Script [dataset_batch_runner.py](/Users/thanhhai/itec/dataset_batch_runner.py) chay qua toan bo dataset hien co trong registry, thuc thi mot hoac nhieu cau hoi, roi luu ket qua vao file JSON.
+
+Vi du 1 cau hoi:
+
+```bash
+python dataset_batch_runner.py \
+  --query "ROE là bao nhiêu?" \
+  --output batch_test_results.json
+```
+
+Vi du nhieu cau hoi:
+
+```bash
+python dataset_batch_runner.py \
+  --query "ROE là bao nhiêu?" \
+  --query "Lợi nhuận sau thuế là bao nhiêu?" \
+  --output batch_test_results.json
+```
+
+Vi du doc cau hoi tu file:
+
+```bash
+python dataset_batch_runner.py \
+  --queries-file queries.txt \
+  --output batch_test_results.json
+```
+
+`queries.txt` co the la file text moi dong 1 cau hoi, hoac file `.json` dang list:
+
+```json
+[
+  "ROE là bao nhiêu?",
+  "Lợi nhuận sau thuế là bao nhiêu?"
+]
+```
+
+Trong JSON output, moi dataset se co danh sach `runs`, moi run co:
+
+- `query`
+- `formatted_answer`
+- `answer`
+- `synth_status`
+- `errors`
+- `run_summary`
+
+Neu muon luu ca trace chi tiet, them `--include-trace`. Neu muon bat trace debug cho pipeline, them `--debug-trace`.
 
 ## Trace va debug
 
