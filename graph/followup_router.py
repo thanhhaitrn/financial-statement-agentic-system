@@ -17,11 +17,18 @@ def dispatch_followups(state: dict):
 
         agent = str(r.get("agent", "")).strip()
         table = str(r.get("table", "") or "").strip()
+        requirements = [
+            str(item).strip()
+            for item in (r.get("requirements", []) or [])
+            if str(item).strip()
+        ]
         keywords = [str(k).strip() for k in (r.get("keywords", []) or []) if str(k).strip()]
         if not agent or agent in seen:
             continue
 
         worker_query = str(r.get("query", "") or "").strip()
+        if not worker_query and table and requirements:
+            worker_query = build_worker_query(table, requirements, company, time_hint)
         if not worker_query and table and keywords:
             worker_query = build_worker_query(table, keywords, company, time_hint)
         if not worker_query:

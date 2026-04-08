@@ -1,10 +1,12 @@
 import argparse
 import sys
+import time
 import uuid
 
 from config.settings import DEFAULT_DATASET, DEFAULT_DATA_FILE
 from datasets.registry import (
     build_dataset_record,
+    delete_dataset as delete_dataset_record,
     describe_dataset,
     find_datasets,
     get_dataset,
@@ -19,10 +21,40 @@ from vectorstore.chroma_store import create_collection
 from vectorstore.index_builder import build_vector_store
 
 
+def _dedupe_keep_order(items):
+    seen = set()
+    output = []
+
+    for item in items:
+        text = str(item).strip()
+        if not text or text in seen:
+            continue
+        output.append(text)
+        seen.add(text)
+
+    return output
+
+
 def parse_args():
     parser = argparse.ArgumentParser(description="Run the agentic financial QA pipeline.")
     parser.add_argument("--list-datasets", action="store_true", help="List registered datasets and exit.")
+    parser.add_argument("--delete-dataset", action="store_true", help="Delete a registered dataset and exit.")
+    parser.add_argument(
+        "--purge-artifacts",
+        action="store_true",
+        help="When deleting a dataset, also remove its SQLite DB, raw tables, and vector collection.",
+    )
+    parser.add_argument(
+        "--yes",
+        action="store_true",
+        help="Skip confirmation prompts for destructive actions like deleting a dataset.",
+    )
     parser.add_argument("--dataset-id", default="", help="Select an existing dataset by id.")
+    parser.add_argument(
+        "--select-dataset",
+        action="store_true",
+        help="Prompt to choose a dataset from the matched registered datasets.",
+    )
     parser.add_argument("--company", default="", help="Filter/select company or create a dataset with this company.")
     parser.add_argument("--ticker", default="", help="Filter/select ticker or create a dataset with this ticker.")
     parser.add_argument("--industry", default="", help="Industry metadata when creating a dataset.")
@@ -66,8 +98,8 @@ def list_datasets() -> int:
     return 0
 
 
-def _choose_dataset_interactively(matches):
-    print("Multiple datasets matched. Select one:")
+def _choose_dataset_interactively(matches, *, header="Select one dataset:"):
+    print(header)
     for idx, record in enumerate(matches, start=1):
         print(f"{idx}. {describe_dataset(record)}")
 
@@ -94,6 +126,9 @@ def resolve_dataset(args):
             args.scope,
             args.audit_status,
         ]
+    )
+    prompt_dataset_selection = sys.stdin.isatty() and (
+        args.select_dataset or (not selection_requested and not args.query.strip())
     )
 
     if args.file_path:
@@ -136,6 +171,11 @@ def resolve_dataset(args):
         scope=args.scope,
         audit_status=args.audit_status,
     )
+    if prompt_dataset_selection and matches:
+        return _choose_dataset_interactively(
+            matches,
+            header="Available datasets. Select one:",
+        )
     if len(matches) == 1:
         return matches[0]
     if len(matches) > 1:
@@ -150,6 +190,55 @@ def resolve_dataset(args):
         )
 
     return ensure_default_dataset()
+
+
+def resolve_dataset_for_delete(args):
+    if args.file_path:
+        raise SystemExit("Cannot use --file-path with --delete-dataset. Select an existing dataset instead.")
+
+    selection_requested = any(
+        [
+            args.dataset_id,
+            args.company,
+            args.ticker,
+            args.report_type,
+            args.fiscal_year is not None,
+            args.fiscal_quarter is not None,
+            args.scope,
+            args.audit_status,
+        ]
+    )
+    if not selection_requested:
+        raise SystemExit(
+            "Deleting a dataset requires --dataset-id or filters like --company/--fiscal-year."
+        )
+
+    if args.dataset_id:
+        dataset = get_dataset(args.dataset_id)
+        if dataset is None:
+            raise SystemExit(f"Dataset not found: {args.dataset_id}")
+        return dataset
+
+    matches = find_datasets(
+        company=args.company,
+        ticker=args.ticker,
+        report_type=args.report_type,
+        fiscal_year=args.fiscal_year,
+        fiscal_quarter=args.fiscal_quarter,
+        scope=args.scope,
+        audit_status=args.audit_status,
+    )
+    if len(matches) == 1:
+        return matches[0]
+    if len(matches) > 1:
+        if sys.stdin.isatty():
+            return _choose_dataset_interactively(
+                matches,
+                header="Multiple datasets matched. Select one to delete:",
+            )
+        raise SystemExit("Multiple datasets matched. Re-run with --dataset-id.")
+
+    raise SystemExit("No dataset matched the provided filters.")
 
 
 def ensure_built(dataset):
@@ -196,6 +285,120 @@ def ensure_built(dataset):
     return dataset, conn, collection
 
 
+def _resolve_query(args) -> str:
+    query = args.query.strip()
+    if query:
+        return query
+
+    if not sys.stdin.isatty():
+        raise SystemExit("Missing query. Re-run with --query when stdin is not interactive.")
+
+    try:
+        query = input("Enter query: ").strip()
+    except EOFError as exc:
+        raise SystemExit("Missing query.") from exc
+
+    if not query:
+        raise SystemExit("Missing query.")
+
+    return query
+
+
+def _collect_pipeline_errors(final_state: dict) -> list[str]:
+    errors = []
+    synth_decision = final_state.get("synth_decision", {}) or {}
+    synth_status = str(synth_decision.get("status", "") or "").strip().lower()
+    synth_answer = str(synth_decision.get("answer", "") or "").strip()
+
+    if synth_status == "error":
+        message = "synth:error"
+        if synth_answer:
+            message = f"{message}: {synth_answer}"
+        errors.append(message)
+
+    for entry in final_state.get("trace", []):
+        if not isinstance(entry, dict):
+            continue
+
+        event = str(entry.get("event", "") or "").strip()
+        if not event:
+            continue
+
+        if not (event.endswith(":error") or event == "tool:error_runtime"):
+            continue
+
+        message = event
+        error_type = str(entry.get("error_type", "") or "").strip()
+        error = str(entry.get("error", "") or "").strip()
+        if error_type:
+            message = f"{message} ({error_type})"
+        if error:
+            message = f"{message}: {error}"
+        errors.append(message)
+
+    return _dedupe_keep_order(errors)
+
+
+def _run_graph_with_live_trace(agentic_graph, initial_state: dict) -> dict:
+    final_state = dict(initial_state)
+    printed_trace_count = 0
+
+    for state in agentic_graph.stream(initial_state, stream_mode="values"):
+        if not isinstance(state, dict):
+            continue
+
+        final_state = state
+        trace_entries = final_state.get("trace", []) or []
+        new_entries = trace_entries[printed_trace_count:]
+
+        for entry in new_entries:
+            print(entry)
+            sys.stdout.flush()
+
+        printed_trace_count = len(trace_entries)
+
+    return final_state
+
+
+def _build_run_trace_entry(final_state: dict, *, duration_ms: int) -> dict:
+    summary = {
+        "event": "run:done",
+        "duration_ms": int(duration_ms),
+        "trace_events_n": len(final_state.get("trace", []) or []),
+    }
+
+    input_tokens = 0
+    output_tokens = 0
+    total_tokens = 0
+    token_event_count = 0
+
+    for entry in final_state.get("trace", []) or []:
+        if not isinstance(entry, dict):
+            continue
+
+        has_tokens = False
+        if entry.get("input_tokens") is not None:
+            input_tokens += int(entry.get("input_tokens") or 0)
+            has_tokens = True
+        if entry.get("output_tokens") is not None:
+            output_tokens += int(entry.get("output_tokens") or 0)
+            has_tokens = True
+        if entry.get("total_tokens") is not None:
+            total_tokens += int(entry.get("total_tokens") or 0)
+            has_tokens = True
+
+        if has_tokens:
+            token_event_count += 1
+
+    if token_event_count:
+        summary["llm_steps_n"] = token_event_count
+        summary["input_tokens"] = input_tokens
+        summary["output_tokens"] = output_tokens
+        summary["total_tokens"] = total_tokens
+
+    return summary
+
+
 def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
     from graph.workflow import agentic_graph
 
@@ -211,21 +414,77 @@ def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
         "worker_results": {},
         "web_summary": "",
         "expected_workers": [],
-        "done_workers": [],
+        "done_workers": {},
         "followup_rounds": 0,
         "run_id": str(uuid.uuid4())[:8],
         "trace": [],
     }
 
-    final_state = agentic_graph.invoke(initial_state)
-
     print(f"\n=== DATASET ===\n{describe_dataset(dataset)}")
+    print("\n=== TRACE ===")
+    sys.stdout.flush()
+    started_at = time.perf_counter()
+    final_state = _run_graph_with_live_trace(agentic_graph, initial_state)
+    run_log = _build_run_trace_entry(
+        final_state,
+        duration_ms=int((time.perf_counter() - started_at) * 1000),
+    )
+    final_state = dict(final_state)
+    final_state["trace"] = [*(final_state.get("trace", []) or []), run_log]
+    print(run_log)
+    sys.stdout.flush()
     print("\n=== FINAL ANSWER ===")
     print(format_final_answer(final_state))
 
-    print("\n=== TRACE ===")
-    for entry in final_state.get("trace", []):
-        print(entry)
+    return final_state
+
+
+def _confirm_delete_dataset(dataset, *, purge_artifacts: bool, skip_confirmation: bool = False):
+    if skip_confirmation:
+        return
+
+    if not sys.stdin.isatty():
+        raise SystemExit("Deleting a dataset in non-interactive mode requires --yes.")
+
+    print("\n=== DELETE DATASET ===")
+    print(describe_dataset(dataset))
+    if purge_artifacts:
+        print(
+            "This will remove the dataset from the registry and delete its manifest, "
+            "SQLite DB, raw tables, and vector collection."
+        )
+    else:
+        print(
+            "This will remove the dataset from the registry and delete its manifest only. "
+            "Pass --purge-artifacts to also remove derived build artifacts."
+        )
+
+    if input("Type DELETE to confirm: ").strip() != "DELETE":
+        raise SystemExit("Delete cancelled.")
+
+
+def delete_dataset_cli(args) -> int:
+    dataset = resolve_dataset_for_delete(args)
+    _confirm_delete_dataset(
+        dataset,
+        purge_artifacts=args.purge_artifacts,
+        skip_confirmation=args.yes,
+    )
+    deleted = delete_dataset_record(
+        dataset.dataset_id,
+        purge_artifacts=args.purge_artifacts,
+    )
+    if deleted is None:
+        raise SystemExit(f"Dataset not found: {dataset.dataset_id}")
+
+    print("Deleted dataset:")
+    print(describe_dataset(deleted))
+    if args.purge_artifacts:
+        print("Purged derived artifacts. The source document file was left untouched.")
+    else:
+        print("Removed registry entry and manifest only. Derived artifacts were kept.")
+
+    return 0
 
 
 def main():
@@ -233,15 +492,22 @@ def main():
 
     if args.list_datasets:
         raise SystemExit(list_datasets())
+    if args.delete_dataset:
+        raise SystemExit(delete_dataset_cli(args))
 
     dataset = resolve_dataset(args)
     dataset, _conn, collection = ensure_built(dataset)
 
-    query = args.query.strip()
-    if not query:
-        query = input("Enter query: ").strip()
+    query = _resolve_query(args)
+    final_state = run_query(dataset, collection, query, debug_trace=args.debug_trace)
+    errors = _collect_pipeline_errors(final_state)
 
-    run_query(dataset, collection, query, debug_trace=args.debug_trace)
+    if errors:
+        sys.stdout.flush()
+        print("\n=== ERROR SUMMARY ===", file=sys.stderr)
+        for item in errors:
+            print(f"- {item}", file=sys.stderr)
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":

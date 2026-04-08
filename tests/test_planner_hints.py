@@ -6,7 +6,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from agents.planner_hints import infer_table_keywords, infer_table_query_hints
+from agents.planner_hints import infer_table_keywords, infer_table_query_hints, infer_time_hint
 
 
 TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
@@ -44,3 +44,7 @@ def test_infer_table_query_hints_returns_planner_texts_not_table_keywords():
         "total_assets: Xác định giá trị tổng tài sản tại thời điểm được yêu cầu",
         user_query,
     ]
+
+
+def test_infer_time_hint_prefers_explicit_date():
+    assert infer_time_hint("Tổng tài sản của Hòa Phát tại ngày 30/06/2025 là bao nhiêu?") == "30/06/2025"

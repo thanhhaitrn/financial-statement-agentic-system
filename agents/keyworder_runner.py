@@ -1,19 +1,20 @@
 import json
 import re
+import time
 from typing import Any, Optional
 
 from pydantic import ValidationError
 
 from agents.planner_hints import infer_table_keywords
-from config.allowed_keywords import ALLOWED_KEYWORDS
+from config.allowed_keywords import build_allowed_keywords_payload
 from schemas.agent_outputs import KeywordPlan
 from agents.profiles import AGENT_PROFILES
-from llm.client import llm
+from llm.invoke import extract_usage_metadata, invoke_prompt
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
 from schemas.keyword_guard import repair_keywords, validate_keywords
+from schemas.table_names import normalize_table_heading
 
-keyworder_chain = PROMPT_TEMPLATE | llm.with_structured_output(KeywordPlan, include_raw=True)
 MAX_SEED_KEYWORDS_PER_TABLE = 2
 
 
@@ -57,17 +58,53 @@ def _planner_hints_by_table(planner_plan: dict, selected_tables: list[str], user
 
 
 def _allowed_keywords_payload(selected_tables: list[str]) -> str:
-    allowed = {
-        table: sorted(ALLOWED_KEYWORDS.get(table, set()))
-        for table in selected_tables
-    }
-    return json.dumps(allowed, ensure_ascii=False)
+    return build_allowed_keywords_payload(selected_tables)
 
 
 def _limit_seed_keywords(items: list[str], limit: int = MAX_SEED_KEYWORDS_PER_TABLE) -> list[str]:
     if limit <= 0:
         return []
     return _dedupe_keep_order(items)[:limit]
+
+
+def _keyword_trace_targets(worker_plan: dict) -> list[dict]:
+    targets = []
+    for item in (worker_plan.get("targets", []) or []):
+        if not isinstance(item, dict):
+            continue
+        table = str(item.get("table", "") or "").strip()
+        keywords = [
+            str(keyword).strip()
+            for keyword in (item.get("keywords", []) or [])
+            if str(keyword).strip()
+        ]
+        if not table:
+            continue
+        targets.append(
+            {
+                "table": table,
+                "keywords": keywords[:2],
+            }
+        )
+    return targets
+
+
+def _force_json_output_instruction(base_instruction: str) -> str:
+    return (
+        f"{base_instruction}\n\n"
+        "DINH DANG DAU RA BAT BUOC:\n"
+        '- Chi tra duy nhat 1 JSON object hop le theo schema KeywordPlan.\n'
+        '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
+        '- Output phai co dang: {"targets":[...]}.\n'
+    )
+
+
+def _plain_keyworder_payload(payload: dict) -> dict:
+    fallback_payload = dict(payload)
+    fallback_payload["system_instruction"] = _force_json_output_instruction(
+        str(payload.get("system_instruction", "") or "")
+    )
+    return fallback_payload
 
 
 def _to_text(raw: Any) -> str:
@@ -157,7 +194,55 @@ def _try_parse_json_object(value: Any) -> Optional[dict]:
     return None
 
 
-def _coerce_keyword_plan(result: Any) -> tuple[KeywordPlan, Optional[str], Optional[str]]:
+def _coerce_target_table(value: Any, selected_tables: list[str]) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    if text in selected_tables:
+        return text
+
+    normalized = normalize_table_heading(text)
+    if normalized in selected_tables:
+        return normalized
+
+    if len(selected_tables) == 1:
+        return selected_tables[0]
+
+    return ""
+
+
+def _sanitize_keyword_plan_payload(payload: dict, selected_tables: list[str]) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+
+    raw_targets = payload.get("targets")
+    if not isinstance(raw_targets, list):
+        return payload
+
+    targets = []
+    for item in raw_targets:
+        if not isinstance(item, dict):
+            continue
+
+        table = _coerce_target_table(item.get("table", ""), selected_tables)
+        if not table:
+            continue
+
+        keywords = item.get("keywords", []) or []
+        if not isinstance(keywords, list):
+            keywords = [keywords]
+
+        targets.append(
+            {
+                "table": table,
+                "keywords": [str(keyword).strip() for keyword in keywords if str(keyword).strip()],
+            }
+        )
+
+    return {"targets": targets}
+
+
+def _coerce_keyword_plan(result: Any, selected_tables: list[str]) -> tuple[KeywordPlan, Optional[str], Optional[str]]:
     if isinstance(result, KeywordPlan):
         return result, None, None
 
@@ -186,7 +271,9 @@ def _coerce_keyword_plan(result: Any) -> tuple[KeywordPlan, Optional[str], Optio
         if payload is None:
             continue
         try:
-            return KeywordPlan.model_validate(payload), parsing_error, source
+            return KeywordPlan.model_validate(
+                _sanitize_keyword_plan_payload(payload, selected_tables)
+            ), parsing_error, source
         except ValidationError:
             continue
 
@@ -225,6 +312,8 @@ def run_keyworder(state: dict) -> dict:
     profile = AGENT_PROFILES["agent_keyworder"]
     planner_plan = state.get("planner_plan", {}) or {}
     trace = []
+    started_at = time.perf_counter()
+    llm_usage = {}
 
     start_log = make_debug_log(
         state,
@@ -266,9 +355,23 @@ def run_keyworder(state: dict) -> dict:
     }
 
     try:
-        raw_result = keyworder_chain.invoke(payload)
-        kp, parse_warning, recovered_from = _coerce_keyword_plan(raw_result)
+        raw_result = invoke_prompt(
+            PROMPT_TEMPLATE,
+            payload,
+            structured_schema=KeywordPlan,
+            plain_payload_factory=_plain_keyworder_payload,
+        )
+        llm_usage = extract_usage_metadata(raw_result.get("raw"))
+        kp, parse_warning, recovered_from = _coerce_keyword_plan(raw_result, selected_tables)
         worker_plan = kp.model_dump()
+        if raw_result.get("mode") != "structured":
+            updates["trace"].append(
+                make_log(
+                    state,
+                    "keyworder:structured_output_fallback",
+                    mode=raw_result.get("mode", "plain_json"),
+                )
+            )
 
         targets_in = worker_plan.get("targets", []) or []
 
@@ -390,24 +493,24 @@ def run_keyworder(state: dict) -> dict:
                 updates["trace"].append(debug_log)
 
         if invalid_all:
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "keyworder:invalid_keywords",
-                    invalid_count=len(invalid_all),
-                    samples=invalid_all[:5],
-                )
+            debug_log = make_debug_log(
+                state,
+                "keyworder:invalid_keywords",
+                invalid_count=len(invalid_all),
+                samples=invalid_all[:5],
             )
+            if debug_log:
+                updates["trace"].append(debug_log)
 
         if repaired_all:
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "keyworder:repaired_keywords",
-                    repaired_count=len(repaired_all),
-                    samples=repaired_all[:5],
-                )
+            debug_log = make_debug_log(
+                state,
+                "keyworder:repaired_keywords",
+                repaired_count=len(repaired_all),
+                samples=repaired_all[:5],
             )
+            if debug_log:
+                updates["trace"].append(debug_log)
 
         if planner_hint_repairs:
             debug_log = make_debug_log(
@@ -423,26 +526,42 @@ def run_keyworder(state: dict) -> dict:
             make_log(
                 state,
                 "keyworder:done",
-                worker_plan=worker_plan,
+                targets_n=len(worker_plan.get("targets", []) or []),
+                targets=_keyword_trace_targets(worker_plan),
+                duration_ms=int((time.perf_counter() - started_at) * 1000),
+                **llm_usage,
             )
         )
         return updates
 
     except Exception as e:
         updates["worker_plan"] = fallback_worker_plan
-        updates["trace"].append(
-            make_log(
-                state,
-                "keyworder:error",
-                error_type=type(e).__name__,
-                error=str(e)[:250],
+        fallback_reason = str(e)[:250]
+        if any(target.get("keywords") for target in fallback_worker_plan.get("targets", [])):
+            updates["trace"].append(
+                make_log(
+                    state,
+                    "keyworder:fallback_from_hints",
+                    reason=fallback_reason,
+                    duration_ms=int((time.perf_counter() - started_at) * 1000),
+                )
             )
-        )
+        else:
+            updates["trace"].append(
+                make_log(
+                    state,
+                    "keyworder:error",
+                    error_type=type(e).__name__,
+                    error=fallback_reason,
+                )
+            )
         updates["trace"].append(
             make_log(
                 state,
                 "keyworder:done",
-                worker_plan=updates["worker_plan"],
+                targets_n=len(updates["worker_plan"].get("targets", []) or []),
+                targets=_keyword_trace_targets(updates["worker_plan"]),
+                duration_ms=int((time.perf_counter() - started_at) * 1000),
             )
         )
         return updates

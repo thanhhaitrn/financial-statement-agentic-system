@@ -14,7 +14,7 @@ TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
 
 def _make_state(
     *,
-    question_type: str,
+    difficulty_level: str,
     user_query: str,
     objective: str,
     seed_keywords: list[str],
@@ -22,10 +22,11 @@ def _make_state(
     followup_rounds: int = 0,
 ):
     return {
+        "debug_trace": True,
         "user_query": user_query,
         "followup_rounds": followup_rounds,
         "planner_plan": {
-            "question_type": question_type,
+            "difficulty_level": difficulty_level,
             "analysis_axes": [
                 {
                     "axis": "axis_1",
@@ -80,7 +81,7 @@ def test_lookup_uses_planner_fallback_only_when_primary_is_empty(monkeypatch):
     tool_runner.set_collection(object())
 
     state = _make_state(
-        question_type="lookup",
+        difficulty_level="easy",
         user_query="Vốn chủ sở hữu là bao nhiêu?",
         objective="Xác định vốn chủ sở hữu",
         seed_keywords=["nợ phải trả"],
@@ -95,11 +96,15 @@ def test_lookup_uses_planner_fallback_only_when_primary_is_empty(monkeypatch):
     assert updates["tool_results"][1]["args"]["query"] == "vốn chủ sở hữu"
 
     refine_log = next(item for item in updates["trace"] if item["event"] == "tool:keyword_refined")
-    assert refine_log["question_type"] == "lookup"
+    assert refine_log["difficulty_level"] == "easy"
     assert refine_log["expansion_enabled"] is False
     assert refine_log["planner_hints"] == []
     assert refine_log["empty_primary_fallbacks"] == ["vốn chủ sở hữu"]
-    assert "planner_queries" not in refine_log
+    assert refine_log["planner_queries"] == [
+        "Xác định vốn chủ sở hữu",
+        "axis_1: Xác định vốn chủ sở hữu",
+        "Vốn chủ sở hữu là bao nhiêu?",
+    ]
 
     followup_log = next(item for item in updates["trace"] if item["event"] == "tool:followup_done")
     assert followup_log["trigger"] == "empty_primary"
@@ -116,7 +121,7 @@ def test_lookup_does_not_run_planner_fallback_when_primary_has_context(monkeypat
     tool_runner.set_collection(object())
 
     state = _make_state(
-        question_type="lookup",
+        difficulty_level="easy",
         user_query="Vốn chủ sở hữu là bao nhiêu?",
         objective="Xác định vốn chủ sở hữu",
         seed_keywords=["nợ phải trả"],
@@ -129,7 +134,7 @@ def test_lookup_does_not_run_planner_fallback_when_primary_has_context(monkeypat
     assert len(updates["tool_results"]) == 1
 
 
-def test_analysis_question_allows_keyword_expansion_followups(monkeypatch):
+def test_hard_question_allows_keyword_expansion_followups(monkeypatch):
     calls = []
 
     def fake_get_related_info(query: str, table: str, collection):
@@ -140,7 +145,7 @@ def test_analysis_question_allows_keyword_expansion_followups(monkeypatch):
     tool_runner.set_collection(object())
 
     state = _make_state(
-        question_type="evaluation",
+        difficulty_level="hard",
         user_query="Đánh giá cấu trúc tài sản và vốn",
         objective="Đánh giá tổng cộng tài sản và vốn chủ sở hữu",
         seed_keywords=["tổng cộng tài sản"],
@@ -153,7 +158,7 @@ def test_analysis_question_allows_keyword_expansion_followups(monkeypatch):
     assert len(updates["tool_results"]) == 2
 
     refine_log = next(item for item in updates["trace"] if item["event"] == "tool:keyword_refined")
-    assert refine_log["question_type"] == "evaluation"
+    assert refine_log["difficulty_level"] == "hard"
     assert refine_log["expansion_enabled"] is True
     assert refine_log["planner_hints"] == ["tổng cộng tài sản", "vốn chủ sở hữu"]
 
@@ -166,7 +171,7 @@ def test_lookup_does_not_fallback_to_raw_planner_objective_text():
         "user_query": "Tổng tài sản của Hòa Phát tại ngày 30/06/2025 là bao nhiêu?",
         "followup_rounds": 0,
         "planner_plan": {
-            "question_type": "lookup",
+            "difficulty_level": "easy",
             "analysis_axes": [
                 {
                     "axis": "total_assets",
@@ -202,7 +207,7 @@ def test_followup_prefers_untried_queries_before_repeating_previous_round_query(
         "user_query": "Tính hiệu suất sử dụng tài sản",
         "followup_rounds": 1,
         "planner_plan": {
-            "question_type": "calculation",
+            "difficulty_level": "medium",
             "analysis_axes": [
                 {
                     "axis": "capital_efficiency",
@@ -246,3 +251,40 @@ def test_followup_prefers_untried_queries_before_repeating_previous_round_query(
 
     assert refined[3][:2] == ["ngày kết thúc kỳ báo cáo", "thời điểm tương ứng doanh thu"]
     assert refined[3][-1] == "tổng cộng tài sản"
+
+
+def test_hard_question_allows_worker_generated_keyword_when_guard_has_no_match():
+    state = {
+        "user_query": "Phân tích áp lực nợ vay và nghĩa vụ tài chính",
+        "followup_rounds": 0,
+        "planner_plan": {
+            "difficulty_level": "hard",
+            "analysis_axes": [
+                {
+                    "axis": "debt_pressure",
+                    "tables": [TABLE_BS],
+                    "objective": "Phân tích áp lực nợ vay và nghĩa vụ tài chính.",
+                }
+            ],
+        },
+        "worker_plan": {
+            "targets": [
+                {
+                    "table": TABLE_BS,
+                    "keywords": ["nợ phải trả"],
+                }
+            ]
+        },
+        "tool_results": [],
+    }
+
+    refined = tool_runner._refine_keywords_for_table(
+        state,
+        "agent_bs",
+        TABLE_BS,
+        requested_query="áp lực nợ vay",
+    )
+
+    assert refined[3][0] == "áp lực nợ vay"
+    assert "nợ phải trả" in refined[3]
+    assert refined[5] is True

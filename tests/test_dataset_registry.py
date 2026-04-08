@@ -76,3 +76,63 @@ def test_save_dataset_resets_build_state_when_source_changes(monkeypatch, tmp_pa
     assert saved_changed.status == "registered"
     assert saved_changed.facts_count == 0
     assert saved_changed.vector_docs_count == 0
+
+
+def test_delete_dataset_removes_registry_and_manifest_only_by_default(monkeypatch, tmp_path: Path):
+    _configure_registry_paths(monkeypatch, tmp_path)
+
+    saved = registry.save_dataset(
+        registry.build_dataset_record(
+            file_path="data/document.md",
+            company="Cong ty A",
+            fiscal_year=2024,
+        )
+    )
+    sqlite_path = Path(saved.sqlite_db_path)
+    raw_tables_path = Path(saved.raw_tables_path)
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_tables_path.parent.mkdir(parents=True, exist_ok=True)
+    sqlite_path.write_text("sqlite", encoding="utf-8")
+    raw_tables_path.write_text("{}", encoding="utf-8")
+
+    assert Path(saved.manifest_path).exists()
+
+    deleted = registry.delete_dataset(saved.dataset_id)
+
+    assert deleted is not None
+    assert deleted.dataset_id == saved.dataset_id
+    assert registry.get_dataset(saved.dataset_id) is None
+    assert not Path(saved.manifest_path).exists()
+    assert sqlite_path.exists()
+    assert raw_tables_path.exists()
+
+
+def test_delete_dataset_can_purge_managed_artifacts(monkeypatch, tmp_path: Path):
+    _configure_registry_paths(monkeypatch, tmp_path)
+
+    saved = registry.save_dataset(
+        registry.build_dataset_record(
+            file_path="data/document.md",
+            company="Cong ty B",
+            fiscal_year=2025,
+        )
+    )
+    sqlite_path = Path(saved.sqlite_db_path)
+    raw_tables_path = Path(saved.raw_tables_path)
+    sqlite_path.parent.mkdir(parents=True, exist_ok=True)
+    raw_tables_path.parent.mkdir(parents=True, exist_ok=True)
+    sqlite_path.write_text("sqlite", encoding="utf-8")
+    raw_tables_path.write_text("{}", encoding="utf-8")
+    seen = {}
+
+    deleted = registry.delete_dataset(
+        saved.dataset_id,
+        purge_artifacts=True,
+        delete_vector_collection_fn=lambda name: seen.setdefault("collection_name", name),
+    )
+
+    assert deleted is not None
+    assert not Path(saved.manifest_path).exists()
+    assert not sqlite_path.exists()
+    assert not raw_tables_path.exists()
+    assert seen["collection_name"] == saved.vector_collection_name

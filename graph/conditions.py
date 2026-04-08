@@ -1,5 +1,7 @@
 import re
 
+from schemas.agent_outputs import parse_worker_response, WorkerAction, WorkerAnswer
+
 
 def _current_round(state: dict) -> int:
     return int((state or {}).get("followup_rounds", 0) or 0)
@@ -81,6 +83,17 @@ def make_should_continue(agent_name: str):
             return "collect"
 
         text = _latest_agent_response_for(state, agent_name)
+        if text:
+            try:
+                reparsed = parse_worker_response(text)
+            except Exception:
+                reparsed = None
+            else:
+                if isinstance(reparsed, WorkerAction):
+                    return "tools"
+                if isinstance(reparsed, WorkerAnswer):
+                    return "collect"
+
         return "tools" if re.search(r"\bACTION\s*:", text) else "collect"
     return route
 
@@ -92,8 +105,9 @@ def should_synthesize_after_collect(state: dict) -> str:
 def synth_route(state: dict) -> str:
     d = state.get("synth_decision", {}) or {}
     rounds = state.get("followup_rounds", 0)
+    followups = state.get("followup_requests", []) or []
 
-    if d.get("status") == "need_more" and rounds < 2:
+    if d.get("status") == "need_more" and rounds < 2 and followups:
         return "followup"
 
     return "end"

@@ -138,32 +138,10 @@ def _merge_worker_output(previous: dict, current: dict) -> dict:
         list(prev.get("facts", []) or []) + list(curr.get("facts", []) or [])
     )
 
-    notes_parts = []
-    for note in (prev.get("notes", ""), curr.get("notes", "")):
-        text = str(note or "").strip()
-        if text and text not in notes_parts:
-            notes_parts.append(text)
-
     return {
         "table": table,
         "facts": facts,
-        "missing": [],
-        "notes": " | ".join(notes_parts),
     }
-
-
-def _fact_briefs(facts: list[dict], limit: int = 6) -> list[dict]:
-    items = []
-    for fact in facts or []:
-        if not isinstance(fact, dict):
-            continue
-        items.append(
-            {
-                "item_name": str(fact.get("item_name", "") or "").strip(),
-                "time_hint": str(fact.get("time_hint", "") or "").strip(),
-            }
-        )
-    return items[:limit]
 
 
 def collect_all_workers(state: dict) -> dict:
@@ -224,12 +202,10 @@ def collect_all_workers(state: dict) -> dict:
             else:
                 parsed = parse_worker_output(text)
                 data = parsed.model_dump()
-            data["missing"] = []
             kind = "answer"
             summary = {
                 "table": data.get("table", ""),
                 "facts_n": len(data.get("facts", []) or []),
-                "facts": _fact_briefs(data.get("facts", [])),
             }
 
             if agent == "agent_web":
@@ -241,14 +217,12 @@ def collect_all_workers(state: dict) -> dict:
                 summary = {
                     "table": merged.get("table", ""),
                     "facts_n": len(merged.get("facts", []) or []),
-                    "facts": _fact_briefs(merged.get("facts", [])),
                 }
 
         except Exception as e:
             fallback = {
                 "table": "",
                 "facts": [],
-                "notes": f"Parse lỗi từ {agent}: {str(e)}"
             }
             previous = existing_worker_results.get(agent, {})
 
@@ -272,7 +246,6 @@ def collect_all_workers(state: dict) -> dict:
                     summary = {
                         "table": previous.get("table", ""),
                         "facts_n": len(previous.get("facts", []) or []),
-                        "facts": _fact_briefs(previous.get("facts", [])),
                         "error": "fallback_keep_previous",
                     }
                 else:

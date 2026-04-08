@@ -1,5 +1,6 @@
 from __future__ import annotations
-from typing import Dict, Set
+import json
+from typing import Dict, Iterable, Set
 
 # Canonical table names (must match your system exactly)
 TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
@@ -125,3 +126,26 @@ ALIASES: Dict[str, str] = {
     "chi đầu tư tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
 
 }
+
+
+def _selected_allowed_keyword_tables(selected_tables: Iterable[str] | None = None) -> list[str]:
+    if selected_tables is None:
+        return list(ALLOWED_KEYWORDS.keys())
+
+    normalized = []
+    seen = set()
+    for table in selected_tables:
+        text = str(table or "").strip()
+        if not text or text in seen or text not in ALLOWED_KEYWORDS:
+            continue
+        normalized.append(text)
+        seen.add(text)
+    return normalized
+
+
+def build_allowed_keywords_payload(selected_tables: Iterable[str] | None = None) -> str:
+    allowed = {
+        table: sorted(ALLOWED_KEYWORDS.get(table, set()))
+        for table in _selected_allowed_keyword_tables(selected_tables)
+    }
+    return json.dumps(allowed, ensure_ascii=False)

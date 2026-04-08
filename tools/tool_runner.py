@@ -1,5 +1,6 @@
 import json
 import re
+import time
 from typing import Any, Dict, List, Optional, Tuple
 
 from agents.planner_hints import infer_table_keywords, infer_table_query_hints
@@ -14,12 +15,7 @@ _COLLECTION = None
 MAX_KEYWORDS_PER_TOOL_RUN = 4
 SEED_KEYWORD_CUTOFF = 0.88
 PLANNER_COMPONENT_CUTOFF = 0.93
-ANALYSIS_QUESTION_TYPES = {
-    "calculation",
-    "comparison",
-    "evaluation",
-    "risk_assessment",
-}
+HARD_DIFFICULTY_LEVELS = {"hard"}
 
 
 def set_collection(collection):
@@ -168,13 +164,22 @@ def _planner_query_hints_for_table(state: dict, table: str) -> List[str]:
     )
 
 
-def _question_type(state: dict) -> str:
+def _difficulty_level(state: dict) -> str:
     planner_plan = state.get("planner_plan", {}) or {}
-    return str(planner_plan.get("question_type", "") or "lookup").strip().lower()
+    difficulty_level = str(planner_plan.get("difficulty_level", "") or "").strip().lower()
+    if difficulty_level in {"easy", "medium", "hard"}:
+        return difficulty_level
+
+    legacy_question_type = str(planner_plan.get("question_type", "") or "").strip().lower()
+    if legacy_question_type == "calculation":
+        return "medium"
+    if legacy_question_type in {"evaluation", "risk_assessment"}:
+        return "hard"
+    return "easy"
 
 
 def _keyword_expansion_enabled(state: dict) -> bool:
-    return _question_type(state) in ANALYSIS_QUESTION_TYPES
+    return _difficulty_level(state) in HARD_DIFFICULTY_LEVELS
 
 
 def _guarded_keywords_for_table(
@@ -237,17 +242,19 @@ def _refine_keywords_for_table(
     )
     exhausted_queries = _called_queries_for_agent_table(state, agent_name, table)
     planner_queries = _planner_query_hints_for_table(state, table)
+    planner_hint_keywords = _guarded_keywords_for_table(
+        table,
+        _planner_hints_for_table(state, table),
+        cutoff=PLANNER_COMPONENT_CUTOFF,
+    )
     planner_hints: List[str] = []
     if _keyword_expansion_enabled(state):
-        planner_hints = _guarded_keywords_for_table(
-            table,
-            _planner_hints_for_table(state, table),
-            cutoff=PLANNER_COMPONENT_CUTOFF,
-        )
+        planner_hints = list(planner_hint_keywords)
 
     refined_keywords = _dedupe_keep_order(seed_keywords)
     direct_requested = False
     requested_query = str(requested_query or "").strip()
+    difficulty_level = _difficulty_level(state)
     if requested_query:
         requested_refined = _guarded_keywords_for_table(
             table,
@@ -257,6 +264,11 @@ def _refine_keywords_for_table(
         for keyword in requested_refined:
             if keyword not in refined_keywords:
                 refined_keywords.insert(0, keyword)
+
+        if not requested_refined and difficulty_level == "hard":
+            if requested_query not in refined_keywords:
+                refined_keywords.insert(0, requested_query)
+                direct_requested = True
 
         if not requested_refined and int(state.get("followup_rounds", 0) or 0) > 0 and not refined_keywords:
             refined_keywords = [requested_query]
@@ -281,6 +293,10 @@ def _refine_keywords_for_table(
 
     if not _keyword_expansion_enabled(state):
         fallback_candidates: List[str] = []
+        for keyword in planner_hint_keywords:
+            if keyword not in refined_keywords and keyword not in fallback_candidates:
+                fallback_candidates.append(keyword)
+
         for keyword in _guarded_keywords_for_table(
             table,
             planner_queries,
@@ -372,11 +388,9 @@ def _prepare_get_related_info_args(
     log_data = {
         "agent": agent_name,
         "table": table,
-        "question_type": _question_type(state),
+        "difficulty_level": _difficulty_level(state),
         "expansion_enabled": expansion_enabled,
-        "seed_keywords": seed_keywords[:4],
-        "planner_hints": planner_hints[:4],
-        "refined_keywords": refined_keywords[:4],
+        "primary_query": refined_keywords[0] if refined_keywords else "",
     }
     if direct_requested:
         log_data["requested_query"] = requested_query
@@ -387,12 +401,12 @@ def _prepare_get_related_info_args(
     if empty_only_queries:
         log_data["empty_primary_fallbacks"] = empty_only_queries[:2]
     if bool((state or {}).get("debug_trace", False)):
+        log_data["seed_keywords"] = seed_keywords[:4]
+        log_data["planner_hints"] = planner_hints[:4]
+        log_data["refined_keywords"] = refined_keywords[:4]
         log_data["planner_queries"] = planner_queries[:3]
 
-    if refined_keywords != _keywords_to_fetch(seed_keywords) or direct_requested or empty_only_queries:
-        log_entry = make_log(state, "tool:keyword_refined", **log_data)
-    else:
-        log_entry = make_debug_log(state, "tool:keyword_refined", **log_data)
+    log_entry = make_debug_log(state, "tool:keyword_refined", **log_data)
 
     if refined_keywords:
         prepared["query"] = refined_keywords[0]
@@ -615,8 +629,10 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     )
 
     try:
+        started_at = time.perf_counter()
         raw_results = tool_func(**prepared_args)
         results = _normalize_tool_result(raw_results)
+        duration_ms = int((time.perf_counter() - started_at) * 1000)
     except Exception as e:
         trace_logs.append(
             make_log(
@@ -624,6 +640,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                 "tool:error_runtime",
                 agent=agent_name,
                 tool=tool_name,
+                duration_ms=int((time.perf_counter() - started_at) * 1000),
                 error_type=type(e).__name__,
                 error=str(e)[:250],
             )
@@ -653,6 +670,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             tool=tool_name,
             table=prepared_args.get("table", ""),
             query=prepared_args.get("query", ""),
+            duration_ms=duration_ms,
             context_len=len(ctx),
             empty=(len(ctx) == 0),
         )
@@ -693,8 +711,10 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                 continue
 
             try:
+                follow_started_at = time.perf_counter()
                 raw_follow = tool_func(**follow_args)
                 follow_results = _normalize_tool_result(raw_follow)
+                follow_duration_ms = int((time.perf_counter() - follow_started_at) * 1000)
                 follow_ctx = (follow_results.get("context") or "").strip()
                 follow_src = follow_results.get("source", "")
 
@@ -728,6 +748,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                         query=follow_args.get("query", ""),
                         followup_index=follow_index,
                         trigger=trigger,
+                        duration_ms=follow_duration_ms,
                         context_len=len(follow_ctx),
                         empty=(len(follow_ctx) == 0),
                     )
@@ -745,6 +766,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                         "tool:error_runtime",
                         agent=agent_name,
                         tool=tool_name,
+                        duration_ms=int((time.perf_counter() - follow_started_at) * 1000),
                         error_type=type(e).__name__,
                         error=str(e)[:250],
                     )

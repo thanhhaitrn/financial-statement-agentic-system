@@ -11,7 +11,6 @@ from schemas.keyword_guard import repair_keywords
 _SPACE_RE = re.compile(r"\s+")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
 
-
 def _normalize_text(value: Any) -> str:
     text = str(value or "").strip().lower()
     text = _SPACE_RE.sub(" ", text)
@@ -77,6 +76,17 @@ def infer_time_hint(
     dataset_fiscal_quarter: Optional[int] = None,
 ) -> str:
     text = _normalize_text(user_query)
+
+    date_patterns = [
+        re.compile(r"\b(\d{1,2})[/-](\d{1,2})[/-](20\d{2})\b", flags=re.IGNORECASE),
+        re.compile(r"\bngày\s+(\d{1,2})\s+tháng\s+(\d{1,2})\s+năm\s+(20\d{2})\b", flags=re.IGNORECASE),
+    ]
+    for pattern in date_patterns:
+        match = pattern.search(text)
+        if not match:
+            continue
+        day, month, year = match.group(1), match.group(2), match.group(3)
+        return f"{int(day):02d}/{int(month):02d}/{int(year)}"
 
     quarter_patterns = [
         re.compile(r"\bquý\s*([1-4])\s*(?:năm\s*)?(20\d{2})\b", flags=re.IGNORECASE),

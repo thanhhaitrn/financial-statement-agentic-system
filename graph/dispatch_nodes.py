@@ -46,18 +46,25 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
 
         agent = str(r.get("agent", "")).strip()
         table = str(r.get("table", "")).strip()
-        kws = r.get("keywords", []) or []
+        requirements = [
+            str(item).strip()
+            for item in (r.get("requirements", []) or [])
+            if str(item).strip()
+        ]
+        reason = str(r.get("reason", "") or "").strip()
 
         if not agent:
             continue
 
         expected.add(agent)
 
-        if table and kws:
+        if table:
             new_targets.append(
                 {
                     "table": table,
-                    "keywords": [str(k).strip() for k in kws if str(k).strip()],
+                    "keywords": [],
+                    "requirements": requirements[:3],
+                    "reason": reason,
                     "source": "followup",
                 }
             )
@@ -70,7 +77,13 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
                 state,
                 "followup:prepare",
                 expected=sorted(expected),
-                targets=new_targets[:3],
+                targets=[
+                    {
+                        "table": target.get("table", ""),
+                        "requirements": target.get("requirements", []),
+                    }
+                    for target in new_targets[:3]
+                ],
                 rounds=state.get("followup_rounds", 0) + 1,
             )
         ],

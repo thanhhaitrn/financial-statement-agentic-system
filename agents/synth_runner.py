@@ -2,18 +2,20 @@ from __future__ import annotations
 
 import json
 import re
+import time
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from pydantic import ValidationError
 
+from agents.planner_hints import infer_table_keywords, infer_table_query_hints
 from agents.profiles import AGENT_PROFILES
 from agents.prompts import PROMPT_TEMPLATE
+from config.allowed_keywords import build_allowed_keywords_payload
 from graph.logger import debug_enabled, make_debug_log, make_log
-from llm.client import llm
+from llm.invoke import extract_usage_metadata, invoke_prompt
+from schemas.keyword_guard import repair_keywords, validate_keywords
 from schemas.agent_outputs import SynthDecision
-
-
-synth_chain = PROMPT_TEMPLATE | llm.with_structured_output(SynthDecision, include_raw=True)
+from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS
 
 DEFAULT_DECISION = {
     "status": "error",
@@ -24,6 +26,14 @@ DEFAULT_DECISION = {
 
 MAX_SYNTH_FACTS_PER_TABLE = 6
 MAX_SYNTH_WEB_CHARS = 1200
+MAX_FOLLOWUP_KEYWORDS = 3
+
+TABLE_TO_AGENT = {
+    TABLE_BS: "agent_bs",
+    TABLE_IS: "agent_is",
+    TABLE_CF: "agent_cf",
+}
+AGENT_TO_TABLE = {agent: table for table, agent in TABLE_TO_AGENT.items()}
 
 
 class NormalizedFact(TypedDict):
@@ -69,6 +79,22 @@ class SynthUsage(TypedDict, total=False):
     done_reason: str
 
 
+def _dedupe_keep_order(items: List[str]) -> List[str]:
+    seen = set()
+    out: List[str] = []
+    for item in items or []:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        out.append(text)
+        seen.add(text)
+    return out
+
+
+def _normalize_text(value: Any) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
 def _to_text(raw: Any) -> str:
     if raw is None:
         return ""
@@ -86,8 +112,472 @@ def _safe_json_dumps(value: Any) -> str:
         return json.dumps(str(value), ensure_ascii=False)
 
 
+def _force_json_output_instruction(base_instruction: str) -> str:
+    return (
+        f"{base_instruction}\n\n"
+        "DINH DANG DAU RA BAT BUOC:\n"
+        '- Chi tra duy nhat 1 JSON object hop le theo schema SynthDecision.\n'
+        '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
+        '- status chi duoc la \"answer\" hoac \"need_more\".\n'
+    )
+
+
 def _normalize_table_name(value: Any) -> str:
     return " ".join(str(value or "").strip().upper().split())
+
+
+def _planned_target_keywords_by_table(state: dict) -> Dict[str, List[str]]:
+    planned: Dict[str, List[str]] = {}
+    worker_plan = state.get("worker_plan", {}) or {}
+    planner_plan = state.get("planner_plan", {}) or {}
+
+    for target in (worker_plan.get("targets", []) or []):
+        if not isinstance(target, dict):
+            continue
+        table = str(target.get("table", "") or "").strip()
+        if not table:
+            continue
+        planned.setdefault(table, [])
+        planned[table].extend(
+            [
+                str(keyword).strip()
+                for keyword in (target.get("keywords", []) or [])
+                if str(keyword).strip()
+            ]
+        )
+
+    for axis in (planner_plan.get("analysis_axes", []) or []):
+        if not isinstance(axis, dict):
+            continue
+        for table in (axis.get("tables", []) or []):
+            text = str(table or "").strip()
+            if text and text not in planned:
+                planned[text] = []
+
+    return {
+        table: _dedupe_keep_order(keywords)
+        for table, keywords in planned.items()
+    }
+
+
+def _followup_requirements_for_table(
+    state: dict,
+    table: str,
+    *,
+    preferred: Optional[List[str]] = None,
+) -> List[str]:
+    table_name = str(table or "").strip()
+    planner_plan = state.get("planner_plan", {}) or {}
+    analysis_axes = planner_plan.get("analysis_axes", []) or []
+    user_query = str(state.get("user_query", "") or "").strip()
+
+    requirements = _dedupe_keep_order(preferred or [])
+    if requirements:
+        return requirements[:MAX_FOLLOWUP_KEYWORDS]
+
+    query_hints = infer_table_query_hints(table_name, user_query, analysis_axes)
+    requirements = _dedupe_keep_order(query_hints)
+    if requirements:
+        return requirements[:MAX_FOLLOWUP_KEYWORDS]
+
+    planned_keywords = _planned_target_keywords_by_table(state).get(table_name, [])
+    if planned_keywords:
+        return planned_keywords[:MAX_FOLLOWUP_KEYWORDS]
+
+    if user_query:
+        return [user_query]
+
+    return []
+
+
+def _facts_count_by_table(
+    normalized_worker_results: Dict[str, NormalizedWorkerResult],
+) -> Dict[str, int]:
+    counts: Dict[str, int] = {}
+    for item in (normalized_worker_results or {}).values():
+        table = str(item.get("table", "") or "").strip()
+        if not table:
+            continue
+        counts[table] = counts.get(table, 0) + len(item.get("facts", []) or [])
+    return counts
+
+
+def _attempted_queries_by_agent_table(state: dict) -> Dict[Tuple[str, str], set[str]]:
+    attempted: Dict[Tuple[str, str], set[str]] = {}
+
+    for item in (state.get("tool_results", []) or []):
+        if str(item.get("tool", "") or "").strip() != "get_related_info":
+            continue
+
+        agent = str(item.get("agent", "") or "").strip()
+        args = item.get("args", {}) or {}
+        table = str(args.get("table", "") or "").strip() or AGENT_TO_TABLE.get(agent, "")
+        query = str(args.get("query", "") or "").strip()
+
+        if not agent or not table or not query:
+            continue
+
+        key = (agent, table)
+        attempted.setdefault(key, set()).add(_normalize_text(query))
+
+    return attempted
+
+
+def _suggest_followup_keywords(
+    table: str,
+    state: dict,
+    *,
+    preferred: Optional[List[str]] = None,
+) -> List[str]:
+    table_name = str(table or "").strip()
+    if table_name not in TABLE_TO_AGENT:
+        return _dedupe_keep_order(preferred or [])[:MAX_FOLLOWUP_KEYWORDS]
+
+    planner_plan = state.get("planner_plan", {}) or {}
+    analysis_axes = planner_plan.get("analysis_axes", []) or []
+    user_query = str(state.get("user_query", "") or "").strip()
+    planned_keywords = _planned_target_keywords_by_table(state).get(table_name, [])
+    planner_hints = infer_table_keywords(table_name, user_query, analysis_axes)
+    repaired_user_query, _ = repair_keywords(table_name, [user_query])
+
+    candidates = _dedupe_keep_order(
+        list(preferred or [])
+        + planned_keywords
+        + planner_hints
+        + repaired_user_query
+    )
+
+    valid_keywords, details = validate_keywords(
+        table_name,
+        candidates,
+        fuzzy=True,
+        cutoff=0.88,
+    )
+    for item in details or []:
+        suggestion = item.get("suggested")
+        if suggestion and suggestion not in valid_keywords:
+            valid_keywords.append(suggestion)
+
+    return _dedupe_keep_order(valid_keywords)[:MAX_FOLLOWUP_KEYWORDS]
+
+
+def _coalesce_followups(followups: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    merged: Dict[str, Dict[str, Any]] = {}
+    order: List[str] = []
+
+    for item in followups or []:
+        agent = str(item.get("agent", "") or "").strip()
+        if not agent:
+            continue
+
+        if agent not in merged:
+            merged[agent] = {
+                "agent": agent,
+                "table": str(item.get("table", "") or "").strip(),
+                "requirements": _dedupe_keep_order(item.get("requirements", []) or []),
+                "reason": str(item.get("reason", "") or "").strip(),
+            }
+            order.append(agent)
+            continue
+
+        current = merged[agent]
+        if not current.get("table") and item.get("table"):
+            current["table"] = str(item.get("table", "") or "").strip()
+        current["requirements"] = _dedupe_keep_order(
+            list(current.get("requirements", []) or [])
+            + list(item.get("requirements", []) or [])
+        )[:MAX_FOLLOWUP_KEYWORDS]
+        if not current.get("reason") and item.get("reason"):
+            current["reason"] = str(item.get("reason", "") or "").strip()
+
+    return [merged[agent] for agent in order]
+
+
+def _sanitize_followups(
+    state: dict,
+    decision: Dict[str, Any],
+    normalized_worker_results: Dict[str, NormalizedWorkerResult],
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    if str(decision.get("status", "") or "").strip().lower() != "need_more":
+        return decision, None
+
+    planned_targets = _planned_target_keywords_by_table(state)
+    if not planned_targets:
+        return decision, None
+
+    raw_followups = decision.get("followups", []) or []
+    facts_n_by_table = _facts_count_by_table(normalized_worker_results)
+    empty_tables = [
+        table
+        for table in planned_targets
+        if facts_n_by_table.get(table, 0) == 0
+    ]
+
+    kept_followups: List[Dict[str, Any]] = []
+    dropped_samples: List[Dict[str, Any]] = []
+    added_samples: List[Dict[str, Any]] = []
+    seen_tables = set()
+
+    for raw in raw_followups:
+        if not isinstance(raw, dict):
+            continue
+
+        table = str(raw.get("table", "") or "").strip()
+        agent = str(raw.get("agent", "") or "").strip()
+
+        if not table:
+            table = AGENT_TO_TABLE.get(agent, "")
+        if table in TABLE_TO_AGENT:
+            agent = TABLE_TO_AGENT[table]
+
+        if not agent or (agent != "agent_web" and table not in planned_targets):
+            if len(dropped_samples) < 3:
+                dropped_samples.append(
+                    {
+                        "agent": agent,
+                        "table": table,
+                        "reason": "followup_ngoai_ke_hoach",
+                    }
+                )
+            continue
+
+        if agent == "agent_web":
+            kept_followups.append(raw)
+            continue
+
+        requirements = _followup_requirements_for_table(
+            state,
+            table,
+            preferred=list(raw.get("requirements", []) or []),
+        )
+        if not requirements:
+            if len(dropped_samples) < 3:
+                dropped_samples.append(
+                    {
+                        "agent": agent,
+                        "table": table,
+                        "reason": "followup_khong_ro_yeu_cau_du_lieu",
+                    }
+                )
+            continue
+
+        kept_followups.append(
+            {
+                "agent": agent,
+                "table": table,
+                "requirements": requirements[:MAX_FOLLOWUP_KEYWORDS],
+                "reason": str(raw.get("reason", "") or "").strip(),
+            }
+        )
+        seen_tables.add(table)
+
+    for table in empty_tables:
+        if table in seen_tables:
+            continue
+
+        agent = TABLE_TO_AGENT.get(table, "")
+        requirements = _followup_requirements_for_table(
+            state,
+            table,
+            preferred=planned_targets.get(table, []),
+        )
+        if not agent or not requirements:
+            continue
+
+        followup = {
+            "agent": agent,
+            "table": table,
+            "requirements": requirements[:MAX_FOLLOWUP_KEYWORDS],
+            "reason": "Bang nay dang thieu du lieu can thiet de hoan tat cau tra loi.",
+        }
+        kept_followups.append(followup)
+        seen_tables.add(table)
+        if len(added_samples) < 3:
+            added_samples.append(followup)
+
+    normalized_followups = _coalesce_followups(kept_followups)
+    if normalized_followups == raw_followups:
+        return decision, None
+
+    updated = dict(decision)
+    updated["followups"] = normalized_followups
+    return updated, make_debug_log(
+        state,
+        "synth:followups_sanitized",
+        raw_n=len(raw_followups),
+        kept_n=len(normalized_followups),
+        dropped_samples=dropped_samples,
+        added_samples=added_samples,
+    )
+
+
+def _format_fact_brief(fact: NormalizedFact, fallback_item_name: str = "") -> str:
+    item_name = (
+        str(fact.get("item_name", "") or "").strip()
+        or str(fallback_item_name or "").strip()
+    )
+    value = str(fact.get("value", "") or "").strip()
+    time_hint = str(fact.get("time_hint", "") or "").strip()
+
+    if item_name and value and item_name != value:
+        text = f"{item_name}: {value}"
+    else:
+        text = item_name or value
+
+    if time_hint:
+        text = f"{text} ({time_hint})"
+    return text
+
+
+def _capitalize_first(text: str) -> str:
+    value = str(text or "").strip()
+    if not value:
+        return ""
+    return value[0].upper() + value[1:]
+
+
+def _pick_primary_fact(
+    facts: List[NormalizedFact],
+    planned_targets: Dict[str, List[str]],
+) -> Tuple[Optional[NormalizedFact], str]:
+    best_fact: Optional[NormalizedFact] = None
+    best_label = ""
+    best_score = -1.0
+
+    for fact in facts or []:
+        table = str(fact.get("table", "") or "").strip()
+        fallback_label = next(iter(planned_targets.get(table, []) or []), "")
+        label = str(fact.get("item_name", "") or "").strip() or fallback_label
+        score = 0.0
+        if label:
+            score += 10.0
+        if fallback_label and _normalize_text(label) == _normalize_text(fallback_label):
+            score += 50.0
+        if str(fact.get("time_hint", "") or "").strip():
+            score += 5.0
+        if str(fact.get("value", "") or "").strip():
+            score += 5.0
+
+        if score > best_score:
+            best_fact = fact
+            best_label = label
+            best_score = score
+
+    return best_fact, best_label
+
+
+def _build_query_aware_heuristic_answer(
+    state: dict,
+    facts: List[NormalizedFact],
+    planned_targets: Dict[str, List[str]],
+) -> str:
+    if not facts:
+        return ""
+
+    planner_plan = state.get("planner_plan", {}) or {}
+    company = str(planner_plan.get("company", "") or "").strip()
+    plan_time_hint = str(planner_plan.get("time_hint", "") or "").strip()
+    primary_fact, primary_label = _pick_primary_fact(facts, planned_targets)
+
+    if primary_fact is None:
+        return ""
+
+    value = str(primary_fact.get("value", "") or "").strip()
+    fact_time_hint = str(primary_fact.get("time_hint", "") or "").strip()
+    effective_time_hint = fact_time_hint or plan_time_hint
+
+    if value:
+        subject_parts = []
+        if primary_label:
+            subject_parts.append(primary_label)
+        if company and _normalize_text(company) not in _normalize_text(" ".join(subject_parts)):
+            subject_parts.append(f"của {company}")
+        if effective_time_hint:
+            subject_parts.append(effective_time_hint)
+        subject = " ".join(part.strip() for part in subject_parts if str(part).strip())
+        if subject:
+            return f"{_capitalize_first(subject)} là {value}."
+
+    fact_briefs = []
+    for fact in facts[:6]:
+        fallback_item_name = ""
+        if not str(fact.get("item_name", "") or "").strip():
+            fallback_item_name = next(
+                iter(planned_targets.get(str(fact.get("table", "") or "").strip(), []) or []),
+                "",
+            )
+        brief = _format_fact_brief(fact, fallback_item_name=fallback_item_name)
+        if brief:
+            fact_briefs.append(brief)
+
+    if not fact_briefs:
+        return ""
+
+    return "Dữ liệu thu được là: " + "; ".join(fact_briefs) + "."
+
+
+def _build_heuristic_synth_decision(
+    state: dict,
+    normalized_worker_results: Dict[str, NormalizedWorkerResult],
+) -> Dict[str, Any]:
+    planned_targets = _planned_target_keywords_by_table(state)
+    facts_n_by_table = _facts_count_by_table(normalized_worker_results)
+    missing: List[str] = []
+    followups: List[Dict[str, Any]] = []
+
+    for table, planned_keywords in planned_targets.items():
+        if facts_n_by_table.get(table, 0) > 0:
+            continue
+
+        requirements = _followup_requirements_for_table(
+            state,
+            table,
+            preferred=planned_keywords,
+        )
+        if requirements:
+            missing.append(
+                f"Thiếu dữ liệu từ {table}."
+            )
+            followups.append(
+                {
+                    "agent": TABLE_TO_AGENT.get(table, ""),
+                    "table": table,
+                    "requirements": requirements[:MAX_FOLLOWUP_KEYWORDS],
+                    "reason": "Bang nay chua co du lieu de hoan tat cau tra loi.",
+                }
+            )
+        else:
+            missing.append(f"Thiếu dữ liệu từ {table}.")
+
+    if missing or followups:
+        return {
+            "status": "need_more",
+            "answer": "",
+            "missing": _dedupe_keep_order(missing),
+            "followups": _coalesce_followups(followups),
+        }
+
+    facts = _flatten_facts(normalized_worker_results)
+    if facts:
+        heuristic_answer = _build_query_aware_heuristic_answer(
+            state,
+            facts,
+            planned_targets,
+        )
+        if heuristic_answer:
+            return {
+                "status": "answer",
+                "answer": heuristic_answer,
+                "missing": [],
+                "followups": [],
+            }
+
+    return {
+        "status": "need_more",
+        "answer": "",
+        "missing": ["Chưa thu thập được dữ liệu phù hợp để trả lời."],
+        "followups": [],
+    }
 
 
 def _extract_first_json_object(text: str) -> Optional[str]:
@@ -254,7 +744,7 @@ def _normalize_all_worker_results(
     for agent_name, raw in (worker_results or {}).items():
         item, kind = _normalize_worker_result(raw, agent_name=agent_name)
         normalized[agent_name] = item
-        should_log = emit_debug_logs or kind != "structured" or item["action_pending"] or len(item["facts"]) == 0
+        should_log = emit_debug_logs or kind != "structured" or item["action_pending"]
         if should_log:
             entry = {
                 "event": "synth:normalize_worker_result",
@@ -428,45 +918,19 @@ def _coerce_decision(value: Any) -> Dict[str, Any]:
 
     decision = dict(DEFAULT_DECISION)
     decision.update(data)
+    decision["status"] = (
+        str(decision.get("status", DEFAULT_DECISION["status"]) or "").strip().lower()
+    )
+    if not decision["status"]:
+        decision["status"] = DEFAULT_DECISION["status"]
+    decision["answer"] = str(decision.get("answer", DEFAULT_DECISION["answer"]) or "").strip()
     decision["missing"] = decision.get("missing") or []
     decision["followups"] = decision.get("followups") or []
     return decision
 
 
 def _extract_synth_usage(raw: Any) -> Optional[SynthUsage]:
-    if raw is None:
-        return None
-
-    usage_metadata = getattr(raw, "usage_metadata", None) or {}
-    response_metadata = getattr(raw, "response_metadata", None) or {}
-
-    input_tokens = usage_metadata.get("input_tokens")
-    output_tokens = usage_metadata.get("output_tokens")
-    total_tokens = usage_metadata.get("total_tokens")
-
-    if input_tokens is None:
-        input_tokens = response_metadata.get("prompt_eval_count")
-    if output_tokens is None:
-        output_tokens = response_metadata.get("eval_count")
-    if total_tokens is None and input_tokens is not None and output_tokens is not None:
-        total_tokens = input_tokens + output_tokens
-
-    usage: SynthUsage = {}
-    if input_tokens is not None:
-        usage["input_tokens"] = int(input_tokens)
-    if output_tokens is not None:
-        usage["output_tokens"] = int(output_tokens)
-    if total_tokens is not None:
-        usage["total_tokens"] = int(total_tokens)
-
-    model = str(response_metadata.get("model") or response_metadata.get("model_name") or "").strip()
-    if model:
-        usage["model"] = model
-
-    done_reason = str(response_metadata.get("done_reason") or "").strip()
-    if done_reason:
-        usage["done_reason"] = done_reason
-
+    usage = extract_usage_metadata(raw)
     return usage or None
 
 
@@ -490,15 +954,70 @@ def _build_payload(
     }
 
 
-def _invoke_synth(payload: SynthPayload) -> Tuple[Dict[str, Any], Optional[SynthUsage]]:
+def _plain_synth_payload(payload: dict) -> dict:
+    fallback_payload = dict(payload)
+    fallback_payload["system_instruction"] = _force_json_output_instruction(
+        str(payload.get("system_instruction", "") or "")
+    )
+    return fallback_payload
+
+
+def _invoke_synth(payload: SynthPayload) -> Tuple[Dict[str, Any], Optional[SynthUsage], str]:
     try:
-        result = synth_chain.invoke(payload)
+        result = invoke_prompt(
+            PROMPT_TEMPLATE,
+            payload,
+            structured_schema=SynthDecision,
+            plain_payload_factory=_plain_synth_payload,
+        )
         if not isinstance(result, dict):
-            return _coerce_decision(result), None
+            return _coerce_decision(result), None, "plain_json"
 
         usage = _extract_synth_usage(result.get("raw"))
+        mode = str(result.get("mode", "") or "structured")
+
+        if mode != "structured":
+            for candidate in (
+                result.get("parsed"),
+                result.get("raw"),
+                result.get("content"),
+            ):
+                parsed_payload = _try_parse_json(candidate)
+                if parsed_payload is None:
+                    continue
+                try:
+                    recovered = SynthDecision.model_validate(parsed_payload).model_dump()
+                except ValidationError:
+                    continue
+                return _coerce_decision(recovered), usage, mode
+
+            return (
+                {
+                    "status": "error",
+                    "answer": "Synth không parse được JSON hợp lệ từ plain_json fallback.",
+                    "missing": [],
+                    "followups": [],
+                },
+                usage,
+                mode,
+            )
+
         parsing_error = result.get("parsing_error")
         if parsing_error is not None:
+            for candidate in (
+                result.get("parsed"),
+                result.get("raw"),
+                result.get("content"),
+            ):
+                parsed_payload = _try_parse_json(candidate)
+                if parsed_payload is None:
+                    continue
+                try:
+                    recovered = SynthDecision.model_validate(parsed_payload).model_dump()
+                except ValidationError:
+                    continue
+                return _coerce_decision(recovered), usage, mode
+
             return (
                 {
                     "status": "error",
@@ -507,9 +1026,10 @@ def _invoke_synth(payload: SynthPayload) -> Tuple[Dict[str, Any], Optional[Synth
                     "followups": [],
                 },
                 usage,
+                mode,
             )
 
-        return _coerce_decision(result.get("parsed")), usage
+        return _coerce_decision(result.get("parsed")), usage, mode
     except ValidationError as exc:
         return (
             {
@@ -519,6 +1039,7 @@ def _invoke_synth(payload: SynthPayload) -> Tuple[Dict[str, Any], Optional[Synth
                 "followups": [],
             },
             None,
+            "structured",
         )
     except Exception as exc:
         return (
@@ -529,6 +1050,7 @@ def _invoke_synth(payload: SynthPayload) -> Tuple[Dict[str, Any], Optional[Synth
                 "followups": [],
             },
             None,
+            "structured",
         )
 
 
@@ -536,6 +1058,7 @@ def run_synth(state: dict) -> dict:
     profile = AGENT_PROFILES["agent_synth"]
     raw_worker_results = state.get("synth_context", state.get("worker_results", {})) or {}
     trace = []
+    started_at = time.perf_counter()
 
     start_log = make_debug_log(
         state,
@@ -560,10 +1083,52 @@ def run_synth(state: dict) -> dict:
 
     facts = _flatten_facts(normalized_worker_results)
     payload = _build_payload(state, profile, normalized_worker_results)
-    decision, usage = _invoke_synth(payload)
+    decision, usage, invoke_mode = _invoke_synth(payload)
+    heuristic_log = None
 
-    if usage:
-        trace.append(make_log(state, "synth:usage", **usage))
+    heuristic_reason = ""
+    if str(decision.get("status", "") or "").strip().lower() == "error":
+        heuristic_reason = "error"
+    elif (
+        str(decision.get("status", "") or "").strip().lower() == "answer"
+        and not str(decision.get("answer", "") or "").strip()
+    ):
+        heuristic_reason = "blank_answer"
+
+    if heuristic_reason:
+        heuristic_decision = _build_heuristic_synth_decision(
+            state,
+            normalized_worker_results,
+        )
+        heuristic_log = make_log(
+            state,
+            "synth:heuristic_fallback",
+            reason=heuristic_reason,
+            original_status=decision.get("status", ""),
+            original_answer=(decision.get("answer", "") or "")[:200],
+            fallback_status=heuristic_decision.get("status", ""),
+            fallback_followups_n=len(heuristic_decision.get("followups", []) or []),
+        )
+        decision = heuristic_decision
+
+    decision, followup_sanitize_log = _sanitize_followups(
+        state,
+        decision,
+        normalized_worker_results,
+    )
+
+    if invoke_mode != "structured":
+        trace.append(
+            make_log(
+                state,
+                "synth:structured_output_fallback",
+                mode=invoke_mode,
+            )
+        )
+    if heuristic_log:
+        trace.append(heuristic_log)
+    if followup_sanitize_log:
+        trace.append(followup_sanitize_log)
 
     done_log = make_log(
         state,
@@ -571,7 +1136,9 @@ def run_synth(state: dict) -> dict:
         status=decision.get("status", ""),
         followups_n=len(decision.get("followups", []) or []),
         facts_n=len(facts),
+        duration_ms=int((time.perf_counter() - started_at) * 1000),
         answer_preview=(decision.get("answer", "") or "")[:200],
+        **(usage or {}),
     )
 
     return {

@@ -4,7 +4,7 @@ import json
 import re
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import List, Optional
+from typing import Callable, List, Optional
 
 from schemas.datasets import DatasetRecord
 
@@ -164,6 +164,78 @@ def save_dataset(record: DatasetRecord) -> DatasetRecord:
         json.dump(saved.model_dump(mode="json"), handle, ensure_ascii=False, indent=2)
 
     return saved
+
+
+def _path_is_within_dir(path: Path, directory: Path) -> bool:
+    try:
+        path.resolve(strict=False).relative_to(directory.resolve(strict=False))
+        return True
+    except ValueError:
+        return False
+
+
+def _remove_managed_file(path_str: str, *, allowed_dir: Path) -> bool:
+    path = Path(path_str or "")
+    if not path_str or not _path_is_within_dir(path, allowed_dir):
+        return False
+
+    try:
+        path.unlink()
+    except FileNotFoundError:
+        return False
+
+    return True
+
+
+def _delete_vector_collection_if_exists(
+    collection_name: str,
+    *,
+    delete_vector_collection_fn: Optional[Callable[[str], None]] = None,
+) -> bool:
+    if not collection_name:
+        return False
+
+    delete_fn = delete_vector_collection_fn
+    if delete_fn is None:
+        from vectorstore.chroma_store import delete_collection
+
+        delete_fn = delete_collection
+
+    try:
+        delete_fn(collection_name)
+        return True
+    except Exception as exc:
+        message = str(exc).strip().lower()
+        if "not found" in message or "does not exist" in message:
+            return False
+        raise
+
+
+def delete_dataset(
+    dataset_id: str,
+    *,
+    purge_artifacts: bool = False,
+    delete_vector_collection_fn: Optional[Callable[[str], None]] = None,
+) -> Optional[DatasetRecord]:
+    existing = {item.dataset_id: item for item in load_registry()}
+    current = existing.pop(str(dataset_id or "").strip(), None)
+    if current is None:
+        return None
+
+    records = sorted(existing.values(), key=lambda item: item.dataset_id)
+    save_registry(records)
+
+    _remove_managed_file(current.manifest_path, allowed_dir=MANIFESTS_DIR)
+
+    if purge_artifacts:
+        _remove_managed_file(current.sqlite_db_path, allowed_dir=SQLITE_DIR)
+        _remove_managed_file(current.raw_tables_path, allowed_dir=RAW_TABLES_DIR)
+        _delete_vector_collection_if_exists(
+            current.vector_collection_name,
+            delete_vector_collection_fn=delete_vector_collection_fn,
+        )
+
+    return current
 
 
 def get_dataset(dataset_id: str) -> Optional[DatasetRecord]:
