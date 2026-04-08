@@ -214,7 +214,6 @@ def _delete_vector_collection_if_exists(
 def delete_dataset(
     dataset_id: str,
     *,
-    purge_artifacts: bool = False,
     delete_vector_collection_fn: Optional[Callable[[str], None]] = None,
 ) -> Optional[DatasetRecord]:
     existing = {item.dataset_id: item for item in load_registry()}
@@ -226,14 +225,12 @@ def delete_dataset(
     save_registry(records)
 
     _remove_managed_file(current.manifest_path, allowed_dir=MANIFESTS_DIR)
-
-    if purge_artifacts:
-        _remove_managed_file(current.sqlite_db_path, allowed_dir=SQLITE_DIR)
-        _remove_managed_file(current.raw_tables_path, allowed_dir=RAW_TABLES_DIR)
-        _delete_vector_collection_if_exists(
-            current.vector_collection_name,
-            delete_vector_collection_fn=delete_vector_collection_fn,
-        )
+    _remove_managed_file(current.sqlite_db_path, allowed_dir=SQLITE_DIR)
+    _remove_managed_file(current.raw_tables_path, allowed_dir=RAW_TABLES_DIR)
+    _delete_vector_collection_if_exists(
+        current.vector_collection_name,
+        delete_vector_collection_fn=delete_vector_collection_fn,
+    )
 
     return current
 

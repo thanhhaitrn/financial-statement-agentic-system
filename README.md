@@ -47,12 +47,6 @@ Xoa mot dataset da dang ky theo id:
 python test.py --delete-dataset --dataset-id song-da-financial-statement-2024-unknown-unknown
 ```
 
-Xoa dataset va purge ca artifact da build:
-
-```bash
-python test.py --delete-dataset --dataset-id song-da-financial-statement-2024-unknown-unknown --purge-artifacts --yes
-```
-
 Chay voi dataset theo id:
 
 ```bash
@@ -82,12 +76,12 @@ python test.py \
 ```
 
 `--file-path` co the la duong dan tuong doi hoac tuyet doi. Neu la duong dan tuong doi, no se duoc resolve tu root cua repo.
+Neu khong truyen `--company`, CLI se khong con fallback sang cong ty mac dinh. Neu ban cung khong truyen `--dataset-id`, he thong se dung ten file lam `dataset_id` tam.
 
 ## Cac tham so chinh
 
 - `--list-datasets`: in danh sach dataset va thoat
 - `--delete-dataset`: xoa dataset da dang ky va thoat
-- `--purge-artifacts`: khi xoa dataset, xoa them SQLite DB, raw tables va vector collection
 - `--yes`: bo qua prompt xac nhan cho thao tac pha huy nhu xoa dataset
 - `--dataset-id`: chon dataset da ton tai theo id
 - `--select-dataset`: bat prompt chon dataset trong cac ket qua match
@@ -123,16 +117,13 @@ Khi bat `--debug-trace`, cac event noi bo hon se duoc in them.
 - dang ky dataset moi tu `--file-path`
 - xoa source document goc
 
-Mac dinh, lenh xoa se:
+Lenh xoa se luon:
 
 - xoa dataset khoi `dataset_store/registry.json`
 - xoa manifest cua dataset
-
-Neu them `--purge-artifacts`, lenh se xoa them:
-
-- SQLite DB cua dataset
-- file raw tables
-- vector collection trong Chroma
+- xoa SQLite DB cua dataset
+- xoa file raw tables
+- xoa vector collection trong Chroma
 
 Neu dang chay interactive, CLI se yeu cau ban go `DELETE` de xac nhan. Neu chay khong interactive, can them `--yes`.
 

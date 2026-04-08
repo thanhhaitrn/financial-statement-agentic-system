@@ -2,6 +2,7 @@ import argparse
 import sys
 import time
 import uuid
+from pathlib import Path
 
 from config.settings import DEFAULT_DATASET, DEFAULT_DATA_FILE
 from datasets.registry import (
@@ -39,11 +40,6 @@ def parse_args():
     parser = argparse.ArgumentParser(description="Run the agentic financial QA pipeline.")
     parser.add_argument("--list-datasets", action="store_true", help="List registered datasets and exit.")
     parser.add_argument("--delete-dataset", action="store_true", help="Delete a registered dataset and exit.")
-    parser.add_argument(
-        "--purge-artifacts",
-        action="store_true",
-        help="When deleting a dataset, also remove its SQLite DB, raw tables, and vector collection.",
-    )
     parser.add_argument(
         "--yes",
         action="store_true",
@@ -132,11 +128,14 @@ def resolve_dataset(args):
     )
 
     if args.file_path:
-        company = args.company or DEFAULT_DATASET["company"]
+        company = str(args.company or "").strip()
+        dataset_id = str(args.dataset_id or "").strip()
+        if not dataset_id and not company:
+            dataset_id = Path(args.file_path).stem
         dataset = build_dataset_record(
             file_path=args.file_path,
             company=company,
-            dataset_id=args.dataset_id,
+            dataset_id=dataset_id,
             ticker=args.ticker,
             industry=args.industry,
             report_type=args.report_type or DEFAULT_DATASET["report_type"],
@@ -439,7 +438,7 @@ def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
     return final_state
 
 
-def _confirm_delete_dataset(dataset, *, purge_artifacts: bool, skip_confirmation: bool = False):
+def _confirm_delete_dataset(dataset, *, skip_confirmation: bool = False):
     if skip_confirmation:
         return
 
@@ -448,16 +447,10 @@ def _confirm_delete_dataset(dataset, *, purge_artifacts: bool, skip_confirmation
 
     print("\n=== DELETE DATASET ===")
     print(describe_dataset(dataset))
-    if purge_artifacts:
-        print(
-            "This will remove the dataset from the registry and delete its manifest, "
-            "SQLite DB, raw tables, and vector collection."
-        )
-    else:
-        print(
-            "This will remove the dataset from the registry and delete its manifest only. "
-            "Pass --purge-artifacts to also remove derived build artifacts."
-        )
+    print(
+        "This will remove the dataset from the registry and delete its manifest, "
+        "SQLite DB, raw tables, and vector collection."
+    )
 
     if input("Type DELETE to confirm: ").strip() != "DELETE":
         raise SystemExit("Delete cancelled.")
@@ -467,22 +460,17 @@ def delete_dataset_cli(args) -> int:
     dataset = resolve_dataset_for_delete(args)
     _confirm_delete_dataset(
         dataset,
-        purge_artifacts=args.purge_artifacts,
         skip_confirmation=args.yes,
     )
     deleted = delete_dataset_record(
         dataset.dataset_id,
-        purge_artifacts=args.purge_artifacts,
     )
     if deleted is None:
         raise SystemExit(f"Dataset not found: {dataset.dataset_id}")
 
     print("Deleted dataset:")
     print(describe_dataset(deleted))
-    if args.purge_artifacts:
-        print("Purged derived artifacts. The source document file was left untouched.")
-    else:
-        print("Removed registry entry and manifest only. Derived artifacts were kept.")
+    print("Purged derived artifacts. The source document file was left untouched.")
 
     return 0
 
