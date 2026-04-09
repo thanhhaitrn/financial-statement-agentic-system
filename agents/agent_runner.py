@@ -35,6 +35,16 @@ _DOC_FACT_RE = re.compile(
     flags=re.IGNORECASE,
 )
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
+_ABBREV_REPLACEMENTS = {
+    "tndn": "thu nhập doanh nghiệp",
+    "tscd": "tài sản cố định",
+    "tscđ": "tài sản cố định",
+    "hdkd": "hoạt động kinh doanh",
+    "hđkd": "hoạt động kinh doanh",
+    "lctt": "lưu chuyển tiền tệ",
+    "lnst": "lợi nhuận sau thuế",
+    "qldn": "quản lý doanh nghiệp",
+}
 
 def _force_json_output_instruction(base_instruction: str) -> str:
     return (
@@ -229,7 +239,10 @@ def _split_item_and_time_hint(item_text: str) -> tuple[str, str]:
 
 
 def _normalize_text(value: str) -> str:
-    return " ".join(str(value or "").strip().lower().split())
+    text = str(value or "").strip().lower()
+    for short, expanded in _ABBREV_REPLACEMENTS.items():
+        text = re.sub(rf"\b{re.escape(short)}\b", expanded, text)
+    return " ".join(text.split())
 
 
 def _text_tokens(value: str) -> set[str]:

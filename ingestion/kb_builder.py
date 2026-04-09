@@ -13,9 +13,35 @@ LABEL_PREFIX = re.compile(
     """,
     re.VERBOSE | re.IGNORECASE
 )
+_MARKDOWN_EMPHASIS_RE = re.compile(r"(\\\*\\\*|\\\*|\*\*|\*|__|_)")
+_HTML_TAG_RE = re.compile(r"<[^>]+>")
+
+
+def _strip_inline_formatting(text: str) -> str:
+    value = str(text or "").strip()
+    if not value:
+        return ""
+
+    value = _HTML_TAG_RE.sub(" ", value)
+    value = _MARKDOWN_EMPHASIS_RE.sub("", value)
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _normalize_value_text(text: str) -> str:
+    value = _strip_inline_formatting(text)
+    if not value:
+        return ""
+
+    compact = value.replace(",", "").replace(".", "").replace(" ", "")
+    if compact.startswith("(") and compact.endswith(")") and compact[1:-1].isdigit():
+        inner = value[1:-1].strip()
+        if inner:
+            return f"-{inner}"
+
+    return value
 
 def looks_like_value(x: str) -> bool:
-    x = x.strip()
+    x = _normalize_value_text(x)
 
     if not x:
         return False
@@ -31,6 +57,9 @@ def looks_like_value(x: str) -> bool:
     if cleaned.startswith("(") and cleaned.endswith(")"):
         cleaned = cleaned[1:-1]
 
+    if cleaned.startswith("-"):
+        cleaned = cleaned[1:]
+
     # Pure number
     if cleaned.isdigit():
         return True
@@ -42,7 +71,7 @@ def looks_like_value(x: str) -> bool:
     return False
 
 def clean_label(text: str) -> str:
-    return LABEL_PREFIX.sub("", text).strip()
+    return _strip_inline_formatting(LABEL_PREFIX.sub("", text)).strip()
 
 def df_to_facts(df, heading, company, source):
     facts = []
@@ -76,12 +105,17 @@ def df_to_facts(df, heading, company, source):
                 if not looks_like_value(cell):
                     continue
 
+                raw_value = _strip_inline_formatting(cell)
+                normalized_value = _normalize_value_text(cell)
+
                 facts.append({
                     "company": company,
                     "heading": normalize_table_heading(clean_label(heading)),
                     "item_code": row.get("Mã số") if "Mã số" in df.columns else None,
                     "item_name": f"{row_label} | {col_name}",
-                    "value": cell,
+                    "value": normalized_value,
+                    "raw_value": raw_value,
+                    "normalized_value": normalized_value,
                     "source": source
                 })
         
@@ -113,6 +147,8 @@ def build_fact_rows(tables_with_context, company, source):
                 f.get("item_code"),
                 f["item_name"],
                 f["value"],
+                f.get("raw_value", ""),
+                f.get("normalized_value", ""),
                 f["source"],
             ))
 

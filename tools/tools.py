@@ -5,6 +5,16 @@ from schemas.table_names import normalize_table_heading
 
 _SPACE_RE = re.compile(r"\s+")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
+_ABBREV_REPLACEMENTS = {
+    "tndn": "thu nhập doanh nghiệp",
+    "tscd": "tài sản cố định",
+    "tscđ": "tài sản cố định",
+    "hdkd": "hoạt động kinh doanh",
+    "hđkd": "hoạt động kinh doanh",
+    "lctt": "lưu chuyển tiền tệ",
+    "lnst": "lợi nhuận sau thuế",
+    "qldn": "quản lý doanh nghiệp",
+}
 _REPORT_WIDE_LIMIT = 50
 _REPORT_WIDE_MIN_COVERAGE = 0.6
 _REPORT_WIDE_MIN_OVERLAP = 4
@@ -12,6 +22,8 @@ _REPORT_WIDE_MIN_OVERLAP = 4
 
 def _normalize_text(value):
     text = str(value or "").strip().lower()
+    for short, expanded in _ABBREV_REPLACEMENTS.items():
+        text = re.sub(rf"\b{re.escape(short)}\b", expanded, text)
     return _SPACE_RE.sub(" ", text)
 
 

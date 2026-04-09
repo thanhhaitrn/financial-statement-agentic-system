@@ -1,5 +1,45 @@
 import sqlite3
 
+
+_FINANCIAL_FACT_COLUMNS = {
+    "company": "TEXT",
+    "heading": "TEXT",
+    "item_code": "TEXT",
+    "item_name": "TEXT",
+    "value": "TEXT",
+    "raw_value": "TEXT",
+    "normalized_value": "TEXT",
+    "source": "TEXT",
+}
+
+
+def _financial_fact_column_names(conn) -> set[str]:
+    cur = conn.cursor()
+    cur.execute("PRAGMA table_info(financial_facts)")
+    return {str(row[1]).strip() for row in cur.fetchall()}
+
+
+def sqlite_has_fact_columns(conn, required_columns=None) -> bool:
+    required = set(required_columns or [])
+    if not required:
+        required = set(_FINANCIAL_FACT_COLUMNS.keys())
+    existing = _financial_fact_column_names(conn)
+    return required.issubset(existing)
+
+
+def sqlite_has_populated_fact_values(conn) -> bool:
+    if not sqlite_has_fact_columns(conn, {"raw_value", "normalized_value"}):
+        return False
+
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT COUNT(*)
+        FROM financial_facts
+        WHERE TRIM(COALESCE(raw_value, '')) = ''
+           OR TRIM(COALESCE(normalized_value, '')) = ''
+    """)
+    return int(cur.fetchone()[0] or 0) == 0
+
 def init_db(db_path: str, reset: bool = False):
     conn  = sqlite3.connect(db_path)
     cur = conn.cursor()
@@ -14,9 +54,19 @@ def init_db(db_path: str, reset: bool = False):
         item_code TEXT,
         item_name TEXT,
         value TEXT,
+        raw_value TEXT,
+        normalized_value TEXT,
         source TEXT
         )
         """)
+
+    existing_columns = _financial_fact_column_names(conn)
+    for column_name, column_type in _FINANCIAL_FACT_COLUMNS.items():
+        if column_name in existing_columns:
+            continue
+        cur.execute(
+            f"ALTER TABLE financial_facts ADD COLUMN {column_name} {column_type}"
+        )
     conn.commit()
     return conn
 
@@ -32,9 +82,11 @@ def insert_financial_facts(conn, rows):
             item_code,
             item_name,
             value,
+            raw_value,
+            normalized_value,
             source
         )
-        VALUES (?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
     """, rows)
 
     conn.commit()

@@ -15,7 +15,13 @@ from datasets.registry import (
     save_dataset,
 )
 from ingestion.pipeline import build_knowledge_base
-from kb.sqlite_repo import init_db, sqlite_count_facts, sqlite_has_facts
+from kb.sqlite_repo import (
+    init_db,
+    sqlite_count_facts,
+    sqlite_has_fact_columns,
+    sqlite_has_facts,
+    sqlite_has_populated_fact_values,
+)
 from output_formatter import format_final_answer
 from tools.tool_runner import set_collection
 from vectorstore.chroma_store import create_collection
@@ -241,10 +247,43 @@ def resolve_dataset_for_delete(args):
 
 
 def ensure_built(dataset):
+    required_fact_columns = {"company", "heading", "item_code", "item_name", "value", "raw_value", "normalized_value", "source"}
     conn = init_db(dataset.sqlite_db_path)
+    schema_outdated = not sqlite_has_fact_columns(conn, required_fact_columns)
+    values_outdated = not sqlite_has_populated_fact_values(conn)
+
+    rebuild_required = (
+        str(dataset.ingestion_version or "").strip()
+        != str(DEFAULT_DATASET["ingestion_version"] or "").strip()
+    ) or schema_outdated or values_outdated
+
     facts_count = sqlite_count_facts(conn)
 
-    if not sqlite_has_facts(conn):
+    if rebuild_required:
+        reasons = []
+        if str(dataset.ingestion_version or "").strip() != str(DEFAULT_DATASET["ingestion_version"] or "").strip():
+            reasons.append(
+                "Dataset ingestion_version is outdated "
+                f"({dataset.ingestion_version or 'unknown'} -> {DEFAULT_DATASET['ingestion_version']})."
+            )
+        if schema_outdated:
+            reasons.append("financial_facts schema is missing required columns.")
+        if values_outdated:
+            reasons.append("financial_facts is missing populated raw_value/normalized_value data.")
+        print(" ".join(reasons) + " Rebuilding derived artifacts.")
+        conn, n_rows = build_knowledge_base(dataset, reset=True)
+        facts_count = n_rows
+        dataset = save_dataset(
+            dataset.model_copy(
+                update={
+                    "facts_count": facts_count,
+                    "vector_docs_count": 0,
+                    "status": "kb_ready" if facts_count > 0 else "registered",
+                    "ingestion_version": DEFAULT_DATASET["ingestion_version"],
+                }
+            )
+        )
+    elif not sqlite_has_facts(conn):
         conn, n_rows = build_knowledge_base(dataset)
         facts_count = n_rows
         dataset = save_dataset(
@@ -255,11 +294,14 @@ def ensure_built(dataset):
                 }
             )
         )
-
     collection = create_collection(dataset.vector_collection_name)
     vector_docs_count = collection.count()
-    if vector_docs_count == 0:
-        collection, n_docs = build_vector_store(conn, dataset.vector_collection_name)
+    if rebuild_required or vector_docs_count == 0:
+        collection, n_docs = build_vector_store(
+            conn,
+            dataset.vector_collection_name,
+            reset=rebuild_required,
+        )
         vector_docs_count = n_docs
         dataset = save_dataset(
             dataset.model_copy(
@@ -267,6 +309,7 @@ def ensure_built(dataset):
                     "facts_count": facts_count,
                     "vector_docs_count": vector_docs_count,
                     "status": "ready",
+                    "ingestion_version": DEFAULT_DATASET["ingestion_version"],
                 }
             )
         )
@@ -277,6 +320,7 @@ def ensure_built(dataset):
                     "facts_count": facts_count,
                     "vector_docs_count": vector_docs_count,
                     "status": "ready" if facts_count > 0 else dataset.status,
+                    "ingestion_version": DEFAULT_DATASET["ingestion_version"],
                 }
             )
         )

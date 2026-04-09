@@ -15,12 +15,12 @@ def _write_raw_tables(dataset: DatasetRecord, tables_with_context: list[dict]) -
         json.dump(tables_with_context, handle, ensure_ascii=False, indent=2)
 
 
-def build_knowledge_base(dataset: DatasetRecord):
+def build_knowledge_base(dataset: DatasetRecord, *, reset: bool = False):
     print("\n=== BUILDING KNOWLEDGE BASE ===")
 
-    conn = init_db(dataset.sqlite_db_path)
+    conn = init_db(dataset.sqlite_db_path, reset=reset)
 
-    if sqlite_has_facts(conn):
+    if not reset and sqlite_has_facts(conn):
         print("SQLite already has facts → skipping KB build")
         return conn, 0
 
