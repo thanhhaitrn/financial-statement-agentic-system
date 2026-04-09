@@ -76,7 +76,6 @@ class SynthUsage(TypedDict, total=False):
     output_tokens: Optional[int]
     total_tokens: Optional[int]
     model: str
-    done_reason: str
 
 
 def _dedupe_keep_order(items: List[str]) -> List[str]:
@@ -659,6 +658,10 @@ def _empty_worker_result(agent_name: str = "", raw_text: str = "") -> Normalized
     }
 
 
+def _fallback_table_for_agent(agent_name: str = "") -> str:
+    return str(AGENT_TO_TABLE.get(str(agent_name or "").strip(), "") or "").strip()
+
+
 def _normalize_fact(raw_fact: Any, fallback_table: str = "") -> Optional[NormalizedFact]:
     if not isinstance(raw_fact, dict):
         return None
@@ -695,7 +698,7 @@ def _normalize_facts(raw_facts: Any, fallback_table: str = "") -> List[Normalize
 
 def _normalize_worker_result(raw: Any, agent_name: str = "") -> Tuple[NormalizedWorkerResult, str]:
     if isinstance(raw, dict):
-        table = str(raw.get("table", "")).strip()
+        table = str(raw.get("table", "")).strip() or _fallback_table_for_agent(agent_name)
         return (
             {
                 "agent": agent_name,
@@ -720,7 +723,7 @@ def _normalize_worker_result(raw: Any, agent_name: str = "") -> Tuple[Normalized
     if parsed is None:
         return _empty_worker_result(agent_name=agent_name, raw_text=text), "fallback"
 
-    table = str(parsed.get("table", "")).strip()
+    table = str(parsed.get("table", "")).strip() or _fallback_table_for_agent(agent_name)
     return (
         {
             "agent": agent_name,
@@ -1118,13 +1121,13 @@ def run_synth(state: dict) -> dict:
     )
 
     if invoke_mode != "structured":
-        trace.append(
-            make_log(
-                state,
-                "synth:structured_output_fallback",
-                mode=invoke_mode,
-            )
+        fallback_log = make_debug_log(
+            state,
+            "synth:structured_output_fallback",
+            mode=invoke_mode,
         )
+        if fallback_log:
+            trace.append(fallback_log)
     if heuristic_log:
         trace.append(heuristic_log)
     if followup_sanitize_log:

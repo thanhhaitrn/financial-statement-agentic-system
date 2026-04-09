@@ -117,6 +117,9 @@ ALIASES: Dict[str, str] = {
 
     #IS
     "lợi nhuận sau thuế": "lợi nhuận sau thuế thu nhập doanh nghiệp",
+    "lợi nhuận ròng": "lợi nhuận sau thuế thu nhập doanh nghiệp",
+    "doanh thu cung cấp dịch vụ": "doanh thu bán hàng và cung cấp dịch vụ",
+    "doanh thu thuần về cung cấp dịch vụ": "doanh thu thuần về bán hàng và cung cấp dịch vụ",
 
     # CF
     "tiền cuối kỳ": "tiền và tương đương tiền cuối kỳ",

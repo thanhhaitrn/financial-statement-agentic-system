@@ -5,6 +5,9 @@ from schemas.table_names import normalize_table_heading
 
 _SPACE_RE = re.compile(r"\s+")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
+_REPORT_WIDE_LIMIT = 50
+_REPORT_WIDE_MIN_COVERAGE = 0.6
+_REPORT_WIDE_MIN_OVERLAP = 4
 
 
 def _normalize_text(value):
@@ -89,6 +92,80 @@ def _rerank_matches(query, docs, metas, limit=5):
     return ranked_docs, ranked_metas
 
 
+def _heading_matches_requested_table(meta, requested_table):
+    if not requested_table or not isinstance(meta, dict):
+        return False
+    return normalize_table_heading(meta.get("heading", "")) == requested_table
+
+
+def _is_strong_report_wide_match(query, meta, doc):
+    item_name = ""
+    if isinstance(meta, dict):
+        item_name = str(meta.get("item_name", "") or "")
+
+    candidate_text = item_name or str(doc or "")
+    query_norm = _normalize_text(query)
+    candidate_norm = _normalize_text(candidate_text)
+    if not query_norm or not candidate_norm:
+        return False
+
+    if candidate_norm == query_norm or query_norm in candidate_norm:
+        return True
+
+    query_tokens = _text_tokens(query)
+    candidate_tokens = _text_tokens(candidate_text)
+    if not query_tokens or not candidate_tokens:
+        return False
+
+    overlap = len(query_tokens & candidate_tokens)
+    coverage = overlap / len(query_tokens)
+    return coverage >= _REPORT_WIDE_MIN_COVERAGE or overlap >= _REPORT_WIDE_MIN_OVERLAP
+
+
+def _report_wide_fallback_matches(query, requested_table, docs, metas, limit=5):
+    if not docs:
+        return [], []
+
+    same_table_docs = []
+    same_table_metas = []
+    same_table_strong_docs = []
+    same_table_strong_metas = []
+    report_wide_docs = []
+    report_wide_metas = []
+
+    for doc, meta in zip(docs or [], metas or []):
+        strong_match = _is_strong_report_wide_match(query, meta, doc)
+
+        if _heading_matches_requested_table(meta, requested_table):
+            same_table_docs.append(doc)
+            same_table_metas.append(meta)
+            if strong_match:
+                same_table_strong_docs.append(doc)
+                same_table_strong_metas.append(meta)
+
+        if strong_match:
+            report_wide_docs.append(doc)
+            report_wide_metas.append(meta)
+
+    if same_table_strong_docs:
+        return _rerank_matches(query, same_table_strong_docs, same_table_strong_metas, limit=limit)
+
+    if report_wide_docs:
+        return _rerank_matches(query, report_wide_docs, report_wide_metas, limit=limit)
+
+    if same_table_docs:
+        return _rerank_matches(query, same_table_docs, same_table_metas, limit=limit)
+
+    return _rerank_matches(query, report_wide_docs, report_wide_metas, limit=limit)
+
+
+def _has_strong_match(query, docs, metas):
+    for doc, meta in zip(docs or [], metas or []):
+        if _is_strong_report_wide_match(query, meta, doc):
+            return True
+    return False
+
+
 def get_related_info(query: str, table: str, collection):
     requested_table = normalize_table_heading(table)
     results = collection.query(
@@ -100,22 +177,18 @@ def get_related_info(query: str, table: str, collection):
     docs, metas = _extract_docs_and_metas(results)
     docs, metas = _rerank_matches(query, docs, metas, limit=5)
 
-    if not docs:
-        fallback = collection.query(query_texts=[query], n_results=20)
+    if not docs or not _has_strong_match(query, docs, metas):
+        fallback = collection.query(query_texts=[query], n_results=_REPORT_WIDE_LIMIT)
         fallback_docs, fallback_metas = _extract_docs_and_metas(fallback)
-        filtered_docs = []
-        filtered_metas = []
-
-        for doc, meta in zip(fallback_docs, fallback_metas):
-            if not isinstance(meta, dict):
-                continue
-            if normalize_table_heading(meta.get("heading", "")) != requested_table:
-                continue
-            filtered_docs.append(doc)
-            filtered_metas.append(meta)
-
-        if filtered_docs:
-            docs, metas = _rerank_matches(query, filtered_docs, filtered_metas, limit=5)
+        fallback_ranked_docs, fallback_ranked_metas = _report_wide_fallback_matches(
+            query,
+            requested_table,
+            fallback_docs,
+            fallback_metas,
+            limit=5,
+        )
+        if fallback_ranked_docs:
+            docs, metas = fallback_ranked_docs, fallback_ranked_metas
 
     context = "\n".join(docs)
     return {"context": context, "source": _join_sources(metas)}

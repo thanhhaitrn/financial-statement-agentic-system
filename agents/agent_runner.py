@@ -43,7 +43,7 @@ def _force_json_output_instruction(base_instruction: str) -> str:
         '- Chi tra duy nhat 1 JSON object hop le, khong giai thich them.\n'
         '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
         '- Neu can goi tool, tra: {"kind":"action","action":"get_related_info|web_search","arguments":{"query":"..."}}.\n'
-        '- Neu da du du lieu, tra: {"kind":"answer","table":"...","facts":[]}.\n'
+        '- Neu da du du lieu, tra: {"kind":"answer","facts":[]}.\n'
     )
 
 
@@ -118,6 +118,46 @@ def _parsed_kind(parsed_output) -> str:
     if not isinstance(parsed_output, dict):
         return ""
     return str(parsed_output.get("kind", "")).strip().lower()
+
+
+def _default_table_for_agent(agent_name: str) -> str:
+    return str(AGENT_DEFAULT_TABLE.get(agent_name, "") or "").strip()
+
+
+def _normalize_answer_output(agent_name: str, parsed_output):
+    if not isinstance(parsed_output, dict):
+        return parsed_output
+    if _parsed_kind(parsed_output) != "answer":
+        return parsed_output
+
+    normalized = dict(parsed_output)
+    facts = normalized.get("facts", [])
+    normalized_facts = facts if isinstance(facts, list) else []
+    inferred_table = (
+        str(normalized.get("table", "") or "").strip()
+        or next(
+            (
+                str((fact or {}).get("table", "") or "").strip()
+                for fact in normalized_facts
+                if isinstance(fact, dict) and str((fact or {}).get("table", "") or "").strip()
+            ),
+            "",
+        )
+        or _default_table_for_agent(agent_name)
+    )
+
+    normalized["table"] = inferred_table
+
+    rewritten_facts = []
+    for fact in normalized_facts:
+        if not isinstance(fact, dict):
+            rewritten_facts.append(fact)
+            continue
+        fact_table = str(fact.get("table", "") or "").strip() or inferred_table
+        rewritten_facts.append({**fact, "table": fact_table})
+
+    normalized["facts"] = rewritten_facts
+    return normalized
 
 
 def _run_worker_once(payload: dict):
@@ -333,7 +373,7 @@ def _coerce_tool_context_to_answer(state: dict, agent_name: str) -> dict | None:
     table = (
         str(previous.get("table", "")).strip()
         or next((str(fact.get("table", "")).strip() for fact in facts if str(fact.get("table", "")).strip()), "")
-        or AGENT_DEFAULT_TABLE.get(agent_name, "")
+        or _default_table_for_agent(agent_name)
     )
 
     return {
@@ -345,7 +385,7 @@ def _coerce_tool_context_to_answer(state: dict, agent_name: str) -> dict | None:
 
 def _coerce_repeat_action_to_answer(state: dict, agent_name: str) -> dict:
     previous = (state.get("worker_results", {}) or {}).get(agent_name, {}) or {}
-    table = str(previous.get("table", "")).strip() or AGENT_DEFAULT_TABLE.get(agent_name, "")
+    table = str(previous.get("table", "")).strip() or _default_table_for_agent(agent_name)
     facts = previous.get("facts", []) if isinstance(previous.get("facts"), list) else []
 
     return {
@@ -469,19 +509,22 @@ def call_worker_agent(state: dict, agent_name: str) -> dict:
     }
 
     parsed_output, response_text, parse_error, fallback_mode, usage = _run_worker_once(payload)
+    parsed_output = _normalize_answer_output(agent_name, parsed_output)
+    if _parsed_kind(parsed_output) == "answer":
+        response_text = _serialize_payload(parsed_output)
     trace = []
     llm_usage = merge_usage_metadata(usage)
     llm_calls = 1
 
     if fallback_mode:
-        trace.append(
-            make_log(
-                state,
-                "agent:structured_output_fallback",
-                agent_name=agent_name,
-                mode=fallback_mode,
-            )
+        fallback_log = make_debug_log(
+            state,
+            "agent:structured_output_fallback",
+            agent_name=agent_name,
+            mode=fallback_mode,
         )
+        if fallback_log:
+            trace.append(fallback_log)
 
     if (
         parsed_output is None
@@ -516,17 +559,20 @@ def call_worker_agent(state: dict, agent_name: str) -> dict:
             trace.append(debug_log)
 
         retry_parsed_output, retry_response_text, retry_parse_error, retry_fallback_mode, retry_usage = _run_worker_once(retry_payload)
+        retry_parsed_output = _normalize_answer_output(agent_name, retry_parsed_output)
+        if _parsed_kind(retry_parsed_output) == "answer":
+            retry_response_text = _serialize_payload(retry_parsed_output)
         llm_usage = merge_usage_metadata(llm_usage, retry_usage)
         llm_calls += 1
         if retry_fallback_mode:
-            trace.append(
-                make_log(
-                    state,
-                    "agent:structured_output_fallback",
-                    agent_name=agent_name,
-                    mode=retry_fallback_mode,
-                )
+            fallback_log = make_debug_log(
+                state,
+                "agent:structured_output_fallback",
+                agent_name=agent_name,
+                mode=retry_fallback_mode,
             )
+            if fallback_log:
+                trace.append(fallback_log)
         if _parsed_kind(retry_parsed_output) == "answer":
             parsed_output = retry_parsed_output
             response_text = retry_response_text

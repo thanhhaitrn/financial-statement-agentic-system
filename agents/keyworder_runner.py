@@ -5,7 +5,7 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.planner_hints import infer_table_keywords
+from agents.planner_hints import infer_metric_priority_keywords, infer_table_keywords
 from config.allowed_keywords import build_allowed_keywords_payload
 from schemas.agent_outputs import KeywordPlan
 from agents.profiles import AGENT_PROFILES
@@ -53,6 +53,14 @@ def _planner_hints_by_table(planner_plan: dict, selected_tables: list[str], user
     analysis_axes = planner_plan.get("analysis_axes", []) or []
     return {
         table: infer_table_keywords(table, user_query, analysis_axes)
+        for table in selected_tables
+    }
+
+
+def _priority_hints_by_table(planner_plan: dict, selected_tables: list[str], user_query: str) -> dict[str, list[str]]:
+    analysis_axes = planner_plan.get("analysis_axes", []) or []
+    return {
+        table: infer_metric_priority_keywords(table, user_query, analysis_axes)
         for table in selected_tables
     }
 
@@ -329,6 +337,11 @@ def run_keyworder(state: dict) -> dict:
         selected_tables,
         state.get("user_query", ""),
     )
+    priority_hints_by_table = _priority_hints_by_table(
+        planner_plan,
+        selected_tables,
+        state.get("user_query", ""),
+    )
     fallback_worker_plan = _fallback_worker_plan_from_hints(
         planner_plan,
         selected_tables,
@@ -365,13 +378,13 @@ def run_keyworder(state: dict) -> dict:
         kp, parse_warning, recovered_from = _coerce_keyword_plan(raw_result, selected_tables)
         worker_plan = kp.model_dump()
         if raw_result.get("mode") != "structured":
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "keyworder:structured_output_fallback",
-                    mode=raw_result.get("mode", "plain_json"),
-                )
+            fallback_log = make_debug_log(
+                state,
+                "keyworder:structured_output_fallback",
+                mode=raw_result.get("mode", "plain_json"),
             )
+            if fallback_log:
+                updates["trace"].append(fallback_log)
 
         targets_in = worker_plan.get("targets", []) or []
 
@@ -450,6 +463,12 @@ def run_keyworder(state: dict) -> dict:
                             "to": suggestion,
                         }
                     )
+
+            if priority_hints_by_table.get(table):
+                valid_kws = _limit_seed_keywords(
+                    list(priority_hints_by_table.get(table, []))
+                    + list(valid_kws)
+                )
 
             valid_kws = _limit_seed_keywords(valid_kws)
             cleaned_targets.append({"table": table, "keywords": valid_kws})

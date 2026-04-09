@@ -8,22 +8,35 @@ TABLE_CF = "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
 _SPACE_RE = re.compile(r"\s+")
 
 _TABLE_PATTERNS = {
-    TABLE_BS: [
-        "bảng cân đối kế toán",
-        "bcđkt",
-        "bcdkt",
-    ],
-    TABLE_IS: [
-        "báo cáo kết quả hoạt động kinh doanh",
-        "kết quả hoạt động kinh doanh",
-        "kqhđkd",
-        "kqhdkd",
-    ],
-    TABLE_CF: [
-        "báo cáo lưu chuyển tiền tệ",
-        "lưu chuyển tiền tệ",
-        "lctt",
-    ],
+    TABLE_BS: {
+        "contains": [
+            "bảng cân đối kế toán",
+            "báo cáo tình hình tài chính",
+            "bcđkt",
+            "bcdkt",
+        ],
+        "exact": {
+            "tài sản",
+            "nguồn vốn",
+        },
+    },
+    TABLE_IS: {
+        "contains": [
+            "báo cáo kết quả hoạt động kinh doanh",
+            "kết quả hoạt động kinh doanh",
+            "kqhđkd",
+            "kqhdkd",
+        ],
+        "exact": set(),
+    },
+    TABLE_CF: {
+        "contains": [
+            "báo cáo lưu chuyển tiền tệ",
+            "lưu chuyển tiền tệ",
+            "lctt",
+        ],
+        "exact": set(),
+    },
 }
 
 
@@ -32,8 +45,12 @@ def normalize_table_heading(value: str) -> str:
     if not text:
         return ""
 
-    for canonical_name, patterns in _TABLE_PATTERNS.items():
-        if any(pattern in text for pattern in patterns):
+    for canonical_name, matcher in _TABLE_PATTERNS.items():
+        exact_aliases = matcher.get("exact", set())
+        contains_aliases = matcher.get("contains", [])
+        if text in exact_aliases:
+            return canonical_name
+        if any(pattern in text for pattern in contains_aliases):
             return canonical_name
 
     return str(value or "").strip()

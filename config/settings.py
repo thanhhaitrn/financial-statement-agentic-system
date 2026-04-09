@@ -2,11 +2,11 @@ DEFAULT_DATA_FILE = "data/document.md"
 
 DEFAULT_DATASET = {
     "dataset_id": "",
-    "company": "Công ty Cổ phần Sông Đà",
+    "company": "",
     "ticker": "",
     "industry": "",
     "report_type": "financial_statement",
-    "fiscal_year": 2024,
+    "fiscal_year": None,
     "fiscal_quarter": None,
     "scope": "unknown",
     "audit_status": "unknown",

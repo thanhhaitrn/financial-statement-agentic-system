@@ -1,14 +1,32 @@
 import pandas as pd
 from io import StringIO
+import re
+
+
+_SPACE_RE = re.compile(r"\s+")
+_SIGNATURE_HEADING_RE = re.compile(
+    r"^(người lập|người soát xét|người duyệt)\s*:$",
+    flags=re.IGNORECASE,
+)
+
+
+def _normalize_heading_line(line: str) -> str:
+    text = str(line or "").strip().replace("#", "").replace("*", "")
+    return _SPACE_RE.sub(" ", text).strip()
 
 
 def is_heading(line: str) -> bool:
-    line = line.strip()
+    raw_line = str(line or "").strip()
+    normalized_line = _normalize_heading_line(line)
+    lowered = normalized_line.lower()
+    if not normalized_line:
+        return False
+
     return (
-        line.startswith("#")
-        or line.endswith(":")
-        or "BẢNG" in line
-        or "BÁO CÁO" in line
+        raw_line.startswith("#")
+        or lowered.startswith("bảng")
+        or lowered.startswith("báo cáo")
+        or (normalized_line.endswith(":") and not _SIGNATURE_HEADING_RE.match(lowered))
     )
 
 def attach_context(md_text: str) -> list[dict]:
@@ -25,7 +43,7 @@ def attach_context(md_text: str) -> list[dict]:
             current_table = []
             
         if is_heading(line):
-            current_heading = line.replace("#", "").strip()
+            current_heading = _normalize_heading_line(line)
 
         if line.strip().startswith("|"):
             current_table.append(line)

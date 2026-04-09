@@ -476,8 +476,15 @@ class WorkerFact(BaseModel):
         return str(value).strip()
 
 class WorkerOutput(BaseModel):
-    table: str
+    table: str = ""
     facts: list[WorkerFact] = Field(default_factory=list)
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_table(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
 
     @field_validator("facts", mode="before")
     @classmethod

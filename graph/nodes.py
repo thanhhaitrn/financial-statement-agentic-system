@@ -1,6 +1,6 @@
 import json
 
-from agents.agent_runner import call_worker_agent
+from agents.agent_runner import AGENT_DEFAULT_TABLE, call_worker_agent
 from tools.tool_runner import call_tool_for_agent
 from agents.planner_runner import run_planner
 from agents.synth_runner import prepare_synth_context, run_synth
@@ -144,6 +144,35 @@ def _merge_worker_output(previous: dict, current: dict) -> dict:
     }
 
 
+def _normalize_worker_output_table(agent_name: str, data: dict) -> dict:
+    normalized = dict(data or {})
+    facts = normalized.get("facts", [])
+    normalized_facts = facts if isinstance(facts, list) else []
+    table = (
+        str(normalized.get("table", "") or "").strip()
+        or next(
+            (
+                str((fact or {}).get("table", "") or "").strip()
+                for fact in normalized_facts
+                if isinstance(fact, dict) and str((fact or {}).get("table", "") or "").strip()
+            ),
+            "",
+        )
+        or str(AGENT_DEFAULT_TABLE.get(agent_name, "") or "").strip()
+    )
+
+    normalized["table"] = table
+    rewritten_facts = []
+    for fact in normalized_facts:
+        if not isinstance(fact, dict):
+            rewritten_facts.append(fact)
+            continue
+        fact_table = str(fact.get("table", "") or "").strip() or table
+        rewritten_facts.append({**fact, "table": fact_table})
+    normalized["facts"] = rewritten_facts
+    return normalized
+
+
 def collect_all_workers(state: dict) -> dict:
     expected = set(state.get("expected_workers", []) or [])
     round_n = state.get("followup_rounds", 0)
@@ -198,10 +227,13 @@ def collect_all_workers(state: dict) -> dict:
                 parsed_response = parse_worker_response_payload(parsed_payload)
                 if isinstance(parsed_response, WorkerAction):
                     raise ValueError("Worker đang trả action, chưa có answer để collect.")
-                data = parsed_response.model_dump(exclude={"kind"})
+                data = _normalize_worker_output_table(
+                    agent,
+                    parsed_response.model_dump(exclude={"kind"}),
+                )
             else:
                 parsed = parse_worker_output(text)
-                data = parsed.model_dump()
+                data = _normalize_worker_output_table(agent, parsed.model_dump())
             kind = "answer"
             summary = {
                 "table": data.get("table", ""),

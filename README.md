@@ -49,6 +49,20 @@ python dataset_batch_runner.py \
   --output batch_test_results.json
 ```
 
+Mac dinh, neu file output da ton tai, script se merge them ket qua theo tung `query` vao cung file JSON. Query moi se duoc them vao `query_reports`; neu chay lai cung mot query, ket qua query do se duoc cap nhat. Neu muon ghi de hoan toan, them `--overwrite-output`.
+
+De cap nhat trace cho 1 dataset cu the trong file batch JSON:
+
+```bash
+python dataset_batch_runner.py \
+  --dataset-id hoaphat \
+  --query "Biên lợi nhuận ròng của công ty là bao nhiêu?" \
+  --output batch_test_results.json \
+  --include-trace
+```
+
+Voi `--dataset-id`, script chi chay cac dataset duoc chi dinh va khi merge se chi cap nhat ket qua cua cac dataset do trong `query_report`, khong xoa ket qua cu cua dataset khac.
+
 Xoa mot dataset da dang ky theo id:
 
 ```bash
@@ -143,7 +157,9 @@ python dataset_batch_runner.py \
 ]
 ```
 
-Trong JSON output, moi dataset se co danh sach `runs`, moi run co:
+Trong JSON output, top-level se co `query_reports`. Moi `query_report` ung voi 1 cau hoi, va ben trong moi dataset co `run` cua query do.
+
+Moi `run` co:
 
 - `query`
 - `formatted_answer`

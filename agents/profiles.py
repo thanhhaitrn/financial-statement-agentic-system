@@ -35,6 +35,7 @@ def _build_worker_system_instruction(table_name: str) -> str:
             - Không tự kết luận follow-up.
             - item_name nên bám sát khoản mục + cột/kỳ nếu có.
             - source lấy từ tool_observations.
+            - Không cần trả field table; hệ thống sẽ tự gắn bảng theo agent.
 
             OUTPUT
             - Xuất đúng schema WorkerResponse
@@ -54,7 +55,7 @@ def _build_web_worker_system_instruction() -> str:
             QUY TẮC
             - Nếu chưa có tool_observations phù hợp, trả kind="action" với arguments.query là truy vấn web ngắn gọn.
             - Nếu đã có tool_observations từ web_search, trả kind="answer" ngay.
-            - Với kind="answer": table phải là "WEB", facts là các phát hiện quan trọng.
+            - Với kind="answer": facts là các phát hiện quan trọng; không cần trả field table.
             - Không bịa dữ liệu, chỉ dùng thông tin có trong tool_observations.
             - Chỉ dùng tiếng Việt trong các field dạng text.
             """

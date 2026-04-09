@@ -321,10 +321,10 @@ def describe_dataset(record: DatasetRecord) -> str:
     parts = [record.dataset_id, f"company={record.company}"]
     if record.ticker:
         parts.append(f"ticker={record.ticker}")
-    if record.fiscal_year is not None:
-        parts.append(f"year={record.fiscal_year}")
-    if record.fiscal_quarter is not None:
-        parts.append(f"quarter={record.fiscal_quarter}")
+    fiscal_year = record.fiscal_year if record.fiscal_year is not None else "None"
+    fiscal_quarter = record.fiscal_quarter if record.fiscal_quarter is not None else "None"
+    parts.append(f"fiscal_year={fiscal_year}")
+    parts.append(f"fiscal_quarter={fiscal_quarter}")
     if record.scope:
         parts.append(f"scope={record.scope}")
     if record.audit_status:

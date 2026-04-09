@@ -139,17 +139,12 @@ def extract_usage_metadata(raw: Any) -> Dict[str, Any]:
     if model:
         usage["model"] = model
 
-    done_reason = str(response_metadata.get("done_reason") or "").strip()
-    if done_reason:
-        usage["done_reason"] = done_reason
-
     return usage
 
 
 def merge_usage_metadata(*items: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     merged: Dict[str, Any] = {}
     model = ""
-    done_reason = ""
 
     for item in items:
         if not isinstance(item, dict):
@@ -165,14 +160,8 @@ def merge_usage_metadata(*items: Optional[Dict[str, Any]]) -> Dict[str, Any]:
         if current_model:
             model = current_model
 
-        current_done_reason = str(item.get("done_reason", "") or "").strip()
-        if current_done_reason:
-            done_reason = current_done_reason
-
     if model:
         merged["model"] = model
-    if done_reason:
-        merged["done_reason"] = done_reason
 
     return merged
 

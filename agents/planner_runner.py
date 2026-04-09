@@ -458,13 +458,13 @@ def run_planner(state: dict) -> dict:
     query_company = str((updates.get("planner_plan", {}) or {}).get("company", "") or "").strip()
     dataset_company = str(getattr(dataset, "company", "") or "").strip()
     if query_company and dataset_company and _normalize_company(query_company) not in _normalize_company(dataset_company):
-        updates["trace"].append(
-            make_log(
-                state,
-                "planner:dataset_company_mismatch",
-                query_company=query_company,
-                dataset_company=dataset_company,
-            )
+        debug_log = make_debug_log(
+            state,
+            "planner:dataset_company_mismatch",
+            query_company=query_company,
+            dataset_company=dataset_company,
         )
+        if debug_log:
+            updates["trace"].append(debug_log)
 
     return updates

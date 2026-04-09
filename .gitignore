@@ -8,3 +8,4 @@ chroma_db/
 data/
 dataset_store/
 tests/
+*.json

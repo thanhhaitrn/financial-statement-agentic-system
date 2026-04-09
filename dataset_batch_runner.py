@@ -29,6 +29,12 @@ def parse_args():
         description="Run one or more queries across all registered datasets and save the outputs to JSON."
     )
     parser.add_argument(
+        "--dataset-id",
+        action="append",
+        default=[],
+        help="Dataset id to run. Repeat this flag to limit the batch to specific datasets.",
+    )
+    parser.add_argument(
         "--query",
         action="append",
         default=[],
@@ -43,6 +49,11 @@ def parse_args():
         "--output",
         default="batch_test_results.json",
         help="Path to the JSON file where results will be written.",
+    )
+    parser.add_argument(
+        "--overwrite-output",
+        action="store_true",
+        help="Overwrite the output JSON instead of preserving older batch reports in history.",
     )
     parser.add_argument(
         "--include-trace",
@@ -90,6 +101,46 @@ def resolve_queries(cli_queries: list[str], queries_file: str = "") -> list[str]
         raise SystemExit("Missing queries. Provide at least one --query or use --queries-file.")
 
     return resolved
+
+
+def resolve_dataset_ids(dataset_ids: list[str] | None = None) -> list[str]:
+    return _dedupe_keep_order(dataset_ids or [])
+
+
+def resolve_datasets(datasets: list, dataset_ids: list[str] | None = None) -> list:
+    selected_ids = resolve_dataset_ids(dataset_ids)
+    if not selected_ids:
+        return list(datasets or [])
+
+    index = {
+        str(getattr(dataset, "dataset_id", "") or "").strip(): dataset
+        for dataset in (datasets or [])
+        if str(getattr(dataset, "dataset_id", "") or "").strip()
+    }
+    missing = [dataset_id for dataset_id in selected_ids if dataset_id not in index]
+    if missing:
+        raise SystemExit(f"Unknown dataset id(s): {', '.join(missing)}")
+
+    return [index[dataset_id] for dataset_id in selected_ids]
+
+
+def load_existing_output(path: Path) -> dict | None:
+    if not path.exists():
+        return None
+
+    raw_text = path.read_text(encoding="utf-8").strip()
+    if not raw_text:
+        return None
+
+    try:
+        payload = json.loads(raw_text)
+    except JSONDecodeError as exc:
+        raise SystemExit(f"Invalid existing output JSON: {path} ({exc})") from exc
+
+    if not isinstance(payload, dict):
+        raise SystemExit(f"Invalid existing output JSON: {path} must contain a JSON object.")
+
+    return payload
 
 
 def serialize_run_result(final_state: dict, query: str, *, include_trace: bool = False) -> dict:
@@ -170,7 +221,14 @@ def run_dataset_queries(dataset, queries: list[str], *, debug_trace: bool = Fals
     return dataset_result
 
 
-def build_report(datasets: list, queries: list[str], *, debug_trace: bool = False, include_trace: bool = False) -> dict:
+def build_report(
+    datasets: list,
+    queries: list[str],
+    *,
+    debug_trace: bool = False,
+    include_trace: bool = False,
+    selected_dataset_ids: list[str] | None = None,
+) -> dict:
     results = []
 
     for idx, dataset in enumerate(datasets, start=1):
@@ -198,6 +256,7 @@ def build_report(datasets: list, queries: list[str], *, debug_trace: bool = Fals
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "datasets_n": len(results),
         "queries": queries,
+        "selected_dataset_ids": resolve_dataset_ids(selected_dataset_ids),
         "debug_trace": bool(debug_trace),
         "include_trace": bool(include_trace),
         "total_runs": total_runs,
@@ -207,10 +266,216 @@ def build_report(datasets: list, queries: list[str], *, debug_trace: bool = Fals
     }
 
 
+def _dataset_report_without_runs(dataset_result: dict) -> dict:
+    cleaned = {}
+    for key, value in (dataset_result or {}).items():
+        if key == "runs":
+            continue
+        cleaned[key] = value
+    return cleaned
+
+
+def build_query_reports(report: dict) -> list[dict]:
+    queries = [str(item or "").strip() for item in (report.get("queries", []) or []) if str(item or "").strip()]
+    results = report.get("results", []) or []
+    query_reports = []
+
+    for query in queries:
+        query_results = []
+        runs_with_errors = 0
+        datasets_with_setup_error = 0
+        total_runs = 0
+
+        for dataset_result in results:
+            if not isinstance(dataset_result, dict):
+                continue
+
+            item = _dataset_report_without_runs(dataset_result)
+            if item.get("setup_error"):
+                datasets_with_setup_error += 1
+                query_results.append(item)
+                continue
+
+            run = None
+            for candidate in (dataset_result.get("runs", []) or []):
+                if not isinstance(candidate, dict):
+                    continue
+                if str(candidate.get("query", "") or "").strip() == query:
+                    run = dict(candidate)
+                    break
+
+            if run is None:
+                continue
+
+            item["run"] = run
+            query_results.append(item)
+            total_runs += 1
+            if run.get("errors"):
+                runs_with_errors += 1
+
+        query_reports.append(
+            {
+                "query": query,
+                "generated_at": report.get("generated_at", ""),
+                "datasets_n": len(query_results),
+                "debug_trace": bool(report.get("debug_trace", False)),
+                "include_trace": bool(report.get("include_trace", False)),
+                "total_runs": total_runs,
+                "runs_with_errors": runs_with_errors,
+                "datasets_with_setup_error": datasets_with_setup_error,
+                "results": query_results,
+            }
+        )
+
+    return query_reports
+
+
+def _normalize_query_report(item: dict) -> dict:
+    if not isinstance(item, dict):
+        return {}
+
+    query = str(item.get("query", "") or "").strip()
+    if not query:
+        return {}
+
+    cleaned = dict(item)
+    cleaned["query"] = query
+    return cleaned
+
+
+def normalize_existing_query_reports(existing_output: dict | None) -> list[dict]:
+    if not existing_output:
+        return []
+
+    if isinstance(existing_output.get("query_reports"), list):
+        reports = []
+        for item in (existing_output.get("query_reports", []) or []):
+            normalized = _normalize_query_report(item)
+            if normalized:
+                reports.append(normalized)
+        return reports
+
+    if "queries" in existing_output and "results" in existing_output:
+        reports = []
+        for item in (existing_output.get("history", []) or []):
+            if not isinstance(item, dict):
+                continue
+            reports.extend(build_query_reports(item))
+        reports.extend(build_query_reports(existing_output))
+
+        merged = []
+        index_by_query = {}
+        for item in reports:
+            normalized = _normalize_query_report(item)
+            if not normalized:
+                continue
+            query = normalized["query"]
+            if query in index_by_query:
+                merged[index_by_query[query]] = normalized
+            else:
+                index_by_query[query] = len(merged)
+                merged.append(normalized)
+        return merged
+
+    return []
+
+
+def _merge_query_results(existing_results: list, latest_results: list) -> list[dict]:
+    merged = [dict(item) for item in (existing_results or []) if isinstance(item, dict)]
+    index_by_dataset_id = {
+        str(item.get("dataset_id", "") or "").strip(): idx
+        for idx, item in enumerate(merged)
+        if str(item.get("dataset_id", "") or "").strip()
+    }
+
+    for item in (latest_results or []):
+        if not isinstance(item, dict):
+            continue
+        dataset_id = str(item.get("dataset_id", "") or "").strip()
+        normalized = dict(item)
+        if dataset_id and dataset_id in index_by_dataset_id:
+            merged[index_by_dataset_id[dataset_id]] = normalized
+        else:
+            if dataset_id:
+                index_by_dataset_id[dataset_id] = len(merged)
+            merged.append(normalized)
+
+    return merged
+
+
+def _query_report_stats(results: list[dict]) -> tuple[int, int, int, int]:
+    datasets_n = len(results or [])
+    total_runs = sum(1 for item in (results or []) if isinstance(item, dict) and isinstance(item.get("run"), dict))
+    runs_with_errors = sum(
+        1
+        for item in (results or [])
+        if isinstance(item, dict) and ((item.get("run", {}) or {}).get("errors"))
+    )
+    datasets_with_setup_error = sum(
+        1 for item in (results or []) if isinstance(item, dict) and item.get("setup_error")
+    )
+    return datasets_n, total_runs, runs_with_errors, datasets_with_setup_error
+
+
+def _merge_query_report(existing_item: dict, latest_item: dict, *, partial_dataset_update: bool = False) -> dict:
+    if not partial_dataset_update:
+        return latest_item
+
+    merged_results = _merge_query_results(
+        existing_item.get("results", []) or [],
+        latest_item.get("results", []) or [],
+    )
+    datasets_n, total_runs, runs_with_errors, datasets_with_setup_error = _query_report_stats(merged_results)
+
+    merged = dict(latest_item)
+    merged["results"] = merged_results
+    merged["datasets_n"] = datasets_n
+    merged["total_runs"] = total_runs
+    merged["runs_with_errors"] = runs_with_errors
+    merged["datasets_with_setup_error"] = datasets_with_setup_error
+    return merged
+
+
+def build_output_document(report: dict, *, existing_output: dict | None = None, overwrite: bool = False) -> dict:
+    new_query_reports = build_query_reports(report)
+    partial_dataset_update = bool(resolve_dataset_ids(report.get("selected_dataset_ids", [])))
+    if overwrite:
+        merged_reports = list(new_query_reports)
+    else:
+        merged_reports = normalize_existing_query_reports(existing_output)
+        index_by_query = {
+            str(item.get("query", "") or "").strip(): idx
+            for idx, item in enumerate(merged_reports)
+            if str(item.get("query", "") or "").strip()
+        }
+
+        for item in new_query_reports:
+            query = str(item.get("query", "") or "").strip()
+            if query in index_by_query:
+                merged_reports[index_by_query[query]] = _merge_query_report(
+                    merged_reports[index_by_query[query]],
+                    item,
+                    partial_dataset_update=partial_dataset_update,
+                )
+            else:
+                index_by_query[query] = len(merged_reports)
+                merged_reports.append(item)
+
+    queries = [item.get("query", "") for item in merged_reports if str(item.get("query", "") or "").strip()]
+
+    return {
+        "updated_at": report.get("generated_at", ""),
+        "queries_n": len(queries),
+        "queries": queries,
+        "query_reports": merged_reports,
+    }
+
+
 def main():
     args = parse_args()
     queries = resolve_queries(args.query, args.queries_file)
-    datasets = load_registry()
+    dataset_ids = resolve_dataset_ids(args.dataset_id)
+    datasets = resolve_datasets(load_registry(), dataset_ids)
     if not datasets:
         raise SystemExit("No datasets registered. Use test.py to register a dataset first.")
 
@@ -219,12 +484,19 @@ def main():
         queries,
         debug_trace=args.debug_trace,
         include_trace=args.include_trace,
+        selected_dataset_ids=dataset_ids,
     )
 
     output_path = Path(args.output)
     output_path.parent.mkdir(parents=True, exist_ok=True)
+    existing_output = None if args.overwrite_output else load_existing_output(output_path)
+    output_document = build_output_document(
+        report,
+        existing_output=existing_output,
+        overwrite=args.overwrite_output,
+    )
     output_path.write_text(
-        json.dumps(report, ensure_ascii=False, indent=2),
+        json.dumps(output_document, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 

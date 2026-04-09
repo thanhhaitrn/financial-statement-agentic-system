@@ -4,7 +4,7 @@ import re
 from difflib import SequenceMatcher
 from typing import Any, Iterable, List, Optional
 
-from config.allowed_keywords import ALIASES, ALLOWED_KEYWORDS
+from config.allowed_keywords import ALIASES, ALLOWED_KEYWORDS, TABLE_IS
 from schemas.keyword_guard import repair_keywords
 
 
@@ -47,6 +47,38 @@ def _relevant_axes(analysis_axes: list[dict], table: str) -> list[dict]:
         relevant.append(axis)
 
     return relevant
+
+
+def _analysis_corpus_text(user_query: str, analysis_axes: list[dict], table: str) -> str:
+    relevant_axes = _relevant_axes(analysis_axes, table)
+    parts: list[str] = [str(user_query or "").strip()]
+
+    for axis in relevant_axes:
+        parts.append(str(axis.get("axis", "") or "").strip())
+        parts.append(str(axis.get("objective", "") or "").strip())
+
+    return _normalize_text(" ".join(part for part in parts if part))
+
+
+def infer_metric_priority_keywords(table: str, user_query: str, analysis_axes: list[dict]) -> List[str]:
+    normalized_table = str(table or "").strip()
+    corpus = _analysis_corpus_text(user_query, analysis_axes, normalized_table)
+
+    if normalized_table == TABLE_IS:
+        if any(
+            needle in corpus
+            for needle in (
+                "biên lợi nhuận ròng",
+                "net profit margin",
+                "net_profit_margin",
+            )
+        ):
+            return [
+                "lợi nhuận sau thuế thu nhập doanh nghiệp",
+                "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+            ]
+
+    return []
 
 
 def infer_table_query_hints(table: str, user_query: str, analysis_axes: list[dict]) -> List[str]:
@@ -119,6 +151,10 @@ def infer_table_keywords(table: str, user_query: str, analysis_axes: list[dict])
     allowed = ALLOWED_KEYWORDS.get(table, set())
     if not allowed:
         return []
+
+    priority_keywords = infer_metric_priority_keywords(table, user_query, analysis_axes)
+    if priority_keywords:
+        return [keyword for keyword in priority_keywords if keyword in allowed]
 
     texts = infer_table_query_hints(table, user_query, analysis_axes)
     normalized_texts = [_normalize_text(text) for text in texts if str(text).strip()]
