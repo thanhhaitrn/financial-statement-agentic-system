@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
+from pydantic.json_schema import SkipJsonSchema
 from typing import Annotated, List, Literal, Dict, Any, Optional, Union
 import re, json
+from agents.agent_registry import get_default_table, is_retrieval_agent
 from schemas.table_names import normalize_table_heading
 
 TABLE_NAME = Literal[
@@ -21,11 +23,53 @@ TABLE_CANON = {
 }
 
 VALID_TABLE_NAMES = set(TABLE_CANON.values())
-AGENT_NAME_VALUES = {"agent_bs", "agent_is", "agent_cf", "agent_web"}
+ANALYSIS_AXIS_VALUES = {
+    "agent_profitability",
+    "agent_liquidity_solvency",
+    "agent_cashflow_analysis",
+    "agent_efficiency",
+}
+AGENT_NAME_VALUES = {
+    "agent_bs",
+    "agent_is",
+    "agent_cf",
+    "agent_web",
+    "agent_profitability",
+    "agent_liquidity_solvency",
+    "agent_cashflow_analysis",
+    "agent_efficiency",
+}
 FOLLOWUP_AGENT_DEFAULT_TABLE = {
     "agent_bs": "BẢNG CÂN ĐỐI KẾ TOÁN",
     "agent_is": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
     "agent_cf": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "agent_profitability": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "agent_liquidity_solvency": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "agent_cashflow_analysis": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "agent_efficiency": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+}
+ANALYSIS_AXIS_ALIASES = {
+    "profitability": "agent_profitability",
+    "profit": "agent_profitability",
+    "earnings": "agent_profitability",
+    "agent_profitability": "agent_profitability",
+    "liquidity": "agent_liquidity_solvency",
+    "solvency": "agent_liquidity_solvency",
+    "leverage": "agent_liquidity_solvency",
+    "liquidity_solvency": "agent_liquidity_solvency",
+    "agent_liquidity_solvency": "agent_liquidity_solvency",
+    "cashflow": "agent_cashflow_analysis",
+    "cash_flow": "agent_cashflow_analysis",
+    "cashflow_analysis": "agent_cashflow_analysis",
+    "cash_flow_analysis": "agent_cashflow_analysis",
+    "cash_flow_quality": "agent_cashflow_analysis",
+    "cashflow_quality": "agent_cashflow_analysis",
+    "agent_cashflow_analysis": "agent_cashflow_analysis",
+    "efficiency": "agent_efficiency",
+    "capital_efficiency": "agent_efficiency",
+    "operating_efficiency": "agent_efficiency",
+    "asset_efficiency": "agent_efficiency",
+    "agent_efficiency": "agent_efficiency",
 }
 
 
@@ -274,7 +318,22 @@ def _dedupe_keep_order(items: List[str]) -> List[str]:
         seen.add(text)
     return out
 
-AGENT_NAME = Literal["agent_bs", "agent_is", "agent_cf", "agent_web"]
+AGENT_NAME = Literal[
+    "agent_bs",
+    "agent_is",
+    "agent_cf",
+    "agent_web",
+    "agent_profitability",
+    "agent_liquidity_solvency",
+    "agent_cashflow_analysis",
+    "agent_efficiency",
+]
+ANALYSIS_AXIS = Literal[
+    "agent_profitability",
+    "agent_liquidity_solvency",
+    "agent_cashflow_analysis",
+    "agent_efficiency",
+]
 
 PLANNER_DIFFICULTY_LEVEL = Literal[
     "easy",
@@ -296,29 +355,24 @@ def _map_question_type_to_difficulty(value: Any) -> str:
 
 # ---------- Planner evidence plan ---------
 class PlannerAnalysisAxis(BaseModel):
-    axis: str
-    tables: List[TABLE_NAME] = Field(default_factory=list)
-    components: List[str] = Field(default_factory=list, exclude=True)
+    axis: ANALYSIS_AXIS
+    components: SkipJsonSchema[List[str]] = Field(default_factory=list, exclude=True)
     objective: str = ""
 
-    @field_validator("tables", mode="before")
+    @field_validator("axis", mode="before")
     @classmethod
-    def normalize_axis_tables(cls, v):
+    def normalize_axis(cls, v):
         if v is None:
-            return []
-        out = []
-        for item in v:
-            if isinstance(item, dict) and "table" in item:
-                item = item["table"]
-            if isinstance(item, str):
-                out.append(_normalize_table_value(item))
-            else:
-                out.append(item)
-        return out
+            return ""
+        text = str(v).strip()
+        if not text:
+            return text
+        normalized = ANALYSIS_AXIS_ALIASES.get(text.lower())
+        return normalized or text
 
-    @field_validator("axis", "objective", mode="before")
+    @field_validator("objective", mode="before")
     @classmethod
-    def normalize_axis_strings(cls, v):
+    def normalize_objective(cls, v):
         if v is None:
             return ""
         return str(v).strip()
@@ -333,9 +387,9 @@ class PlannerAnalysisAxis(BaseModel):
 
 class PlannerEvidencePlan(BaseModel):
     difficulty_level: PLANNER_DIFFICULTY_LEVEL = "easy"
-    tables: List[TABLE_NAME] = Field(default_factory=list, exclude=True)
+    tables: SkipJsonSchema[List[TABLE_NAME]] = Field(default_factory=list, exclude=True)
     analysis_axes: List[PlannerAnalysisAxis] = Field(default_factory=list)
-    required_components: List[str] = Field(default_factory=list, exclude=True)
+    required_components: SkipJsonSchema[List[str]] = Field(default_factory=list, exclude=True)
     company: Optional[str] = ""
     time_hint: Optional[str] = ""
     need_web: bool = False
@@ -391,17 +445,12 @@ class PlannerEvidencePlan(BaseModel):
         seen_tables = set()
         normalized_axes = []
 
-        for axis in self.analysis_axes:
-            axis_tables = []
-            axis_seen_tables = set()
-            for table in axis.tables:
-                if table not in axis_seen_tables:
-                    axis_tables.append(table)
-                    axis_seen_tables.add(table)
-                if table not in seen_tables:
-                    tables.append(table)
-                    seen_tables.add(table)
+        for table in self.tables:
+            if table not in seen_tables:
+                tables.append(table)
+                seen_tables.add(table)
 
+        for axis in self.analysis_axes:
             axis_components = []
             axis_seen_components = set()
             for component in axis.components:
@@ -409,24 +458,31 @@ class PlannerEvidencePlan(BaseModel):
                     axis_components.append(component)
                     axis_seen_components.add(component)
 
-            axis.tables = axis_tables
             axis.components = axis_components
             normalized_axes.append(axis)
 
-        if not normalized_axes and self.tables:
-            normalized_axes.append(
-                PlannerAnalysisAxis(
-                    axis="core",
-                    tables=tables or list(self.tables),
-                    components=list(self.required_components),
-                    objective="",
+        if not normalized_axes and tables:
+            inferred_axes = []
+            for table in tables:
+                if table == "BẢNG CÂN ĐỐI KẾ TOÁN":
+                    inferred_axes.append("agent_liquidity_solvency")
+                elif table == "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH":
+                    inferred_axes.append("agent_profitability")
+                elif table == "BÁO CÁO LƯU CHUYỂN TIỀN TỆ":
+                    inferred_axes.append("agent_cashflow_analysis")
+
+            seen_axes = set()
+            for axis_name in inferred_axes or ["agent_profitability"]:
+                if axis_name in seen_axes:
+                    continue
+                normalized_axes.append(
+                    PlannerAnalysisAxis(
+                        axis=axis_name,
+                        components=list(self.required_components),
+                        objective="",
+                    )
                 )
-            )
-        elif self.tables:
-            for table in self.tables:
-                if table not in seen_tables:
-                    tables.append(table)
-                    seen_tables.add(table)
+                seen_axes.add(axis_name)
 
         self.tables = tables
         self.analysis_axes = normalized_axes
@@ -434,24 +490,74 @@ class PlannerEvidencePlan(BaseModel):
         return self
 
 
-# ---------- Keyworder / Detailed plan (optional next step) ----------
+# ---------- Router / Dispatch plan ----------
 class Target(BaseModel):
-    table: Literal[
-        "BẢNG CÂN ĐỐI KẾ TOÁN",
-        "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-        "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    ]
-    keywords: List[str] = Field(default_factory=list)
+    agent: AGENT_NAME
+    table: Optional[TABLE_NAME] = None
+    requirements: List[str] = Field(default_factory=list)
+    keywords: List[str] = Field(default_factory=list, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy_target_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "requirements" not in data and data.get("keywords"):
+            data["requirements"] = data.get("keywords")
+
+        if "agent" not in data and data.get("table"):
+            inferred_table = _normalize_table_value(data.get("table"))
+            if inferred_table == "BẢNG CÂN ĐỐI KẾ TOÁN":
+                data["agent"] = "agent_bs"
+            elif inferred_table == "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH":
+                data["agent"] = "agent_is"
+            elif inferred_table == "BÁO CÁO LƯU CHUYỂN TIỀN TỆ":
+                data["agent"] = "agent_cf"
+
+        return data
+
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def normalize_requirements(cls, value):
+        return _coerce_text_list(value)
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def normalize_keywords(cls, value):
+        return _coerce_keyword_list(value)
 
     @field_validator("table", mode="before")
     @classmethod
-    def normalize_table(cls, v):
-        if not isinstance(v, str):
-            return v
-        return _normalize_table_value(v)
+    def normalize_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        if normalized in VALID_TABLE_NAMES:
+            return normalized
+        return None
 
-class KeywordPlan(BaseModel):
+    @model_validator(mode="after")
+    def finalize_target_defaults(self):
+        if self.table is None and is_retrieval_agent(self.agent):
+            default_table = get_default_table(self.agent)
+            if default_table in VALID_TABLE_NAMES:
+                self.table = default_table
+
+        if not self.requirements and self.keywords:
+            self.requirements = _coerce_text_list(self.keywords)
+
+        return self
+
+
+class DispatchPlan(BaseModel):
     targets: List[Target] = Field(default_factory=list)
+
+
+class KeywordPlan(DispatchPlan):
+    pass
 
 
 WORKER_TOOL_ACTION = Literal["get_related_info", "web_search"]
@@ -533,6 +639,81 @@ WORKER_RESPONSE_JSON_SCHEMA.setdefault("title", "WorkerResponse")
 WORKER_RESPONSE_JSON_SCHEMA.setdefault(
     "description",
     "Structured worker response that is either a tool action request or a final extracted answer.",
+)
+
+
+def _analysis_answer_from_facts(value: Any) -> str:
+    facts = _coerce_worker_facts(value)
+    if not facts:
+        return ""
+
+    lines: List[str] = []
+    for fact in facts:
+        if not isinstance(fact, dict):
+            continue
+        item_name = str(fact.get("item_name", "") or "").strip()
+        time_hint = str(fact.get("time_hint", "") or "").strip()
+        fact_value = str(fact.get("value", "") or "").strip()
+        prefix = " - ".join(part for part in (item_name, time_hint) if part)
+        if prefix and fact_value:
+            lines.append(f"{prefix}: {fact_value}")
+        elif fact_value:
+            lines.append(fact_value)
+        elif prefix:
+            lines.append(prefix)
+
+    return "\n".join(lines)
+
+
+class AnalysisOutput(BaseModel):
+    answer: str = ""
+    requirements: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy_analysis_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "answer" not in data:
+            for key in ("analysis", "summary", "result", "conclusion", "response", "text"):
+                if data.get(key):
+                    data["answer"] = data.get(key)
+                    break
+
+        if ("answer" not in data or not str(data.get("answer", "")).strip()) and data.get("facts"):
+            data["answer"] = _analysis_answer_from_facts(data.get("facts"))
+
+        if "requirements" not in data:
+            for key in ("requirement", "missing_requirement", "missing_requirements", "missing", "needs"):
+                if data.get(key):
+                    data["requirements"] = data.get(key)
+                    break
+
+        return data
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def normalize_answer(cls, value):
+        if value is None:
+            return ""
+        if isinstance(value, (list, tuple, set)):
+            return "\n".join(item for item in _flatten_text_items(value) if item)
+        return str(value).strip()
+
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def normalize_requirements(cls, value):
+        return _coerce_text_list(value)
+
+
+ANALYSIS_RESPONSE_JSON_SCHEMA = AnalysisOutput.model_json_schema()
+ANALYSIS_RESPONSE_JSON_SCHEMA.setdefault("title", "AnalysisOutput")
+ANALYSIS_RESPONSE_JSON_SCHEMA.setdefault(
+    "description",
+    "Structured analysis response with a synthesized answer and optional missing-data requirements.",
 )
 
 
@@ -671,44 +852,94 @@ def parse_worker_output(text: str):
     return WorkerOutput.model_validate(parsed.model_dump(exclude={"kind"}))
 
 
+def parse_analysis_response_payload(value: Any):
+    if isinstance(value, AnalysisOutput):
+        return value
+
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(exclude_none=True)
+
+    if not isinstance(value, dict):
+        raise ValueError("Analysis payload phải là dict hoặc text hợp lệ.")
+
+    return AnalysisOutput.model_validate(value)
+
+
+def parse_analysis_response(text: str):
+    stripped = str(text or "").strip()
+    if not stripped:
+        raise ValueError("Analysis response rỗng.")
+
+    data = extract_answer_json(stripped)
+    return AnalysisOutput.model_validate(data)
+
+
 # ---------- Synth ----------
-class FollowupRequest(BaseModel):
-    agent: AGENT_NAME
+class SynthFollowupRequest(BaseModel):
+    agent: Optional[AGENT_NAME] = None
     table: Optional[TABLE_NAME] = None
     requirements: List[str] = Field(default_factory=list)
     keywords: List[str] = Field(default_factory=list, exclude=True)
     reason: str = ""
 
-    @field_validator("requirements", mode="before")
+    @model_validator(mode="before")
     @classmethod
-    def normalize_followup_requirements(cls, v):
-        return _coerce_text_list(v)
+    def coerce_followup_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+        return _coerce_followup_dict(value)
 
-    @field_validator("keywords", mode="before")
+    @field_validator("agent", mode="before")
     @classmethod
-    def normalize_followup_keywords(cls, v):
-        return _coerce_keyword_list(v)
+    def normalize_followup_agent(cls, value):
+        if value is None:
+            return None
+        text = str(value or "").strip()
+        return text or None
 
     @field_validator("table", mode="before")
     @classmethod
-    def normalize_followup_table(cls, v):
-        if v is None or not isinstance(v, str):
-            return v
-        normalized = _normalize_table_value(v)
+    def normalize_followup_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
         if normalized in VALID_TABLE_NAMES:
             return normalized
         return None
 
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def normalize_followup_requirements(cls, value):
+        return _coerce_text_list(value)
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def normalize_followup_keywords(cls, value):
+        return _coerce_keyword_list(value)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def normalize_followup_reason(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
     @model_validator(mode="after")
-    def infer_followup_table_from_agent(self):
-        if self.table is None:
-            self.table = FOLLOWUP_AGENT_DEFAULT_TABLE.get(self.agent)
+    def finalize_followup_defaults(self):
+        if not self.requirements and self.keywords:
+            self.requirements = _coerce_text_list(self.keywords)
+
+        if self.agent and self.table is None:
+            default_table = FOLLOWUP_AGENT_DEFAULT_TABLE.get(self.agent) or get_default_table(self.agent) or None
+            if default_table in VALID_TABLE_NAMES:
+                self.table = default_table
+
         return self
 
 class SynthDecision(BaseModel):
     status: Literal["answer", "need_more"] = "answer"
     answer: str = ""
-    followups: List[FollowupRequest] = Field(default_factory=list)
+    followups: List[SynthFollowupRequest] = Field(default_factory=list)
 
     @field_validator("followups", mode="before")
     @classmethod

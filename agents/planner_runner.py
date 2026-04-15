@@ -5,11 +5,10 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.planner_hints import infer_table_keywords, infer_time_hint
+from agents.agent_tools_list import get_tools_list
 from agents.profiles import AGENT_PROFILES
 from datasets.registry import get_dataset
 from schemas.agent_outputs import PlannerEvidencePlan
-from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS
 from llm.invoke import extract_usage_metadata, invoke_prompt
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
@@ -21,8 +20,27 @@ DEFAULT_PLANNER_PLAN = {
     "time_hint": "",
     "need_web": False,
 }
-
-PLANNER_TABLES = (TABLE_BS, TABLE_IS, TABLE_CF)
+EVALUATIVE_INTENT_PATTERNS = [
+    r"\bđánh giá\b",
+    r"\bnhận xét\b",
+    r"\bgiải thích\b",
+    r"\bxu hướng\b",
+    r"\bchất lượng\b",
+    r"\bbền vững\b",
+    r"\brủi ro\b",
+    r"\btốt không\b",
+    r"\bmạnh không\b",
+    r"\byếu không\b",
+    r"\bassess\b",
+    r"\bevaluate\b",
+    r"\bexplain\b",
+    r"\btrend\b",
+    r"\bquality\b",
+    r"\bsustainable\b",
+    r"\brisk\b",
+    r"\bgood profit\b",
+    r"\bgenerate(?:s|d)? good profit\b",
+]
 
 
 def _force_json_output_instruction(base_instruction: str) -> str:
@@ -31,7 +49,6 @@ def _force_json_output_instruction(base_instruction: str) -> str:
         "DINH DANG DAU RA BAT BUOC:\n"
         '- Chi tra duy nhat 1 JSON object hop le theo schema PlannerEvidencePlan.\n'
         '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
-        '- Cac ten bang chi duoc la: "BẢNG CÂN ĐỐI KẾ TOÁN", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH", "BÁO CÁO LƯU CHUYỂN TIỀN TỆ".\n'
     )
 def _plain_planner_payload(payload: dict) -> dict:
     fallback_payload = dict(payload)
@@ -142,108 +159,6 @@ def _extract_company_from_query(user_query: str) -> str:
     return ""
 
 
-def _infer_difficulty_level(user_query: str) -> str:
-    text = str(user_query or "").strip().lower()
-    if any(token in text for token in ("rủi ro", "nguy cơ", "an toàn tài chính", "đánh giá", "nhận xét", "phân tích", "hiệu quả")):
-        return "hard"
-    if any(token in text for token in ("roe", "roa", "biên", "tỷ lệ", "hệ số", "vòng quay", "tính")):
-        return "medium"
-    return "easy"
-
-
-def _infer_tables_from_query(user_query: str, difficulty_level: str) -> list[str]:
-    text = str(user_query or "").strip().lower()
-    selected_tables = []
-
-    if any(
-        token in text
-        for token in (
-            "tài sản",
-            "nợ phải trả",
-            "nợ ngắn hạn",
-            "nợ dài hạn",
-            "vốn chủ sở hữu",
-            "thanh toán",
-            "đòn bẩy",
-            "roe",
-            "roa",
-            "debt",
-            "equity",
-        )
-    ):
-        selected_tables.append(TABLE_BS)
-
-    if any(
-        token in text
-        for token in (
-            "doanh thu",
-            "lợi nhuận",
-            "chi phí",
-            "biên",
-            "eps",
-            "roe",
-            "roa",
-            "kết quả kinh doanh",
-        )
-    ):
-        selected_tables.append(TABLE_IS)
-
-    if any(
-        token in text
-        for token in (
-            "dòng tiền",
-            "lưu chuyển tiền",
-            "tiền cuối kỳ",
-            "tiền đầu kỳ",
-            "cash flow",
-        )
-    ):
-        selected_tables.append(TABLE_CF)
-
-    if not selected_tables and difficulty_level == "hard":
-        selected_tables = [TABLE_BS, TABLE_IS, TABLE_CF]
-
-    return list(dict.fromkeys(selected_tables))
-
-
-def _fallback_planner_plan_from_query(state: dict) -> dict:
-    user_query = str((state or {}).get("user_query", "") or "").strip()
-    difficulty_level = _infer_difficulty_level(user_query)
-    selected_tables = [
-        table
-        for table in PLANNER_TABLES
-        if infer_table_keywords(table, user_query, [])
-    ]
-    if not selected_tables:
-        selected_tables = _infer_tables_from_query(user_query, difficulty_level)
-
-    analysis_axes = []
-    for table in selected_tables:
-        keywords = infer_table_keywords(table, user_query, [])
-        objective = "Thu thập dữ liệu phù hợp để trả lời câu hỏi."
-        if keywords:
-            objective = f"Tìm dữ liệu cho khoản mục: {', '.join(keywords[:2])}."
-
-        analysis_axes.append(
-            {
-                "axis": "core",
-                "tables": [table],
-                "objective": objective,
-            }
-        )
-
-    plan = PlannerEvidencePlan.model_validate(
-        {
-            "difficulty_level": difficulty_level,
-            "analysis_axes": analysis_axes,
-            "company": _extract_company_from_query(user_query),
-            "time_hint": infer_time_hint(user_query),
-            "need_web": False,
-        }
-    )
-    return plan.model_dump()
-
-
 def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str], Optional[str]]:
     if isinstance(result, PlannerEvidencePlan):
         return result, None, None
@@ -301,24 +216,15 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
 def _planner_trace_summary(planner_plan: dict) -> dict:
     analysis_axes = planner_plan.get("analysis_axes", []) or []
     analysis_axes_trace = []
-    tables = []
     for axis in analysis_axes:
         if not isinstance(axis, dict):
             continue
         analysis_axes_trace.append(dict(axis))
-        tables.extend(
-            [
-                str(table).strip()
-                for table in (axis.get("tables", []) or [])
-                if str(table).strip()
-            ]
-        )
 
     return {
         "difficulty_level": str(planner_plan.get("difficulty_level", "") or "").strip(),
         "analysis_axes_n": len(analysis_axes),
         "analysis_axes": analysis_axes_trace,
-        "tables": _dedupe_keep_order(tables),
         "company": str(planner_plan.get("company", "") or "").strip(),
         "time_hint": str(planner_plan.get("time_hint", "") or "").strip(),
         "need_web": bool(planner_plan.get("need_web", False)),
@@ -340,14 +246,54 @@ def _enrich_plan_fields(state: dict, planner_plan: dict) -> dict:
         elif dataset is not None:
             enriched["company"] = dataset.company
 
-    if not str(enriched.get("time_hint", "") or "").strip():
-        enriched["time_hint"] = infer_time_hint(
-            user_query,
-            dataset_fiscal_year=getattr(dataset, "fiscal_year", None),
-            dataset_fiscal_quarter=getattr(dataset, "fiscal_quarter", None),
-        )
+    enriched["time_hint"] = ""
 
     return enriched
+
+
+def _normalize_intent_text(value: Any) -> str:
+    return " ".join(str(value or "").strip().lower().split())
+
+
+def _contains_evaluative_intent(text: str) -> bool:
+    normalized = _normalize_intent_text(text)
+    if not normalized:
+        return False
+    return any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in EVALUATIVE_INTENT_PATTERNS)
+
+
+def _collect_planner_objectives(planner_plan: dict) -> list[str]:
+    objectives = []
+    for axis in (planner_plan.get("analysis_axes", []) or []):
+        if not isinstance(axis, dict):
+            continue
+        objective = str(axis.get("objective", "") or "").strip()
+        if objective:
+            objectives.append(objective)
+    return _dedupe_keep_order(objectives)
+
+
+def _apply_planner_difficulty_heuristics(state: dict, planner_plan: dict) -> tuple[dict, Optional[dict]]:
+    enriched = dict(planner_plan or {})
+    current = _normalize_intent_text(enriched.get("difficulty_level", ""))
+    if current == "hard":
+        return enriched, None
+
+    text_candidates = [
+        str((state or {}).get("user_query", "") or "").strip(),
+        *(_collect_planner_objectives(enriched)),
+    ]
+    if not any(_contains_evaluative_intent(text) for text in text_candidates):
+        return enriched, None
+
+    enriched["difficulty_level"] = "hard"
+    return enriched, make_debug_log(
+        state,
+        "planner:difficulty_upgraded_by_heuristic",
+        previous_difficulty=current or "",
+        upgraded_difficulty="hard",
+        matched_texts=[text for text in text_candidates if _contains_evaluative_intent(text)][:3],
+    )
 
 
 def run_planner(state: dict) -> dict:
@@ -375,7 +321,7 @@ def run_planner(state: dict) -> dict:
         "web_summary": "",
         "last_agent_response": "",
         "tool_observations": "",
-        "tools_list": profile.get("tool_list", ""),
+        "tools_list": get_tools_list("agent_planner"),
     }
 
     updates = {
@@ -393,6 +339,10 @@ def run_planner(state: dict) -> dict:
         llm_usage = extract_usage_metadata(raw_result.get("raw"))
         plan_obj, parse_warning, recovered_from = _coerce_planner_plan(raw_result)
         updates["planner_plan"] = _enrich_plan_fields(state, plan_obj.model_dump())
+        updates["planner_plan"], heuristic_log = _apply_planner_difficulty_heuristics(
+            state,
+            updates["planner_plan"],
+        )
         if raw_result.get("mode") != "structured":
             fallback_log = make_debug_log(
                 state,
@@ -401,6 +351,8 @@ def run_planner(state: dict) -> dict:
             )
             if fallback_log:
                 updates["trace"].append(fallback_log)
+        if heuristic_log:
+            updates["trace"].append(heuristic_log)
         if parse_warning and recovered_from:
             debug_log = make_debug_log(
                 state,
@@ -420,38 +372,16 @@ def run_planner(state: dict) -> dict:
             )
         )
     except Exception as e:
-        fallback_reason = str(e)[:250]
-        fallback_plan = _fallback_planner_plan_from_query(state)
-        updates["planner_plan"] = _enrich_plan_fields(
-            state,
-            fallback_plan if fallback_plan.get("analysis_axes") else DEFAULT_PLANNER_PLAN,
+        updates["planner_plan"] = _enrich_plan_fields(state, DEFAULT_PLANNER_PLAN)
+        updates["trace"].append(
+            make_log(
+                state,
+                "planner:error",
+                error_type=type(e).__name__,
+                error=str(e)[:250],
+                duration_ms=int((time.perf_counter() - started_at) * 1000),
+            )
         )
-        if updates["planner_plan"].get("analysis_axes"):
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "planner:fallback_from_query",
-                    reason=fallback_reason,
-                    duration_ms=int((time.perf_counter() - started_at) * 1000),
-                )
-            )
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "planner:done",
-                    **_planner_trace_summary(updates["planner_plan"]),
-                    duration_ms=int((time.perf_counter() - started_at) * 1000),
-                )
-            )
-        else:
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "planner:error",
-                    error_type=type(e).__name__,
-                    error=fallback_reason,
-                )
-            )
 
     dataset_id = str((state or {}).get("dataset_id", "") or "").strip()
     dataset = get_dataset(dataset_id) if dataset_id else None

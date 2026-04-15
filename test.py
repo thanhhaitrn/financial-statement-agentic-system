@@ -383,7 +383,12 @@ def _collect_pipeline_errors(final_state: dict) -> list[str]:
 
 
 def _print_trace_entry(entry: dict) -> None:
-    print(entry)
+    rendered = dict(entry or {})
+    if "context_preview" in rendered and "context" not in rendered:
+        rendered["context"] = rendered.pop("context_preview")
+    rendered.pop("context_len", None)
+    rendered.pop("context_length", None)
+    print(rendered)
     sys.stdout.flush()
 
 

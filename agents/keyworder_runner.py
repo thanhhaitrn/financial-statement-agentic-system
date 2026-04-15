@@ -5,24 +5,259 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.planner_hints import infer_metric_priority_keywords, infer_table_keywords
-from config.allowed_keywords import build_allowed_keywords_payload
-from schemas.agent_outputs import KeywordPlan
+from agents.agent_tools_list import get_tools_list
+from agents.agent_registry import is_analysis_agent, is_retrieval_agent
 from agents.profiles import AGENT_PROFILES
-from llm.invoke import extract_usage_metadata, invoke_prompt
-from agents.prompts import PROMPT_TEMPLATE
+from config.allowed_keywords import (
+    ALIASES,
+    ALLOWED_KEYWORDS,
+    TABLE_BS,
+    TABLE_CF,
+    TABLE_IS,
+    build_allowed_keywords_payload,
+)
+from graph.dispatch_nodes import prepare_dispatch_state
 from graph.logger import make_debug_log, make_log
-from schemas.keyword_guard import repair_keywords, validate_keywords
-from schemas.table_names import normalize_table_heading
+from llm.invoke import extract_usage_metadata, invoke_prompt
+from schemas.agent_outputs import DispatchPlan, Target
+from agents.prompts import PROMPT_TEMPLATE
 
-MAX_SEED_KEYWORDS_PER_TABLE = 2
+MAX_TARGET_REQUIREMENTS = 8
+FOLLOWUP_ROUTE_STOPWORDS = {
+    "va",
+    "và",
+    "ve",
+    "về",
+    "cua",
+    "của",
+    "cho",
+    "tu",
+    "từ",
+    "den",
+    "đến",
+    "cuoi",
+    "cuối",
+    "ky",
+    "kỳ",
+    "neu",
+    "nếu",
+    "muon",
+    "muốn",
+    "so",
+    "sanh",
+    "xu",
+    "huong",
+    "hướng",
+    "nam",
+    "năm",
+    "quy",
+    "quý",
+    "thang",
+    "tháng",
+}
+TABLE_TO_AGENT = {
+    TABLE_BS: "agent_bs",
+    TABLE_IS: "agent_is",
+    TABLE_CF: "agent_cf",
+}
+KEYWORD_TO_TABLE = {
+    keyword: table
+    for table, keywords in ALLOWED_KEYWORDS.items()
+    for keyword in keywords
+}
+
+
+def _followup_requirements_from_plan(planner_plan: dict) -> list[str]:
+    return _dedupe_keep_order(
+        [
+            str(item).strip()
+            for item in (planner_plan.get("followup_requirements", []) or [])
+            if str(item).strip()
+        ]
+    )
+
+
+def _is_followup_mode(planner_plan: dict) -> bool:
+    if planner_plan.get("followup_mode"):
+        return True
+    return bool(_followup_requirements_from_plan(planner_plan))
+
+
+def _text_tokens(text: str) -> set[str]:
+    tokens = set()
+    for item in re.findall(r"\w+", str(text or "").lower()):
+        if not item or item in FOLLOWUP_ROUTE_STOPWORDS:
+            continue
+        if re.fullmatch(r"(19|20)\d{2}", item):
+            continue
+        tokens.add(item)
+    return tokens
+
+
+def _candidate_route_specs() -> list[dict]:
+    candidates = []
+    for keyword, table in KEYWORD_TO_TABLE.items():
+        candidates.append(
+            {
+                "agent": TABLE_TO_AGENT.get(table, ""),
+                "table": table,
+                "match_text": str(keyword or "").strip().lower(),
+                "tokens": _text_tokens(keyword),
+            }
+        )
+
+    for alias, canonical in ALIASES.items():
+        table = KEYWORD_TO_TABLE.get(canonical)
+        if not table:
+            continue
+        candidates.append(
+            {
+                "agent": TABLE_TO_AGENT.get(table, ""),
+                "table": table,
+                "match_text": str(alias or "").strip().lower(),
+                "tokens": _text_tokens(alias),
+            }
+        )
+    return candidates
+
+
+FOLLOWUP_ROUTE_CANDIDATES = _candidate_route_specs()
+
+
+def _heuristic_followup_route(requirement: str) -> tuple[str, str]:
+    text = str(requirement or "").strip().lower()
+
+    if any(
+        marker in text
+        for marker in (
+            "dòng tiền",
+            "lưu chuyển tiền",
+            "tiền thu",
+            "tiền chi",
+            "trả nợ",
+            "vay",
+            "cổ tức",
+        )
+    ):
+        return "agent_cf", TABLE_CF
+
+    if any(
+        marker in text
+        for marker in (
+            "vốn chủ sở hữu",
+            "tổng tài sản",
+            "tổng cộng tài sản",
+            "nguồn vốn",
+            "nợ",
+            "hàng tồn kho",
+            "phải thu",
+            "phải trả",
+        )
+    ):
+        return "agent_bs", TABLE_BS
+
+    return "agent_is", TABLE_IS
+
+
+def _route_followup_requirement(requirement: str) -> tuple[str, str]:
+    normalized_requirement = str(requirement or "").strip().lower()
+    req_tokens = _text_tokens(normalized_requirement)
+    best_candidate = None
+    best_score = 0.0
+
+    for candidate in FOLLOWUP_ROUTE_CANDIDATES:
+        score = 0.0
+        match_text = str(candidate.get("match_text", "") or "").strip()
+        candidate_tokens = set(candidate.get("tokens", set()) or set())
+
+        if match_text and match_text in normalized_requirement:
+            score += 5.0
+
+        overlap = len(req_tokens.intersection(candidate_tokens))
+        if overlap:
+            score += overlap / max(len(candidate_tokens), 1)
+            score += overlap / max(len(req_tokens), 1)
+
+        if score > best_score:
+            best_candidate = candidate
+            best_score = score
+
+    if best_candidate and best_score >= 1.0:
+        return (
+            str(best_candidate.get("agent", "") or "").strip(),
+            str(best_candidate.get("table", "") or "").strip(),
+        )
+
+    return _heuristic_followup_route(requirement)
+
+
+def _normalize_followup_router_targets(worker_plan: dict, planner_plan: dict) -> dict:
+    followup_requirements = _followup_requirements_from_plan(planner_plan)
+    if not followup_requirements:
+        return worker_plan
+
+    followup_set = set(followup_requirements)
+    grouped_requirements: dict[tuple[str, str], list[str]] = {}
+    assigned = set()
+    normalized_targets = []
+
+    for target in (worker_plan.get("targets", []) or []):
+        if not isinstance(target, dict):
+            continue
+
+        agent = str(target.get("agent", "") or "").strip()
+        requirements = _dedupe_keep_order(target.get("requirements", []) or [])
+
+        if is_analysis_agent(agent):
+            normalized_targets.append(
+                {
+                    "agent": agent,
+                    "requirements": requirements[:MAX_TARGET_REQUIREMENTS],
+                }
+            )
+            continue
+
+        if not is_retrieval_agent(agent):
+            continue
+
+        for requirement in requirements:
+            if requirement not in followup_set:
+                continue
+            routed_agent, routed_table = _route_followup_requirement(requirement)
+            key = (routed_agent, routed_table)
+            grouped_requirements.setdefault(key, [])
+            grouped_requirements[key].append(requirement)
+            assigned.add(requirement)
+
+    for requirement in followup_requirements:
+        if requirement in assigned:
+            continue
+        routed_agent, routed_table = _route_followup_requirement(requirement)
+        key = (routed_agent, routed_table)
+        grouped_requirements.setdefault(key, [])
+        grouped_requirements[key].append(requirement)
+
+    retrieval_targets = []
+    for (agent, table), requirements in grouped_requirements.items():
+        retrieval_targets.append(
+            {
+                "agent": agent,
+                "table": table,
+                "requirements": _dedupe_keep_order(requirements)[:MAX_TARGET_REQUIREMENTS],
+                "source": "followup",
+            }
+        )
+
+    return {
+        "targets": retrieval_targets + normalized_targets,
+    }
 
 
 def _dedupe_keep_order(items: list[str]) -> list[str]:
     seen = set()
     out = []
-    for item in items:
-        text = str(item).strip()
+    for item in items or []:
+        text = str(item or "").strip()
         if not text or text in seen:
             continue
         out.append(text)
@@ -30,70 +265,41 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
     return out
 
 
-def _selected_tables(planner_plan: dict) -> list[str]:
-    selected = []
-
-    for table in (planner_plan.get("tables", []) or []):
-        text = str(table).strip()
-        if text:
-            selected.append(text)
-
-    for axis in (planner_plan.get("analysis_axes", []) or []):
-        if not isinstance(axis, dict):
-            continue
-        for table in (axis.get("tables", []) or []):
-            text = str(table).strip()
-            if text:
-                selected.append(text)
-
-    return _dedupe_keep_order(selected)
-
-
-def _planner_hints_by_table(planner_plan: dict, selected_tables: list[str], user_query: str) -> dict[str, list[str]]:
-    analysis_axes = planner_plan.get("analysis_axes", []) or []
-    return {
-        table: infer_table_keywords(table, user_query, analysis_axes)
-        for table in selected_tables
-    }
-
-
-def _priority_hints_by_table(planner_plan: dict, selected_tables: list[str], user_query: str) -> dict[str, list[str]]:
-    analysis_axes = planner_plan.get("analysis_axes", []) or []
-    return {
-        table: infer_metric_priority_keywords(table, user_query, analysis_axes)
-        for table in selected_tables
-    }
-
-
-def _allowed_keywords_payload(selected_tables: list[str]) -> str:
-    return build_allowed_keywords_payload(selected_tables)
-
-
-def _limit_seed_keywords(items: list[str], limit: int = MAX_SEED_KEYWORDS_PER_TABLE) -> list[str]:
-    if limit <= 0:
+def _split_retrieval_requirement_item(value: str) -> list[str]:
+    text = str(value or "").strip()
+    if not text:
         return []
-    return _dedupe_keep_order(items)[:limit]
+
+    parts = [item.strip() for item in re.split(r"\s*[;,]\s*", text) if item.strip()]
+    if len(parts) <= 1:
+        return [text]
+    return parts
 
 
-def _keyword_trace_targets(worker_plan: dict) -> list[dict]:
+def _normalize_retrieval_requirements(requirements: list[str]) -> list[str]:
+    expanded = []
+    for item in requirements or []:
+        expanded.extend(_split_retrieval_requirement_item(item))
+    return _dedupe_keep_order(expanded)
+
+
+def _router_trace_targets(worker_plan: dict) -> list[dict]:
     targets = []
     for item in (worker_plan.get("targets", []) or []):
         if not isinstance(item, dict):
             continue
-        table = str(item.get("table", "") or "").strip()
-        keywords = [
-            str(keyword).strip()
-            for keyword in (item.get("keywords", []) or [])
-            if str(keyword).strip()
-        ]
-        if not table:
-            continue
-        targets.append(
-            {
-                "table": table,
-                "keywords": keywords[:2],
-            }
-        )
+        agent = str(item.get("agent", "") or "").strip()
+        payload = {
+            "agent": agent,
+            "requirements": [
+                str(req).strip()
+                for req in (item.get("requirements", []) or [])
+                if str(req).strip()
+            ][:2],
+        }
+        if not is_analysis_agent(agent):
+            payload["table"] = str(item.get("table", "") or "").strip()
+        targets.append(payload)
     return targets
 
 
@@ -101,13 +307,13 @@ def _force_json_output_instruction(base_instruction: str) -> str:
     return (
         f"{base_instruction}\n\n"
         "DINH DANG DAU RA BAT BUOC:\n"
-        '- Chi tra duy nhat 1 JSON object hop le theo schema KeywordPlan.\n'
+        '- Chi tra duy nhat 1 JSON object hop le theo schema DispatchPlan.\n'
         '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
         '- Output phai co dang: {"targets":[...]}.\n'
     )
 
 
-def _plain_keyworder_payload(payload: dict) -> dict:
+def _plain_router_payload(payload: dict) -> dict:
     fallback_payload = dict(payload)
     fallback_payload["system_instruction"] = _force_json_output_instruction(
         str(payload.get("system_instruction", "") or "")
@@ -149,22 +355,17 @@ def _extract_first_json_object(text: str) -> Optional[str]:
 
     for idx in range(start, len(cleaned)):
         ch = cleaned[idx]
-
         if escape:
             escape = False
             continue
-
         if ch == "\\":
             escape = True
             continue
-
         if ch == '"':
             in_string = not in_string
             continue
-
         if in_string:
             continue
-
         if ch == "{":
             depth += 1
         elif ch == "}":
@@ -202,63 +403,15 @@ def _try_parse_json_object(value: Any) -> Optional[dict]:
     return None
 
 
-def _coerce_target_table(value: Any, selected_tables: list[str]) -> str:
-    text = str(value or "").strip()
-    if not text:
-        return ""
-    if text in selected_tables:
-        return text
-
-    normalized = normalize_table_heading(text)
-    if normalized in selected_tables:
-        return normalized
-
-    if len(selected_tables) == 1:
-        return selected_tables[0]
-
-    return ""
-
-
-def _sanitize_keyword_plan_payload(payload: dict, selected_tables: list[str]) -> dict:
-    if not isinstance(payload, dict):
-        return {}
-
-    raw_targets = payload.get("targets")
-    if not isinstance(raw_targets, list):
-        return payload
-
-    targets = []
-    for item in raw_targets:
-        if not isinstance(item, dict):
-            continue
-
-        table = _coerce_target_table(item.get("table", ""), selected_tables)
-        if not table:
-            continue
-
-        keywords = item.get("keywords", []) or []
-        if not isinstance(keywords, list):
-            keywords = [keywords]
-
-        targets.append(
-            {
-                "table": table,
-                "keywords": [str(keyword).strip() for keyword in keywords if str(keyword).strip()],
-            }
-        )
-
-    return {"targets": targets}
-
-
-def _coerce_keyword_plan(result: Any, selected_tables: list[str]) -> tuple[KeywordPlan, Optional[str], Optional[str]]:
-    if isinstance(result, KeywordPlan):
+def _coerce_dispatch_plan(result: Any) -> tuple[DispatchPlan, Optional[str], Optional[str]]:
+    if isinstance(result, DispatchPlan):
         return result, None, None
 
     parsing_error = None
 
     if isinstance(result, dict):
         parsed = result.get("parsed")
-        if isinstance(parsed, KeywordPlan):
+        if isinstance(parsed, DispatchPlan):
             return parsed, None, None
 
         if result.get("parsing_error") is not None:
@@ -271,7 +424,6 @@ def _coerce_keyword_plan(result: Any, selected_tables: list[str]) -> tuple[Keywo
             ("content", result.get("content")),
         ]
     else:
-        parsed = result
         candidates = [("result", result)]
 
     for source, candidate in candidates:
@@ -279,45 +431,130 @@ def _coerce_keyword_plan(result: Any, selected_tables: list[str]) -> tuple[Keywo
         if payload is None:
             continue
         try:
-            return KeywordPlan.model_validate(
-                _sanitize_keyword_plan_payload(payload, selected_tables)
-            ), parsing_error, source
+            return DispatchPlan.model_validate(payload), parsing_error, source
         except ValidationError:
             continue
 
     if parsing_error:
         raise ValueError(parsing_error)
 
-    raise ValueError("Keyworder did not return a valid KeywordPlan payload.")
+    raise ValueError("Router did not return a valid DispatchPlan payload.")
 
 
-def _fallback_worker_plan_from_hints(planner_plan: dict, selected_tables: list[str], user_query: str) -> dict:
-    hint_map = _planner_hints_by_table(planner_plan, selected_tables, user_query)
-    targets = []
+def _normalize_target_payload(item: Any) -> Optional[dict]:
+    if not isinstance(item, dict):
+        return None
 
-    for table in selected_tables:
-        repairs, details = validate_keywords(
-            table,
-            hint_map.get(table, []),
-            fuzzy=True,
-            cutoff=0.93,
+    try:
+        target = Target.model_validate(item)
+    except ValidationError:
+        return None
+
+    payload = target.model_dump(exclude_none=True)
+    requirements = payload.get("requirements", []) or []
+    if is_retrieval_agent(str(payload.get("agent", "") or "").strip()):
+        requirements = _normalize_retrieval_requirements(requirements)
+    else:
+        requirements = _dedupe_keep_order(requirements)
+
+    payload["requirements"] = requirements[:MAX_TARGET_REQUIREMENTS]
+    if not payload["requirements"]:
+        return None
+    return payload
+
+
+def _sanitize_router_plan_payload(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return {"targets": []}
+
+    raw_targets = payload.get("targets")
+    if not isinstance(raw_targets, list):
+        return {"targets": []}
+
+    normalized_targets = []
+    seen = set()
+
+    for item in raw_targets:
+        target = _normalize_target_payload(item)
+        if target is None:
+            continue
+
+        key = (
+            str(target.get("agent", "")).strip(),
+            str(target.get("table", "") or "").strip(),
+            tuple(target.get("requirements", []) or []),
         )
-        for item in details:
-            suggestion = item.get("suggested")
-            if suggestion and suggestion not in repairs:
-                repairs.append(suggestion)
-        targets.append(
+        if key in seen:
+            continue
+        seen.add(key)
+        normalized_targets.append(target)
+
+    return {"targets": normalized_targets}
+
+
+def _planner_analysis_targets(planner_plan: dict) -> list[dict]:
+    merged: dict[str, dict] = {}
+    order: list[str] = []
+
+    for axis in (planner_plan.get("analysis_axes", []) or []):
+        if not isinstance(axis, dict):
+            continue
+
+        agent = str(axis.get("axis", "") or "").strip()
+        if not is_analysis_agent(agent):
+            continue
+
+        objective = str(axis.get("objective", "") or "").strip()
+        if agent not in merged:
+            merged[agent] = {
+                "agent": agent,
+                "requirements": [],
+            }
+            order.append(agent)
+
+        if objective:
+            merged[agent]["requirements"] = _dedupe_keep_order(
+                list(merged[agent].get("requirements", []) or []) + [objective]
+            )[:MAX_TARGET_REQUIREMENTS]
+
+    return [merged[agent] for agent in order]
+
+
+def _finalize_router_targets(worker_plan: dict, planner_plan: dict) -> dict:
+    normalized_targets = list((worker_plan or {}).get("targets", []) or [])
+    retrieval_targets = [
+        target
+        for target in normalized_targets
+        if is_retrieval_agent(str(target.get("agent", "") or "").strip())
+    ]
+
+    difficulty_level = str(planner_plan.get("difficulty_level", "") or "").strip().lower()
+    if difficulty_level != "hard":
+        return {"targets": retrieval_targets}
+
+    planned_analysis_targets = _planner_analysis_targets(planner_plan)
+    planned_by_agent = {
+        str(target.get("agent", "") or "").strip(): dict(target)
+        for target in planned_analysis_targets
+        if str(target.get("agent", "") or "").strip()
+    }
+
+    analysis_targets = []
+    for agent in [str(target.get("agent", "") or "").strip() for target in planned_analysis_targets]:
+        planned_target = planned_by_agent.get(agent, {})
+        requirements = _dedupe_keep_order(list(planned_target.get("requirements", []) or []))[:MAX_TARGET_REQUIREMENTS]
+        analysis_targets.append(
             {
-                "table": table,
-                "keywords": _limit_seed_keywords(repairs),
+                "agent": agent,
+                "requirements": requirements,
             }
         )
 
-    return {"targets": targets}
+    return {"targets": retrieval_targets + analysis_targets}
 
 
-def run_keyworder(state: dict) -> dict:
-    profile = AGENT_PROFILES["agent_keyworder"]
+def run_router(state: dict) -> dict:
+    profile = AGENT_PROFILES["agent_router"]
     planner_plan = state.get("planner_plan", {}) or {}
     trace = []
     started_at = time.perf_counter()
@@ -325,28 +562,11 @@ def run_keyworder(state: dict) -> dict:
 
     start_log = make_debug_log(
         state,
-        "keyworder:start",
-        planner_plan=state.get("planner_plan", {}),
+        "router:start",
+        planner_plan=planner_plan,
     )
     if start_log:
         trace.append(start_log)
-
-    selected_tables = _selected_tables(planner_plan)
-    planner_hints_by_table = _planner_hints_by_table(
-        planner_plan,
-        selected_tables,
-        state.get("user_query", ""),
-    )
-    priority_hints_by_table = _priority_hints_by_table(
-        planner_plan,
-        selected_tables,
-        state.get("user_query", ""),
-    )
-    fallback_worker_plan = _fallback_worker_plan_from_hints(
-        planner_plan,
-        selected_tables,
-        state.get("user_query", ""),
-    )
 
     payload = {
         "role": profile["role"],
@@ -355,15 +575,15 @@ def run_keyworder(state: dict) -> dict:
         "worker_query": "",
         "plan_json": json.dumps(planner_plan, ensure_ascii=False),
         "worker_results_json": "{}",
-        "allowed_keywords_json": _allowed_keywords_payload(selected_tables),
+        "allowed_keywords_json": build_allowed_keywords_payload(),
         "web_summary": "",
         "last_agent_response": "",
         "tool_observations": "",
-        "tools_list": profile.get("tool_list", ""),
+        "tools_list": get_tools_list("agent_router"),
     }
 
     updates = {
-        "last_agent": "agent_keyworder",
+        "last_agent": "agent_router",
         "trace": trace,
     }
 
@@ -371,216 +591,89 @@ def run_keyworder(state: dict) -> dict:
         raw_result = invoke_prompt(
             PROMPT_TEMPLATE,
             payload,
-            structured_schema=KeywordPlan,
-            plain_payload_factory=_plain_keyworder_payload,
+            structured_schema=DispatchPlan,
+            plain_payload_factory=_plain_router_payload,
         )
         llm_usage = extract_usage_metadata(raw_result.get("raw"))
-        kp, parse_warning, recovered_from = _coerce_keyword_plan(raw_result, selected_tables)
-        worker_plan = kp.model_dump()
+        plan_obj, parse_warning, recovered_from = _coerce_dispatch_plan(raw_result)
+        worker_plan = _finalize_router_targets(
+            _sanitize_router_plan_payload(plan_obj.model_dump()),
+            planner_plan,
+        )
+        if _is_followup_mode(planner_plan):
+            worker_plan = _normalize_followup_router_targets(worker_plan, planner_plan)
+        dispatch_updates = prepare_dispatch_state(
+            {
+                **state,
+                "worker_plan": worker_plan,
+            }
+        )
+
+        if any(
+            str(item.get("agent", "") or "").strip() == "agent_web"
+            for item in (worker_plan.get("targets", []) or [])
+        ):
+            worker_plan["need_web"] = True
+
+        updates["worker_plan"] = dispatch_updates.get("worker_plan", worker_plan)
+        updates["expected_workers"] = dispatch_updates.get("expected_workers", [])
+        updates["dispatch_phase"] = dispatch_updates.get("dispatch_phase", "retrieval")
+        updates["pending_analysis_targets"] = dispatch_updates.get("pending_analysis_targets", [])
+
         if raw_result.get("mode") != "structured":
             fallback_log = make_debug_log(
                 state,
-                "keyworder:structured_output_fallback",
+                "router:structured_output_fallback",
                 mode=raw_result.get("mode", "plain_json"),
             )
             if fallback_log:
                 updates["trace"].append(fallback_log)
 
-        targets_in = worker_plan.get("targets", []) or []
-
-        by_table = {}
-        for t in targets_in:
-            table = str(t.get("table", "")).strip()
-            kws = t.get("keywords", []) or []
-            if not table:
-                continue
-            by_table.setdefault(table, [])
-            by_table[table].extend(kws)
-
-        cleaned_targets = []
-        invalid_all = []
-        repaired_all = []
-        planner_hint_repairs = []
-
-        for table in selected_tables:
-            kws = by_table.get(table, [])
-            valid_kws, invalid = validate_keywords(table, kws, fuzzy=True, cutoff=0.88)
-
-            invalid = invalid or []
-            invalid_all.extend([{"table": table, **x} for x in invalid])
-
-            for x in invalid:
-                s = x.get("suggested")
-                if s and s not in valid_kws:
-                    valid_kws.append(s)
-                    repaired_all.append({
-                        "table": table,
-                        "from": x.get("raw", ""),
-                        "to": s,
-                    })
-
-            if not valid_kws and kws:
-                fallback_repairs, fallback_details = repair_keywords(table, kws)
-                for repaired_kw in fallback_repairs:
-                    if repaired_kw not in valid_kws:
-                        valid_kws.append(repaired_kw)
-                for x in fallback_details:
-                    repaired_all.append(
-                        {
-                            "table": table,
-                            "from": x.get("raw", ""),
-                            "to": x.get("suggested", ""),
-                            "source": "keyword",
-                        }
-                    )
-
-            if not valid_kws and planner_hints_by_table.get(table):
-                hint_valid, hint_details = validate_keywords(
-                    table,
-                    planner_hints_by_table.get(table, []),
-                    fuzzy=True,
-                    cutoff=0.93,
-                )
-                for repaired_kw in hint_valid:
-                    if repaired_kw not in valid_kws:
-                        valid_kws.append(repaired_kw)
-                for x in hint_details:
-                    suggestion = x.get("suggested")
-                    if not suggestion:
-                        continue
-                    repaired_all.append(
-                        {
-                            "table": table,
-                            "from": x.get("raw", ""),
-                            "to": suggestion,
-                            "source": "planner_hint",
-                        }
-                    )
-                    planner_hint_repairs.append(
-                        {
-                            "table": table,
-                            "from": x.get("raw", ""),
-                            "to": suggestion,
-                        }
-                    )
-
-            if priority_hints_by_table.get(table):
-                valid_kws = _limit_seed_keywords(
-                    list(priority_hints_by_table.get(table, []))
-                    + list(valid_kws)
-                )
-
-            valid_kws = _limit_seed_keywords(valid_kws)
-            cleaned_targets.append({"table": table, "keywords": valid_kws})
-
-        worker_plan["targets"] = cleaned_targets
-
-        empty_tables = {
-            target["table"]
-            for target in cleaned_targets
-            if not target["keywords"]
-        }
-        if empty_tables:
-            fallback_by_table = {
-                target["table"]: target["keywords"]
-                for target in fallback_worker_plan.get("targets", [])
-            }
-            for target in cleaned_targets:
-                if not target["keywords"]:
-                    target["keywords"] = fallback_by_table.get(target["table"], [])
-
-        updates["worker_plan"] = worker_plan
-
         if parse_warning and recovered_from:
             debug_log = make_debug_log(
                 state,
-                "keyworder:recovered_from_raw",
+                "router:recovered_from_raw",
                 source=recovered_from,
                 parsing_error=parse_warning,
             )
             if debug_log:
                 updates["trace"].append(debug_log)
 
-        empty_tables = [t["table"] for t in cleaned_targets if not t["keywords"]]
-        if empty_tables:
-            debug_log = make_debug_log(
-                state,
-                "keyworder:empty_keyword_targets",
-                tables=empty_tables,
-            )
-            if debug_log:
-                updates["trace"].append(debug_log)
-
-        if invalid_all:
-            debug_log = make_debug_log(
-                state,
-                "keyworder:invalid_keywords",
-                invalid_count=len(invalid_all),
-                samples=invalid_all[:5],
-            )
-            if debug_log:
-                updates["trace"].append(debug_log)
-
-        if repaired_all:
-            debug_log = make_debug_log(
-                state,
-                "keyworder:repaired_keywords",
-                repaired_count=len(repaired_all),
-                samples=repaired_all[:5],
-            )
-            if debug_log:
-                updates["trace"].append(debug_log)
-
-        if planner_hint_repairs:
-            debug_log = make_debug_log(
-                state,
-                "keyworder:planner_hint_repairs",
-                repaired_count=len(planner_hint_repairs),
-                samples=planner_hint_repairs[:5],
-            )
-            if debug_log:
-                updates["trace"].append(debug_log)
-
         updates["trace"].append(
             make_log(
                 state,
-                "keyworder:done",
-                targets_n=len(worker_plan.get("targets", []) or []),
-                targets=_keyword_trace_targets(worker_plan),
+                "router:done",
+                targets_n=len((updates.get("worker_plan", {}) or {}).get("targets", []) or []),
+                targets=_router_trace_targets(updates.get("worker_plan", {}) or {}),
                 duration_ms=int((time.perf_counter() - started_at) * 1000),
                 **llm_usage,
             )
         )
+        updates["trace"].extend(dispatch_updates.get("trace", []) or [])
         return updates
 
     except Exception as e:
-        updates["worker_plan"] = fallback_worker_plan
-        fallback_reason = str(e)[:250]
-        if any(target.get("keywords") for target in fallback_worker_plan.get("targets", [])):
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "keyworder:fallback_from_hints",
-                    reason=fallback_reason,
-                    duration_ms=int((time.perf_counter() - started_at) * 1000),
-                )
-            )
-        else:
-            updates["trace"].append(
-                make_log(
-                    state,
-                    "keyworder:error",
-                    error_type=type(e).__name__,
-                    error=fallback_reason,
-                )
-            )
+        updates["worker_plan"] = {"targets": []}
         updates["trace"].append(
             make_log(
                 state,
-                "keyworder:done",
-                targets_n=len(updates["worker_plan"].get("targets", []) or []),
-                targets=_keyword_trace_targets(updates["worker_plan"]),
+                "router:error",
+                error_type=type(e).__name__,
+                error=str(e)[:250],
+                duration_ms=int((time.perf_counter() - started_at) * 1000),
+            )
+        )
+        updates["trace"].append(
+            make_log(
+                state,
+                "router:done",
+                targets_n=0,
+                targets=[],
                 duration_ms=int((time.perf_counter() - started_at) * 1000),
             )
         )
         return updates
+
+
+def run_keyworder(state: dict) -> dict:
+    return run_router(state)

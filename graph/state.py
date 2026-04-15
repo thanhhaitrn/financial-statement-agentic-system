@@ -15,6 +15,8 @@ class GraphState(TypedDict, total=False):
 
     # branch-specific input injected by Send(...)
     worker_query: str
+    dispatch_target: dict
+    analysis_input_results: dict
 
     # sequential/global
     last_agent: str
@@ -22,12 +24,13 @@ class GraphState(TypedDict, total=False):
     planner_plan: dict
     worker_plan: dict
     expected_workers: list[str]
+    dispatch_phase: str
     followup_rounds: int
     followup_requests: list[dict]
+    analysis_dispatch_targets: list[dict]
+    pending_analysis_targets: list[dict]
     missing_components: list[str]
     web_summary: str
-    synth_context: dict
-    synth_web_summary: str
     synth_decision: dict
     final_answer: str
 
@@ -41,6 +44,7 @@ class GraphState(TypedDict, total=False):
     worker_results: Annotated[dict[str, Any], merge_dicts]
     done_workers: Annotated[dict[str, int], merge_dicts]
     collected_rounds: Annotated[list[int], operator.add]
+    collected_keys: Annotated[list[str], operator.add]
     trace: Annotated[list[dict], operator.add]
     tool_call_counts: Annotated[dict[str, dict[str, int]], merge_dicts]
     force_collect_agents: Annotated[dict[str, int], merge_dicts]

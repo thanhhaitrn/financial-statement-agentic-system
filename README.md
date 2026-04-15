@@ -180,7 +180,7 @@ Bat debug trace:
 python test.py --debug-trace --query "ROE quy 2/2025 la bao nhieu?"
 ```
 
-Khi bat `--debug-trace`, cac event noi bo hon se duoc in them.
+Khi bat `--debug-trace`, cac event noi bo hon se duoc in them. Rieng cac event tool nhu `tool:done` va `tool:followup_done` se kem them `context_preview` de nhin noi dung ung voi `context_len`.
 
 ## Xoa dataset
 

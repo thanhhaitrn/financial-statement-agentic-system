@@ -1,21 +1,16 @@
 import json
-import re
 import time
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple
 
-from agents.planner_hints import infer_table_keywords, infer_table_query_hints
 from schemas.agent_outputs import WorkerAction, parse_worker_response, parse_worker_response_payload
-from schemas.keyword_guard import repair_keywords, validate_keywords
 from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
 from agents.agent_tools_list import AGENT_TOOLS_LIST
 from graph.logger import make_debug_log, make_log
 
 
 _COLLECTION = None
-MAX_KEYWORDS_PER_TOOL_RUN = 4
-SEED_KEYWORD_CUTOFF = 0.88
-PLANNER_COMPONENT_CUTOFF = 0.93
-HARD_DIFFICULTY_LEVELS = {"hard"}
+TOOL_CONTEXT_PREVIEW_LIMIT = 1200
+DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
 
 
 def set_collection(collection):
@@ -30,16 +25,36 @@ WORKER_TO_TABLE = {
 }
 
 
-def _normalize_table_name(value: Any) -> str:
-    return " ".join(str(value or "").strip().upper().split())
-
-
 def _safe_json_dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
 
 
+def _coerce_tool_context(value: Any) -> str:
+    return str(value or "").strip()
+
+
+def _build_tool_context_debug_fields(state: dict, context: str) -> dict:
+    preview = context[:TOOL_CONTEXT_PREVIEW_LIMIT] if context else "<EMPTY_CONTEXT>"
+    return {
+        "context_preview": preview,
+        "context_preview_truncated": bool(context) and len(context) > TOOL_CONTEXT_PREVIEW_LIMIT,
+    }
+
+
 def _get_allowed_tools(agent_name: str) -> set:
     return {tool["name"] for tool in AGENT_TOOLS_LIST.get(agent_name, [])}
+
+
+def _dedupe_keep_order(items: list[str]) -> list[str]:
+    seen = set()
+    output = []
+    for item in items or []:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        output.append(text)
+        seen.add(text)
+    return output
 
 
 def _latest_agent_response_for(state: dict, agent_name: str) -> str:
@@ -108,218 +123,108 @@ def _force_collect_update(state: dict, agent_name: str) -> dict:
     return {agent_name: _current_round(state)}
 
 
-def _get_target_for_table(worker_plan: dict, table: str) -> dict:
+def _tool_observation_entry(agent_name: str, text: str, round_n: int) -> dict:
+    return {
+        "agent": agent_name,
+        "text": text,
+        "round": round_n,
+    }
+
+
+def _get_target_for_agent_table(state: dict, agent_name: str, table: str) -> dict:
+    dispatch_target = state.get("dispatch_target")
+    if isinstance(dispatch_target, dict) and str(dispatch_target.get("agent", "")).strip() == agent_name:
+        return dispatch_target
+
+    worker_plan = state.get("worker_plan", {}) or {}
     targets = worker_plan.get("targets", []) or []
-    normalized_target = _normalize_table_name(table)
 
     for target in targets:
-        tname = _normalize_table_name(target.get("table", ""))
-        if tname == normalized_target:
-            return target
+        if str(target.get("agent", "")).strip() != agent_name:
+            continue
+        target_table = str(target.get("table", "") or "").strip()
+        if table and target_table and target_table != table:
+            continue
+        return target
     return {}
 
 
-def _get_keywords_for_table(worker_plan: dict, table: str) -> List[str]:
-    target = _get_target_for_table(worker_plan, table)
-    kws = target.get("keywords", []) or []
-    seen = set()
-    cleaned = []
-    for kw in kws:
-        s = str(kw).strip()
-        if s and s not in seen:
-            cleaned.append(s)
-            seen.add(s)
-    return cleaned
+def _get_requirements_for_agent_table(state: dict, agent_name: str, table: str) -> list[str]:
+    target = _get_target_for_agent_table(state, agent_name, table)
+    return _dedupe_keep_order(target.get("requirements", []) or [])
 
 
-def _dedupe_keep_order(items: List[str]) -> List[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item).strip()
-        if not text or text in seen:
+def _assigned_requirements_for_agent(state: dict, agent_name: str) -> list[str]:
+    dispatch_target = state.get("dispatch_target")
+    if isinstance(dispatch_target, dict) and str(dispatch_target.get("agent", "")).strip() == agent_name:
+        return _dedupe_keep_order(dispatch_target.get("requirements", []) or [])
+
+    worker_plan = state.get("worker_plan", {}) or {}
+    requirements = []
+    for target in (worker_plan.get("targets", []) or []):
+        if str(target.get("agent", "")).strip() != agent_name:
             continue
-        out.append(text)
-        seen.add(text)
-    return out
+        requirements.extend(target.get("requirements", []) or [])
+    return _dedupe_keep_order(requirements)
 
 
-def _planner_hints_for_table(state: dict, table: str) -> List[str]:
-    planner_plan = state.get("planner_plan", {}) or {}
-    analysis_axes = planner_plan.get("analysis_axes", []) or []
-    return infer_table_keywords(
-        table,
-        str(state.get("user_query", "") or ""),
-        analysis_axes,
+def _max_tool_calls_for_agent(state: dict, agent_name: str) -> int:
+    requirements_n = len(_assigned_requirements_for_agent(state, agent_name))
+    if requirements_n > 0:
+        return requirements_n
+    return DEFAULT_MAX_TOOL_CALLS_PER_ROUND
+
+
+def _is_followup_dispatch_target(state: dict, agent_name: str) -> bool:
+    dispatch_target = state.get("dispatch_target")
+    return (
+        isinstance(dispatch_target, dict)
+        and str(dispatch_target.get("agent", "")).strip() == agent_name
+        and str(dispatch_target.get("source", "")).strip() == "followup"
     )
 
 
-def _planner_query_hints_for_table(state: dict, table: str) -> List[str]:
-    planner_plan = state.get("planner_plan", {}) or {}
-    analysis_axes = planner_plan.get("analysis_axes", []) or []
-    return infer_table_query_hints(
-        table,
-        str(state.get("user_query", "") or ""),
-        analysis_axes,
-    )
+def _requirement_query_for_followup_call(state: dict, agent_name: str, table: str, tool_call_index: int) -> str:
+    if not _is_followup_dispatch_target(state, agent_name):
+        return ""
+
+    requirements = _get_requirements_for_agent_table(state, agent_name, table)
+    if tool_call_index < 0 or tool_call_index >= len(requirements):
+        return ""
+    return str(requirements[tool_call_index] or "").strip()
 
 
-def _difficulty_level(state: dict) -> str:
-    planner_plan = state.get("planner_plan", {}) or {}
-    difficulty_level = str(planner_plan.get("difficulty_level", "") or "").strip().lower()
-    if difficulty_level in {"easy", "medium", "hard"}:
-        return difficulty_level
-
-    legacy_question_type = str(planner_plan.get("question_type", "") or "").strip().lower()
-    if legacy_question_type == "calculation":
-        return "medium"
-    if legacy_question_type in {"evaluation", "risk_assessment"}:
-        return "hard"
-    return "easy"
-
-
-def _keyword_expansion_enabled(state: dict) -> bool:
-    return _difficulty_level(state) in HARD_DIFFICULTY_LEVELS
-
-
-def _guarded_keywords_for_table(
-    table: str,
-    candidates: List[str],
-    *,
-    cutoff: float,
-) -> List[str]:
-    valid, details = validate_keywords(
-        table,
-        candidates,
-        fuzzy=True,
-        cutoff=cutoff,
-    )
-    out = list(valid or [])
-    for item in details or []:
-        suggestion = item.get("suggested")
-        if suggestion and suggestion not in out:
-            out.append(suggestion)
-    return _dedupe_keep_order(out)
-
-
-def _called_queries_for_agent_table(state: dict, agent_name: str, table: str) -> List[str]:
-    items = state.get("tool_results", []) or []
-    normalized_table = _normalize_table_name(table)
-    queries = []
-
-    for item in items:
-        if str(item.get("agent", "")).strip() != agent_name:
-            continue
-        if str(item.get("tool", "")).strip() != "get_related_info":
-            continue
-
-        args = item.get("args", {}) or {}
-        if _normalize_table_name(args.get("table", "")) != normalized_table:
-            continue
-
-        query = str(args.get("query", "") or "").strip()
-        if query and query not in queries:
-            queries.append(query)
-
-    return queries
-
-
-def _refine_keywords_for_table(
+def _prepare_get_related_info_args(
     state: dict,
     agent_name: str,
-    table: str,
-    requested_query: str = "",
-) -> Tuple[List[str], List[str], List[str], List[str], List[str], bool]:
-    worker_plan = state.get("worker_plan", {}) or {}
-    target = _get_target_for_table(worker_plan, table)
-    raw_seed_keywords = _get_keywords_for_table(worker_plan, table)
-    target_source = str(target.get("source", "") or "").strip().lower()
-    followup_target = target_source == "followup"
-    seed_keywords = _guarded_keywords_for_table(
-        table,
-        raw_seed_keywords,
-        cutoff=SEED_KEYWORD_CUTOFF,
-    )
-    exhausted_queries = _called_queries_for_agent_table(state, agent_name, table)
-    planner_queries = _planner_query_hints_for_table(state, table)
-    planner_hint_keywords = _guarded_keywords_for_table(
-        table,
-        _planner_hints_for_table(state, table),
-        cutoff=PLANNER_COMPONENT_CUTOFF,
-    )
-    planner_hints: List[str] = []
-    if _keyword_expansion_enabled(state):
-        planner_hints = list(planner_hint_keywords)
+    args: dict,
+) -> Tuple[Optional[dict], Optional[str], Optional[dict]]:
+    global _COLLECTION
 
-    refined_keywords = _dedupe_keep_order(seed_keywords)
-    direct_requested = False
-    requested_query = str(requested_query or "").strip()
-    difficulty_level = _difficulty_level(state)
-    if requested_query:
-        requested_refined = _guarded_keywords_for_table(
-            table,
-            [requested_query],
-            cutoff=PLANNER_COMPONENT_CUTOFF,
-        )
-        for keyword in requested_refined:
-            if keyword not in refined_keywords:
-                refined_keywords.insert(0, keyword)
+    if _COLLECTION is None:
+        return None, "collection not set. Call set_collection(collection) before running workflow.", None
 
-        if not requested_refined and difficulty_level == "hard":
-            if requested_query not in refined_keywords:
-                refined_keywords.insert(0, requested_query)
-                direct_requested = True
+    prepared = dict(args)
+    prepared["collection"] = _COLLECTION
+    prepared["table"] = WORKER_TO_TABLE.get(agent_name, prepared.get("table", ""))
+    prepared["query"] = str(prepared.get("query", "") or "").strip()
 
-        if not requested_refined and int(state.get("followup_rounds", 0) or 0) > 0 and not refined_keywords:
-            refined_keywords = [requested_query]
-            direct_requested = True
+    if not prepared["query"]:
+        return None, f"missing query for table={prepared.get('table', '')}", None
 
-    for keyword in planner_hints:
-        if keyword not in refined_keywords:
-            refined_keywords.append(keyword)
+    log_data = {
+        "agent": agent_name,
+        "table": prepared.get("table", ""),
+        "query": prepared["query"],
+    }
+    if bool((state or {}).get("debug_trace", False)):
+        log_data["assigned_requirements"] = _get_requirements_for_agent_table(
+            state,
+            agent_name,
+            str(prepared.get("table", "") or "").strip(),
+        )[:4]
 
-    if followup_target:
-        exploratory_queries = [
-            keyword
-            for keyword in raw_seed_keywords
-            if keyword not in refined_keywords and keyword not in exhausted_queries
-        ]
-        unseen_refined = [keyword for keyword in refined_keywords if keyword not in exhausted_queries]
-        exhausted_refined = [keyword for keyword in refined_keywords if keyword in exhausted_queries]
-        refined_keywords = unseen_refined + exploratory_queries + exhausted_refined
-
-    refined_keywords = _keywords_to_fetch(refined_keywords)
-    empty_only_queries: List[str] = []
-
-    if not _keyword_expansion_enabled(state):
-        fallback_candidates: List[str] = []
-        for keyword in planner_hint_keywords:
-            if keyword not in refined_keywords and keyword not in fallback_candidates:
-                fallback_candidates.append(keyword)
-
-        for keyword in _guarded_keywords_for_table(
-            table,
-            planner_queries,
-            cutoff=PLANNER_COMPONENT_CUTOFF,
-        ):
-            if keyword not in refined_keywords and keyword not in fallback_candidates:
-                fallback_candidates.append(keyword)
-
-        repaired_queries, _details = repair_keywords(table, planner_queries)
-        for keyword in repaired_queries:
-            if keyword not in refined_keywords and keyword not in fallback_candidates:
-                fallback_candidates.append(keyword)
-
-        empty_only_queries = _keywords_to_fetch(fallback_candidates, limit=1)
-
-    return (
-        seed_keywords,
-        planner_hints,
-        planner_queries,
-        refined_keywords,
-        empty_only_queries,
-        direct_requested,
-    )
+    return prepared, None, make_debug_log(state, "tool:query_prepared", **log_data)
 
 
 def _parse_action_block(action_text: str) -> Tuple[Optional[str], Dict[str, Any], Optional[str]]:
@@ -358,96 +263,6 @@ def _normalize_tool_result(raw_result: Any) -> dict:
     }
 
 
-def _prepare_get_related_info_args(
-    state: dict,
-    agent_name: str,
-    args: dict,
-) -> Tuple[Optional[dict], Optional[str], Optional[dict], dict]:
-    global _COLLECTION
-
-    if _COLLECTION is None:
-        return None, "collection not set. Call set_collection(collection) before running workflow.", None, {
-            "standard_queries": [],
-            "empty_only_queries": [],
-        }
-
-    prepared = dict(args)
-    prepared["collection"] = _COLLECTION
-    prepared["table"] = WORKER_TO_TABLE.get(agent_name, prepared.get("table", ""))
-
-    table = prepared.get("table", "")
-    requested_query = str(args.get("query", "")).strip()
-    seed_keywords, planner_hints, planner_queries, refined_keywords, empty_only_queries, direct_requested = _refine_keywords_for_table(
-        state,
-        agent_name,
-        table,
-        requested_query=requested_query,
-    )
-    expansion_enabled = _keyword_expansion_enabled(state)
-
-    log_data = {
-        "agent": agent_name,
-        "table": table,
-        "difficulty_level": _difficulty_level(state),
-        "expansion_enabled": expansion_enabled,
-        "primary_query": refined_keywords[0] if refined_keywords else "",
-    }
-    if direct_requested:
-        log_data["requested_query"] = requested_query
-        log_data["direct_requested"] = True
-    exhausted_queries = _called_queries_for_agent_table(state, agent_name, table)
-    if exhausted_queries:
-        log_data["previous_queries"] = exhausted_queries[:4]
-    if empty_only_queries:
-        log_data["empty_primary_fallbacks"] = empty_only_queries[:2]
-    if bool((state or {}).get("debug_trace", False)):
-        log_data["seed_keywords"] = seed_keywords[:4]
-        log_data["planner_hints"] = planner_hints[:4]
-        log_data["refined_keywords"] = refined_keywords[:4]
-        log_data["planner_queries"] = planner_queries[:3]
-
-    log_entry = make_debug_log(state, "tool:keyword_refined", **log_data)
-
-    if refined_keywords:
-        prepared["query"] = refined_keywords[0]
-        return prepared, None, log_entry, {
-            "standard_queries": [
-                keyword
-                for keyword in refined_keywords
-                if keyword != str(prepared.get("query", "")).strip()
-            ],
-            "empty_only_queries": empty_only_queries,
-        }
-
-    if empty_only_queries:
-        prepared["query"] = empty_only_queries[0]
-        return prepared, None, log_entry, {
-            "standard_queries": empty_only_queries[1:],
-            "empty_only_queries": [],
-        }
-
-    return None, f"no usable query available for table={table}", log_entry, {
-        "standard_queries": [],
-        "empty_only_queries": [],
-    }
-
-
-def _keywords_to_fetch(keywords: List[str], *, limit: int = MAX_KEYWORDS_PER_TOOL_RUN) -> List[str]:
-    seen = set()
-    out = []
-
-    for keyword in (keywords or []):
-        text = str(keyword).strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-        if len(out) >= limit:
-            break
-
-    return out
-
-
 def _already_called(state: dict, agent_name: str, tool_name: str, args: dict) -> bool:
     items = state.get("tool_results", []) or []
     current_round = _current_round(state)
@@ -474,13 +289,15 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     current_round = _current_round(state)
     count = _tool_call_count_for_round(state, agent_name)
 
-    if count >= 2:
+    max_calls = _max_tool_calls_for_agent(state, agent_name)
+    if count >= max_calls:
         return {
             "tool_observations": [
-                {
-                    "agent": agent_name,
-                    "text": "[Tool loop cap reached. Stop calling tools and answer with available evidence.]"
-                }
+                _tool_observation_entry(
+                    agent_name,
+                    "[Tool loop cap reached. Stop calling tools and answer with available evidence.]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count),
             "force_collect_agents": _force_collect_update(state, agent_name),
@@ -490,6 +307,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                     "tool:loop_cap_reached",
                     agent=agent_name,
                     count=count,
+                    max_calls=max_calls,
                 )
             ],
         }
@@ -497,7 +315,11 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     if not action_text.strip():
         return {
             "tool_observations": [
-                {"agent": agent_name, "text": f"[No worker response found for {agent_name}]"}
+                _tool_observation_entry(
+                    agent_name,
+                    f"[No worker response found for {agent_name}]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count + 1),
             "force_collect_agents": _force_collect_update(state, agent_name),
@@ -512,7 +334,11 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     if parse_error:
         return {
             "tool_observations": [
-                {"agent": agent_name, "text": f"[No valid tool action by {agent_name}: {parse_error}]"}
+                _tool_observation_entry(
+                    agent_name,
+                    f"[No valid tool action by {agent_name}: {parse_error}]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count + 1),
             "force_collect_agents": _force_collect_update(state, agent_name),
@@ -531,7 +357,11 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     if tool_name not in allowed_tools:
         return {
             "tool_observations": [
-                {"agent": agent_name, "text": f"[Tool '{tool_name}' NOT allowed for {agent_name}]"}
+                _tool_observation_entry(
+                    agent_name,
+                    f"[Tool '{tool_name}' NOT allowed for {agent_name}]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count + 1),
             "force_collect_agents": _force_collect_update(state, agent_name),
@@ -549,7 +379,11 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
     if not tool_func:
         return {
             "tool_observations": [
-                {"agent": agent_name, "text": f"[Unknown tool: {tool_name}]"}
+                _tool_observation_entry(
+                    agent_name,
+                    f"[Unknown tool: {tool_name}]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count + 1),
             "force_collect_agents": _force_collect_update(state, agent_name),
@@ -565,13 +399,9 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
 
     prepared_args = dict(args)
     trace_logs = []
-    followup_plan = {
-        "standard_queries": [],
-        "empty_only_queries": [],
-    }
 
     if tool_name == "get_related_info":
-        prepared_args, prep_error, prep_log, followup_plan = _prepare_get_related_info_args(
+        prepared_args, prep_error, prep_log = _prepare_get_related_info_args(
             state,
             agent_name,
             prepared_args,
@@ -591,12 +421,37 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             )
             return {
                 "tool_observations": [
-                    {"agent": agent_name, "text": f"[Tool blocked: {prep_error}]"}
+                    _tool_observation_entry(
+                        agent_name,
+                        f"[Tool blocked: {prep_error}]",
+                        current_round,
+                    )
                 ],
                 "tool_call_counts": _round_count_update(state, agent_name, count + 1),
                 "force_collect_agents": _force_collect_update(state, agent_name),
                 "trace": trace_logs,
             }
+
+        enforced_query = _requirement_query_for_followup_call(
+            state,
+            agent_name,
+            str(prepared_args.get("table", "") or "").strip(),
+            count,
+        )
+        if enforced_query:
+            original_query = str(prepared_args.get("query", "") or "").strip()
+            prepared_args["query"] = enforced_query
+            if original_query != enforced_query:
+                trace_logs.append(
+                    make_log(
+                        state,
+                        "tool:followup_query_enforced",
+                        agent=agent_name,
+                        original_query=original_query,
+                        enforced_query=enforced_query,
+                        requirement_index=count,
+                    )
+                )
 
     if _already_called(state, agent_name, tool_name, prepared_args):
         trace_logs.append(
@@ -610,7 +465,11 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         )
         return {
             "tool_observations": [
-                {"agent": agent_name, "text": f"[Tool call blocked: repeated identical call: {tool_name}]"}
+                _tool_observation_entry(
+                    agent_name,
+                    f"[Tool call blocked: repeated identical call: {tool_name}]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count + 1),
             "force_collect_agents": _force_collect_update(state, agent_name),
@@ -628,8 +487,8 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         )
     )
 
+    started_at = time.perf_counter()
     try:
-        started_at = time.perf_counter()
         raw_results = tool_func(**prepared_args)
         results = _normalize_tool_result(raw_results)
         duration_ms = int((time.perf_counter() - started_at) * 1000)
@@ -647,19 +506,24 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         )
         return {
             "tool_observations": [
-                {"agent": agent_name, "text": f"[Tool error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]"}
+                _tool_observation_entry(
+                    agent_name,
+                    f"[Tool error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]",
+                    current_round,
+                )
             ],
             "tool_call_counts": _round_count_update(state, agent_name, count + 1),
             "force_collect_agents": _force_collect_update(state, agent_name),
             "trace": trace_logs,
         }
 
-    ctx = (results.get("context") or "").strip()
+    ctx = _coerce_tool_context(results.get("context"))
     src = results.get("source", "")
+    context_debug_fields = _build_tool_context_debug_fields(state, ctx)
     obs = (
         f"[{tool_name} source={src} table={prepared_args.get('table','')} "
         f"query={prepared_args.get('query','')}]\n"
-        f"{ctx[:1200] if ctx else '<EMPTY_CONTEXT>'}"
+        f"{ctx[:TOOL_CONTEXT_PREVIEW_LIMIT] if ctx else '<EMPTY_CONTEXT>'}"
     )
 
     trace_logs.append(
@@ -673,12 +537,13 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             duration_ms=duration_ms,
             context_len=len(ctx),
             empty=(len(ctx) == 0),
+            **context_debug_fields,
         )
     )
 
-    updates = {
+    return {
         "tool_observations": [
-            {"agent": agent_name, "text": obs}
+            _tool_observation_entry(agent_name, obs, current_round)
         ],
         "tool_results": [
             {
@@ -693,84 +558,3 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         "tool_call_counts": _round_count_update(state, agent_name, count + 1),
         "trace": trace_logs,
     }
-
-    if tool_name == "get_related_info":
-        followup_keywords = list(followup_plan.get("standard_queries", []) or [])
-        empty_only_queries = list(followup_plan.get("empty_only_queries", []) or [])
-        if len(ctx) == 0:
-            for keyword in empty_only_queries:
-                if keyword not in followup_keywords:
-                    followup_keywords.append(keyword)
-
-        for follow_index, keyword in enumerate(followup_keywords, start=1):
-            follow_args = dict(prepared_args)
-            follow_args["query"] = keyword
-            trigger = "empty_primary" if keyword in empty_only_queries else "standard"
-
-            if _already_called(state, agent_name, tool_name, follow_args):
-                continue
-
-            try:
-                follow_started_at = time.perf_counter()
-                raw_follow = tool_func(**follow_args)
-                follow_results = _normalize_tool_result(raw_follow)
-                follow_duration_ms = int((time.perf_counter() - follow_started_at) * 1000)
-                follow_ctx = (follow_results.get("context") or "").strip()
-                follow_src = follow_results.get("source", "")
-
-                updates["tool_observations"].append(
-                    {
-                        "agent": agent_name,
-                        "text": (
-                            f"[AUTO_FOLLOWUP source={follow_src} table={follow_args.get('table','')} "
-                            f"query={follow_args.get('query','')}]\n"
-                            f"{follow_ctx[:1200] if follow_ctx else '<EMPTY_CONTEXT>'}"
-                        ),
-                    }
-                )
-                updates["tool_results"].append(
-                    {
-                        "agent": agent_name,
-                        "kind": "followup",
-                        "round": current_round,
-                        "tool": tool_name,
-                        "args": follow_args,
-                        "results": follow_results,
-                    }
-                )
-                updates["trace"].append(
-                    make_log(
-                        state,
-                        "tool:followup_done",
-                        agent=agent_name,
-                        tool=tool_name,
-                        table=follow_args.get("table", ""),
-                        query=follow_args.get("query", ""),
-                        followup_index=follow_index,
-                        trigger=trigger,
-                        duration_ms=follow_duration_ms,
-                        context_len=len(follow_ctx),
-                        empty=(len(follow_ctx) == 0),
-                    )
-                )
-            except Exception as e:
-                updates["tool_observations"].append(
-                    {
-                        "agent": agent_name,
-                        "text": f"[Tool followup error: {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]",
-                    }
-                )
-                updates["trace"].append(
-                    make_log(
-                        state,
-                        "tool:error_runtime",
-                        agent=agent_name,
-                        tool=tool_name,
-                        duration_ms=int((time.perf_counter() - follow_started_at) * 1000),
-                        error_type=type(e).__name__,
-                        error=str(e)[:250],
-                    )
-                )
-                break
-
-    return updates

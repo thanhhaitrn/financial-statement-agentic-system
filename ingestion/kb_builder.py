@@ -40,6 +40,40 @@ def _normalize_value_text(text: str) -> str:
 
     return value
 
+
+def _normalize_column_name(text: str) -> str:
+    value = _strip_inline_formatting(text).lower()
+    return re.sub(r"\s+", " ", value).strip()
+
+
+def _display_column_name(text: str) -> str:
+    raw = str(text or "").strip()
+    head = re.split(r"<br\s*/?>", raw, maxsplit=1, flags=re.IGNORECASE)[0]
+    return _strip_inline_formatting(head)
+
+
+def _is_item_code_column(col_name: str) -> bool:
+    normalized = _normalize_column_name(col_name)
+    return "mã số" in normalized or "ma so" in normalized
+
+
+def _is_note_column(col_name: str) -> bool:
+    normalized = _normalize_column_name(col_name)
+    return "thuyết minh" in normalized or "thuyet minh" in normalized
+
+
+def _is_ignored_column(col_name: str) -> bool:
+    return _is_item_code_column(col_name) or _is_note_column(col_name)
+
+
+def _item_code_for_row(row, columns) -> str | None:
+    for col_name in columns:
+        if not _is_item_code_column(col_name):
+            continue
+        value = str(row.get(col_name, "") or "").strip()
+        return value or None
+    return None
+
 def looks_like_value(x: str) -> bool:
     x = _normalize_value_text(x)
 
@@ -77,7 +111,6 @@ def df_to_facts(df, heading, company, source):
     facts = []
 
     df = df.map(lambda x: "" if pd.isna(x) else str(x).strip())
-    ignore_cols = {"mã số", "thuyết minh"}
     columns = [str(c).strip() for c in df.columns]
 
     for _, row in df.iterrows():
@@ -85,7 +118,7 @@ def df_to_facts(df, heading, company, source):
 
         # find row label
         for col_name, cell in zip(columns, row.values):
-            if col_name.lower() in ignore_cols:
+            if _is_ignored_column(col_name):
                 continue
             if cell and not looks_like_value(cell):
                 row_label = clean_label(cell)
@@ -96,7 +129,7 @@ def df_to_facts(df, heading, company, source):
         
         # create facts
         for col_name, cell in zip(columns, row.values):
-                if col_name.lower() in ignore_cols:
+                if _is_ignored_column(col_name):
                     continue
                 if not cell:
                     continue
@@ -111,8 +144,8 @@ def df_to_facts(df, heading, company, source):
                 facts.append({
                     "company": company,
                     "heading": normalize_table_heading(clean_label(heading)),
-                    "item_code": row.get("Mã số") if "Mã số" in df.columns else None,
-                    "item_name": f"{row_label} | {col_name}",
+                    "item_code": _item_code_for_row(row, columns),
+                    "item_name": f"{row_label} | {_display_column_name(col_name)}",
                     "value": normalized_value,
                     "raw_value": raw_value,
                     "normalized_value": normalized_value,
