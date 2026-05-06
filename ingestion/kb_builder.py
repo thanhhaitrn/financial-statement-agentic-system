@@ -1,3 +1,6 @@
+"""Parse financial-statement markdown tables into normalized SQLite fact rows."""
+# Code note: Ingestion modules convert source reports into normalized facts; comments here mark parsing assumptions.
+
 import pandas as pd
 from ingestion.table_parser import markdown_table_to_df
 import re
@@ -107,7 +110,7 @@ def looks_like_value(x: str) -> bool:
 def clean_label(text: str) -> str:
     return _strip_inline_formatting(LABEL_PREFIX.sub("", text)).strip()
 
-def df_to_facts(df, heading, company, source):
+def df_to_facts(df, heading, company, source, fiscal_year=None):
     facts = []
 
     df = df.map(lambda x: "" if pd.isna(x) else str(x).strip())
@@ -143,8 +146,10 @@ def df_to_facts(df, heading, company, source):
 
                 facts.append({
                     "company": company,
+                    "fiscal_year": "" if fiscal_year is None else str(fiscal_year),
                     "heading": normalize_table_heading(clean_label(heading)),
                     "item_code": _item_code_for_row(row, columns),
+                    "subheading": "",
                     "item_name": f"{row_label} | {_display_column_name(col_name)}",
                     "value": normalized_value,
                     "raw_value": raw_value,
@@ -154,7 +159,7 @@ def df_to_facts(df, heading, company, source):
         
     return facts
 
-def build_fact_rows(tables_with_context, company, source):
+def build_fact_rows(tables_with_context, company, source, fiscal_year=None):
     rows = []
 
     for block in tables_with_context:
@@ -167,7 +172,8 @@ def build_fact_rows(tables_with_context, company, source):
             df,
             heading=block["heading"],
             company=company,
-            source=source
+            source=source,
+            fiscal_year=fiscal_year,
         )
 
         for f in facts:
@@ -176,8 +182,10 @@ def build_fact_rows(tables_with_context, company, source):
 
             rows.append((
                 f["company"],
+                f.get("fiscal_year", ""),
                 f["heading"],
                 f.get("item_code"),
+                f.get("subheading", ""),
                 f["item_name"],
                 f["value"],
                 f.get("raw_value", ""),

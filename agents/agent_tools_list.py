@@ -1,23 +1,30 @@
+"""Declare which tool calls each agent is allowed to request."""
+# Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
+
+from tools.langchain_tools import (
+    get_langchain_tools_for_agent,
+    get_tool_names_for_agent as _get_tool_names_for_agent,
+    get_tool_prompt_specs_for_agent,
+)
+
+AGENT_NAMES = (
+    "agent_planner",
+    "agent_router",
+    "agent_bs",
+    "agent_is",
+    "agent_cf",
+    "agent_note",
+    "agent_web",
+    "agent_profitability",
+    "agent_liquidity_solvency",
+    "agent_cashflow_analysis",
+    "agent_efficiency",
+    "agent_synth",
+)
+
 AGENT_TOOLS_LIST = {
-    "agent_planner": [],
-    "agent_router": [],
-    "agent_bs": [
-        {"name": "get_related_info", "description": "Retrieve relevant info in the balance sheet.", "args": "query (string)"}
-    ],
-    "agent_is": [
-        {"name": "get_related_info", "description": "Retrieve relevant info in the income statement.", "args": "query (string)"}
-    ],
-    "agent_cf": [
-        {"name": "get_related_info", "description": "Retrieve relevant info in cash flow.", "args": "query (string)"}
-    ],
-    "agent_web": [
-        {"name": "web_search", "description": "Perform a web search.", "args": "query (string)"}
-    ],
-    "agent_profitability": [],
-    "agent_liquidity_solvency": [],
-    "agent_cashflow_analysis": [],
-    "agent_efficiency": [],
-    "agent_synth": []
+    agent_name: get_tool_prompt_specs_for_agent(agent_name)
+    for agent_name in AGENT_NAMES
 }
 
 
@@ -45,3 +52,13 @@ AGENT_TOOL_PROMPTS = {
 
 def get_tools_list(agent_name: str) -> str:
     return AGENT_TOOL_PROMPTS.get(agent_name, "")
+
+
+def get_tools_for_bind(agent_name: str):
+    """Return LangChain BaseTool objects for native bind_tools experiments."""
+    return get_langchain_tools_for_agent(agent_name)
+
+
+def get_tool_names_for_agent(agent_name: str) -> set[str]:
+    """Return allowed public tool names for an agent."""
+    return _get_tool_names_for_agent(agent_name)

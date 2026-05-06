@@ -1,3 +1,6 @@
+"""Load markdown input files with the project-standard UTF-8 encoding."""
+# Code note: Ingestion modules convert source reports into normalized facts; comments here mark parsing assumptions.
+
 def load_markdown(path: str) -> str:
     with open(path, "r", encoding="utf-8") as f:
         return f.read()

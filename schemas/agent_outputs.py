@@ -1,14 +1,19 @@
+"""Pydantic models and coercion helpers for planner, router, and worker outputs."""
+# Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
+
 from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
 from pydantic.json_schema import SkipJsonSchema
-from typing import Annotated, List, Literal, Dict, Any, Optional, Union
+from typing import List, Literal, Any, Optional
 import re, json
 from agents.agent_registry import get_default_table, is_retrieval_agent
+from schemas.requirements import normalize_fact_status
 from schemas.table_names import normalize_table_heading
 
 TABLE_NAME = Literal[
     "BẢNG CÂN ĐỐI KẾ TOÁN",
     "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
+    "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
 ]
 
 TABLE_CANON = {
@@ -19,34 +24,26 @@ TABLE_CANON = {
     "bcđkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
     "kqhđkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
     "kqhdkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
+    "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "thuyết minh báo cáo tài chính": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "thuyet minh bao cao tai chinh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "thuyết minh bctc": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "thuyet minh bctc": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "thuyết minh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "thuyet minh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
 }
 
 VALID_TABLE_NAMES = set(TABLE_CANON.values())
-ANALYSIS_AXIS_VALUES = {
-    "agent_profitability",
-    "agent_liquidity_solvency",
-    "agent_cashflow_analysis",
-    "agent_efficiency",
-}
 AGENT_NAME_VALUES = {
     "agent_bs",
     "agent_is",
     "agent_cf",
+    "agent_note",
     "agent_web",
     "agent_profitability",
     "agent_liquidity_solvency",
     "agent_cashflow_analysis",
     "agent_efficiency",
-}
-FOLLOWUP_AGENT_DEFAULT_TABLE = {
-    "agent_bs": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "agent_is": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "agent_cf": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    "agent_profitability": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "agent_liquidity_solvency": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "agent_cashflow_analysis": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    "agent_efficiency": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
 }
 ANALYSIS_AXIS_ALIASES = {
     "profitability": "agent_profitability",
@@ -77,6 +74,8 @@ def _normalize_table_value(value: Any) -> Any:
     if not isinstance(value, str):
         return value
 
+    # Accept common abbreviations from LLM output, but store only canonical
+    # statement headings in validated plans and worker answers.
     text = " ".join(value.strip().split())
     if not text:
         return text
@@ -123,6 +122,8 @@ def _coerce_keyword_list(value: Any) -> List[str]:
     if not text:
         return []
 
+    # Router/planner models sometimes return comma-separated strings even when
+    # the schema expects a list. Split only obvious list separators.
     if "," in text or ";" in text:
         split_items = re.split(r"[;,]", text)
         normalized = _dedupe_keep_order([item.strip() for item in split_items if item.strip()])
@@ -148,6 +149,7 @@ def _coerce_worker_fact_item(value: Any) -> Optional[dict]:
         if isinstance(dumped, dict):
             return dumped
 
+    # Preserve legacy worker output that returns facts as plain strings.
     text = str(value).strip()
     if not text:
         return None
@@ -177,6 +179,7 @@ def _coerce_worker_fact_item(value: Any) -> Optional[dict]:
         "time_hint": "",
         "value": fact_value,
         "source": "",
+        "status": "found",
     }
 
 
@@ -322,11 +325,19 @@ AGENT_NAME = Literal[
     "agent_bs",
     "agent_is",
     "agent_cf",
+    "agent_note",
     "agent_web",
     "agent_profitability",
     "agent_liquidity_solvency",
     "agent_cashflow_analysis",
     "agent_efficiency",
+]
+RETRIEVAL_AGENT = Literal[
+    "agent_bs",
+    "agent_is",
+    "agent_cf",
+    "agent_note",
+    "agent_web",
 ]
 ANALYSIS_AXIS = Literal[
     "agent_profitability",
@@ -516,6 +527,8 @@ class Target(BaseModel):
                 data["agent"] = "agent_is"
             elif inferred_table == "BÁO CÁO LƯU CHUYỂN TIỀN TỆ":
                 data["agent"] = "agent_cf"
+            elif inferred_table == "THUYẾT MINH BÁO CÁO TÀI CHÍNH":
+                data["agent"] = "agent_note"
 
         return data
 
@@ -552,40 +565,231 @@ class Target(BaseModel):
         return self
 
 
-class DispatchPlan(BaseModel):
-    targets: List[Target] = Field(default_factory=list)
+class EvidencePlanItem(BaseModel):
+    table: Optional[TABLE_NAME] = None
+    query: str = ""
+    needby: List[ANALYSIS_AXIS] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy_evidence_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "needby" not in data and "needed_by" in data:
+            data["needby"] = data.get("needed_by")
+
+        if not data.get("query"):
+            for key in ("requirement", "keyword", "keywords", "requirements"):
+                raw = data.get(key)
+                items = _coerce_text_list(raw)
+                if items:
+                    data["query"] = items[0]
+                    break
+
+        if not data.get("table") and data.get("agent"):
+            default_table = get_default_table(str(data.get("agent", "") or "").strip())
+            if default_table in VALID_TABLE_NAMES:
+                data["table"] = default_table
+
+        return data
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        if normalized in VALID_TABLE_NAMES:
+            return normalized
+        return None
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @field_validator("needby", mode="before")
+    @classmethod
+    def normalize_needby(cls, value):
+        items = _coerce_text_list(value)
+        normalized = []
+        for item in items:
+            agent = ANALYSIS_AXIS_ALIASES.get(str(item or "").strip().lower(), str(item or "").strip())
+            if agent in ANALYSIS_AXIS_ALIASES.values() and agent not in normalized:
+                normalized.append(agent)
+        return normalized
 
 
-class KeywordPlan(DispatchPlan):
-    pass
+class AnalysisPlanItem(BaseModel):
+    agent: ANALYSIS_AXIS
+    objective: str = ""
+
+    @field_validator("agent", mode="before")
+    @classmethod
+    def normalize_agent(cls, value):
+        text = str(value or "").strip()
+        return ANALYSIS_AXIS_ALIASES.get(text.lower(), text)
+
+    @field_validator("objective", mode="before")
+    @classmethod
+    def normalize_objective(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
 
 
-WORKER_TOOL_ACTION = Literal["get_related_info", "web_search"]
+class EvidenceDispatchPlan(BaseModel):
+    evidence_plan: List[dict] = Field(default_factory=list)
+    analysis_plan: List[dict] = Field(default_factory=list)
+    targets: List[dict] = Field(default_factory=list)
 
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_current_router_output(cls, value):
+        if not isinstance(value, dict):
+            return value
 
-# ---------- Tools ----------
-class ToolCall(BaseModel):
-    action: WORKER_TOOL_ACTION
-    arguments: Dict[str, Any] = Field(default_factory=dict)
+        data = dict(value)
+
+        for wrapper_key in (
+            "evidence_dispatch_plan",
+            "dispatch_plan",
+            "router_plan",
+            "worker_plan",
+            "plan",
+            "output",
+            "data",
+            "result",
+        ):
+            nested = data.get(wrapper_key)
+            if isinstance(nested, dict):
+                nested_data = dict(nested)
+                nested_data.update({k: v for k, v in data.items() if k not in nested_data})
+                data = nested_data
+                break
+
+        if "evidence_plan" not in data:
+            for key in ("evidence", "evidence_items", "retrieval_plan", "retrieval_queries", "queries", "items"):
+                if key in data:
+                    data["evidence_plan"] = data.get(key)
+                    break
+
+        if "analysis_plan" not in data:
+            for key in ("analysis", "analysis_items", "analyses"):
+                if key in data:
+                    data["analysis_plan"] = data.get(key)
+                    break
+
+        if "targets" not in data:
+            for key in ("retrieval_targets", "workers", "worker_targets"):
+                if key in data:
+                    data["targets"] = data.get(key)
+                    break
+
+        return data
+
+    @field_validator("evidence_plan", "analysis_plan", "targets", mode="before")
+    @classmethod
+    def normalize_router_items(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, dict):
+            for key in ("items", "queries", "requirements", "targets", "evidence_plan", "analysis_plan"):
+                nested = value.get(key)
+                if isinstance(nested, list):
+                    value = nested
+                    break
+            else:
+                value = [value]
+        elif not isinstance(value, list):
+            value = [value]
+
+        items = []
+        for item in value:
+            if isinstance(item, dict):
+                items.append(dict(item))
+                continue
+            text = str(item or "").strip()
+            if text:
+                items.append({"query": text})
+        return items
+
 
 class WorkerFact(BaseModel):
+    content_type: str = ""
+    note_number: str = ""
+    note_title: str = ""
+    subheading: str = ""
     item_name: str = ""
     time_hint: str = ""
     value: str = ""
+    interpretation_hint: str = ""
     source: str = ""
+    status: Literal["found", "not_found_after_search", "ambiguous"] = "found"
 
-    @field_validator("item_name", "time_hint", "value", "source", mode="before")
+    @field_validator(
+        "content_type",
+        "note_number",
+        "note_title",
+        "subheading",
+        "item_name",
+        "time_hint",
+        "value",
+        "interpretation_hint",
+        "source",
+        mode="before",
+    )
     @classmethod
     def normalize_fact_strings(cls, value):
         if value is None:
             return ""
         return str(value).strip()
 
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value):
+        return normalize_fact_status(value)
+
+
+class WorkerNarrative(BaseModel):
+    content_type: str = "narrative"
+    note_number: str = ""
+    note_title: str = ""
+    subheading: str = ""
+    summary: str = ""
+    relevance: str = ""
+    source: str = ""
+
+    @field_validator(
+        "content_type",
+        "note_number",
+        "note_title",
+        "subheading",
+        "summary",
+        "relevance",
+        "source",
+        mode="before",
+    )
+    @classmethod
+    def normalize_narrative_strings(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+
 class WorkerOutput(BaseModel):
     table: str = ""
+    statement: str = ""
     facts: list[WorkerFact] = Field(default_factory=list)
+    narratives: list[WorkerNarrative] = Field(default_factory=list)
+    missing: List[str] = Field(default_factory=list)
 
-    @field_validator("table", mode="before")
+    @field_validator("table", "statement", mode="before")
     @classmethod
     def normalize_table(cls, value):
         if value is None:
@@ -597,48 +801,31 @@ class WorkerOutput(BaseModel):
     def normalize_facts(cls, value):
         return _coerce_worker_facts(value)
 
+    @field_validator("narratives", mode="before")
+    @classmethod
+    def normalize_narratives(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        return [value]
 
-class WorkerAction(BaseModel):
-    kind: Literal["action"] = "action"
-    action: WORKER_TOOL_ACTION
-    arguments: Dict[str, Any] = Field(default_factory=dict)
+    @field_validator("missing", mode="before")
+    @classmethod
+    def normalize_missing(cls, value):
+        return _coerce_text_list(value)
 
 
 class WorkerAnswer(WorkerOutput):
     kind: Literal["answer"] = "answer"
 
 
-WorkerResponse = Annotated[
-    Union[WorkerAction, WorkerAnswer],
-    Field(discriminator="kind"),
-]
-
-
-class WorkerStructuredOutput(BaseModel):
-    kind: Literal["action", "answer"]
-    action: Optional[WORKER_TOOL_ACTION] = None
-    arguments: Dict[str, Any] = Field(default_factory=dict)
-    table: str = ""
-    facts: list[WorkerFact] = Field(default_factory=list)
-
-    @field_validator("table", mode="before")
-    @classmethod
-    def normalize_output_strings(cls, value):
-        if value is None:
-            return ""
-        return str(value).strip()
-
-    @field_validator("facts", mode="before")
-    @classmethod
-    def normalize_facts(cls, value):
-        return _coerce_worker_facts(value)
-
-WORKER_RESPONSE_ADAPTER = TypeAdapter(WorkerResponse)
+WORKER_RESPONSE_ADAPTER = TypeAdapter(WorkerAnswer)
 WORKER_RESPONSE_JSON_SCHEMA = WORKER_RESPONSE_ADAPTER.json_schema()
-WORKER_RESPONSE_JSON_SCHEMA.setdefault("title", "WorkerResponse")
+WORKER_RESPONSE_JSON_SCHEMA.setdefault("title", "WorkerAnswer")
 WORKER_RESPONSE_JSON_SCHEMA.setdefault(
     "description",
-    "Structured worker response that is either a tool action request or a final extracted answer.",
+    "Structured worker answer with extracted facts after native tool calls are complete.",
 )
 
 
@@ -784,35 +971,8 @@ def extract_answer_json(text: str) -> dict:
     raise ValueError("Không tìm thấy JSON hợp lệ trong phản hồi worker.")
 
 
-def extract_action_json(text: str) -> dict:
-    action_match = re.search(r"(?mi)^\s*ACTION:\s*([^\n]+?)\s*$", text)
-    if not action_match:
-        raise ValueError("Không tìm thấy ACTION hợp lệ trong phản hồi worker.")
-
-    action = action_match.group(1).strip()
-    arguments: Dict[str, Any] = {}
-
-    args_match = re.search(r"(?mis)^\s*ARGUMENTS:\s*(\{.*\})\s*$", text)
-    if args_match:
-        args_text = args_match.group(1).strip()
-        try:
-            parsed = json.loads(args_text)
-        except json.JSONDecodeError as exc:
-            raise ValueError(f"ARGUMENTS không phải JSON hợp lệ: {exc}") from exc
-
-        if not isinstance(parsed, dict):
-            raise ValueError("ARGUMENTS phải là JSON object.")
-        arguments = parsed
-
-    return {
-        "kind": "action",
-        "action": action,
-        "arguments": arguments,
-    }
-
-
 def parse_worker_response_payload(value: Any):
-    if isinstance(value, (WorkerAction, WorkerAnswer)):
+    if isinstance(value, WorkerAnswer):
         return value
 
     if hasattr(value, "model_dump"):
@@ -823,10 +983,7 @@ def parse_worker_response_payload(value: Any):
 
     data = dict(value)
     if "kind" not in data:
-        if data.get("action"):
-            data["kind"] = "action"
-        else:
-            data["kind"] = "answer"
+        data["kind"] = "answer"
 
     return WORKER_RESPONSE_ADAPTER.validate_python(data)
 
@@ -836,9 +993,6 @@ def parse_worker_response(text: str):
     if not stripped:
         raise ValueError("Worker response rỗng.")
 
-    if re.search(r"(?mi)^\s*ACTION\s*:", stripped):
-        return WORKER_RESPONSE_ADAPTER.validate_python(extract_action_json(stripped))
-
     data = extract_answer_json(stripped)
     if "kind" not in data:
         data["kind"] = "answer"
@@ -847,8 +1001,6 @@ def parse_worker_response(text: str):
 
 def parse_worker_output(text: str):
     parsed = parse_worker_response(text)
-    if isinstance(parsed, WorkerAction):
-        raise ValueError("Worker đang trả action, chưa có answer để collect.")
     return WorkerOutput.model_validate(parsed.model_dump(exclude={"kind"}))
 
 
@@ -930,7 +1082,7 @@ class SynthFollowupRequest(BaseModel):
             self.requirements = _coerce_text_list(self.keywords)
 
         if self.agent and self.table is None:
-            default_table = FOLLOWUP_AGENT_DEFAULT_TABLE.get(self.agent) or get_default_table(self.agent) or None
+            default_table = get_default_table(self.agent) or None
             if default_table in VALID_TABLE_NAMES:
                 self.table = default_table
 

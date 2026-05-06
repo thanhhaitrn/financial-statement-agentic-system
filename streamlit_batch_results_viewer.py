@@ -1,3 +1,6 @@
+"""Streamlit viewer for inspecting saved batch-query outputs."""
+# Code note: Streamlit viewer code keeps batch-result inspection separate from workflow execution.
+
 import json
 from pathlib import Path
 

@@ -1,3 +1,6 @@
+"""Synthesize worker outputs into the final user-facing answer."""
+# Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
+
 from __future__ import annotations
 
 import json
@@ -7,12 +10,10 @@ from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from pydantic import ValidationError
 
-from agents.agent_tools_list import get_tools_list
 from agents.agent_registry import get_default_table, is_analysis_agent, is_retrieval_agent
 from agents.profiles import AGENT_PROFILES
 from agents.prompts import PROMPT_TEMPLATE
 from graph.dispatch_nodes import prepare_followup_dispatch_state
-from graph.router import build_worker_query
 from graph.logger import debug_enabled, make_debug_log, make_log
 from llm.invoke import extract_usage_metadata, invoke_prompt
 from schemas.agent_outputs import (
@@ -22,6 +23,12 @@ from schemas.agent_outputs import (
     parse_analysis_response,
     parse_analysis_response_payload,
 )
+from schemas.requirements import (
+    normalize_fact_status,
+    normalize_requirement_text,
+    normalize_requirements_keep_order,
+    requirement_matches_fact,
+)
 
 DEFAULT_DECISION = {
     "status": "error",
@@ -29,15 +36,46 @@ DEFAULT_DECISION = {
     "followups": [],
 }
 
-MAX_SYNTH_FACTS_PER_AGENT = 6
+MAX_SYNTH_FACTS_PER_AGENT = 20
 MAX_FOLLOWUP_REQUIREMENTS = 10
-MAX_FOLLOWUP_ROUNDS = 5
+MAX_FOLLOWUP_ROUNDS = 1
+OPTIONAL_FOLLOWUP_REQUIREMENTS = {
+    "chi phí bán hàng",
+    "các khoản phải trả ngắn hạn",
+    "phải trả người bán ngắn hạn",
+}
+_NUMERIC_VALUE_RE = re.compile(
+    r"(?<!\w)-?\d{1,3}(?:[.,]\d{3})*(?:[.,]\d+)?%?|(?<!\w)-?\d+(?:[.,]\d+)?%?"
+)
+_CALCULATION_OPERATOR_RE = re.compile(r"(=|/|÷|\*)")
+_CALCULATION_WORD_RE = re.compile(
+    r"(\bcông thức\b|\btính\b|\btỷ lệ\b|\bbiên\b|\bvòng quay\b)",
+    flags=re.IGNORECASE,
+)
+_CALCULATION_RESULT_RE = re.compile(
+    r"(%|\bbằng\b|\blần\b)",
+    flags=re.IGNORECASE,
+)
+_INSUFFICIENT_ANSWER_MARKERS = (
+    "chưa đủ dữ liệu",
+    "không đủ dữ liệu",
+    "không thể kết luận",
+    "cần bổ sung",
+    "cần truy xuất",
+    "không tìm thấy",
+    "không có dữ liệu",
+    "not_found_after_search",
+)
+
+
 class NormalizedFact(TypedDict):
     item_name: str
     time_hint: str
     value: Any
     source: str
     table: str
+    interpretation_hint: str
+    status: str
 
 
 class NormalizedWorkerResult(TypedDict):
@@ -45,7 +83,6 @@ class NormalizedWorkerResult(TypedDict):
     table: str
     facts: List[NormalizedFact]
     raw_text: str
-    action_pending: bool
 
 
 class SynthPayload(TypedDict):
@@ -129,7 +166,8 @@ def _force_json_output_instruction(base_instruction: str) -> str:
         f"{base_instruction}\n\n"
         "DINH DANG DAU RA BAT BUOC:\n"
         '- Chi tra duy nhat 1 JSON object hop le theo schema SynthDecision.\n'
-        '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
+        '- Khong boc JSON bang markdown/code fence; field "answer" duoc phep dung Markdown tieng Viet theo profile.\n'
+        '- Khong them van ban ngoai JSON.\n'
         '- status chi duoc la \"answer\" hoac \"need_more\".\n'
     )
 
@@ -199,17 +237,12 @@ def _try_parse_json(value: Any) -> Optional[Dict[str, Any]]:
     return None
 
 
-def _is_action_text(text: str) -> bool:
-    return (text or "").strip().upper().startswith("ACTION:")
-
-
 def _empty_worker_result(agent_name: str = "", raw_text: str = "") -> NormalizedWorkerResult:
     return {
         "agent": agent_name,
         "table": "",
         "facts": [],
         "raw_text": raw_text,
-        "action_pending": False,
     }
 
 
@@ -226,6 +259,8 @@ def _normalize_fact(raw_fact: Any, fallback_table: str = "") -> Optional[Normali
     value = raw_fact.get("value", "")
     source = str(raw_fact.get("source", "")).strip()
     table = str(raw_fact.get("table", fallback_table)).strip() or fallback_table
+    interpretation_hint = str(raw_fact.get("interpretation_hint", "") or "").strip()
+    status = normalize_fact_status(raw_fact.get("status", "found"))
 
     if not item_name and value in ("", None):
         return None
@@ -236,6 +271,8 @@ def _normalize_fact(raw_fact: Any, fallback_table: str = "") -> Optional[Normali
         "value": value,
         "source": source,
         "table": table,
+        "interpretation_hint": interpretation_hint,
+        "status": status,
     }
 
 
@@ -260,7 +297,6 @@ def _normalize_worker_result(raw: Any, agent_name: str = "") -> Tuple[Normalized
                 "table": table,
                 "facts": _normalize_facts(raw.get("facts", []), fallback_table=table),
                 "raw_text": "",
-                "action_pending": False,
             },
             "structured",
         )
@@ -268,11 +304,6 @@ def _normalize_worker_result(raw: Any, agent_name: str = "") -> Tuple[Normalized
     text = _to_text(raw).strip()
     if not text:
         return _empty_worker_result(agent_name=agent_name), "empty"
-
-    if _is_action_text(text):
-        result = _empty_worker_result(agent_name=agent_name, raw_text=text)
-        result["action_pending"] = True
-        return result, "action_pending"
 
     parsed = _try_parse_json(text)
     if parsed is None:
@@ -285,7 +316,6 @@ def _normalize_worker_result(raw: Any, agent_name: str = "") -> Tuple[Normalized
             "table": table,
             "facts": _normalize_facts(parsed.get("facts", []), fallback_table=table),
             "raw_text": text,
-            "action_pending": False,
         },
         "json_text",
     )
@@ -302,14 +332,13 @@ def _normalize_all_worker_results(
     for agent_name, raw in (worker_results or {}).items():
         item, kind = _normalize_worker_result(raw, agent_name=agent_name)
         normalized[agent_name] = item
-        should_log = emit_debug_logs or kind != "structured" or item["action_pending"]
+        should_log = emit_debug_logs or kind != "structured"
         if should_log:
             entry = {
                 "event": "synth:normalize_worker_result",
                 "agent": agent_name,
                 "kind": kind,
                 "facts_n": len(item["facts"]),
-                "action_pending": item["action_pending"],
             }
             if emit_debug_logs:
                 entry["debug"] = True
@@ -336,6 +365,7 @@ def _dedupe_facts(facts: List[NormalizedFact]) -> List[NormalizedFact]:
             str(fact.get("time_hint", "")).strip(),
             str(fact.get("value", "")).strip(),
             str(fact.get("source", "")).strip(),
+            str(fact.get("status", "")).strip(),
         )
         if key in seen:
             continue
@@ -408,12 +438,23 @@ def _build_compact_analysis_results(
     return compact, stats
 
 
+def _combine_analysis_and_retrieval_context(
+    analysis_results: Dict[str, CompactAnalysisResult],
+    retrieval_results: Dict[str, CompactWorkerResult],
+) -> Dict[str, Any]:
+    return {
+        "analysis_outputs": analysis_results,
+        "retrieval_facts": retrieval_results,
+    }
+
+
 def _force_json_analysis_instruction(base_instruction: str) -> str:
     return (
         f"{base_instruction}\n\n"
         "DINH DANG DAU RA BAT BUOC:\n"
         '- Chi tra duy nhat 1 JSON object hop le theo schema AnalysisOutput.\n'
-        '- Khong markdown, khong ```json, khong van ban ngoai JSON.\n'
+        '- Khong boc JSON bang markdown/code fence; field "answer" duoc phep dung Markdown tieng Viet theo profile.\n'
+        '- Khong them van ban ngoai JSON.\n'
         '- Bat buoc co 2 field: \"answer\" va \"requirements\".\n'
     )
 
@@ -492,23 +533,31 @@ def _merge_analysis_outputs(previous: dict, current: dict) -> dict:
 def _planned_analysis_targets(state: dict) -> List[dict]:
     merged: Dict[str, dict] = {}
     order: List[str] = []
+    worker_plan = state.get("worker_plan", {}) or {}
+    raw_targets = list(worker_plan.get("analysis_plan", []) or []) + list(worker_plan.get("targets", []) or [])
 
-    for target in (state.get("worker_plan", {}) or {}).get("targets", []) or []:
+    for target in raw_targets:
         if not isinstance(target, dict):
             continue
         agent = str(target.get("agent", "") or "").strip()
         if not is_analysis_agent(agent):
             continue
+        requirements = _dedupe_keep_order(target.get("requirements", []) or [])
+        if not requirements:
+            objective = str(target.get("objective", "") or "").strip()
+            requirements = [objective] if objective else []
+        if not requirements:
+            continue
         if agent not in merged:
             merged[agent] = {
                 "agent": agent,
-                "requirements": _dedupe_keep_order(target.get("requirements", []) or []),
+                "requirements": requirements,
             }
             order.append(agent)
             continue
         merged[agent]["requirements"] = _dedupe_keep_order(
             list(merged[agent].get("requirements", []) or [])
-            + list(target.get("requirements", []) or [])
+            + requirements
         )[:MAX_FOLLOWUP_REQUIREMENTS]
 
     return [merged[agent] for agent in order]
@@ -536,7 +585,21 @@ def _prepare_synth_inputs(state: dict) -> Tuple[Dict[str, Any], List[Dict[str, A
     context_mode = "analysis" if planned_analysis_targets else "retrieval_fallback"
     synth_normalize_logs: List[Dict[str, Any]] = []
     if planned_analysis_targets:
-        compact_worker_results, stats = _build_compact_analysis_results(analysis_results)
+        compact_analysis_results, analysis_stats = _build_compact_analysis_results(analysis_results)
+        compact_retrieval_results, retrieval_stats = _build_compact_worker_results(normalized_retrieval_results)
+        compact_worker_results = _combine_analysis_and_retrieval_context(
+            compact_analysis_results,
+            compact_retrieval_results,
+        )
+        stats = {
+            "agents_n": analysis_stats.get("agents_n", 0),
+            "answers_n": analysis_stats.get("answers_n", 0),
+            "requirements_n": analysis_stats.get("requirements_n", 0),
+            "retrieval_sources_n": retrieval_stats.get("agents_n", 0),
+            "facts_n_raw": retrieval_stats.get("facts_n_raw", 0),
+            "facts_n_kept": retrieval_stats.get("facts_n_kept", 0),
+            "agents_trimmed": retrieval_stats.get("agents_trimmed", 0),
+        }
     else:
         normalized_synth_results, synth_normalize_logs = _normalize_all_worker_results(
             raw_retrieval_worker_results,
@@ -549,8 +612,9 @@ def _prepare_synth_inputs(state: dict) -> Tuple[Dict[str, Any], List[Dict[str, A
         "synth_context:prepared",
         context_mode=context_mode,
         analysis_targets_n=len(planned_analysis_targets),
-        retrieval_agents_n=len(raw_retrieval_worker_results),
+        retrieval_sources_n=len(raw_retrieval_worker_results),
         synth_agents_n=stats["agents_n"],
+        synth_retrieval_sources_n=stats.get("retrieval_sources_n", 0),
         facts_n_raw=stats.get("facts_n_raw", 0),
         facts_n_kept=stats.get("facts_n_kept", 0),
         synth_agents_trimmed=stats.get("agents_trimmed", 0),
@@ -589,6 +653,59 @@ def _extract_synth_usage(raw: Any) -> Optional[SynthUsage]:
     return usage or None
 
 
+def _difficulty_level_from_state(state: dict) -> str:
+    for source_key in ("planner_plan", "worker_plan"):
+        source = state.get(source_key, {})
+        if not isinstance(source, dict):
+            continue
+        difficulty = str(source.get("difficulty_level", "") or "").strip().lower()
+        if difficulty in {"easy", "medium", "hard"}:
+            return difficulty
+    return ""
+
+
+def _synth_plan_payload(state: dict) -> Any:
+    worker_plan = state.get("worker_plan", {})
+    if not isinstance(worker_plan, dict):
+        return worker_plan
+
+    plan_payload = dict(worker_plan)
+    difficulty = _difficulty_level_from_state(state)
+    if difficulty:
+        plan_payload["difficulty_level"] = difficulty
+    return plan_payload
+
+
+def _synth_difficulty_instruction(state: dict) -> str:
+    difficulty = _difficulty_level_from_state(state)
+    if difficulty == "easy":
+        return """
+
+            QUY TẮC RIÊNG CHO DIFFICULTY EASY
+            - Chỉ trả lời ngắn gọn, trực tiếp theo facts có trong worker_results_json.
+            - Không viết phân tích, không đánh giá mở rộng, không thêm mục "*Nhận xét*:" hoặc "**Kết luận tổng thể**".
+            - answer nên gồm 1-3 câu hoặc 1-3 bullet ngắn; nêu đúng số liệu/kỳ/bảng nếu có.
+            - Chỉ tạo followups khi thiếu dữ liệu cốt lõi khiến không thể trả lời câu hỏi chính.
+            """
+
+    if difficulty == "medium":
+        return """
+
+            QUY TẮC RIÊNG CHO DIFFICULTY MEDIUM
+            - Tập trung tính toán đúng yêu cầu từ facts có trong worker_results_json.
+            - Không viết phân tích, không đánh giá xu hướng/nguyên nhân/rủi ro nếu người dùng không hỏi hard.
+            - answer cần nêu dữ liệu đầu vào, công thức, kết quả; có thể thêm 1 câu diễn giải rất ngắn về kết quả.
+            - Không dùng format phân tích theo khía cạnh, không thêm mục "*Nhận xét*:" hoặc "**Kết luận tổng thể**".
+            - Chỉ tạo followups khi thiếu biến đầu vào bắt buộc cho phép tính/câu hỏi chính.
+            """
+
+    return ""
+
+
+def _synth_system_instruction(state: dict, profile: Dict[str, Any]) -> str:
+    return f"{profile['system_instruction']}{_synth_difficulty_instruction(state)}"
+
+
 def _build_payload(
     state: dict,
     profile: Dict[str, Any],
@@ -597,10 +714,10 @@ def _build_payload(
     return {
         "role": profile["role"],
         "tools_list": "",
-        "system_instruction": profile["system_instruction"],
+        "system_instruction": _synth_system_instruction(state, profile),
         "user_query": state.get("user_query", ""),
         "worker_query": "",
-        "plan_json": _safe_json_dumps(state.get("worker_plan", {})),
+        "plan_json": _safe_json_dumps(_synth_plan_payload(state)),
         "worker_results_json": _safe_json_dumps(worker_results_payload),
         "allowed_keywords_json": "{}",
         "web_summary": "",
@@ -713,7 +830,11 @@ def _coalesce_followups(followups: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     for item in followups or []:
         agent = str(item.get("agent", "") or "").strip()
         table = str(item.get("table", "") or "").strip()
-        requirements = _dedupe_keep_order(item.get("requirements", []) or [])[:MAX_FOLLOWUP_REQUIREMENTS]
+        requirements = normalize_requirements_keep_order(
+            item.get("requirements", []) or [],
+            table=table,
+            limit=MAX_FOLLOWUP_REQUIREMENTS,
+        )
         reason = str(item.get("reason", "") or "").strip()
 
         if not requirements:
@@ -740,26 +861,64 @@ def _coalesce_followups(followups: List[Dict[str, Any]]) -> List[Dict[str, Any]]
             continue
 
         current = merged[key]
-        current["requirements"] = _dedupe_keep_order(
+        current["requirements"] = normalize_requirements_keep_order(
             list(current.get("requirements", []) or [])
-            + list(item.get("requirements", []) or [])
-        )[:MAX_FOLLOWUP_REQUIREMENTS]
+            + list(item.get("requirements", []) or []),
+            table=table,
+            limit=MAX_FOLLOWUP_REQUIREMENTS,
+        )
         if not current.get("reason") and item.get("reason"):
             current["reason"] = str(item.get("reason", "") or "").strip()
 
     return passthrough + [merged[key] for key in order]
 
 
+def _requirement_satisfied_by_retrieval_facts(
+    requirement: str,
+    retrieval_results: Dict[str, Any],
+) -> bool:
+    requirement_text = str(requirement or "").strip().lower()
+    if not requirement_text:
+        return True
+
+    for payload in (retrieval_results or {}).values():
+        if not isinstance(payload, dict):
+            continue
+        facts = payload.get("facts", [])
+        if not isinstance(facts, list):
+            continue
+
+        for fact in facts:
+            if not isinstance(fact, dict):
+                continue
+            item_name = str(fact.get("item_name", "") or "").strip().lower()
+            value = fact.get("value", "")
+            if not item_name or value in ("", None):
+                continue
+            if not requirement_matches_fact(requirement_text, fact):
+                continue
+            return True
+
+    return False
+
+
 def _build_followups_from_analysis_requirements(
     worker_results: Dict[str, Any],
+    retrieval_results: Dict[str, Any],
 ) -> List[Dict[str, Any]]:
     followups: List[Dict[str, Any]] = []
 
     for agent_name, payload in (worker_results or {}).items():
         if not is_analysis_agent(agent_name) or not isinstance(payload, dict):
             continue
+        if _analysis_answer_has_complete_calculation(payload.get("answer", "")):
+            continue
 
-        requirements = _normalize_requirements_list(payload.get("requirements"), limit=0)
+        requirements = [
+            requirement
+            for requirement in normalize_requirements_keep_order(payload.get("requirements"), limit=0)
+            if not _requirement_satisfied_by_retrieval_facts(requirement, retrieval_results)
+        ]
         if not requirements:
             continue
 
@@ -773,22 +932,260 @@ def _build_followups_from_analysis_requirements(
     return _coalesce_followups(followups)
 
 
+def _analysis_outputs_payload(worker_results: Dict[str, Any]) -> Dict[str, Any]:
+    if isinstance(worker_results.get("analysis_outputs"), dict):
+        return worker_results.get("analysis_outputs", {})
+    return {
+        agent_name: payload
+        for agent_name, payload in (worker_results or {}).items()
+        if is_analysis_agent(agent_name) and isinstance(payload, dict)
+    }
+
+
+def _analysis_answer_has_complete_calculation(answer: Any) -> bool:
+    text = str(answer or "").strip()
+    if not text:
+        return False
+
+    lowered = text.lower()
+    if any(marker in lowered for marker in _INSUFFICIENT_ANSWER_MARKERS):
+        return False
+
+    numbers = _NUMERIC_VALUE_RE.findall(text)
+    if len(numbers) < 2:
+        return False
+
+    if _CALCULATION_OPERATOR_RE.search(text):
+        return True
+
+    return bool(_CALCULATION_WORD_RE.search(text) and _CALCULATION_RESULT_RE.search(text) and len(numbers) >= 3)
+
+
+def _complete_analysis_answer_agents(worker_results: Dict[str, Any]) -> List[str]:
+    complete_agents: List[str] = []
+    for agent_name, payload in (_analysis_outputs_payload(worker_results) or {}).items():
+        if not isinstance(payload, dict):
+            continue
+        if _analysis_answer_has_complete_calculation(payload.get("answer", "")):
+            complete_agents.append(str(agent_name or "").strip())
+    return [agent for agent in complete_agents if agent]
+
+
+def _has_unresolved_incomplete_analysis_requirements(worker_results: Dict[str, Any]) -> bool:
+    for _agent_name, payload in (_analysis_outputs_payload(worker_results) or {}).items():
+        if not isinstance(payload, dict):
+            continue
+        if _analysis_answer_has_complete_calculation(payload.get("answer", "")):
+            continue
+        if normalize_requirements_keep_order(payload.get("requirements"), limit=0):
+            return True
+    return False
+
+
+def _combined_complete_analysis_answer(worker_results: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    seen = set()
+    for _agent_name, payload in (_analysis_outputs_payload(worker_results) or {}).items():
+        if not isinstance(payload, dict):
+            continue
+        answer = str(payload.get("answer", "") or "").strip()
+        if not answer or answer in seen:
+            continue
+        if not _analysis_answer_has_complete_calculation(answer):
+            continue
+        parts.append(answer)
+        seen.add(answer)
+    return "\n\n".join(parts)
+
+
+def _suppress_followups_if_analysis_answer_complete(
+    state: dict,
+    decision: Dict[str, Any],
+    worker_results: Dict[str, Any],
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    if str(decision.get("status", "") or "").strip().lower() != "need_more":
+        return decision, None
+
+    complete_agents = _complete_analysis_answer_agents(worker_results)
+    if not complete_agents:
+        return decision, None
+    if _has_unresolved_incomplete_analysis_requirements(worker_results):
+        return decision, None
+
+    updated = dict(decision)
+    if not str(updated.get("answer", "") or "").strip():
+        updated["answer"] = _combined_complete_analysis_answer(worker_results)
+    updated["status"] = "answer"
+    updated["followups"] = []
+
+    return updated, make_log(
+        state,
+        "synth:followups_suppressed_complete_analysis_answer",
+        complete_analysis_agents=complete_agents,
+        suppressed_followups_n=len(decision.get("followups", []) or []),
+        suppressed_requirements=_followup_requirement_items(decision.get("followups", []) or []),
+    )
+
+
+def _followup_requirement_items(followups: List[Dict[str, Any]]) -> List[str]:
+    requirements: List[str] = []
+    for followup in followups or []:
+        if not isinstance(followup, dict):
+            continue
+        requirements.extend(followup.get("requirements", []) or [])
+    return _dedupe_keep_order([str(item).strip() for item in requirements if str(item).strip()])
+
+
+def _answer_with_followup_limit_note(
+    decision: Dict[str, Any],
+    followups: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    updated = dict(decision)
+    answer = str(updated.get("answer", "") or "").strip()
+    if not answer:
+        answer = "Trả lời dựa trên dữ liệu hiện có."
+
+    requirements = _followup_requirement_items(followups)
+    if requirements:
+        note = (
+            "Giới hạn dữ liệu: hệ thống đã đạt giới hạn follow-up; "
+            "các dữ liệu chưa xác nhận thêm gồm "
+            + "; ".join(requirements)
+            + "."
+        )
+    else:
+        note = (
+            "Giới hạn dữ liệu: hệ thống đã đạt giới hạn follow-up; "
+            "câu trả lời được lập dựa trên dữ liệu hiện có."
+        )
+
+    if note not in answer:
+        answer = "\n\n".join([answer, note])
+
+    updated["status"] = "answer"
+    updated["answer"] = answer
+    updated["followups"] = []
+    return updated
+
+
+def _answer_with_optional_followup_note(
+    decision: Dict[str, Any],
+    followups: List[Dict[str, Any]],
+) -> Dict[str, Any]:
+    updated = dict(decision)
+    answer = str(updated.get("answer", "") or "").strip()
+    if not answer:
+        answer = "Trả lời dựa trên dữ liệu hiện có."
+
+    requirements = _followup_requirement_items(followups)
+    note = (
+        "Giới hạn dữ liệu: một số chỉ số phụ chưa được xác nhận thêm"
+        + (f" ({'; '.join(requirements)})" if requirements else "")
+        + ", nên câu trả lời sử dụng các số liệu chính hiện có."
+    )
+    if note not in answer:
+        answer = "\n\n".join([answer, note])
+
+    updated["status"] = "answer"
+    updated["answer"] = answer
+    updated["followups"] = []
+    return updated
+
+
+def _user_explicitly_requested_requirement(user_query: str, requirement: str) -> bool:
+    query_text = str(user_query or "").strip().lower()
+    if not query_text:
+        return False
+
+    requirement_text = normalize_requirement_text(requirement)
+    if requirement_text and requirement_text in query_text:
+        return True
+
+    query_markers = {
+        "chi phí bán hàng": ("chi phí bán hàng",),
+        "các khoản phải trả ngắn hạn": (
+            "các khoản phải trả",
+            "phải trả ngắn hạn",
+            "vòng quay phải trả",
+            "dpo",
+            "days payables",
+            "chu kỳ chuyển đổi tiền",
+            "cash conversion cycle",
+        ),
+        "phải trả người bán ngắn hạn": (
+            "phải trả người bán",
+            "vòng quay phải trả",
+            "dpo",
+            "days payables",
+            "chu kỳ chuyển đổi tiền",
+            "cash conversion cycle",
+        ),
+    }
+    return any(
+        marker in query_text
+        for marker in query_markers.get(requirement_text, ())
+    )
+
+
+def _can_answer_with_optional_followups(
+    state: dict,
+    decision: Dict[str, Any],
+    followups: List[Dict[str, Any]],
+) -> bool:
+    if not str(decision.get("answer", "") or "").strip():
+        return False
+
+    requirements = _followup_requirement_items(followups)
+    if not requirements:
+        return False
+
+    user_query = str((state or {}).get("user_query", "") or "")
+    for requirement in requirements:
+        normalized = normalize_requirement_text(requirement)
+        if normalized not in OPTIONAL_FOLLOWUP_REQUIREMENTS:
+            return False
+        if _user_explicitly_requested_requirement(user_query, normalized):
+            return False
+
+    return True
+
+
 def _merge_analysis_requirement_followups(
     state: dict,
     decision: Dict[str, Any],
     worker_results: Dict[str, Any],
 ) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
-    auto_followups = _build_followups_from_analysis_requirements(worker_results)
+    if isinstance(worker_results.get("analysis_outputs"), dict):
+        worker_results = worker_results.get("analysis_outputs", {})
+
+    retrieval_results = {
+        agent_name: payload
+        for agent_name, payload in (state.get("worker_results", {}) or {}).items()
+        if not is_analysis_agent(agent_name) and isinstance(payload, dict)
+    }
+    auto_followups = _build_followups_from_analysis_requirements(worker_results, retrieval_results)
     if not auto_followups:
         return decision, None
+
+    status = str(decision.get("status", "") or "").strip().lower()
+    if status != "need_more":
+        return decision, make_debug_log(
+            state,
+            "synth:auto_followups_skipped_for_answer",
+            auto_followups_n=len(auto_followups),
+            status=status or "unknown",
+            targets=[
+                {
+                    "requirements": item.get("requirements", []),
+                    "reason": item.get("reason", ""),
+                }
+                for item in auto_followups[:3]
+            ],
+        )
 
     merged = dict(decision)
     model_followups_n = len(list(merged.get("followups", []) or []))
     merged["followups"] = auto_followups
-
-    status = str(merged.get("status", "") or "").strip().lower()
-    if status != "need_more":
-        merged["status"] = "need_more"
 
     return merged, make_debug_log(
         state,
@@ -824,7 +1221,11 @@ def _sanitize_followups(
                 dropped_samples.append({"raw": raw, "reason": "invalid_followup_payload"})
             continue
 
-        requirements = _dedupe_keep_order(followup.requirements)[:MAX_FOLLOWUP_REQUIREMENTS]
+        requirements = normalize_requirements_keep_order(
+            followup.requirements,
+            table=str(followup.table or "").strip(),
+            limit=MAX_FOLLOWUP_REQUIREMENTS,
+        )
         if not requirements:
             if len(dropped_samples) < 3:
                 dropped_samples.append(
@@ -842,8 +1243,7 @@ def _sanitize_followups(
         }
 
         if followup.agent and is_retrieval_agent(followup.agent):
-            payload["agent"] = followup.agent
-            payload["table"] = followup.table
+            payload["table"] = followup.table or get_default_table(followup.agent)
         elif followup.agent and len(dropped_samples) < 3:
             dropped_samples.append(
                 {
@@ -852,6 +1252,8 @@ def _sanitize_followups(
                     "reason": "non_retrieval_agent_salvaged_as_requirements_only",
                 }
             )
+        elif followup.table:
+            payload["table"] = followup.table
 
         normalized_followups.append(payload)
 
@@ -881,6 +1283,9 @@ def _is_analysis_context(worker_results: Dict[str, Any]) -> bool:
 
 
 def _count_facts_in_results(worker_results: Dict[str, Any]) -> int:
+    if isinstance(worker_results.get("retrieval_facts"), dict):
+        return _count_facts_in_results(worker_results.get("retrieval_facts", {}))
+
     total = 0
     for payload in (worker_results or {}).values():
         if not isinstance(payload, dict):
@@ -892,6 +1297,9 @@ def _count_facts_in_results(worker_results: Dict[str, Any]) -> int:
 
 
 def _count_requirements_in_results(worker_results: Dict[str, Any]) -> int:
+    if isinstance(worker_results.get("analysis_outputs"), dict):
+        return _count_requirements_in_results(worker_results.get("analysis_outputs", {}))
+
     total = 0
     for payload in (worker_results or {}).values():
         if not isinstance(payload, dict):
@@ -924,6 +1332,13 @@ def run_synth(state: dict) -> dict:
             payload_worker_results,
         )
     decision, followup_sanitize_log = _sanitize_followups(state, decision)
+    complete_analysis_suppression_log = None
+    if context_mode == "analysis":
+        decision, complete_analysis_suppression_log = _suppress_followups_if_analysis_answer_complete(
+            state,
+            decision,
+            payload_worker_results,
+        )
 
     if invoke_mode != "structured":
         fallback_log = make_debug_log(
@@ -937,10 +1352,28 @@ def run_synth(state: dict) -> dict:
         trace.append(auto_followup_log)
     if followup_sanitize_log:
         trace.append(followup_sanitize_log)
+    if complete_analysis_suppression_log:
+        trace.append(complete_analysis_suppression_log)
 
     followup_updates: Dict[str, Any] = {}
     dispatchable_followups = decision.get("followups", []) or []
     current_round = int(state.get("followup_rounds", 0) or 0)
+    if (
+        str(decision.get("status", "") or "").strip().lower() == "need_more"
+        and dispatchable_followups
+        and _can_answer_with_optional_followups(state, decision, dispatchable_followups)
+    ):
+        trace.append(
+            make_log(
+                state,
+                "synth:optional_followups_answered",
+                followups_n=len(dispatchable_followups),
+                requirements=_followup_requirement_items(dispatchable_followups),
+            )
+        )
+        decision = _answer_with_optional_followup_note(decision, dispatchable_followups)
+        dispatchable_followups = []
+
     if (
         str(decision.get("status", "") or "").strip().lower() == "need_more"
         and dispatchable_followups
@@ -963,6 +1396,7 @@ def run_synth(state: dict) -> dict:
                 followups_n=len(dispatchable_followups),
             )
         )
+        decision = _answer_with_followup_limit_note(decision, dispatchable_followups)
         dispatchable_followups = []
 
     done_log = make_log(

@@ -1,10 +1,13 @@
+"""Graph routing helpers for evidence-pack and analysis dispatch."""
+# Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
+
 from __future__ import annotations
 
 from collections import defaultdict
 
 from langgraph.types import Send
 
-from agents.agent_registry import is_analysis_agent, is_retrieval_agent
+from agents.agent_registry import is_analysis_agent
 
 
 def build_worker_query(
@@ -40,41 +43,24 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
     return out
 
 
-def _retrieval_targets(worker_plan: dict) -> list[dict]:
-    targets = worker_plan.get("targets", []) or []
-    grouped = defaultdict(list)
-    grouped_tables = {}
-
-    for target in targets:
-        if not isinstance(target, dict):
-            continue
-        agent = str(target.get("agent", "") or "").strip()
-        if not is_retrieval_agent(agent):
-            continue
-
-        key = (
-            agent,
-            str(target.get("table", "") or "").strip(),
-        )
-        grouped[key].extend(
-            [
-                str(item).strip()
-                for item in (target.get("requirements", []) or [])
-                if str(item).strip()
-            ]
-        )
-        grouped_tables[key] = dict(target)
-
-    normalized_targets = []
-    for key, requirements in grouped.items():
-        target = dict(grouped_tables.get(key, {}) or {})
-        target["requirements"] = _dedupe_keep_order(requirements)
-        normalized_targets.append(target)
-
-    return normalized_targets
-
-
 def _analysis_targets(worker_plan: dict) -> list[dict]:
+    if worker_plan.get("analysis_plan"):
+        targets = []
+        for item in worker_plan.get("analysis_plan", []) or []:
+            if not isinstance(item, dict):
+                continue
+            agent = str(item.get("agent", "") or "").strip()
+            if not is_analysis_agent(agent):
+                continue
+            targets.append(
+                {
+                    "agent": agent,
+                    "objective": str(item.get("objective", "") or "").strip(),
+                    "evidence_queries": list(item.get("evidence_queries", []) or []),
+                }
+            )
+        return targets
+
     targets = worker_plan.get("targets", []) or []
     grouped = defaultdict(list)
     grouped_payloads = {}
@@ -104,45 +90,6 @@ def _analysis_targets(worker_plan: dict) -> list[dict]:
     return normalized_targets
 
 
-def dispatch_workers(state: dict):
-    worker_plan = state.get("worker_plan", {}) or {}
-    planner_plan = state.get("planner_plan", {}) or {}
-
-    company = planner_plan.get("company", "") or ""
-    time_hint = planner_plan.get("time_hint", "") or ""
-    targets = _retrieval_targets(worker_plan)
-
-    jobs = []
-    for target in targets:
-        agent = str(target.get("agent", "") or "").strip()
-        table = str(target.get("table", "") or "").strip()
-        requirements = [
-            str(item).strip()
-            for item in (target.get("requirements", []) or [])
-            if str(item).strip()
-        ]
-        if not agent:
-            continue
-
-        jobs.append(
-            Send(
-                agent,
-                {
-                    "worker_query": build_worker_query(
-                        table,
-                        requirements,
-                        company,
-                        time_hint,
-                    ),
-                    "dispatch_target": target,
-                    "followup_rounds": state.get("followup_rounds", 0),
-                },
-            )
-        )
-
-    return jobs
-
-
 def dispatch_analysis_workers(state: dict):
     worker_plan = state.get("worker_plan", {}) or {}
     planner_plan = state.get("planner_plan", {}) or {}
@@ -154,11 +101,19 @@ def dispatch_analysis_workers(state: dict):
     jobs = []
     for target in targets:
         agent = str(target.get("agent", "") or "").strip()
-        requirements = [
+        worker_query_items = [
             str(item).strip()
             for item in (target.get("requirements", []) or [])
             if str(item).strip()
         ]
+        if not worker_query_items:
+            worker_query_items = _dedupe_keep_order(
+                [
+                    str(item.get("query", "") or "").strip()
+                    for item in (target.get("evidence_queries", []) or [])
+                    if isinstance(item, dict) and str(item.get("query", "") or "").strip()
+                ]
+            )
         if not agent:
             continue
 
@@ -166,14 +121,23 @@ def dispatch_analysis_workers(state: dict):
             Send(
                 agent,
                 {
+                    "user_query": state.get("user_query", ""),
+                    "dataset_id": state.get("dataset_id", ""),
+                    "debug_trace": bool(state.get("debug_trace", False)),
+                    "worker_plan": worker_plan,
+                    "evidence_pack": state.get("evidence_pack", {}) or {},
+                    "evidence_cache": state.get("evidence_cache", {}) or {},
+                    "worker_results": state.get("worker_results", {}) or {},
                     "worker_query": build_worker_query(
                         "",
-                        requirements,
+                        worker_query_items,
                         company,
                         time_hint,
                     ),
                     "dispatch_target": target,
                     "analysis_input_results": target.get("analysis_input_results", {}) or {},
+                    "analysis_objective": str(target.get("objective", "") or "").strip(),
+                    "evidence_queries": list(target.get("evidence_queries", []) or []),
                     "followup_rounds": state.get("followup_rounds", 0),
                 },
             )
@@ -182,15 +146,8 @@ def dispatch_analysis_workers(state: dict):
     return jobs
 
 
-def route_after_router(state: dict):
-    jobs = dispatch_workers(state)
-    if jobs:
-        return jobs
-    return "end"
-
-
-def route_after_worker_collect(state: dict):
-    decision = str(state.get("collect_decision", "") or "").strip()
+def route_after_evidence(state: dict):
+    decision = str(state.get("collect_decision", "") or state.get("dispatch_phase", "") or "").strip()
     if decision == "analysis":
         jobs = dispatch_analysis_workers(state)
         if jobs:

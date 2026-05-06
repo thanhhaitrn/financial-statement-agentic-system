@@ -1,8 +1,12 @@
+"""Build the SQLite knowledge base from a registered dataset document."""
+# Code note: Ingestion modules convert source reports into normalized facts; comments here mark parsing assumptions.
+
 import json
 from pathlib import Path
 
 from ingestion.kb_builder import build_fact_rows
 from ingestion.markdown_loader import load_markdown
+from ingestion.note_parser import build_note_rows, infer_company, infer_fiscal_year
 from ingestion.table_parser import attach_context
 from kb.sqlite_repo import insert_financial_facts, init_db, sqlite_has_facts
 from schemas.datasets import DatasetRecord
@@ -25,13 +29,24 @@ def build_knowledge_base(dataset: DatasetRecord, *, reset: bool = False):
         return conn, 0
 
     md_text = load_markdown(dataset.file_path)
+    company = dataset.company or infer_company(md_text)
+    fiscal_year = dataset.fiscal_year or infer_fiscal_year(md_text)
     tables_with_context = attach_context(md_text)
     _write_raw_tables(dataset, tables_with_context)
 
     rows = build_fact_rows(
         tables_with_context,
-        company=dataset.company,
+        company=company,
         source=dataset.file_path,
+        fiscal_year=fiscal_year,
+    )
+    rows.extend(
+        build_note_rows(
+            md_text,
+            company=company,
+            source=dataset.file_path,
+            fiscal_year=fiscal_year,
+        )
     )
 
     insert_financial_facts(conn, rows)

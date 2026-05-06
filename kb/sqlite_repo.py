@@ -1,10 +1,15 @@
+"""SQLite schema and insert helpers for normalized financial facts."""
+# Code note: KB modules own SQLite schema compatibility and fact persistence helpers.
+
 import sqlite3
 
 
 _FINANCIAL_FACT_COLUMNS = {
     "company": "TEXT",
+    "fiscal_year": "TEXT",
     "heading": "TEXT",
     "item_code": "TEXT",
+    "subheading": "TEXT",
     "item_name": "TEXT",
     "value": "TEXT",
     "raw_value": "TEXT",
@@ -50,8 +55,10 @@ def init_db(db_path: str, reset: bool = False):
     cur.execute("""
     CREATE TABLE IF NOT EXISTS financial_facts (
         company TEXT,
+        fiscal_year TEXT,
         heading TEXT,
         item_code TEXT,
+        subheading TEXT,
         item_name TEXT,
         value TEXT,
         raw_value TEXT,
@@ -70,24 +77,77 @@ def init_db(db_path: str, reset: bool = False):
     conn.commit()
     return conn
 
+
+def _normalize_fact_row(row):
+    if isinstance(row, dict):
+        return (
+            row.get("company", ""),
+            row.get("fiscal_year", ""),
+            row.get("heading", ""),
+            row.get("item_code", ""),
+            row.get("subheading", ""),
+            row.get("item_name", ""),
+            row.get("value", ""),
+            row.get("raw_value", ""),
+            row.get("normalized_value", ""),
+            row.get("source", ""),
+        )
+
+    values = tuple(row)
+    if len(values) == 8:
+        company, heading, item_code, item_name, value, raw_value, normalized_value, source = values
+        return (
+            company,
+            "",
+            heading,
+            item_code,
+            "",
+            item_name,
+            value,
+            raw_value,
+            normalized_value,
+            source,
+        )
+    if len(values) == 9:
+        company, fiscal_year, heading, item_code, item_name, value, raw_value, normalized_value, source = values
+        return (
+            company,
+            fiscal_year,
+            heading,
+            item_code,
+            "",
+            item_name,
+            value,
+            raw_value,
+            normalized_value,
+            source,
+        )
+    if len(values) == 10:
+        return values
+    raise ValueError(f"financial_facts row must have 8, 9, or 10 values, got {len(values)}")
+
+
 def insert_financial_facts(conn, rows):
     if not rows:
         return
 
+    normalized_rows = [_normalize_fact_row(row) for row in rows]
     cur = conn.cursor()
     cur.executemany("""
         INSERT INTO financial_facts (
             company,
+            fiscal_year,
             heading,
             item_code,
+            subheading,
             item_name,
             value,
             raw_value,
             normalized_value,
             source
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-    """, rows)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, normalized_rows)
 
     conn.commit()
 

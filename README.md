@@ -7,6 +7,18 @@
 - Chay lenh trong thu muc project: `/Users/thanhhai/itec`
 - Moi truong Python va dependencies cua repo da duoc cai dat
 
+## Cau hinh vector store
+
+Vector store dung Qdrant Cloud. `.env` can co:
+
+```bash
+QDRANT_URL=https://<cluster-url>.qdrant.io:6333
+QDRANT_API_KEY=<qdrant-api-key>
+```
+
+Embedding mac dinh chay qua Ollama local voi model `qwen3-embedding:0.6b`.
+Neu moi truong chua co Qdrant client, cai bang `python -m pip install qdrant-client`.
+
 ## Cach chay nhanh
 
 Chay voi dataset mac dinh (document.md):
@@ -196,7 +208,7 @@ Lenh xoa se luon:
 - xoa manifest cua dataset
 - xoa SQLite DB cua dataset
 - xoa file raw tables
-- xoa vector collection trong Chroma
+- xoa vector collection trong Qdrant
 
 Neu dang chay interactive, CLI se yeu cau ban go `DELETE` de xac nhan. Neu chay khong interactive, can them `--yes`.
 

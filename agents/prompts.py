@@ -1,3 +1,6 @@
+"""Shared prompt template used to call the configured chat model."""
+# Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
+
 from __future__ import annotations
 
 from typing import Any
@@ -8,10 +11,11 @@ from langchain_core.prompts import ChatPromptTemplate
 _PROMPT_SECTIONS = [
     ("system", "You are {role}", "role", True),
     ("system", "{system_instruction}", "system_instruction", True),
-    ("system", "You can access these actions:\n{tools_list}", "tools_list", False),
+    ("system", "Available bound tools:\n{tools_list}", "tools_list", False),
     ("human", "User query: {user_query}", "user_query", True),
     ("system", "Worker query:\n{worker_query}", "worker_query", False),
     ("system", "Planner plan (JSON):\n{plan_json}", "plan_json", False),
+    ("system", "Evidence pack (JSON):\n{evidence_pack_json}", "evidence_pack_json", False),
     ("system", "Worker results (JSON):\n{worker_results_json}", "worker_results_json", False),
     ("system", "Allowed keywords by table (JSON):\n{allowed_keywords_json}", "allowed_keywords_json", False),
     ("system", "Web summary:\n{web_summary}", "web_summary", False),

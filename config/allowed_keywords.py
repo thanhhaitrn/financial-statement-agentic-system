@@ -1,3 +1,6 @@
+"""Allowed financial statement keywords and aliases used for safe routing."""
+# Code note: Config modules centralize constants used by routing, ingestion, and retrieval.
+
 from __future__ import annotations
 import json
 from typing import Dict, Iterable, Set
@@ -6,6 +9,7 @@ from typing import Dict, Iterable, Set
 TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
 TABLE_IS = "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"
 TABLE_CF = "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
+TABLE_NOTE = "THUYẾT MINH BÁO CÁO TÀI CHÍNH"
 
 # ---- Allowed keywords (canonical Vietnamese line-items) ----
 ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
@@ -33,6 +37,7 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "nợ phải trả",
         "nợ ngắn hạn",
         "nợ dài hạn",
+        "các khoản phải trả ngắn hạn",
         "vay và nợ thuê tài chính ngắn hạn",
         "vay và nợ thuê tài chính dài hạn",
         "phải trả người bán ngắn hạn",
@@ -104,6 +109,38 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "tiền và tương đương tiền cuối kỳ",
         "ảnh hưởng của thay đổi tỷ giá hối đoái quy đổi ngoại tệ",
     },
+
+    TABLE_NOTE: {
+        # Notes to financial statements - common disclosure topics
+        "chính sách kế toán",
+        "cơ sở lập báo cáo tài chính",
+        "đơn vị tiền tệ sử dụng trong kế toán",
+        "ước tính kế toán",
+        "tiền và các khoản tương đương tiền",
+        "các khoản phải thu",
+        "hàng tồn kho",
+        "tài sản cố định hữu hình",
+        "tài sản cố định vô hình",
+        "bất động sản đầu tư",
+        "chi phí trả trước",
+        "đầu tư tài chính",
+        "vay và nợ thuê tài chính",
+        "phải trả người bán",
+        "thuế và các khoản phải nộp nhà nước",
+        "vốn chủ sở hữu",
+        "doanh thu bán hàng và cung cấp dịch vụ",
+        "giá vốn hàng bán",
+        "chi phí tài chính",
+        "chi phí bán hàng",
+        "chi phí quản lý doanh nghiệp",
+        "thuế thu nhập doanh nghiệp",
+        "lãi cơ bản trên cổ phiếu",
+        "giao dịch với các bên liên quan",
+        "cam kết và nghĩa vụ tiềm tàng",
+        "công cụ tài chính",
+        "quản lý rủi ro tài chính",
+        "sự kiện sau ngày kết thúc kỳ kế toán",
+    },
 }
 
 # ---- Simple alias map (normalize common variants to canonical) ----
@@ -111,6 +148,7 @@ ALIASES: Dict[str, str] = {
     # BS
     "tiền và tương đương tiền": "tiền và các khoản tương đương tiền",
     "tổng tài sản": "tổng cộng tài sản",
+    "tài sản lưu động": "tài sản ngắn hạn",
     "phải thu khách hàng ngắn hạn": "phải thu ngắn hạn của khách hàng",
     "chi phí qldn": "chi phí quản lý doanh nghiệp",
     "lnst": "lợi nhuận sau thuế thu nhập doanh nghiệp",  
@@ -127,6 +165,15 @@ ALIASES: Dict[str, str] = {
     "lctt hđkd": "lưu chuyển tiền thuần từ hoạt động kinh doanh",
     "mua sắm tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
     "chi đầu tư tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
+
+    # Notes
+    "thuyết minh tiền": "tiền và các khoản tương đương tiền",
+    "thuyết minh phải thu": "các khoản phải thu",
+    "thuyết minh hàng tồn kho": "hàng tồn kho",
+    "thuyết minh tscđ": "tài sản cố định hữu hình",
+    "thuyết minh nợ vay": "vay và nợ thuê tài chính",
+    "bên liên quan": "giao dịch với các bên liên quan",
+    "sau ngày kết thúc kỳ kế toán": "sự kiện sau ngày kết thúc kỳ kế toán",
 
 }
 

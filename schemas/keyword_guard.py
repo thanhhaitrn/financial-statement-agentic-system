@@ -1,3 +1,6 @@
+"""Validate and normalize retrieval keywords before they reach worker tools."""
+# Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
+
 from __future__ import annotations
 from typing import List, Tuple, Dict, Optional
 import re

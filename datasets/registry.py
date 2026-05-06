@@ -1,3 +1,6 @@
+"""Read and update the local dataset manifest used by ingestion and querying."""
+# Code note: Dataset modules manage local registry records and derived artifact paths.
+
 from __future__ import annotations
 
 import json
@@ -197,7 +200,7 @@ def _delete_vector_collection_if_exists(
 
     delete_fn = delete_vector_collection_fn
     if delete_fn is None:
-        from vectorstore.chroma_store import delete_collection
+        from vectorstore.qdrant_store import delete_collection
 
         delete_fn = delete_collection
 

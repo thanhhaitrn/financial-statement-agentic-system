@@ -1,6 +1,5 @@
-import re
-
-from schemas.agent_outputs import parse_worker_response, WorkerAction, WorkerAnswer
+"""LangGraph branch predicates that decide the next workflow node."""
+# Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
 
 DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
 
@@ -19,20 +18,6 @@ def _dedupe_keep_order(items: list[str]) -> list[str]:
         output.append(text)
         seen.add(text)
     return output
-
-
-def _latest_agent_response_for(state: dict, agent_name: str) -> str:
-    items = state.get("worker_messages", []) or []
-    current_round = _current_round(state)
-
-    for item in reversed(items):
-        if (
-            str(item.get("agent", "")).strip() == agent_name
-            and str(item.get("kind", "")) == "agent_response"
-            and item.get("round", 0) == current_round
-        ):
-            return str(item.get("response", "") or "")
-    return ""
 
 
 def _latest_parsed_output_for(state: dict, agent_name: str) -> dict:
@@ -81,9 +66,19 @@ def _tool_call_count_for_round(state: dict, agent_name: str) -> int:
 
 
 def _assigned_requirements_for_agent(state: dict, agent_name: str) -> list[str]:
+    def evidence_queries_to_requirements(target: dict) -> list[str]:
+        return [
+            str(item.get("query", "") or "").strip()
+            for item in (target.get("evidence_queries", []) or [])
+            if isinstance(item, dict) and str(item.get("query", "") or "").strip()
+        ]
+
     dispatch_target = state.get("dispatch_target")
     if isinstance(dispatch_target, dict) and str(dispatch_target.get("agent", "")).strip() == agent_name:
-        return _dedupe_keep_order(dispatch_target.get("requirements", []) or [])
+        return _dedupe_keep_order(
+            list(dispatch_target.get("requirements", []) or [])
+            + evidence_queries_to_requirements(dispatch_target)
+        )
 
     worker_plan = state.get("worker_plan", {}) or {}
     requirements = []
@@ -91,13 +86,19 @@ def _assigned_requirements_for_agent(state: dict, agent_name: str) -> list[str]:
         if str(target.get("agent", "")).strip() != agent_name:
             continue
         requirements.extend(target.get("requirements", []) or [])
+        requirements.extend(evidence_queries_to_requirements(target))
+    for target in (worker_plan.get("analysis_plan", []) or []):
+        if str(target.get("agent", "")).strip() != agent_name:
+            continue
+        requirements.extend(target.get("requirements", []) or [])
+        requirements.extend(evidence_queries_to_requirements(target))
     return _dedupe_keep_order(requirements)
 
 
 def _max_tool_calls_for_agent(state: dict, agent_name: str) -> int:
     requirements_n = len(_assigned_requirements_for_agent(state, agent_name))
     if requirements_n > 0:
-        return requirements_n
+        return min(requirements_n, DEFAULT_MAX_TOOL_CALLS_PER_ROUND)
     return DEFAULT_MAX_TOOL_CALLS_PER_ROUND
 
 
@@ -112,24 +113,12 @@ def make_should_continue(agent_name: str):
 
         parsed = _latest_parsed_output_for(state, agent_name)
         kind = str(parsed.get("kind", "")).strip().lower()
-        if kind == "action":
+        if kind == "tool_calls":
             return "tools"
         if kind == "answer":
             return "collect"
 
-        text = _latest_agent_response_for(state, agent_name)
-        if text:
-            try:
-                reparsed = parse_worker_response(text)
-            except Exception:
-                reparsed = None
-            else:
-                if isinstance(reparsed, WorkerAction):
-                    return "tools"
-                if isinstance(reparsed, WorkerAnswer):
-                    return "collect"
-
-        return "tools" if re.search(r"\bACTION\s*:", text) else "collect"
+        return "collect"
     return route
 
 

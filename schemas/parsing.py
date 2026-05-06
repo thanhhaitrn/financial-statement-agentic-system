@@ -1,11 +1,16 @@
+"""JSON extraction helpers for forgiving LLM response parsing."""
+# Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
+
 import json
 import re
 from typing import Type, TypeVar
-from pydantic import BaseModel, ValidationError
+
+from pydantic import BaseModel
 
 T = TypeVar("T", bound=BaseModel)
 
 JSON_BLOCK = re.compile(r"\{.*\}", re.DOTALL)
+
 
 def extract_json(text: str) -> str:
     """
@@ -18,6 +23,7 @@ def extract_json(text: str) -> str:
     if not m:
         raise ValueError("No JSON object found in text.")
     return m.group(0)
+
 
 def parse_model(text: str, model: Type[T]) -> T:
     raw = extract_json(text)

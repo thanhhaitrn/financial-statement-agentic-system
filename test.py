@@ -1,3 +1,6 @@
+"""CLI entry point for building datasets and running the financial workflow."""
+# Code note: CLI entry-point code wires dataset setup, vector indexing, and graph execution together.
+
 import argparse
 import sys
 import time
@@ -24,7 +27,7 @@ from kb.sqlite_repo import (
 )
 from output_formatter import format_final_answer
 from tools.tool_runner import set_collection
-from vectorstore.chroma_store import create_collection
+from vectorstore.qdrant_store import create_collection
 from vectorstore.index_builder import build_vector_store
 
 
@@ -247,7 +250,18 @@ def resolve_dataset_for_delete(args):
 
 
 def ensure_built(dataset):
-    required_fact_columns = {"company", "heading", "item_code", "item_name", "value", "raw_value", "normalized_value", "source"}
+    required_fact_columns = {
+        "company",
+        "fiscal_year",
+        "heading",
+        "item_code",
+        "subheading",
+        "item_name",
+        "value",
+        "raw_value",
+        "normalized_value",
+        "source",
+    }
     conn = init_db(dataset.sqlite_db_path)
     schema_outdated = not sqlite_has_fact_columns(conn, required_fact_columns)
     values_outdated = not sqlite_has_populated_fact_values(conn)
@@ -479,6 +493,8 @@ def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> d
         "tool_observations": [],
         "planner_plan": {},
         "worker_plan": {},
+        "evidence_pack": {},
+        "evidence_cache": {},
         "worker_results": {},
         "web_summary": "",
         "expected_workers": [],

@@ -1,3 +1,6 @@
+"""Typed state contract shared by all LangGraph nodes."""
+# Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
+
 from typing import TypedDict, Any, Annotated
 import operator
 
@@ -17,12 +20,15 @@ class GraphState(TypedDict, total=False):
     worker_query: str
     dispatch_target: dict
     analysis_input_results: dict
+    analysis_objective: str
+    evidence_queries: list[dict]
 
     # sequential/global
     last_agent: str
     last_agent_response: str
     planner_plan: dict
     worker_plan: dict
+    evidence_pack: dict
     expected_workers: list[str]
     dispatch_phase: str
     followup_rounds: int
@@ -41,6 +47,7 @@ class GraphState(TypedDict, total=False):
     worker_messages: Annotated[list[dict], operator.add]
     tool_observations: Annotated[list[dict], operator.add]
     tool_results: Annotated[list[dict], operator.add]
+    evidence_cache: Annotated[dict[str, Any], merge_dicts]
     worker_results: Annotated[dict[str, Any], merge_dicts]
     done_workers: Annotated[dict[str, int], merge_dicts]
     collected_rounds: Annotated[list[int], operator.add]

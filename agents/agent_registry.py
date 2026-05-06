@@ -1,8 +1,11 @@
+"""Central registry for agent capabilities and their default data scopes."""
+# Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
+
 from __future__ import annotations
 
 from typing import Dict
 
-from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS
+from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE
 
 
 AGENT_METADATA: Dict[str, dict] = {
@@ -31,6 +34,11 @@ AGENT_METADATA: Dict[str, dict] = {
         "default_table": TABLE_CF,
         "supports_tools": True,
     },
+    "agent_note": {
+        "kind": "retrieval",
+        "default_table": TABLE_NOTE,
+        "supports_tools": True,
+    },
     "agent_web": {
         "kind": "retrieval",
         "default_table": "",
@@ -38,23 +46,23 @@ AGENT_METADATA: Dict[str, dict] = {
     },
     "agent_profitability": {
         "kind": "analysis",
-        "default_table": TABLE_IS,
-        "supports_tools": False,
+        "default_table": "",
+        "supports_tools": True,
     },
     "agent_liquidity_solvency": {
         "kind": "analysis",
-        "default_table": TABLE_BS,
-        "supports_tools": False,
+        "default_table": "",
+        "supports_tools": True,
     },
     "agent_cashflow_analysis": {
         "kind": "analysis",
-        "default_table": TABLE_CF,
-        "supports_tools": False,
+        "default_table": "",
+        "supports_tools": True,
     },
     "agent_efficiency": {
         "kind": "analysis",
-        "default_table": TABLE_IS,
-        "supports_tools": False,
+        "default_table": "",
+        "supports_tools": True,
     },
     "agent_synth": {
         "kind": "synth",

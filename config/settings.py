@@ -1,3 +1,6 @@
+"""Project-wide defaults for ingestion, vector indexing, and dataset metadata."""
+# Code note: Config modules centralize constants used by routing, ingestion, and retrieval.
+
 DEFAULT_DATA_FILE = "data/document.md"
 
 DEFAULT_DATASET = {
@@ -10,7 +13,7 @@ DEFAULT_DATASET = {
     "fiscal_quarter": None,
     "scope": "unknown",
     "audit_status": "unknown",
-    "ingestion_version": "v6",
+    "ingestion_version": "v12",
 }
 
 VECTOR_BATCH_SIZE = 500

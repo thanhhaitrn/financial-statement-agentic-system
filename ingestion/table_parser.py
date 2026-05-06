@@ -1,3 +1,6 @@
+"""Utilities for turning markdown tables into cleaned pandas DataFrames."""
+# Code note: Ingestion modules convert source reports into normalized facts; comments here mark parsing assumptions.
+
 import pandas as pd
 from io import StringIO
 import re

@@ -1,6 +1,9 @@
+"""Dataset metadata model used by registry, ingestion, and vector indexing."""
+# Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
+
 from typing import Optional
 
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, field_validator
 
 
 class DatasetRecord(BaseModel):

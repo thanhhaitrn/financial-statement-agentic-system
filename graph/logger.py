@@ -1,5 +1,8 @@
+"""Small structured logging helpers used across graph nodes."""
+# Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
+
 from __future__ import annotations
-from datetime import datetime
+
 from typing import Any, Dict, Optional
 
 

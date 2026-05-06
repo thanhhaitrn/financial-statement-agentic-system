@@ -1,3 +1,6 @@
+"""CLI helper for running multiple dataset queries and saving their outputs."""
+# Code note: Batch runner code executes the same workflow across many datasets and records aggregate results.
+
 import argparse
 import json
 import sys

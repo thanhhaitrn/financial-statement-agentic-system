@@ -1,3 +1,6 @@
+"""Build the high-level plan that decides whether a query needs analysis or retrieval."""
+# Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
+
 import json
 import re
 import time

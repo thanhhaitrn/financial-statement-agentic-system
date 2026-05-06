@@ -1,3 +1,6 @@
+"""Invoke LLM prompts with structured-output and plain-JSON fallbacks."""
+# Code note: LLM modules isolate provider/client behavior from graph orchestration.
+
 from __future__ import annotations
 
 import os

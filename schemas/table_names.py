@@ -1,9 +1,13 @@
+"""Canonical financial-statement table names and heading normalization."""
+# Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
+
 import re
 
 
 TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
 TABLE_IS = "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"
 TABLE_CF = "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
+TABLE_NOTE = "THUYẾT MINH BÁO CÁO TÀI CHÍNH"
 
 _SPACE_RE = re.compile(r"\s+")
 
@@ -36,6 +40,24 @@ _TABLE_PATTERNS = {
             "lctt",
         ],
         "exact": set(),
+    },
+    TABLE_NOTE: {
+        "contains": [
+            "thuyết minh báo cáo tài chính",
+            "thuyet minh bao cao tai chinh",
+            "thuyết minh bctc",
+            "thuyet minh bctc",
+            "bản thuyết minh",
+            "ban thuyet minh",
+            "các thuyết minh",
+            "cac thuyet minh",
+            "thông tin thuyết minh",
+            "thong tin thuyet minh",
+        ],
+        "exact": {
+            "thuyết minh",
+            "thuyet minh",
+        },
     },
 }
 
