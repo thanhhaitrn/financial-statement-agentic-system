@@ -10,7 +10,7 @@ from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from pydantic import ValidationError
 
-from agents.agent_registry import get_default_table, is_analysis_agent, is_retrieval_agent
+from agents.agent_registry import is_analysis_agent
 from agents.profiles import AGENT_PROFILES
 from agents.prompts import PROMPT_TEMPLATE
 from graph.dispatch_nodes import prepare_followup_dispatch_state
@@ -247,7 +247,7 @@ def _empty_worker_result(agent_name: str = "", raw_text: str = "") -> Normalized
 
 
 def _fallback_table_for_agent(agent_name: str = "") -> str:
-    return str(get_default_table(agent_name) or "").strip()
+    return ""
 
 
 def _normalize_fact(raw_fact: Any, fallback_table: str = "") -> Optional[NormalizedFact]:
@@ -438,13 +438,11 @@ def _build_compact_analysis_results(
     return compact, stats
 
 
-def _combine_analysis_and_retrieval_context(
+def _analysis_only_context(
     analysis_results: Dict[str, CompactAnalysisResult],
-    retrieval_results: Dict[str, CompactWorkerResult],
 ) -> Dict[str, Any]:
     return {
         "analysis_outputs": analysis_results,
-        "retrieval_facts": retrieval_results,
     }
 
 
@@ -586,18 +584,16 @@ def _prepare_synth_inputs(state: dict) -> Tuple[Dict[str, Any], List[Dict[str, A
     synth_normalize_logs: List[Dict[str, Any]] = []
     if planned_analysis_targets:
         compact_analysis_results, analysis_stats = _build_compact_analysis_results(analysis_results)
-        compact_retrieval_results, retrieval_stats = _build_compact_worker_results(normalized_retrieval_results)
-        compact_worker_results = _combine_analysis_and_retrieval_context(
-            compact_analysis_results,
-            compact_retrieval_results,
-        )
+        _, retrieval_stats = _build_compact_worker_results(normalized_retrieval_results)
+        compact_worker_results = _analysis_only_context(compact_analysis_results)
         stats = {
             "agents_n": analysis_stats.get("agents_n", 0),
             "answers_n": analysis_stats.get("answers_n", 0),
             "requirements_n": analysis_stats.get("requirements_n", 0),
             "retrieval_sources_n": retrieval_stats.get("agents_n", 0),
             "facts_n_raw": retrieval_stats.get("facts_n_raw", 0),
-            "facts_n_kept": retrieval_stats.get("facts_n_kept", 0),
+            "facts_n_kept": 0,
+            "facts_n_omitted_from_synth": retrieval_stats.get("facts_n_kept", 0),
             "agents_trimmed": retrieval_stats.get("agents_trimmed", 0),
         }
     else:
@@ -617,6 +613,7 @@ def _prepare_synth_inputs(state: dict) -> Tuple[Dict[str, Any], List[Dict[str, A
         synth_retrieval_sources_n=stats.get("retrieval_sources_n", 0),
         facts_n_raw=stats.get("facts_n_raw", 0),
         facts_n_kept=stats.get("facts_n_kept", 0),
+        facts_n_omitted_from_synth=stats.get("facts_n_omitted_from_synth", 0),
         synth_agents_trimmed=stats.get("agents_trimmed", 0),
         analysis_answers_n=stats.get("answers_n", 0),
         analysis_requirements_n=stats.get("requirements_n", 0),
@@ -830,11 +827,17 @@ def _coalesce_followups(followups: List[Dict[str, Any]]) -> List[Dict[str, Any]]
     for item in followups or []:
         agent = str(item.get("agent", "") or "").strip()
         table = str(item.get("table", "") or "").strip()
-        requirements = normalize_requirements_keep_order(
-            item.get("requirements", []) or [],
-            table=table,
-            limit=MAX_FOLLOWUP_REQUIREMENTS,
-        )
+        if agent:
+            requirements = _normalize_requirements_list(
+                item.get("requirements", []) or [],
+                limit=MAX_FOLLOWUP_REQUIREMENTS,
+            )
+        else:
+            requirements = normalize_requirements_keep_order(
+                item.get("requirements", []) or [],
+                table=table,
+                limit=MAX_FOLLOWUP_REQUIREMENTS,
+            )
         reason = str(item.get("reason", "") or "").strip()
 
         if not requirements:
@@ -1006,6 +1009,18 @@ def _suppress_followups_if_analysis_answer_complete(
     if str(decision.get("status", "") or "").strip().lower() != "need_more":
         return decision, None
 
+    existing_agents = {
+        str(agent_name or "").strip()
+        for agent_name in (_analysis_outputs_payload(worker_results) or {}).keys()
+        if str(agent_name or "").strip()
+    }
+    for followup in decision.get("followups", []) or []:
+        if not isinstance(followup, dict):
+            continue
+        agent = str(followup.get("agent", "") or "").strip()
+        if is_analysis_agent(agent) and agent not in existing_agents:
+            return decision, None
+
     complete_agents = _complete_analysis_answer_agents(worker_results)
     if not complete_agents:
         return decision, None
@@ -1024,6 +1039,86 @@ def _suppress_followups_if_analysis_answer_complete(
         complete_analysis_agents=complete_agents,
         suppressed_followups_n=len(decision.get("followups", []) or []),
         suppressed_requirements=_followup_requirement_items(decision.get("followups", []) or []),
+    )
+
+
+def _answer_from_analysis_outputs(worker_results: Dict[str, Any]) -> str:
+    parts: List[str] = []
+    seen = set()
+
+    for _agent_name, payload in (_analysis_outputs_payload(worker_results) or {}).items():
+        if not isinstance(payload, dict):
+            continue
+        answer = str(payload.get("answer", "") or "").strip()
+        if not answer or answer in seen:
+            continue
+        parts.append(answer)
+        seen.add(answer)
+
+    return "\n\n".join(parts)
+
+
+def _keep_only_new_analysis_agent_followups(
+    state: dict,
+    decision: Dict[str, Any],
+    worker_results: Dict[str, Any],
+) -> Tuple[Dict[str, Any], Optional[Dict[str, Any]]]:
+    if str(decision.get("status", "") or "").strip().lower() != "need_more":
+        return decision, None
+
+    raw_followups = list(decision.get("followups", []) or [])
+    if not raw_followups:
+        return decision, None
+
+    existing_agents = {
+        str(agent_name or "").strip()
+        for agent_name in (_analysis_outputs_payload(worker_results) or {}).keys()
+        if str(agent_name or "").strip()
+    }
+    kept = []
+    dropped = []
+
+    for followup in raw_followups:
+        if not isinstance(followup, dict):
+            dropped.append({"raw": followup, "reason": "invalid_followup_payload"})
+            continue
+
+        agent = str(followup.get("agent", "") or "").strip()
+        if not is_analysis_agent(agent):
+            dropped.append(
+                {
+                    "requirements": followup.get("requirements", []),
+                    "reason": "analysis_context_followup_without_analysis_agent",
+                }
+            )
+            continue
+        if agent in existing_agents:
+            dropped.append(
+                {
+                    "agent": agent,
+                    "requirements": followup.get("requirements", []),
+                    "reason": "analysis_agent_already_present",
+                }
+            )
+            continue
+        kept.append(followup)
+
+    if not dropped:
+        return decision, None
+
+    updated = dict(decision)
+    updated["followups"] = kept
+    if not kept:
+        answer = str(updated.get("answer", "") or "").strip() or _answer_from_analysis_outputs(worker_results)
+        updated["status"] = "answer"
+        updated["answer"] = answer or "Trả lời dựa trên các phân tích hiện có."
+
+    return updated, make_debug_log(
+        state,
+        "synth:analysis_followups_filtered",
+        kept_n=len(kept),
+        dropped_n=len(dropped),
+        dropped_samples=dropped[:3],
     )
 
 
@@ -1221,11 +1316,17 @@ def _sanitize_followups(
                 dropped_samples.append({"raw": raw, "reason": "invalid_followup_payload"})
             continue
 
-        requirements = normalize_requirements_keep_order(
-            followup.requirements,
-            table=str(followup.table or "").strip(),
-            limit=MAX_FOLLOWUP_REQUIREMENTS,
-        )
+        if followup.agent:
+            requirements = _normalize_requirements_list(
+                followup.requirements,
+                limit=MAX_FOLLOWUP_REQUIREMENTS,
+            )
+        else:
+            requirements = normalize_requirements_keep_order(
+                followup.requirements,
+                table=str(followup.table or "").strip(),
+                limit=MAX_FOLLOWUP_REQUIREMENTS,
+            )
         if not requirements:
             if len(dropped_samples) < 3:
                 dropped_samples.append(
@@ -1242,18 +1343,10 @@ def _sanitize_followups(
             "reason": str(followup.reason or "").strip(),
         }
 
-        if followup.agent and is_retrieval_agent(followup.agent):
-            payload["table"] = followup.table or get_default_table(followup.agent)
-        elif followup.agent and len(dropped_samples) < 3:
-            dropped_samples.append(
-                {
-                    "agent": followup.agent,
-                    "table": followup.table,
-                    "reason": "non_retrieval_agent_salvaged_as_requirements_only",
-                }
-            )
-        elif followup.table:
+        if followup.table:
             payload["table"] = followup.table
+        if followup.agent:
+            payload["agent"] = followup.agent
 
         normalized_followups.append(payload)
 
@@ -1325,16 +1418,17 @@ def run_synth(state: dict) -> dict:
     payload = _build_payload(state, profile, payload_worker_results)
     decision, usage, invoke_mode = _invoke_synth(payload)
     auto_followup_log = None
-    if context_mode == "analysis":
-        decision, auto_followup_log = _merge_analysis_requirement_followups(
-            state,
-            decision,
-            payload_worker_results,
-        )
     decision, followup_sanitize_log = _sanitize_followups(state, decision)
     complete_analysis_suppression_log = None
     if context_mode == "analysis":
         decision, complete_analysis_suppression_log = _suppress_followups_if_analysis_answer_complete(
+            state,
+            decision,
+            payload_worker_results,
+        )
+    analysis_followup_filter_log = None
+    if context_mode == "analysis":
+        decision, analysis_followup_filter_log = _keep_only_new_analysis_agent_followups(
             state,
             decision,
             payload_worker_results,
@@ -1354,6 +1448,8 @@ def run_synth(state: dict) -> dict:
         trace.append(followup_sanitize_log)
     if complete_analysis_suppression_log:
         trace.append(complete_analysis_suppression_log)
+    if analysis_followup_filter_log:
+        trace.append(analysis_followup_filter_log)
 
     followup_updates: Dict[str, Any] = {}
     dispatchable_followups = decision.get("followups", []) or []

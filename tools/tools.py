@@ -4,7 +4,14 @@
 import json
 import re
 
-from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE, normalize_table_heading
+from schemas.table_names import (
+    TABLE_BS,
+    TABLE_CF,
+    TABLE_IS,
+    TABLE_NOTE,
+    TABLE_REPORT_SECTION,
+    normalize_table_heading,
+)
 from vectorstore.qdrant_store import embed_query_text
 
 
@@ -81,6 +88,7 @@ def _match_key(doc, meta):
             for key in (
                 "heading",
                 "item_code",
+                "note_ref",
                 "subheading",
                 "item_name",
                 "source",
@@ -255,6 +263,16 @@ def get_cashflow_info(query: str, collection, table: str = "", **_kwargs):
 
 def get_note_info(query: str, collection, table: str = "", **_kwargs):
     return get_related_info(query=query, table=TABLE_NOTE, collection=collection, strict_table=True)
+
+
+def get_report_section_info(query: str, collection, table: str = "", **_kwargs):
+    return get_related_info(
+        query=query,
+        table=TABLE_REPORT_SECTION,
+        collection=collection,
+        strict_table=True,
+        limit=8,
+    )
 
 
 def web_search(query: str):

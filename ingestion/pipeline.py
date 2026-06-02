@@ -5,6 +5,7 @@ import json
 from pathlib import Path
 
 from ingestion.kb_builder import build_fact_rows
+from ingestion.frontmatter_parser import build_frontmatter_rows
 from ingestion.markdown_loader import load_markdown
 from ingestion.note_parser import build_note_rows, infer_company, infer_fiscal_year
 from ingestion.table_parser import attach_context
@@ -39,6 +40,14 @@ def build_knowledge_base(dataset: DatasetRecord, *, reset: bool = False):
         company=company,
         source=dataset.file_path,
         fiscal_year=fiscal_year,
+    )
+    rows.extend(
+        build_frontmatter_rows(
+            md_text,
+            company=company,
+            source=dataset.file_path,
+            fiscal_year=fiscal_year,
+        )
     )
     rows.extend(
         build_note_rows(

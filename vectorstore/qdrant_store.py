@@ -147,7 +147,7 @@ def _collection_matches_current_config(info) -> bool:
 
 
 def _ensure_payload_indexes(client: QdrantClient, collection_name: str) -> None:
-    for field_name in ("heading", "item_name", "item_code", "source"):
+    for field_name in ("heading", "item_name", "item_code", "note_ref", "source"):
         try:
             client.create_payload_index(
                 collection_name=collection_name,

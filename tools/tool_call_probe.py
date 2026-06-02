@@ -17,11 +17,6 @@ from tools.tool_calls import invalid_tool_calls, response_tool_calls
 
 
 DEFAULT_PROBES = {
-    "agent_bs": "tong tai san cuoi ky",
-    "agent_is": "doanh thu thuan trong ky",
-    "agent_cf": "luu chuyen tien thuan tu hoat dong kinh doanh",
-    "agent_note": "thuyet minh hang ton kho",
-    "agent_web": "latest public news about Hoa Phat business outlook",
     "agent_profitability": "danh gia kha nang sinh loi tu doanh thu loi nhuan va tai san",
     "agent_liquidity_solvency": "danh gia thanh khoan don bay va kha nang tra lai",
     "agent_cashflow_analysis": "danh gia chat luong dong tien CFO CFI CFF",
@@ -100,7 +95,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--agent",
         choices=sorted(DEFAULT_PROBES.keys()),
-        default="agent_bs",
+        default="agent_profitability",
         help="Agent tool schema to bind and probe.",
     )
     parser.add_argument(
@@ -111,7 +106,7 @@ def _parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--all",
         action="store_true",
-        help="Probe all retrieval/web agents instead of only --agent.",
+        help="Probe all analysis agents instead of only --agent.",
     )
     parser.add_argument(
         "--no-fail",

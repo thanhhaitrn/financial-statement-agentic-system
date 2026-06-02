@@ -10,11 +10,6 @@ from tools.langchain_tools import (
 AGENT_NAMES = (
     "agent_planner",
     "agent_router",
-    "agent_bs",
-    "agent_is",
-    "agent_cf",
-    "agent_note",
-    "agent_web",
     "agent_profitability",
     "agent_liquidity_solvency",
     "agent_cashflow_analysis",

@@ -1,4 +1,4 @@
-"""Allowed financial statement keywords and aliases used for safe routing."""
+"""Allowed financial statement keywords used for safe routing."""
 # Code note: Config modules centralize constants used by routing, ingestion, and retrieval.
 
 from __future__ import annotations
@@ -10,6 +10,7 @@ TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
 TABLE_IS = "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"
 TABLE_CF = "BÁO CÁO LƯU CHUYỂN TIỀN TỆ"
 TABLE_NOTE = "THUYẾT MINH BÁO CÁO TÀI CHÍNH"
+TABLE_REPORT_SECTION = "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH"
 
 # ---- Allowed keywords (canonical Vietnamese line-items) ----
 ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
@@ -141,42 +142,60 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "quản lý rủi ro tài chính",
         "sự kiện sau ngày kết thúc kỳ kế toán",
     },
+
+    TABLE_REPORT_SECTION: {
+        # Front sections before the primary financial statements
+        "mục lục",
+        "thông tin công ty",
+        "khái quát về công ty",
+        "địa chỉ công ty",
+        "địa chỉ trụ sở chính",
+        "trụ sở chính",
+        "trụ sở hoạt động",
+        "hoạt động kinh doanh chính",
+        "giấy chứng nhận đăng ký doanh nghiệp",
+        "chuẩn mực kế toán",
+        "chuẩn mực kế toán áp dụng",
+        "chế độ kế toán",
+        "chế độ kế toán áp dụng",
+        "tuyên bố tuân thủ chuẩn mực kế toán",
+        "báo cáo của ban tổng giám đốc",
+        "báo cáo của ban giám đốc",
+        "hội đồng quản trị",
+        "ban điều hành",
+        "ban điều hành quản lý",
+        "ban tổng giám đốc",
+        "ban giám đốc",
+        "ban kiểm soát",
+        "kế toán trưởng",
+        "người đại diện theo pháp luật",
+        "kiểm toán viên",
+        "đơn vị kiểm toán",
+        "công ty kiểm toán",
+        "hãng kiểm toán",
+        "công ty thực hiện kiểm toán",
+        "đơn vị thực hiện kiểm toán",
+        "công ty thực hiện kế toán kiểm toán",
+        "báo cáo kiểm toán độc lập",
+        "báo cáo soát xét",
+        "trách nhiệm của ban tổng giám đốc",
+        "trách nhiệm của ban giám đốc",
+        "trách nhiệm của kiểm toán viên",
+        "trách nhiệm của kiểm toán viên hành nghề",
+        "cơ sở đưa ra ý kiến kiểm toán",
+        "cơ sở đưa ra kết luận soát xét",
+        "ý kiến của kiểm toán viên",
+        "ý kiến kiểm toán",
+        "kết luận của kiểm toán viên",
+        "kết luận soát xét",
+        "vấn đề cần nhấn mạnh",
+        "hoạt động liên tục",
+        "nghi ngờ đáng kể về khả năng hoạt động liên tục",
+        "người ký báo cáo tài chính",
+        "ngày ký báo cáo tài chính",
+        "ngày lập báo cáo",
+    },
 }
-
-# ---- Simple alias map (normalize common variants to canonical) ----
-ALIASES: Dict[str, str] = {
-    # BS
-    "tiền và tương đương tiền": "tiền và các khoản tương đương tiền",
-    "tổng tài sản": "tổng cộng tài sản",
-    "tài sản lưu động": "tài sản ngắn hạn",
-    "phải thu khách hàng ngắn hạn": "phải thu ngắn hạn của khách hàng",
-    "chi phí qldn": "chi phí quản lý doanh nghiệp",
-    "lnst": "lợi nhuận sau thuế thu nhập doanh nghiệp",  
-
-    #IS
-    "lợi nhuận sau thuế": "lợi nhuận sau thuế thu nhập doanh nghiệp",
-    "lợi nhuận ròng": "lợi nhuận sau thuế thu nhập doanh nghiệp",
-    "doanh thu cung cấp dịch vụ": "doanh thu bán hàng và cung cấp dịch vụ",
-    "doanh thu thuần về cung cấp dịch vụ": "doanh thu thuần về bán hàng và cung cấp dịch vụ",
-
-    # CF
-    "tiền cuối kỳ": "tiền và tương đương tiền cuối kỳ",
-    "tiền đầu kỳ": "tiền và tương đương tiền đầu kỳ",
-    "lctt hđkd": "lưu chuyển tiền thuần từ hoạt động kinh doanh",
-    "mua sắm tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
-    "chi đầu tư tài sản cố định": "tiền chi để mua sắm, xây dựng tscđ và các tài sản dài hạn khác",
-
-    # Notes
-    "thuyết minh tiền": "tiền và các khoản tương đương tiền",
-    "thuyết minh phải thu": "các khoản phải thu",
-    "thuyết minh hàng tồn kho": "hàng tồn kho",
-    "thuyết minh tscđ": "tài sản cố định hữu hình",
-    "thuyết minh nợ vay": "vay và nợ thuê tài chính",
-    "bên liên quan": "giao dịch với các bên liên quan",
-    "sau ngày kết thúc kỳ kế toán": "sự kiện sau ngày kết thúc kỳ kế toán",
-
-}
-
 
 def _selected_allowed_keyword_tables(selected_tables: Iterable[str] | None = None) -> list[str]:
     if selected_tables is None:

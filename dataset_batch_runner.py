@@ -27,6 +27,62 @@ def _dedupe_keep_order(items):
     return output
 
 
+def _normalize_reference(value) -> str:
+    if value is None:
+        return ""
+    if isinstance(value, (list, tuple, set)):
+        return "\n".join(str(item).strip() for item in value if str(item).strip())
+    return str(value or "").strip()
+
+
+def _normalize_query_record(item) -> dict:
+    if isinstance(item, dict):
+        query = str(
+            item.get("query")
+            or item.get("question")
+            or item.get("prompt")
+            or ""
+        ).strip()
+        reference = _normalize_reference(
+            item.get("reference")
+            if "reference" in item
+            else item.get("references")
+        )
+    else:
+        query = str(item or "").strip()
+        reference = ""
+
+    if not query:
+        return {}
+    return {
+        "query": query,
+        "reference": reference,
+    }
+
+
+def _dedupe_query_records(records: list) -> list[dict]:
+    seen = set()
+    output = []
+
+    for item in records or []:
+        record = _normalize_query_record(item)
+        query = str(record.get("query", "") or "").strip()
+        if not query or query in seen:
+            continue
+        output.append(record)
+        seen.add(query)
+
+    return output
+
+
+def _query_texts(records: list) -> list[str]:
+    return [
+        str(record.get("query", "") or "").strip()
+        for record in _dedupe_query_records(records)
+        if str(record.get("query", "") or "").strip()
+    ]
+
+
 def parse_args():
     parser = argparse.ArgumentParser(
         description="Run one or more queries across all registered datasets and save the outputs to JSON."
@@ -71,7 +127,7 @@ def parse_args():
     return parser.parse_args()
 
 
-def load_queries_from_file(path_str: str) -> list[str]:
+def load_query_records_from_file(path_str: str) -> list[dict]:
     path = Path(path_str)
     if not path.exists():
         raise SystemExit(f"Queries file not found: {path}")
@@ -86,24 +142,39 @@ def load_queries_from_file(path_str: str) -> list[str]:
         except JSONDecodeError as exc:
             raise SystemExit(f"Invalid JSON in queries file: {path} ({exc})") from exc
         if isinstance(payload, list):
-            return _dedupe_keep_order(payload)
+            return _dedupe_query_records(payload)
         if isinstance(payload, dict) and isinstance(payload.get("queries"), list):
-            return _dedupe_keep_order(payload.get("queries"))
+            return _dedupe_query_records(payload.get("queries"))
         raise SystemExit("Invalid queries JSON. Use either a JSON list or an object with a 'queries' list.")
 
-    return _dedupe_keep_order(raw_text.splitlines())
+    return _dedupe_query_records(raw_text.splitlines())
 
 
-def resolve_queries(cli_queries: list[str], queries_file: str = "") -> list[str]:
-    queries = list(cli_queries or [])
+def load_queries_from_file(path_str: str) -> list[str]:
+    return _query_texts(load_query_records_from_file(path_str))
+
+
+def resolve_query_records(cli_queries: list[str], queries_file: str = "") -> list[dict]:
+    records = [
+        {
+            "query": str(query or "").strip(),
+            "reference": "",
+        }
+        for query in (cli_queries or [])
+        if str(query or "").strip()
+    ]
     if queries_file:
-        queries.extend(load_queries_from_file(queries_file))
+        records.extend(load_query_records_from_file(queries_file))
 
-    resolved = _dedupe_keep_order(queries)
+    resolved = _dedupe_query_records(records)
     if not resolved:
         raise SystemExit("Missing queries. Provide at least one --query or use --queries-file.")
 
     return resolved
+
+
+def resolve_queries(cli_queries: list[str], queries_file: str = "") -> list[str]:
+    return _query_texts(resolve_query_records(cli_queries, queries_file))
 
 
 def resolve_dataset_ids(dataset_ids: list[str] | None = None) -> list[str]:
@@ -146,16 +217,44 @@ def load_existing_output(path: Path) -> dict | None:
     return payload
 
 
-def serialize_run_result(final_state: dict, query: str, *, include_trace: bool = False) -> dict:
+def _runtime_from_summary(run_summary: dict) -> int | None:
+    if not isinstance(run_summary, dict):
+        return None
+    if run_summary.get("duration_ms") is None:
+        return None
+    return int(run_summary.get("duration_ms") or 0)
+
+
+def _total_tokens_from_summary(run_summary: dict) -> int:
+    if not isinstance(run_summary, dict):
+        return 0
+    return int(run_summary.get("total_tokens") or 0)
+
+
+def serialize_run_result(
+    final_state: dict,
+    query: str,
+    *,
+    reference: str = "",
+    include_trace: bool = False,
+) -> dict:
     synth_decision = final_state.get("synth_decision", {}) or {}
+    formatted_answer = format_final_answer(final_state)
+    answer = str(synth_decision.get("answer", "") or "").strip()
+    run_summary = extract_run_summary(final_state)
+    runtime = _runtime_from_summary(run_summary)
     result = {
         "query": query,
-        "formatted_answer": format_final_answer(final_state),
+        "references": str(reference or "").strip(),
+        "final_answer": answer or formatted_answer,
+        "formatted_answer": formatted_answer,
         "synth_status": str(synth_decision.get("status", "") or "").strip(),
-        "answer": str(synth_decision.get("answer", "") or "").strip(),
+        "answer": answer,
         "missing": synth_decision.get("missing", []) or [],
         "errors": collect_pipeline_errors(final_state),
-        "run_summary": extract_run_summary(final_state),
+        "runtime": runtime,
+        "total_tokens": _total_tokens_from_summary(run_summary),
+        "run_summary": run_summary,
     }
 
     if include_trace:
@@ -164,14 +263,18 @@ def serialize_run_result(final_state: dict, query: str, *, include_trace: bool =
     return result
 
 
-def _runtime_error_result(query: str, exc: Exception) -> dict:
+def _runtime_error_result(query: str, exc: Exception, *, reference: str = "") -> dict:
     return {
         "query": query,
+        "references": str(reference or "").strip(),
+        "final_answer": "",
         "formatted_answer": "",
         "synth_status": "error",
         "answer": "",
         "missing": [],
         "errors": [f"runtime_error ({type(exc).__name__}): {exc}"],
+        "runtime": None,
+        "total_tokens": 0,
         "run_summary": {
             "event": "run:done",
             "trace_events_n": 0,
@@ -179,7 +282,8 @@ def _runtime_error_result(query: str, exc: Exception) -> dict:
     }
 
 
-def run_dataset_queries(dataset, queries: list[str], *, debug_trace: bool = False, include_trace: bool = False) -> dict:
+def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, include_trace: bool = False) -> dict:
+    query_records = _dedupe_query_records(queries)
     dataset_result = {
         "dataset_id": dataset.dataset_id,
         "description": describe_dataset(dataset),
@@ -203,7 +307,9 @@ def run_dataset_queries(dataset, queries: list[str], *, debug_trace: bool = Fals
     dataset_result["facts_count"] = dataset.facts_count
     dataset_result["vector_docs_count"] = dataset.vector_docs_count
 
-    for query in queries:
+    for query_record in query_records:
+        query = str(query_record.get("query", "") or "").strip()
+        reference = str(query_record.get("reference", "") or "").strip()
         try:
             final_state = execute_query(
                 dataset,
@@ -215,23 +321,25 @@ def run_dataset_queries(dataset, queries: list[str], *, debug_trace: bool = Fals
                 serialize_run_result(
                     final_state,
                     query,
+                    reference=reference,
                     include_trace=include_trace,
                 )
             )
         except Exception as exc:
-            dataset_result["runs"].append(_runtime_error_result(query, exc))
+            dataset_result["runs"].append(_runtime_error_result(query, exc, reference=reference))
 
     return dataset_result
 
 
 def build_report(
     datasets: list,
-    queries: list[str],
+    queries: list,
     *,
     debug_trace: bool = False,
     include_trace: bool = False,
     selected_dataset_ids: list[str] | None = None,
 ) -> dict:
+    query_records = _dedupe_query_records(queries)
     results = []
 
     for idx, dataset in enumerate(datasets, start=1):
@@ -240,7 +348,7 @@ def build_report(
         results.append(
             run_dataset_queries(
                 dataset,
-                queries,
+                query_records,
                 debug_trace=debug_trace,
                 include_trace=include_trace,
             )
@@ -258,7 +366,8 @@ def build_report(
     return {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "datasets_n": len(results),
-        "queries": queries,
+        "queries": _query_texts(query_records),
+        "query_records": query_records,
         "selected_dataset_ids": resolve_dataset_ids(selected_dataset_ids),
         "debug_trace": bool(debug_trace),
         "include_trace": bool(include_trace),
@@ -279,11 +388,15 @@ def _dataset_report_without_runs(dataset_result: dict) -> dict:
 
 
 def build_query_reports(report: dict) -> list[dict]:
-    queries = [str(item or "").strip() for item in (report.get("queries", []) or []) if str(item or "").strip()]
+    query_records = _dedupe_query_records(
+        report.get("query_records", []) or report.get("queries", []) or []
+    )
     results = report.get("results", []) or []
     query_reports = []
 
-    for query in queries:
+    for query_record in query_records:
+        query = str(query_record.get("query", "") or "").strip()
+        reference = str(query_record.get("reference", "") or "").strip()
         query_results = []
         runs_with_errors = 0
         datasets_with_setup_error = 0
@@ -305,6 +418,8 @@ def build_query_reports(report: dict) -> list[dict]:
                     continue
                 if str(candidate.get("query", "") or "").strip() == query:
                     run = dict(candidate)
+                    if reference and not run.get("references"):
+                        run["references"] = reference
                     break
 
             if run is None:
@@ -319,6 +434,7 @@ def build_query_reports(report: dict) -> list[dict]:
         query_reports.append(
             {
                 "query": query,
+                "references": reference,
                 "generated_at": report.get("generated_at", ""),
                 "datasets_n": len(query_results),
                 "debug_trace": bool(report.get("debug_trace", False)),
@@ -343,6 +459,13 @@ def _normalize_query_report(item: dict) -> dict:
 
     cleaned = dict(item)
     cleaned["query"] = query
+    reference = _normalize_reference(
+        cleaned.get("reference")
+        if "reference" in cleaned
+        else cleaned.get("references")
+    )
+    cleaned.pop("reference", None)
+    cleaned["references"] = reference
     return cleaned
 
 
@@ -381,6 +504,49 @@ def normalize_existing_query_reports(existing_output: dict | None) -> list[dict]
         return merged
 
     return []
+
+
+def _primary_run_for_query_report(query_report: dict) -> tuple[dict, dict]:
+    for result in (query_report.get("results", []) or []):
+        if not isinstance(result, dict):
+            continue
+        run = result.get("run", {})
+        if isinstance(run, dict):
+            return result, run
+    return {}, {}
+
+
+def _query_output_record(query_report: dict) -> dict:
+    _dataset_result, run = _primary_run_for_query_report(query_report)
+    run_summary = run.get("run_summary", {}) if isinstance(run, dict) else {}
+    reference = _normalize_reference(
+        query_report.get("references")
+        or query_report.get("reference")
+        or run.get("references", "")
+        or run.get("reference", "")
+    )
+    runtime = run.get("runtime")
+    if runtime is None:
+        runtime = _runtime_from_summary(run_summary)
+    total_tokens = run.get("total_tokens")
+    if total_tokens is None:
+        total_tokens = _total_tokens_from_summary(run_summary)
+
+    return {
+        "query": str(query_report.get("query", "") or "").strip(),
+        "final_answer": run.get("final_answer", "") or run.get("answer", ""),
+        "references": reference,
+        "runtime": runtime,
+        "total_tokens": int(total_tokens or 0),
+    }
+
+
+def build_output_queries(query_reports: list[dict]) -> list[dict]:
+    return [
+        record
+        for record in (_query_output_record(item) for item in (query_reports or []))
+        if str(record.get("query", "") or "").strip()
+    ]
 
 
 def _merge_query_results(existing_results: list, latest_results: list) -> list[dict]:
@@ -464,7 +630,7 @@ def build_output_document(report: dict, *, existing_output: dict | None = None, 
                 index_by_query[query] = len(merged_reports)
                 merged_reports.append(item)
 
-    queries = [item.get("query", "") for item in merged_reports if str(item.get("query", "") or "").strip()]
+    queries = build_output_queries(merged_reports)
 
     return {
         "updated_at": report.get("generated_at", ""),
@@ -476,7 +642,7 @@ def build_output_document(report: dict, *, existing_output: dict | None = None, 
 
 def main():
     args = parse_args()
-    queries = resolve_queries(args.query, args.queries_file)
+    queries = resolve_query_records(args.query, args.queries_file)
     dataset_ids = resolve_dataset_ids(args.dataset_id)
     datasets = resolve_datasets(load_registry(), dataset_ids)
     if not datasets:

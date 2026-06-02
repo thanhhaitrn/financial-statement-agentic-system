@@ -3,18 +3,53 @@
 
 import re
 
-from agents.agent_registry import get_default_table, is_analysis_agent, is_retrieval_agent
+from agents.agent_registry import is_analysis_agent
 from graph.logger import make_log
 from schemas.requirements import normalize_requirements_keep_order
-from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE, normalize_table_heading
+from schemas.table_names import (
+    TABLE_BS,
+    TABLE_CF,
+    TABLE_IS,
+    TABLE_NOTE,
+    TABLE_REPORT_SECTION,
+    normalize_table_heading,
+)
 
 
 ANALYSIS_TABLE_ALLOWLIST = {
-    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE},
-    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
-    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
-    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE},
+    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
 }
+NOTE_LLM_FACTS_LIMIT = 5
+
+
+def _dedupe_keep_order(items: list[str]) -> list[str]:
+    seen = set()
+    out = []
+    for item in items or []:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        out.append(text)
+        seen.add(text)
+    return out
+
+
+def _evidence_item_queries(item: dict) -> list[str]:
+    if not isinstance(item, dict):
+        return []
+    queries = []
+    query = str(item.get("query", "") or "").strip()
+    if query:
+        queries.append(query)
+    value = item.get("queries")
+    if isinstance(value, (list, tuple, set)):
+        queries.extend(str(query).strip() for query in value if str(query).strip())
+    elif str(value or "").strip():
+        queries.append(str(value).strip())
+    return _dedupe_keep_order(queries)
 
 
 def _evidence_queries_for_analysis(worker_plan: dict, analysis_agent: str) -> list[dict]:
@@ -33,23 +68,20 @@ def _evidence_queries_for_analysis(worker_plan: dict, analysis_agent: str) -> li
             continue
 
         table = normalize_table_heading(str(item.get("table", "") or "").strip())
-        query = str(item.get("query", "") or "").strip()
-        if not query:
-            continue
-
-        key = (
-            table,
-            query,
-        )
-        if key in seen:
-            continue
-        seen.add(key)
-        queries.append(
-            {
-                "table": table,
-                "query": query,
-            }
-        )
+        for query in _evidence_item_queries(item):
+            key = (
+                table,
+                query,
+            )
+            if key in seen:
+                continue
+            seen.add(key)
+            queries.append(
+                {
+                    "table": table,
+                    "query": query,
+                }
+            )
 
     return queries
 
@@ -76,6 +108,8 @@ def _normalized_targets(worker_plan: dict) -> list[dict]:
         if not isinstance(item, dict):
             continue
         agent = str(item.get("agent", "") or "").strip()
+        if not is_analysis_agent(agent):
+            continue
         if any(
             existing.get("agent") == agent
             and tuple(existing.get("requirements", []) or []) == tuple(
@@ -103,26 +137,38 @@ def _normalized_targets(worker_plan: dict) -> list[dict]:
             for req in (item.get("requirements", []) or [])
             if str(req).strip()
         ]
-        if requirements or not is_analysis_agent(agent):
+        if requirements:
             payload["requirements"] = requirements
         targets.append(payload)
     return targets
 
 
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
-
-
 def _text_tokens(value: str) -> set[str]:
     return set(re.findall(r"\w+", str(value or "").lower()))
+
+
+def _fact_needby_values(fact: dict) -> list[str]:
+    if not isinstance(fact, dict):
+        return []
+    raw = fact.get("needby")
+    if raw is None:
+        raw = fact.get("needed_by")
+    if isinstance(raw, str):
+        values = [raw]
+    elif isinstance(raw, (list, tuple, set)):
+        values = list(raw)
+    else:
+        values = []
+    return [
+        str(agent).strip()
+        for agent in values
+        if is_analysis_agent(str(agent).strip())
+    ]
+
+
+def _fact_visible_to_agent(fact: dict, agent: str) -> bool:
+    needby = _fact_needby_values(fact)
+    return not needby or agent in needby
 
 
 def _first_analysis_axis(existing_targets: list[dict]) -> str:
@@ -131,6 +177,33 @@ def _first_analysis_axis(existing_targets: list[dict]) -> str:
         if is_analysis_agent(agent):
             return agent
     return "agent_profitability"
+
+
+def _analysis_axes_from_agent_followups(reqs: list[dict]) -> list[dict]:
+    axes = []
+    seen = set()
+
+    for item in reqs or []:
+        if not isinstance(item, dict):
+            continue
+        agent = str(item.get("agent", "") or "").strip()
+        if not is_analysis_agent(agent):
+            continue
+
+        requirements = _dedupe_keep_order(item.get("requirements", []) or [])
+        objective = "; ".join(requirements)
+        key = (agent, objective)
+        if key in seen:
+            continue
+        seen.add(key)
+        axes.append(
+            {
+                "axis": agent,
+                "objective": objective or str(item.get("reason", "") or "").strip(),
+            }
+        )
+
+    return axes
 
 
 def _dedupe_targets(targets: list[dict]) -> list[dict]:
@@ -148,15 +221,12 @@ def _dedupe_targets(targets: list[dict]) -> list[dict]:
             "objective": str(target.get("objective", "") or "").strip(),
             "evidence_queries": list(target.get("evidence_queries", []) or []),
         }
+        if not is_analysis_agent(payload["agent"]):
+            continue
         requirements = _dedupe_keep_order(target.get("requirements", []) or [])
-        if requirements or not is_analysis_agent(payload["agent"]):
+        if requirements:
             payload["requirements"] = requirements
         if not payload["agent"]:
-            continue
-        if (
-            not is_analysis_agent(payload["agent"])
-            and not payload.get("requirements")
-        ):
             continue
         if (
             is_analysis_agent(payload["agent"])
@@ -192,11 +262,19 @@ def _result_table_from_key_payload(result_key: str, payload: dict) -> str:
         return table
 
     key_text = str(result_key or "").strip()
-    if is_retrieval_agent(key_text):
-        return normalize_table_heading(get_default_table(key_text))
     if key_text == "WEB":
         return ""
     return normalize_table_heading(key_text)
+
+
+def _limit_facts_for_analysis_prompt(table: str, facts: list[dict]) -> list[dict]:
+    if table == TABLE_NOTE:
+        return [
+            fact
+            for fact in facts or []
+            if isinstance(fact, dict)
+        ][:NOTE_LLM_FACTS_LIMIT]
+    return facts
 
 
 def _retrieval_requirements_by_table(worker_plan: dict) -> dict[str, list[str]]:
@@ -205,21 +283,11 @@ def _retrieval_requirements_by_table(worker_plan: dict) -> dict[str, list[str]]:
         if not isinstance(item, dict):
             continue
         table = normalize_table_heading(str(item.get("table", "") or "").strip())
-        query = str(item.get("query", "") or "").strip()
-        if not query:
-            continue
-        grouped.setdefault(table, [])
-        grouped[table] = _dedupe_keep_order(list(grouped.get(table, []) or []) + [query])
-
-    for target in _normalized_targets(worker_plan):
-        agent = str(target.get("agent", "") or "").strip()
-        if not agent or not is_retrieval_agent(agent):
-            continue
-        table = normalize_table_heading(str(target.get("table", "") or "").strip() or get_default_table(agent))
         grouped.setdefault(table, [])
         grouped[table] = _dedupe_keep_order(
-            list(grouped.get(table, []) or []) + list(target.get("requirements", []) or [])
+            list(grouped.get(table, []) or []) + _evidence_item_queries(item)
         )
+
     return grouped
 
 
@@ -239,14 +307,17 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
     for item in requirements:
         requirement_tokens.update(_text_tokens(item))
     evidence_query_tokens_by_table: dict[str, set[str]] = {}
+    evidence_query_tokens_all: set[str] = set()
     for item in evidence_queries:
         table = normalize_table_heading(str(item.get("table", "") or "").strip())
         query_tokens = _text_tokens(item.get("query", ""))
         query_text = str(item.get("query", "") or "").strip()
         if query_text:
             requirements.append(query_text)
+            requirement_tokens.update(query_tokens)
         if not query_tokens:
             continue
+        evidence_query_tokens_all.update(query_tokens)
         evidence_query_tokens_by_table.setdefault(table, set()).update(query_tokens)
 
     retrieval_requirements = _retrieval_requirements_by_table(state.get("worker_plan", {}) or {})
@@ -266,11 +337,16 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
         facts = payload.get("facts", [])
         if not isinstance(facts, list):
             continue
+        eligible_facts = [
+            fact
+            for fact in facts
+            if isinstance(fact, dict) and _fact_visible_to_agent(fact, agent)
+        ]
+        if not eligible_facts:
+            continue
 
         matched_facts = []
-        for fact in facts:
-            if not isinstance(fact, dict):
-                continue
+        for fact in eligible_facts:
             fact_tokens = _text_tokens(fact.get("item_name", ""))
             if (
                 fact_tokens
@@ -283,6 +359,11 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
                         evidence_query_tokens_by_table.get(table)
                         and fact_tokens.intersection(evidence_query_tokens_by_table.get(table, set()))
                     )
+                    or (
+                        table == TABLE_NOTE
+                        and evidence_query_tokens_all
+                        and fact_tokens.intersection(evidence_query_tokens_all)
+                    )
                 )
             ):
                 matched_facts.append(fact)
@@ -294,21 +375,21 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
         if matched_facts:
             prepared[table or str(result_key or "").strip()] = {
                 "table": table,
-                "facts": matched_facts,
+                "facts": _limit_facts_for_analysis_prompt(table, matched_facts),
             }
             continue
 
         if evidence_query_tokens_by_table.get(table):
             prepared[table or str(result_key or "").strip()] = {
                 "table": table,
-                "facts": facts,
+                "facts": _limit_facts_for_analysis_prompt(table, eligible_facts),
             }
             continue
 
         if requirement_tokens and target_requirement_tokens and requirement_tokens.intersection(target_requirement_tokens):
             prepared[table or str(result_key or "").strip()] = {
                 "table": table,
-                "facts": facts,
+                "facts": _limit_facts_for_analysis_prompt(table, eligible_facts),
             }
 
     if prepared:
@@ -325,9 +406,16 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
         facts = payload.get("facts", [])
         if not isinstance(facts, list):
             continue
+        eligible_facts = [
+            fact
+            for fact in facts
+            if isinstance(fact, dict) and _fact_visible_to_agent(fact, agent)
+        ]
+        if not eligible_facts:
+            continue
         prepared[table or str(result_key or "").strip()] = {
             "table": table,
-            "facts": facts,
+            "facts": _limit_facts_for_analysis_prompt(table, eligible_facts),
         }
 
     return prepared
@@ -338,17 +426,21 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
     existing_targets = _normalized_targets(state.get("worker_plan", {}) or {})
     raw_requirements = []
     normalized_followup_requests = []
+    followup_analysis_axes = _analysis_axes_from_agent_followups(reqs)
 
     for r in reqs:
         if not isinstance(r, dict):
             continue
 
-        agent = str(r.get("agent", "") or "").strip()
         table = str(r.get("table", "") or "").strip()
-        requirements = normalize_requirements_keep_order(
-            r.get("requirements", []) or [],
-            table=table,
-        )
+        agent = str(r.get("agent", "") or "").strip()
+        if is_analysis_agent(agent):
+            requirements = _dedupe_keep_order(r.get("requirements", []) or [])
+        else:
+            requirements = normalize_requirements_keep_order(
+                r.get("requirements", []) or [],
+                table=table,
+            )
         if not requirements:
             continue
         raw_requirements.extend(requirements)
@@ -357,9 +449,9 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
             "requirements": requirements,
             "reason": str(r.get("reason", "") or "").strip(),
         }
-        if agent and is_retrieval_agent(agent):
-            followup_payload["table"] = table or get_default_table(agent)
-        elif table:
+        if is_analysis_agent(agent):
+            followup_payload["agent"] = agent
+        if table:
             followup_payload["table"] = table
         normalized_followup_requests.append(followup_payload)
 
@@ -371,17 +463,18 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
     ])
     planner_plan = state.get("planner_plan", {}) or {}
     followup_axis = _first_analysis_axis(existing_targets)
+    analysis_axes = followup_analysis_axes or [
+        {
+            "axis": followup_axis,
+            "objective": requirement,
+        }
+        for requirement in followup_requirements
+    ]
     followup_plan = {
-        "difficulty_level": "medium",
-        "analysis_axes": [
-            {
-                "axis": followup_axis,
-                "objective": requirement,
-            }
-            for requirement in followup_requirements
-        ],
-        "followup_mode": True,
-        "followup_requirements": followup_requirements,
+        "difficulty_level": "hard" if followup_analysis_axes else "medium",
+        "analysis_axes": analysis_axes,
+        "followup_mode": not bool(followup_analysis_axes),
+        "followup_requirements": [] if followup_analysis_axes else followup_requirements,
         "followup_requests": normalized_followup_requests,
         "company": planner_plan.get("company", "") or "",
         "time_hint": "",

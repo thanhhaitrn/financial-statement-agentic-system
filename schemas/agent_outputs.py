@@ -5,7 +5,6 @@ from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_valid
 from pydantic.json_schema import SkipJsonSchema
 from typing import List, Literal, Any, Optional
 import re, json
-from agents.agent_registry import get_default_table, is_retrieval_agent
 from schemas.requirements import normalize_fact_status
 from schemas.table_names import normalize_table_heading
 
@@ -14,6 +13,7 @@ TABLE_NAME = Literal[
     "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
     "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
     "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
 ]
 
 TABLE_CANON = {
@@ -31,15 +31,46 @@ TABLE_CANON = {
     "thuyet minh bctc": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
     "thuyết minh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
     "thuyet minh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "phần đầu báo cáo tài chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "phan dau bao cao tai chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "báo cáo của ban tổng giám đốc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "bao cao cua ban tong giam doc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "báo cáo của ban giám đốc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "bao cao cua ban giam doc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "báo cáo kiểm toán độc lập": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "bao cao kiem toan doc lap": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "báo cáo kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "bao cao kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "báo cáo soát xét": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "bao cao soat xet": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "báo cáo soát xét báo cáo tài chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "bao cao soat xet bao cao tai chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "thông tin công ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "thong tin cong ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "khái quát về công ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "khai quat ve cong ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "địa chỉ": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "dia chi": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "địa chỉ trụ sở chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "dia chi tru so chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "trụ sở chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "tru so chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "chuẩn mực kế toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "chuan muc ke toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "chuẩn mực kế toán áp dụng": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "chuan muc ke toan ap dung": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "chế độ kế toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "che do ke toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "công ty kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "cong ty kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "hãng kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "hang kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "đơn vị kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+    "don vi kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
 }
 
 VALID_TABLE_NAMES = set(TABLE_CANON.values())
 AGENT_NAME_VALUES = {
-    "agent_bs",
-    "agent_is",
-    "agent_cf",
-    "agent_note",
-    "agent_web",
     "agent_profitability",
     "agent_liquidity_solvency",
     "agent_cashflow_analysis",
@@ -322,22 +353,10 @@ def _dedupe_keep_order(items: List[str]) -> List[str]:
     return out
 
 AGENT_NAME = Literal[
-    "agent_bs",
-    "agent_is",
-    "agent_cf",
-    "agent_note",
-    "agent_web",
     "agent_profitability",
     "agent_liquidity_solvency",
     "agent_cashflow_analysis",
     "agent_efficiency",
-]
-RETRIEVAL_AGENT = Literal[
-    "agent_bs",
-    "agent_is",
-    "agent_cf",
-    "agent_note",
-    "agent_web",
 ]
 ANALYSIS_AXIS = Literal[
     "agent_profitability",
@@ -519,17 +538,6 @@ class Target(BaseModel):
         if "requirements" not in data and data.get("keywords"):
             data["requirements"] = data.get("keywords")
 
-        if "agent" not in data and data.get("table"):
-            inferred_table = _normalize_table_value(data.get("table"))
-            if inferred_table == "BẢNG CÂN ĐỐI KẾ TOÁN":
-                data["agent"] = "agent_bs"
-            elif inferred_table == "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH":
-                data["agent"] = "agent_is"
-            elif inferred_table == "BÁO CÁO LƯU CHUYỂN TIỀN TỆ":
-                data["agent"] = "agent_cf"
-            elif inferred_table == "THUYẾT MINH BÁO CÁO TÀI CHÍNH":
-                data["agent"] = "agent_note"
-
         return data
 
     @field_validator("requirements", mode="before")
@@ -554,11 +562,6 @@ class Target(BaseModel):
 
     @model_validator(mode="after")
     def finalize_target_defaults(self):
-        if self.table is None and is_retrieval_agent(self.agent):
-            default_table = get_default_table(self.agent)
-            if default_table in VALID_TABLE_NAMES:
-                self.table = default_table
-
         if not self.requirements and self.keywords:
             self.requirements = _coerce_text_list(self.keywords)
 
@@ -588,11 +591,6 @@ class EvidencePlanItem(BaseModel):
                 if items:
                     data["query"] = items[0]
                     break
-
-        if not data.get("table") and data.get("agent"):
-            default_table = get_default_table(str(data.get("agent", "") or "").strip())
-            if default_table in VALID_TABLE_NAMES:
-                data["table"] = default_table
 
         return data
 
@@ -1028,7 +1026,7 @@ def parse_analysis_response(text: str):
 
 # ---------- Synth ----------
 class SynthFollowupRequest(BaseModel):
-    agent: Optional[AGENT_NAME] = None
+    agent: Optional[str] = None
     table: Optional[TABLE_NAME] = None
     requirements: List[str] = Field(default_factory=list)
     keywords: List[str] = Field(default_factory=list, exclude=True)
@@ -1080,11 +1078,6 @@ class SynthFollowupRequest(BaseModel):
     def finalize_followup_defaults(self):
         if not self.requirements and self.keywords:
             self.requirements = _coerce_text_list(self.keywords)
-
-        if self.agent and self.table is None:
-            default_table = get_default_table(self.agent) or None
-            if default_table in VALID_TABLE_NAMES:
-                self.table = default_table
 
         return self
 

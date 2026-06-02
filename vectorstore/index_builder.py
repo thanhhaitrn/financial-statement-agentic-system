@@ -15,6 +15,7 @@ def build_vector_store(conn, collection_name: str, *, reset: bool = False):
             fiscal_year,
             heading,
             item_code,
+            note_ref,
             subheading,
             item_name,
             value,

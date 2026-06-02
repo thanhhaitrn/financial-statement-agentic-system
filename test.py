@@ -255,6 +255,7 @@ def ensure_built(dataset):
         "fiscal_year",
         "heading",
         "item_code",
+        "note_ref",
         "subheading",
         "item_name",
         "value",

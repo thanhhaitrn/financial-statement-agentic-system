@@ -15,7 +15,14 @@ from schemas.requirements import (
     not_found_after_search_message,
     requirement_matches_fact,
 )
-from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE, normalize_table_heading
+from schemas.table_names import (
+    TABLE_BS,
+    TABLE_CF,
+    TABLE_IS,
+    TABLE_NOTE,
+    TABLE_REPORT_SECTION,
+    normalize_table_heading,
+)
 
 
 SCOPED_TOOL_TO_TABLE = {
@@ -23,19 +30,9 @@ SCOPED_TOOL_TO_TABLE = {
     "get_income_statement_info": TABLE_IS,
     "get_cashflow_info": TABLE_CF,
     "get_note_info": TABLE_NOTE,
+    "get_report_section_info": TABLE_REPORT_SECTION,
 }
 
-RETRIEVAL_AGENT_TO_TABLE = {
-    "agent_bs": TABLE_BS,
-    "agent_is": TABLE_IS,
-    "agent_cf": TABLE_CF,
-    "agent_note": TABLE_NOTE,
-}
-
-TABLE_TO_RETRIEVAL_AGENT = {
-    table: agent
-    for agent, table in RETRIEVAL_AGENT_TO_TABLE.items()
-}
 TABLE_TO_SCOPED_TOOL = {
     table: tool_name
     for tool_name, table in SCOPED_TOOL_TO_TABLE.items()
@@ -75,7 +72,7 @@ def evidence_cache_key(
     mode: str = "table",
 ) -> str:
     table_name = normalize_evidence_table(table)
-    query_text = normalize_evidence_query(query, table=table_name)
+    query_text = collapse_text(query)
     return "|".join(
         [
             collapse_text(dataset_id) or "default_dataset",
@@ -105,6 +102,83 @@ def set_runtime_cache_item(cache_key: str, item: dict) -> None:
 
 def scoped_tool_name_for_query(query: str, *, agent_name: str = "") -> str:
     text = collapse_text(query)
+
+    if any(
+        marker in text
+        for marker in (
+            "báo cáo của ban tổng giám đốc",
+            "bao cao cua ban tong giam doc",
+            "báo cáo của ban giám đốc",
+            "bao cao cua ban giam doc",
+            "báo cáo kiểm toán",
+            "bao cao kiem toan",
+            "báo cáo soát xét",
+            "bao cao soat xet",
+            "thông tin công ty",
+            "thong tin cong ty",
+            "khái quát về công ty",
+            "khai quat ve cong ty",
+            "địa chỉ",
+            "dia chi",
+            "trụ sở",
+            "tru so",
+            "trụ sở chính",
+            "tru so chinh",
+            "trụ sở hoạt động",
+            "tru so hoat dong",
+            "hoạt động kinh doanh chính",
+            "hoat dong kinh doanh chinh",
+            "giấy chứng nhận đăng ký doanh nghiệp",
+            "giay chung nhan dang ky doanh nghiep",
+            "chuẩn mực kế toán",
+            "chuan muc ke toan",
+            "chuẩn mực kế toán áp dụng",
+            "chuan muc ke toan ap dung",
+            "chế độ kế toán",
+            "che do ke toan",
+            "chế độ kế toán áp dụng",
+            "che do ke toan ap dung",
+            "tuyên bố tuân thủ chuẩn mực kế toán",
+            "tuyen bo tuan thu chuan muc ke toan",
+            "ý kiến kiểm toán",
+            "y kien kiem toan",
+            "kết luận của kiểm toán viên",
+            "ket luan cua kiem toan vien",
+            "kết luận soát xét",
+            "ket luan soat xet",
+            "vấn đề cần nhấn mạnh",
+            "van de can nhan manh",
+            "kiểm toán viên",
+            "kiem toan vien",
+            "đơn vị kiểm toán",
+            "don vi kiem toan",
+            "công ty kiểm toán",
+            "cong ty kiem toan",
+            "hãng kiểm toán",
+            "hang kiem toan",
+            "công ty thực hiện kiểm toán",
+            "cong ty thuc hien kiem toan",
+            "đơn vị thực hiện kiểm toán",
+            "don vi thuc hien kiem toan",
+            "công ty thực hiện kế toán kiểm toán",
+            "cong ty thuc hien ke toan kiem toan",
+            "ban tổng giám đốc",
+            "ban tong giam doc",
+            "ban điều hành",
+            "ban dieu hanh",
+            "hội đồng quản trị",
+            "hoi dong quan tri",
+            "trách nhiệm của ban",
+            "trach nhiem cua ban",
+            "người ký",
+            "nguoi ky",
+            "ngày ký",
+            "ngay ky",
+            "ngày lập báo cáo",
+            "ngay lap bao cao",
+        )
+    ):
+        return "get_report_section_info"
 
     if any(
         marker in text
@@ -177,10 +251,6 @@ def scoped_tool_name_for_table(table: str) -> str:
     return TABLE_TO_SCOPED_TOOL.get(normalize_evidence_table(table), "")
 
 
-def retrieval_agent_for_table(table: str) -> str:
-    return TABLE_TO_RETRIEVAL_AGENT.get(normalize_evidence_table(table), "")
-
-
 def _extract_docs_and_metas(result: dict) -> tuple[list[str], list[dict]]:
     docs = result.get("documents", []) if isinstance(result, dict) else []
     metas = result.get("metadatas", []) if isinstance(result, dict) else []
@@ -202,27 +272,88 @@ def _first_context_lines(context: str, *, limit: int = 5) -> list[str]:
     return lines
 
 
-def _fact_key(fact: dict) -> tuple[str, str, str, str, str]:
+def _fact_key(fact: dict) -> tuple[str, str, str, str, str, str]:
     return (
         collapse_text(fact.get("table", "")),
         collapse_text(fact.get("item_name", "")),
+        collapse_text(fact.get("note_ref", "")),
         collapse_text(fact.get("time_hint", "")),
         collapse_text(fact.get("value", "")),
         collapse_text(fact.get("source", "")),
     )
 
 
-def dedupe_facts(facts: list[dict]) -> list[dict]:
+def _coerce_text_list(value: Any) -> list[str]:
+    if isinstance(value, str):
+        values = [value]
+    elif isinstance(value, (list, tuple, set)):
+        values = list(value)
+    else:
+        values = []
+
     output = []
     seen = set()
+    for item in values:
+        text = str(item or "").strip()
+        if not text or text in seen:
+            continue
+        output.append(text)
+        seen.add(text)
+    return output
+
+
+def _merge_fact_routing_metadata(existing: dict, incoming: dict) -> dict:
+    merged = dict(existing or {})
+
+    needby = _coerce_text_list(merged.get("needby")) + _coerce_text_list(incoming.get("needby"))
+    if needby:
+        merged["needby"] = _coerce_text_list(needby)
+
+    evidence_queries = (
+        _coerce_text_list(merged.get("evidence_queries"))
+        + _coerce_text_list(merged.get("evidence_query"))
+        + _coerce_text_list(incoming.get("evidence_queries"))
+        + _coerce_text_list(incoming.get("evidence_query"))
+    )
+    evidence_queries = _coerce_text_list(evidence_queries)
+    if evidence_queries:
+        merged["evidence_query"] = evidence_queries[0]
+        if len(evidence_queries) > 1:
+            merged["evidence_queries"] = evidence_queries
+
+    for key in ("source_table", "source_item"):
+        if not str(merged.get(key, "") or "").strip() and str(incoming.get(key, "") or "").strip():
+            merged[key] = str(incoming.get(key, "") or "").strip()
+
+    return merged
+
+
+def _raw_item_label(value: Any) -> str:
+    text = str(value or "").split("|", 1)[0]
+    return collapse_text(text)
+
+
+def _fact_label_exactly_matches(query: str, fact: dict, *, table: str = "") -> bool:
+    if not isinstance(fact, dict):
+        return False
+    table_name = normalize_evidence_table(fact.get("table", "") or table)
+    query_text = collapse_text(normalize_evidence_query(query, table=table_name))
+    item_label = _raw_item_label(fact.get("item_name", ""))
+    return bool(query_text and item_label and item_label == query_text)
+
+
+def dedupe_facts(facts: list[dict]) -> list[dict]:
+    output = []
+    seen = {}
     for fact in facts or []:
         if not isinstance(fact, dict):
             continue
         key = _fact_key(fact)
         if key in seen:
+            output[seen[key]] = _merge_fact_routing_metadata(output[seen[key]], fact)
             continue
         output.append(fact)
-        seen.add(key)
+        seen[key] = len(output) - 1
     return output
 
 
@@ -251,6 +382,7 @@ def filter_facts_for_query(
     table_name = normalize_evidence_table(table)
     query_text = normalize_evidence_query(query, table=table_name)
     clean_facts = []
+    exact_facts = []
 
     for fact in dedupe_facts(facts or []):
         if not isinstance(fact, dict):
@@ -265,9 +397,14 @@ def filter_facts_for_query(
                 continue
             if requirement_matches_fact(query_text, fact_payload, table=table_name):
                 clean_facts.append(fact_payload)
+                if _fact_label_exactly_matches(query_text, fact_payload, table=table_name):
+                    exact_facts.append(fact_payload)
             continue
 
         clean_facts.append(fact_payload)
+
+    if exact_facts:
+        clean_facts = exact_facts
 
     if table_name in MAIN_REPORT_TABLES and query_text and not clean_facts:
         return [not_found_fact(table_name, query_text, source=source)]
@@ -305,6 +442,7 @@ def result_to_facts(
                 "table": heading,
                 "heading": heading,
                 "item_code": str(meta.get("item_code", "") or "").strip(),
+                "note_ref": str(meta.get("note_ref", "") or "").strip(),
                 "subheading": str(meta.get("subheading", "") or "").strip(),
                 "status": FACT_STATUS_FOUND if value else FACT_STATUS_NOT_FOUND,
                 "interpretation_hint": doc.strip()[:300],

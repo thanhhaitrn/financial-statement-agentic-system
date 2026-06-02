@@ -25,6 +25,7 @@ from tools.evidence import (
 
 _COLLECTION = None
 TOOL_CONTEXT_PREVIEW_LIMIT = 1200
+TOOL_RESULT_FACTS_LIMIT = 5
 DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
 
 
@@ -37,12 +38,6 @@ def get_collection():
     return _COLLECTION
 
 
-WORKER_TO_TABLE = {
-    "agent_bs": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "agent_is": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "agent_cf": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    "agent_note": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-}
 SCOPED_TOOL_NAMES = set(SCOPED_TOOL_TO_TABLE.keys())
 
 
@@ -207,32 +202,6 @@ def _evidence_queries_to_requirements(target: dict, table: str = "") -> list[str
     return _dedupe_keep_order(requirements)
 
 
-def _get_requirements_for_agent_table(state: dict, agent_name: str, table: str) -> list[str]:
-    current_target = _current_target_for_agent_table(state, agent_name, table)
-    if current_target:
-        return _dedupe_keep_order(
-            list(current_target.get("requirements", []) or [])
-            + _evidence_queries_to_requirements(current_target, table)
-        )
-
-    worker_plan = state.get("worker_plan", {}) or {}
-    requirements = []
-    for target in (worker_plan.get("targets", []) or []):
-        if str(target.get("agent", "")).strip() != agent_name:
-            continue
-        target_table = str(target.get("table", "") or "").strip()
-        if table and target_table and target_table != table:
-            continue
-        requirements.extend(target.get("requirements", []) or [])
-        requirements.extend(_evidence_queries_to_requirements(target, table))
-    for target in (worker_plan.get("analysis_plan", []) or []):
-        if str(target.get("agent", "")).strip() != agent_name:
-            continue
-        requirements.extend(target.get("requirements", []) or [])
-        requirements.extend(_evidence_queries_to_requirements(target, table))
-    return _dedupe_keep_order(requirements)
-
-
 def _assigned_requirements_for_agent(state: dict, agent_name: str) -> list[str]:
     current_target = _current_target_for_agent_table(state, agent_name, "")
     if current_target:
@@ -263,43 +232,6 @@ def _max_tool_calls_for_agent(state: dict, agent_name: str) -> int:
     return DEFAULT_MAX_TOOL_CALLS_PER_ROUND
 
 
-def _prepare_get_related_info_args(
-    state: dict,
-    agent_name: str,
-    args: dict,
-) -> Tuple[Optional[dict], Optional[str], Optional[dict]]:
-    global _COLLECTION
-
-    if _COLLECTION is None:
-        return None, "collection not set. Call set_collection(collection) before running workflow.", None
-
-    prepared = dict(args)
-    prepared["collection"] = _COLLECTION
-    prepared["table"] = WORKER_TO_TABLE.get(agent_name, prepared.get("table", ""))
-    prepared["query"] = str(prepared.get("query", "") or "").strip()
-    if agent_name == "agent_note":
-        # Notes retrieval is deliberately narrower than other statement tools:
-        # it must stay inside the page-bounded notes vector slice.
-        prepared["strict_table"] = True
-
-    if not prepared["query"]:
-        return None, f"missing query for table={prepared.get('table', '')}", None
-
-    log_data = {
-        "agent": agent_name,
-        "table": prepared.get("table", ""),
-        "query": prepared["query"],
-    }
-    if bool((state or {}).get("debug_trace", False)):
-        log_data["assigned_requirements"] = _get_requirements_for_agent_table(
-            state,
-            agent_name,
-            str(prepared.get("table", "") or "").strip(),
-        )[:4]
-
-    return prepared, None, make_debug_log(state, "tool:query_prepared", **log_data)
-
-
 def _prepare_scoped_info_args(
     state: dict,
     agent_name: str,
@@ -316,7 +248,7 @@ def _prepare_scoped_info_args(
     prepared["collection"] = _COLLECTION
     prepared["table"] = table
     raw_query = str(prepared.get("query", "") or "").strip()
-    prepared["query"] = normalize_requirement_text(raw_query, table=table) or raw_query
+    prepared["query"] = raw_query
 
     if not prepared["query"]:
         return None, f"missing query for scoped retrieval table={table}", None
@@ -415,15 +347,11 @@ def _expected_scoped_tool_for_query(state: dict, query: str) -> tuple[str, str]:
 
 
 def _cache_key_for_prepared_args(state: dict, tool_name: str, prepared_args: dict) -> str:
-    if tool_name == "web_search":
-        mode = "web"
-    else:
-        mode = "table"
     return evidence_cache_key(
         dataset_id=str((state or {}).get("dataset_id", "") or ""),
         table=str(prepared_args.get("table", "") or ""),
         query=str(prepared_args.get("query", "") or ""),
-        mode=mode,
+        mode="table",
     )
 
 
@@ -447,7 +375,7 @@ def _cache_hit_update(
         table=table,
         query=query,
         source=str(cache_payload.get("source", "") or ""),
-    )
+    )[:TOOL_RESULT_FACTS_LIMIT]
     obs = observation_text(tool_name, cache_payload)
     return {
         "tool_observations": [
@@ -668,39 +596,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
 
     prepared_args = dict(args)
 
-    if tool_name == "get_related_info":
-        prepared_args, prep_error, prep_log = _prepare_get_related_info_args(
-            state,
-            agent_name,
-            prepared_args,
-        )
-        if prep_log:
-            trace_logs.append(prep_log)
-
-        if prep_error:
-            trace_logs.append(
-                make_log(
-                    state,
-                    "tool:blocked_prepare",
-                    agent=agent_name,
-                    tool=tool_name,
-                    error=prep_error,
-                )
-            )
-            return {
-                "tool_observations": [
-                    _tool_observation_entry(
-                        agent_name,
-                        f"[Tool blocked: {prep_error}]",
-                        current_round,
-                    )
-                ],
-                "tool_call_counts": _round_count_update(state, agent_name, count + 1),
-                "force_collect_agents": _force_collect_update(state, agent_name),
-                "trace": trace_logs,
-            }
-
-    elif tool_name in SCOPED_TOOL_NAMES:
+    if tool_name in SCOPED_TOOL_NAMES:
         prepared_args, prep_error, prep_log = _prepare_scoped_info_args(
             state,
             agent_name,
@@ -758,7 +654,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             "trace": trace_logs,
         }
 
-    if tool_name in SCOPED_TOOL_NAMES or tool_name == "get_related_info":
+    if tool_name in SCOPED_TOOL_NAMES:
         cache_key = _cache_key_for_prepared_args(state, tool_name, prepared_args)
         cache_item = (state.get("evidence_cache", {}) or {}).get(cache_key) or get_runtime_cache_item(cache_key)
         if isinstance(cache_item, dict) and cache_item:
@@ -860,11 +756,10 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             )
         )
     context_debug_fields = _build_tool_context_debug_fields(state, ctx)
-    obs = (
-        f"[{tool_name} source={src} table={prepared_args.get('table','')} "
-        f"query={prepared_args.get('query','')}]\n"
-        f"{ctx[:TOOL_CONTEXT_PREVIEW_LIMIT] if ctx else '<EMPTY_CONTEXT>'}"
-    )
+    tool_result_payload = evidence_cache_update.get(cache_key) if cache_key else results
+    if not isinstance(tool_result_payload, dict) or not tool_result_payload:
+        tool_result_payload = results
+    obs = observation_text(tool_name, tool_result_payload)
 
     trace_logs.append(
         make_log(
@@ -894,7 +789,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                 "tool": tool_name,
                 "tool_call_id": tool_call_id,
                 "args": prepared_args,
-                "results": results,
+                "results": tool_result_payload,
             }
         ],
         "tool_call_counts": _round_count_update(state, agent_name, count + 1),

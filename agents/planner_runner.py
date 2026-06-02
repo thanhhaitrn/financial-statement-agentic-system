@@ -9,6 +9,11 @@ from typing import Any, Optional
 from pydantic import ValidationError
 
 from agents.agent_tools_list import get_tools_list
+from agents.line_item_matcher import (
+    DIRECT_LINE_ITEM_EVALUATIVE_PATTERNS,
+    contains_intent,
+    direct_line_item_match,
+)
 from agents.profiles import AGENT_PROFILES
 from datasets.registry import get_dataset
 from schemas.agent_outputs import PlannerEvidencePlan
@@ -23,27 +28,7 @@ DEFAULT_PLANNER_PLAN = {
     "time_hint": "",
     "need_web": False,
 }
-EVALUATIVE_INTENT_PATTERNS = [
-    r"\bđánh giá\b",
-    r"\bnhận xét\b",
-    r"\bgiải thích\b",
-    r"\bxu hướng\b",
-    r"\bchất lượng\b",
-    r"\bbền vững\b",
-    r"\brủi ro\b",
-    r"\btốt không\b",
-    r"\bmạnh không\b",
-    r"\byếu không\b",
-    r"\bassess\b",
-    r"\bevaluate\b",
-    r"\bexplain\b",
-    r"\btrend\b",
-    r"\bquality\b",
-    r"\bsustainable\b",
-    r"\brisk\b",
-    r"\bgood profit\b",
-    r"\bgenerate(?:s|d)? good profit\b",
-]
+EVALUATIVE_INTENT_PATTERNS = DIRECT_LINE_ITEM_EVALUATIVE_PATTERNS
 
 
 def _force_json_output_instruction(base_instruction: str) -> str:
@@ -259,10 +244,7 @@ def _normalize_intent_text(value: Any) -> str:
 
 
 def _contains_evaluative_intent(text: str) -> bool:
-    normalized = _normalize_intent_text(text)
-    if not normalized:
-        return False
-    return any(re.search(pattern, normalized, flags=re.IGNORECASE) for pattern in EVALUATIVE_INTENT_PATTERNS)
+    return contains_intent(text, EVALUATIVE_INTENT_PATTERNS)
 
 
 def _collect_planner_objectives(planner_plan: dict) -> list[str]:
@@ -279,11 +261,33 @@ def _collect_planner_objectives(planner_plan: dict) -> list[str]:
 def _apply_planner_difficulty_heuristics(state: dict, planner_plan: dict) -> tuple[dict, Optional[dict]]:
     enriched = dict(planner_plan or {})
     current = _normalize_intent_text(enriched.get("difficulty_level", ""))
+    user_query = str((state or {}).get("user_query", "") or "").strip()
+    direct_line_item = direct_line_item_match(user_query)
+    if direct_line_item is not None:
+        previous_axes = list(enriched.get("analysis_axes", []) or [])
+        previous_need_web = bool(enriched.get("need_web", False))
+        enriched["difficulty_level"] = "easy"
+        enriched["analysis_axes"] = []
+        enriched["need_web"] = False
+        changed = current != "easy" or bool(previous_axes) or previous_need_web
+        return enriched, (
+            make_debug_log(
+                state,
+                "planner:difficulty_downgraded_for_direct_line_item",
+                previous_difficulty=current or "",
+                downgraded_difficulty="easy",
+                direct_line_item=direct_line_item.get("canonical", ""),
+                table=direct_line_item.get("table", ""),
+            )
+            if changed
+            else None
+        )
+
     if current == "hard":
         return enriched, None
 
     text_candidates = [
-        str((state or {}).get("user_query", "") or "").strip(),
+        user_query,
         *(_collect_planner_objectives(enriched)),
     ]
     if not any(_contains_evaluative_intent(text) for text in text_candidates):

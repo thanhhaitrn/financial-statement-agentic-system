@@ -9,6 +9,7 @@ _FINANCIAL_FACT_COLUMNS = {
     "fiscal_year": "TEXT",
     "heading": "TEXT",
     "item_code": "TEXT",
+    "note_ref": "TEXT",
     "subheading": "TEXT",
     "item_name": "TEXT",
     "value": "TEXT",
@@ -58,6 +59,7 @@ def init_db(db_path: str, reset: bool = False):
         fiscal_year TEXT,
         heading TEXT,
         item_code TEXT,
+        note_ref TEXT,
         subheading TEXT,
         item_name TEXT,
         value TEXT,
@@ -85,6 +87,7 @@ def _normalize_fact_row(row):
             row.get("fiscal_year", ""),
             row.get("heading", ""),
             row.get("item_code", ""),
+            row.get("note_ref", ""),
             row.get("subheading", ""),
             row.get("item_name", ""),
             row.get("value", ""),
@@ -102,6 +105,7 @@ def _normalize_fact_row(row):
             heading,
             item_code,
             "",
+            "",
             item_name,
             value,
             raw_value,
@@ -116,6 +120,7 @@ def _normalize_fact_row(row):
             heading,
             item_code,
             "",
+            "",
             item_name,
             value,
             raw_value,
@@ -123,8 +128,23 @@ def _normalize_fact_row(row):
             source,
         )
     if len(values) == 10:
+        company, fiscal_year, heading, item_code, subheading, item_name, value, raw_value, normalized_value, source = values
+        return (
+            company,
+            fiscal_year,
+            heading,
+            item_code,
+            "",
+            subheading,
+            item_name,
+            value,
+            raw_value,
+            normalized_value,
+            source,
+        )
+    if len(values) == 11:
         return values
-    raise ValueError(f"financial_facts row must have 8, 9, or 10 values, got {len(values)}")
+    raise ValueError(f"financial_facts row must have 8, 9, 10, or 11 values, got {len(values)}")
 
 
 def insert_financial_facts(conn, rows):
@@ -139,6 +159,7 @@ def insert_financial_facts(conn, rows):
             fiscal_year,
             heading,
             item_code,
+            note_ref,
             subheading,
             item_name,
             value,
@@ -146,7 +167,7 @@ def insert_financial_facts(conn, rows):
             normalized_value,
             source
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, normalized_rows)
 
     conn.commit()

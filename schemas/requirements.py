@@ -6,7 +6,7 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
-from config.allowed_keywords import ALIASES, ALLOWED_KEYWORDS
+from config.allowed_keywords import ALLOWED_KEYWORDS
 
 
 FACT_STATUS_FOUND = "found"
@@ -72,11 +72,6 @@ def _keyword_candidates(table: str = "") -> list[str]:
 
     candidates = []
     seen = set()
-    for item in ALIASES.values():
-        text = _collapse(item)
-        if text and text not in seen:
-            candidates.append(text)
-            seen.add(text)
     for table_key in tables:
         for item in sorted(ALLOWED_KEYWORDS.get(table_key, set()) or set(), key=len, reverse=True):
             text = _collapse(item)
@@ -91,26 +86,12 @@ def normalize_requirement_text(value: Any, table: str = "") -> str:
     if not text:
         return ""
 
-    for alias, canonical in ALIASES.items():
-        alias_text = _collapse(alias)
-        canonical_text = _collapse(canonical)
-        if text in {alias_text, canonical_text}:
-            return canonical_text
-
     candidates = []
     for keyword in _keyword_candidates(table):
         if text == keyword:
             return keyword
         if keyword in text or text in keyword:
             candidates.append(keyword)
-
-    for alias, canonical in ALIASES.items():
-        alias_text = _collapse(alias)
-        canonical_text = _collapse(canonical)
-        if alias_text and alias_text in text:
-            candidates.append(canonical_text)
-        elif canonical_text and canonical_text in text:
-            candidates.append(canonical_text)
 
     candidates = _dedupe_keep_order(candidates)
     if len(candidates) == 1:
@@ -166,14 +147,6 @@ def extract_financial_statement_keywords(
     for keyword in _keyword_candidates(table):
         if keyword and (keyword in text or text in keyword):
             matches.append(keyword)
-
-    for alias, canonical in ALIASES.items():
-        alias_text = _collapse(alias)
-        canonical_text = _collapse(canonical)
-        if alias_text and alias_text in text:
-            matches.append(canonical_text)
-        elif canonical_text and canonical_text in text:
-            matches.append(canonical_text)
 
     matches = _dedupe_keep_order(matches)
     if matches:

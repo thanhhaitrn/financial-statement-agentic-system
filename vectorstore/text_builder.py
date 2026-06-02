@@ -1,7 +1,7 @@
 """Convert financial fact rows into vector documents and metadata."""
 # Code note: Vectorstore modules turn normalized facts into searchable text and metadata for retrieval.
 
-from schemas.table_names import TABLE_NOTE
+from schemas.table_names import TABLE_NOTE, TABLE_REPORT_SECTION
 
 
 def _row_value(row) -> str:
@@ -54,9 +54,30 @@ def _build_note_text(row) -> str:
     return "\n".join(parts)
 
 
+def _build_report_section_text(row) -> str:
+    value = _row_value(row)
+    parts = []
+    if row.get("company"):
+        parts.append(f"Công ty: {row['company']}")
+    if row.get("fiscal_year"):
+        parts.append(f"Năm: {row['fiscal_year']}")
+
+    parts.append(f"Phần báo cáo: {TABLE_REPORT_SECTION}")
+    if row.get("item_name"):
+        parts.append(str(row.get("item_name", "") or "").strip())
+    if row.get("subheading"):
+        parts.append(f"Subheading: {row['subheading']}")
+    if value:
+        parts.append(f"Nội dung: {value}")
+
+    return "\n".join(parts)
+
+
 def build_combined_text(row) -> str:
     if str(row.get("heading", "") or "").strip() == TABLE_NOTE:
         return _build_note_text(row)
+    if str(row.get("heading", "") or "").strip() == TABLE_REPORT_SECTION:
+        return _build_report_section_text(row)
 
     parts = []
     value = _row_value(row)
@@ -66,6 +87,9 @@ def build_combined_text(row) -> str:
 
     if row.get("heading"):
         parts.append(f"Bảng {row['heading']}.")
+
+    if row.get("note_ref"):
+        parts.append(f"Thuyết minh {row['note_ref']}.")
 
     if row.get("item_name"):
         parts.append(f"{row['item_name']}.")
@@ -85,6 +109,7 @@ def build_documents_and_metadata(df):
         "fiscal_year",
         "heading",
         "item_code",
+        "note_ref",
         "subheading",
         "item_name",
         "source",

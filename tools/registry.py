@@ -6,15 +6,13 @@ from tools.tools import (
     get_cashflow_info,
     get_income_statement_info,
     get_note_info,
-    get_related_info,
-    web_search,
+    get_report_section_info,
 )
 
 TOOLS_MAPPING_2_FUNCTIONS = {
-    "get_related_info": get_related_info,
     "get_balance_sheet_info": get_balance_sheet_info,
     "get_income_statement_info": get_income_statement_info,
     "get_cashflow_info": get_cashflow_info,
     "get_note_info": get_note_info,
-    "web_search": web_search,
+    "get_report_section_info": get_report_section_info,
 }

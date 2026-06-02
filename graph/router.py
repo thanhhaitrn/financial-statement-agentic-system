@@ -136,7 +136,6 @@ def dispatch_analysis_workers(state: dict):
                     ),
                     "dispatch_target": target,
                     "analysis_input_results": target.get("analysis_input_results", {}) or {},
-                    "analysis_objective": str(target.get("objective", "") or "").strip(),
                     "evidence_queries": list(target.get("evidence_queries", []) or []),
                     "followup_rounds": state.get("followup_rounds", 0),
                 },

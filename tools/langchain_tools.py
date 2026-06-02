@@ -16,36 +16,15 @@ from langchain.tools import tool as _tool
 from pydantic import BaseModel, Field
 
 
-class RelatedInfoInput(BaseModel):
-    """Arguments visible to the LLM for financial-statement retrieval."""
-
-    query: str = Field(
-        ...,
-        description=(
-            "Short, specific financial statement item or note topic to retrieve. "
-            "Use the original Vietnamese line item when available."
-        ),
-    )
-
-
 class ScopedInfoInput(BaseModel):
     """Arguments visible to analysis agents for scoped financial-statement retrieval."""
 
     query: str = Field(
         ...,
         description=(
-            "One short Vietnamese financial-statement line item or note topic "
+            "One short Vietnamese financial-statement line item, note topic, or front-report-section topic "
             "to retrieve from this tool's scoped section."
         ),
-    )
-
-
-class WebSearchInput(BaseModel):
-    """Arguments visible to the LLM for web search."""
-
-    query: str = Field(
-        ...,
-        description="Specific web search query for external company or market context.",
     )
 
 
@@ -65,19 +44,6 @@ def _schema_only_runtime_error(name: str) -> RuntimeError:
     )
 
 
-def _make_related_info_tool(description: str):
-    @_tool(
-        "get_related_info",
-        args_schema=RelatedInfoInput,
-        description=description,
-    )
-    def get_related_info(query: str) -> dict:
-        """Retrieve relevant financial statement context for the query."""
-        raise _schema_only_runtime_error("get_related_info")
-
-    return get_related_info
-
-
 def _make_scoped_info_tool(name: str, description: str):
     @_tool(
         name,
@@ -91,32 +57,13 @@ def _make_scoped_info_tool(name: str, description: str):
     return scoped_info
 
 
-def _make_web_search_tool(description: str):
-    @_tool(
-        "web_search",
-        args_schema=WebSearchInput,
-        description=description,
-    )
-    def web_search(query: str) -> dict:
-        """Search the web for external context."""
-        raise _schema_only_runtime_error("web_search")
-
-    return web_search
-
-
-_RELATED_INFO_DESCRIPTIONS = {
-    "agent_bs": "Retrieve relevant balance sheet information from the financial statement dataset.",
-    "agent_is": "Retrieve relevant income statement information from the financial statement dataset.",
-    "agent_cf": "Retrieve relevant cash flow information from the financial statement dataset.",
-    "agent_note": "Retrieve relevant notes to the financial statements from the note dataset.",
-}
 _SCOPED_ANALYSIS_TOOL_DESCRIPTIONS = {
     "get_balance_sheet_info": "Retrieve balance sheet evidence only.",
     "get_income_statement_info": "Retrieve income statement evidence only.",
     "get_cashflow_info": "Retrieve cash flow statement evidence only.",
     "get_note_info": "Retrieve notes-to-financial-statements evidence only.",
+    "get_report_section_info": "Retrieve report-level narrative such as company profile, address/head office, accounting standards/regime applied, audit firm, management board, management report, audit/review report, signers, dates, and emphasis matters only.",
 }
-_WEB_SEARCH_DESCRIPTION = "Perform a web search for external context not available in the dataset."
 _ANALYSIS_AGENT_NAMES = (
     "agent_profitability",
     "agent_liquidity_solvency",
@@ -125,25 +72,7 @@ _ANALYSIS_AGENT_NAMES = (
 )
 
 
-AGENT_TOOL_DECLARATIONS: dict[str, list[AgentToolDeclaration]] = {
-    agent_name: [
-        AgentToolDeclaration(
-            name="get_related_info",
-            description=description,
-            args_schema=RelatedInfoInput,
-            langchain_tool=_make_related_info_tool(description),
-        )
-    ]
-    for agent_name, description in _RELATED_INFO_DESCRIPTIONS.items()
-}
-AGENT_TOOL_DECLARATIONS["agent_web"] = [
-    AgentToolDeclaration(
-        name="web_search",
-        description=_WEB_SEARCH_DESCRIPTION,
-        args_schema=WebSearchInput,
-        langchain_tool=_make_web_search_tool(_WEB_SEARCH_DESCRIPTION),
-    )
-]
+AGENT_TOOL_DECLARATIONS: dict[str, list[AgentToolDeclaration]] = {}
 for _agent_name in _ANALYSIS_AGENT_NAMES:
     AGENT_TOOL_DECLARATIONS[_agent_name] = [
         AgentToolDeclaration(

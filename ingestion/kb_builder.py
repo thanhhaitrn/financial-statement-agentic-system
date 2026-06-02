@@ -77,6 +77,16 @@ def _item_code_for_row(row, columns) -> str | None:
         return value or None
     return None
 
+
+def _note_ref_for_row(row, columns) -> str | None:
+    for col_name in columns:
+        if not _is_note_column(col_name):
+            continue
+        value = _strip_inline_formatting(str(row.get(col_name, "") or ""))
+        return value or None
+    return None
+
+
 def looks_like_value(x: str) -> bool:
     x = _normalize_value_text(x)
 
@@ -118,6 +128,8 @@ def df_to_facts(df, heading, company, source, fiscal_year=None):
 
     for _, row in df.iterrows():
         row_label = None
+        item_code = _item_code_for_row(row, columns)
+        note_ref = _note_ref_for_row(row, columns)
 
         # find row label
         for col_name, cell in zip(columns, row.values):
@@ -148,7 +160,8 @@ def df_to_facts(df, heading, company, source, fiscal_year=None):
                     "company": company,
                     "fiscal_year": "" if fiscal_year is None else str(fiscal_year),
                     "heading": normalize_table_heading(clean_label(heading)),
-                    "item_code": _item_code_for_row(row, columns),
+                    "item_code": item_code,
+                    "note_ref": note_ref,
                     "subheading": "",
                     "item_name": f"{row_label} | {_display_column_name(col_name)}",
                     "value": normalized_value,
@@ -185,6 +198,7 @@ def build_fact_rows(tables_with_context, company, source, fiscal_year=None):
                 f.get("fiscal_year", ""),
                 f["heading"],
                 f.get("item_code"),
+                f.get("note_ref", ""),
                 f.get("subheading", ""),
                 f["item_name"],
                 f["value"],

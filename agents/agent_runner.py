@@ -25,17 +25,24 @@ from schemas.requirements import (
     requirement_name_matches_fact,
     requirement_matches_fact,
 )
-from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE, normalize_table_heading
+from schemas.table_names import (
+    TABLE_BS,
+    TABLE_CF,
+    TABLE_IS,
+    TABLE_NOTE,
+    TABLE_REPORT_SECTION,
+    normalize_table_heading,
+)
 from tools.tool_calls import invalid_tool_calls, response_tool_calls, synthetic_tool_call
-from tools.evidence import scoped_tool_name_for_query, scoped_tool_name_for_table
+from tools.evidence import merge_worker_fact_payload, scoped_tool_name_for_query, scoped_tool_name_for_table
 
 
 DEFAULT_MAX_ANALYSIS_TOOL_CALLS_PER_ROUND = 2
 ANALYSIS_ALLOWED_KEYWORD_TABLES = {
-    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE},
-    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
-    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
-    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE},
+    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
 }
 
 
@@ -131,12 +138,11 @@ def _has_nonempty_tool_context(state: dict, agent_name: str) -> bool:
         if stripped.startswith("[Tool ") or stripped.startswith("[No "):
             continue
         if (
-            stripped.startswith("[get_related_info")
-            or stripped.startswith("[get_balance_sheet_info")
+            stripped.startswith("[get_balance_sheet_info")
             or stripped.startswith("[get_income_statement_info")
             or stripped.startswith("[get_cashflow_info")
             or stripped.startswith("[get_note_info")
-            or stripped.startswith("[web_search")
+            or stripped.startswith("[get_report_section_info")
         ):
             return True
     return False
@@ -151,12 +157,11 @@ def _nonempty_tool_context_count(state: dict, agent_name: str) -> int:
         if stripped.startswith("[Tool ") or stripped.startswith("[No "):
             continue
         if (
-            stripped.startswith("[get_related_info")
-            or stripped.startswith("[get_balance_sheet_info")
+            stripped.startswith("[get_balance_sheet_info")
             or stripped.startswith("[get_income_statement_info")
             or stripped.startswith("[get_cashflow_info")
             or stripped.startswith("[get_note_info")
-            or stripped.startswith("[web_search")
+            or stripped.startswith("[get_report_section_info")
         ):
             count += 1
     return count
@@ -283,17 +288,219 @@ def _next_requirement_item(state: dict, agent_name: str) -> str:
     return str(requirements[0] or "").strip()
 
 
-def _evidence_pack_payload_for_prompt(state: dict) -> dict:
+def _dispatch_target_for_agent(state: dict, agent_name: str) -> dict:
+    agent = str(agent_name or "").strip()
+    dispatch_target = state.get("dispatch_target")
+    if (
+        isinstance(dispatch_target, dict)
+        and str(dispatch_target.get("agent", "") or "").strip() == agent
+    ):
+        return dispatch_target
+
+    current_round = int((state or {}).get("followup_rounds", 0) or 0)
+    for item in reversed(state.get("worker_messages", []) or []):
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("agent", "") or "").strip() != agent:
+            continue
+        if str(item.get("kind", "") or "").strip() != "agent_response":
+            continue
+        try:
+            if int(item.get("round", 0) or 0) != current_round:
+                continue
+        except (TypeError, ValueError):
+            continue
+        message_target = item.get("dispatch_target")
+        if (
+            isinstance(message_target, dict)
+            and str(message_target.get("agent", "") or "").strip() == agent
+        ):
+            return message_target
+
+    return {}
+
+
+def _scoped_analysis_input_results(state: dict, agent_name: str) -> dict:
+    dispatch_target = _dispatch_target_for_agent(state, agent_name)
+    target_results = (
+        dispatch_target.get("analysis_input_results")
+        if isinstance(dispatch_target, dict)
+        else None
+    )
+    if isinstance(target_results, dict) and target_results:
+        return target_results
+
+    explicit = state.get("analysis_input_results")
+    if isinstance(explicit, dict) and explicit:
+        return explicit
+
+    return {}
+
+
+def _evidence_pack_payload_for_prompt(state: dict, agent_name: str = "") -> dict:
     pack = state.get("evidence_pack", {}) or {}
     if not isinstance(pack, dict):
         return {}
+    items = []
+    for item in pack.get("items", []) or []:
+        if not isinstance(item, dict):
+            continue
+        payload = {}
+        for key in (
+            "scope",
+            "table",
+            "query",
+            "note_ref",
+            "source_table",
+            "source_item",
+            "facts_n",
+            "cache_hit",
+        ):
+            value = item.get(key)
+            if value in ("", None, [], {}):
+                continue
+            payload[key] = value
+        if payload:
+            items.append(payload)
+
     payload = {
-        "items": list(pack.get("items", []) or []),
+        "items": items,
         "stats": pack.get("stats", {}) or {},
     }
-    if not state.get("analysis_input_results"):
-        payload["facts_by_table"] = pack.get("facts_by_table", {}) or pack.get("facts_by_agent", {}) or {}
+    if not _scoped_analysis_input_results(state, agent_name):
+        payload["facts_by_table"] = _compact_analysis_results_for_prompt(
+            pack.get("facts_by_table", {}) or pack.get("facts_by_agent", {}) or {}
+        )
     return payload
+
+
+def _compact_analysis_fact_for_prompt(fact: dict) -> dict:
+    if not isinstance(fact, dict):
+        return {}
+
+    payload = {}
+    for key in (
+        "content_type",
+        "item_name",
+        "time_hint",
+        "value",
+        "interpretation_hint",
+        "note_ref",
+        "note_number",
+        "note_title",
+        "subheading",
+    ):
+        value = fact.get(key)
+        if value in ("", None, [], {}):
+            continue
+        payload[key] = value
+
+    status = normalize_fact_status(fact.get("status"))
+    if status and status != "found":
+        payload["status"] = status
+
+    return payload
+
+
+def _compact_analysis_results_for_prompt(results: dict) -> dict:
+    output = {}
+    for result_key, payload in (results or {}).items():
+        if not isinstance(payload, dict):
+            continue
+        table = normalize_table_heading(str(payload.get("table", "") or result_key).strip())
+        facts = [
+            compact
+            for compact in (
+                _compact_analysis_fact_for_prompt(fact)
+                for fact in (payload.get("facts", []) or [])
+            )
+            if compact
+        ]
+        item = {}
+        if table:
+            item["table"] = table
+        if facts:
+            item["facts"] = facts
+        if item:
+            output[str(result_key)] = item
+    return output
+
+
+def _analysis_input_results_payload_for_prompt(state: dict, agent_name: str = "") -> dict:
+    return _compact_analysis_results_for_prompt(
+        _analysis_input_results_with_tool_facts(state, agent_name)
+    )
+
+
+def _compact_evidence_queries_for_prompt(items: list[dict]) -> list[dict]:
+    output = []
+    seen = set()
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        table = normalize_table_heading(str(item.get("table", "") or "").strip())
+        query = str(item.get("query", "") or "").strip()
+        if not query:
+            continue
+        key = (table, query)
+        if key in seen:
+            continue
+        seen.add(key)
+        payload = {"query": query}
+        if table:
+            payload["table"] = table
+        output.append(payload)
+    return output
+
+
+def _analysis_plan_payload_for_prompt(state: dict, agent_name: str) -> dict:
+    worker_plan = state.get("worker_plan", {}) or {}
+    if not isinstance(worker_plan, dict):
+        worker_plan = {}
+
+    dispatch_target = state.get("dispatch_target")
+    if not isinstance(dispatch_target, dict):
+        dispatch_target = {}
+
+    objective = str(dispatch_target.get("objective", "") or "").strip()
+    if not objective:
+        for item in worker_plan.get("analysis_plan", []) or []:
+            if not isinstance(item, dict):
+                continue
+            if str(item.get("agent", "") or "").strip() != agent_name:
+                continue
+            objective = str(item.get("objective", "") or "").strip()
+            break
+
+    evidence_queries = _compact_evidence_queries_for_prompt(
+        list(dispatch_target.get("evidence_queries", []) or [])
+        or list(state.get("evidence_queries", []) or [])
+    )
+    requirements = _dedupe_keep_order(
+        str(item).strip()
+        for item in (dispatch_target.get("requirements", []) or [])
+        if str(item).strip()
+    )
+
+    plan_item = {
+        "agent": agent_name,
+        "objective": objective,
+        "evidence_queries": evidence_queries,
+        "requirements": requirements,
+    }
+    compact_plan = {
+        "analysis_plan": [
+            {
+                key: value
+                for key, value in plan_item.items()
+                if value not in ("", None, [], {})
+            }
+        ]
+    }
+    difficulty_level = str(worker_plan.get("difficulty_level", "") or "").strip()
+    if difficulty_level:
+        compact_plan["difficulty_level"] = difficulty_level
+    return compact_plan
 
 
 def _evidence_pack_facts(state: dict) -> list[dict]:
@@ -355,11 +562,11 @@ def _dedupe_fact_payloads(facts: list[dict]) -> list[dict]:
 
 
 def _analysis_evidence_facts(state: dict, agent_name: str) -> list[dict]:
-    return _dedupe_fact_payloads(
-        list(_analysis_input_facts(state, agent_name))
-        + list(_evidence_pack_facts(state))
-        + list(_tool_result_facts_for_agent(state, agent_name))
-    )
+    facts = list(_analysis_input_facts(state, agent_name))
+    if not _scoped_analysis_input_results(state, agent_name):
+        facts.extend(_evidence_pack_facts(state))
+    facts.extend(_tool_result_facts_for_agent(state, agent_name))
+    return _dedupe_fact_payloads(facts)
 
 
 def _tool_result_facts_for_agent(state: dict, agent_name: str) -> list[dict]:
@@ -649,35 +856,73 @@ def _force_analysis_tool_call_instruction(base_instruction: str, requirement: st
     return (
         f"{base_instruction}\n\n"
         "BẮT BUỘC BỔ SUNG:\n"
-        "- Trước hết phải đọc evidence_pack_json và input_facts trong worker_results_json.\n"
-        "- Nếu evidence_pack_json/worker_results_json đã có fact phù hợp cho keyword cần kiểm tra, trả AnalysisOutput trực tiếp và requirements=[].\n"
-        "- Chỉ khi evidence_pack_json và input_facts đều thiếu, mơ hồ hoặc có status not_found_after_search cho dữ liệu cần thiết, hãy gọi đúng bound tool theo phạm vi bảng; không viết JSON action thủ công.\n"
+        "- Trước hết phải đọc input_facts trong worker_results_json; evidence_pack_json chỉ là metadata truy xuất/tóm tắt.\n"
+        "- Nếu worker_results_json đã có fact phù hợp cho keyword cần kiểm tra, trả AnalysisOutput trực tiếp và requirements=[].\n"
+        "- Chỉ khi input_facts thiếu, mơ hồ hoặc có status not_found_after_search cho dữ liệu cần thiết, hãy gọi đúng bound tool theo phạm vi bảng; không viết JSON action thủ công.\n"
         f"{requirement_line}"
         "- Objective phân tích nằm trong plan_json.analysis_plan[].objective; KHÔNG dùng objective dài làm query.\n"
         "- Query tool phải lấy từ evidence_queries được giao hoặc keyword phù hợp trong allowed_keywords_json theo đúng table tương ứng.\n"
-        "- Dùng get_balance_sheet_info cho bảng cân đối kế toán, get_income_statement_info cho báo cáo kết quả kinh doanh, get_cashflow_info cho lưu chuyển tiền tệ, get_note_info cho thuyết minh.\n"
-        "- query của tool PHẢI là 1 khoản mục/line-item báo cáo tài chính ngắn bằng tiếng Việt, ví dụ: \"lợi nhuận sau thuế thu nhập doanh nghiệp\", \"tổng cộng tài sản\", \"lưu chuyển tiền thuần từ hoạt động kinh doanh\".\n"
+        "- Dùng get_balance_sheet_info cho bảng cân đối kế toán, get_income_statement_info cho báo cáo kết quả kinh doanh, get_cashflow_info cho lưu chuyển tiền tệ, get_note_info cho thuyết minh, get_report_section_info cho phần đầu báo cáo như báo cáo Ban Tổng Giám đốc/kiểm toán/soát xét.\n"
+        "- Evidence ban đầu chỉ gửi tối đa 2 facts cho mỗi phần thuyết minh; nếu cần thêm dòng/chi tiết trong đúng phần thuyết minh đó, dùng get_note_info với query là số thuyết minh, tiêu đề note, hoặc chủ đề note ngắn.\n"
+        "- query của tool PHẢI là 1 khoản mục/line-item báo cáo tài chính ngắn bằng tiếng Việt, ví dụ: \"lợi nhuận sau thuế thu nhập doanh nghiệp\", \"tổng cộng tài sản\", \"lưu chuyển tiền thuần từ hoạt động kinh doanh\"; riêng get_note_info dùng chủ đề/số thuyết minh ngắn, get_report_section_info dùng chủ đề phần đầu báo cáo ngắn.\n"
         "- Không dùng objective phân tích dài làm query, không dùng câu như \"đánh giá khả năng sinh lời\" làm query, và không ghép nhiều khoản mục vào cùng một query.\n"
-        "- Nếu không gọi tool nhưng vẫn thiếu dữ liệu, requirements phải dùng cùng kiểu khoản mục/line-item ngắn để hệ thống có thể truy xuất tiếp.\n"
+        "- Nếu không gọi tool nhưng vẫn thiếu dữ liệu, requirements phải dùng cùng kiểu khoản mục/line-item hoặc chủ đề thuyết minh ngắn để hệ thống có thể truy xuất tiếp.\n"
     )
 
 
-def _analysis_input_results(state: dict) -> dict:
+def _analysis_input_results(state: dict, agent_name: str = "") -> dict:
+    scoped = _scoped_analysis_input_results(state, agent_name)
+    if scoped:
+        return scoped
+
     explicit = state.get("analysis_input_results")
-    if isinstance(explicit, dict) and explicit:
+    if isinstance(explicit, dict):
         return explicit
 
     results = {}
-    for agent_name, payload in (state.get("worker_results", {}) or {}).items():
-        if is_analysis_agent(agent_name):
+    for source_agent, payload in (state.get("worker_results", {}) or {}).items():
+        if is_analysis_agent(source_agent):
             continue
-        results[agent_name] = payload
+        results[source_agent] = payload
+    return results
+
+
+def _analysis_input_results_with_tool_facts(state: dict, agent_name: str) -> dict:
+    results = {}
+    for result_key, payload in (_analysis_input_results(state, agent_name) or {}).items():
+        if not isinstance(payload, dict):
+            results[result_key] = payload
+            continue
+
+        facts = [
+            dict(fact)
+            for fact in (payload.get("facts", []) or [])
+            if isinstance(fact, dict)
+        ]
+        results[result_key] = {
+            "table": str(payload.get("table", "") or "").strip(),
+            "facts": facts,
+        }
+
+    for fact in _tool_result_facts_for_agent(state, agent_name):
+        if not isinstance(fact, dict):
+            continue
+        table = normalize_table_heading(str(fact.get("table", "") or "").strip())
+        result_key = table or "TOOL"
+        results[result_key] = merge_worker_fact_payload(
+            results.get(result_key, {}),
+            {
+                "table": table,
+                "facts": [fact],
+            },
+        )
+
     return results
 
 
 def _analysis_input_facts(state: dict, agent_name: str) -> list[dict]:
     facts = []
-    for _source_agent, payload in (_analysis_input_results(state) or {}).items():
+    for _source_agent, payload in (_analysis_input_results(state, agent_name) or {}).items():
         if not isinstance(payload, dict):
             continue
         table = str(payload.get("table", "") or "").strip()
@@ -763,6 +1008,10 @@ def _table_for_requirement(state: dict, requirement: str) -> str:
 
 
 def _statement_query_from_requirement(value: str, *, table: str = "") -> str:
+    raw_text = " ".join(str(value or "").strip().split())
+    if _looks_like_statement_line_item(raw_text):
+        return raw_text
+
     keywords = extract_financial_statement_keywords(value, table=table, limit=1)
     if keywords:
         return keywords[0]
@@ -811,7 +1060,7 @@ def _analysis_allowed_keyword_tables(state: dict, agent_name: str, requirement: 
             if table and table != TABLE_NOTE:
                 tables.add(table)
 
-    return [table for table in (TABLE_BS, TABLE_IS, TABLE_CF) if table in tables]
+    return [table for table in (TABLE_BS, TABLE_IS, TABLE_CF, TABLE_REPORT_SECTION) if table in tables]
 
 
 def _allowed_keywords_payload_for_analysis(state: dict, agent_name: str, requirement: str = "") -> str:
@@ -825,9 +1074,21 @@ def _deterministic_tool_call_for_missing_requirement(
     requirement: str,
 ) -> dict:
     table = _table_for_requirement(state, requirement)
+    raw_query = " ".join(str(requirement or "").strip().split())
+    normalized_table = normalize_table_heading(table)
+    if normalized_table in {TABLE_NOTE, TABLE_REPORT_SECTION} and raw_query:
+        return _tool_call_payload(
+            [
+                synthetic_tool_call(
+                    scoped_tool_name_for_table(normalized_table),
+                    {"query": raw_query},
+                )
+            ]
+        )
+
     query = _statement_query_from_requirement(requirement, table=table)
     if not query:
-        query = normalize_requirement_text(requirement, table=table)
+        query = raw_query
     if not query or not _looks_like_statement_line_item(query):
         return {}
 
@@ -892,10 +1153,10 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
         "role": profile["role"],
         "system_instruction": profile["system_instruction"],
         "user_query": state.get("user_query", ""),
-        "worker_query": state.get("worker_query", ""),
-        "plan_json": json.dumps(state.get("worker_plan", {}), ensure_ascii=False),
-        "evidence_pack_json": json.dumps(_evidence_pack_payload_for_prompt(state), ensure_ascii=False),
-        "worker_results_json": json.dumps(_analysis_input_results(state), ensure_ascii=False),
+        "worker_query": "",
+        "plan_json": json.dumps(_analysis_plan_payload_for_prompt(state, agent_name), ensure_ascii=False),
+        "evidence_pack_json": json.dumps(_evidence_pack_payload_for_prompt(state, agent_name), ensure_ascii=False),
+        "worker_results_json": json.dumps(_analysis_input_results_payload_for_prompt(state, agent_name), ensure_ascii=False),
         "allowed_keywords_json": _allowed_keywords_payload_for_analysis(state, agent_name),
         "web_summary": state.get("web_summary", ""),
         "last_agent_response": "",

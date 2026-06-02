@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agent FinX</title>
+  <link rel="stylesheet" href="chatstyle.css">
+</head>
+<body>
+
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <div class="icon"></div>
+      <span>Agent<b>FinX</b></span>
+    </div>
+
+    <button class="sidebar-new" onclick="newChat()">
+      + Cuộc trò chuyện mới
+    </button>
+
+    <div class="sidebar-section-label">Lịch sử</div>
+
+    <div class="history-list" id="history-list">
+      <div style="padding:8px 12px;font-size:12px;color:var(--text-muted)">Đang tải...</div>
+    </div>
+
+    <div class="sidebar-footer">
+      <div class="user-info">
+        <div class="avatar" id="sidebar-avatar">U</div>
+        <div class="user-meta">
+          <div class="user-name"  id="sidebar-name">Người dùng</div>
+          <div class="user-email" id="sidebar-email">user@email.com</div>
+        </div>
+        <button class="logout-btn" onclick="doLogout()" title="Đăng xuất">⏻</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAIN -->
+  <div class="main">
+
+    <!-- TOPBAR -->
+    <div class="topbar">
+      <div class="model-badge">AgentFinX</div>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="exportChat()">Xuất báo cáo</button>
+        <button class="icon-btn logout-topbar-btn" onclick="doLogout()">Đăng xuất</button>
+      </div>
+    </div>
+
+    <!-- MESSAGES -->
+    <div class="messages" id="messages">
+      <div class="welcome" id="welcome-state">
+        <div class="welcome-icon"></div>
+        <h2>Hế lô tôi là AgentFinX</h2>
+        <p>Tải lên báo cáo tài chính PDF hoặc đặt câu hỏi để phân tích, dự đoán xu hướng và cung cấp insight chuyên sâu.</p>
+        <div class="welcome-chips">
+          <div class="chip" onclick="useChip(this)">Phân tích báo cáo tài chính</div>
+          <div class="chip" onclick="useChip(this)">Dự báo doanh thu năm tới</div>
+          <div class="chip" onclick="useChip(this)">So sánh với ngành</div>
+          <div class="chip" onclick="useChip(this)">Phát hiện rủi ro tài chính</div>
+          <div class="chip" onclick="useChip(this)">Phân tích dòng tiền</div>
+          <div class="chip" onclick="useChip(this)">Đánh giá chỉ số ROE/ROA</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INPUT AREA -->
+    <div class="input-area">
+      <!-- Preview file đính kèm -->
+      <div class="attached-preview" id="attached-preview">
+        <div class="file-icon-sm">📄</div>
+        <span class="aname" id="attached-name">—</span>
+        <span class="asize" id="attached-size">—</span>
+        <button class="remove-file" onclick="removeFile()">✕</button>
+      </div>
+
+      <div class="input-box">
+        <textarea
+          id="chat-input"
+          rows="1"
+          placeholder="Hỏi về báo cáo tài chính hoặc tải lên file PDF..."
+          onkeydown="handleKey(event)"
+          oninput="autoResize(this)"
+        ></textarea>
+        <div class="input-actions">
+          <div class="upload-btn-wrap">
+            <button class="attach-btn" title="Đính kèm file PDF/Excel">📎</button>
+            <input type="file" accept=".pdf,.xlsx,.csv" onchange="attachFile(event)" />
+          </div>
+          <button class="send-btn" id="send-btn" onclick="sendMessage()" disabled>➤</button>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast">✓ <span id="toast-msg"></span></div>
+
+  <script src="chatbox.js"></script>
+</body>
+</html>

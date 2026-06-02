@@ -6,7 +6,7 @@ from typing import List, Tuple, Dict, Optional
 import re
 from difflib import get_close_matches
 
-from config.allowed_keywords import ALLOWED_KEYWORDS, ALIASES
+from config.allowed_keywords import ALLOWED_KEYWORDS
 
 _SPACE_RE = re.compile(r"\s+")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
@@ -16,9 +16,6 @@ def normalize_keyword(k: str) -> str:
     k = _SPACE_RE.sub(" ", k)
     # normalize punctuation variants
     k = k.replace("–", "-").replace("—", "-")
-    # alias mapping
-    if k in ALIASES:
-        k = ALIASES[k]
     return k
 
 def validate_keywords(

@@ -20,7 +20,6 @@ class GraphState(TypedDict, total=False):
     worker_query: str
     dispatch_target: dict
     analysis_input_results: dict
-    analysis_objective: str
     evidence_queries: list[dict]
 
     # sequential/global
