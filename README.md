@@ -1,59 +1,154 @@
-# Huong dan su dung `test.py`
+# AgentFinX Financial QA
 
-`test.py` la CLI de chay pipeline agentic financial QA tren mot dataset da dang ky hoac mot file tai lieu moi.
+AgentFinX là pipeline hỏi đáp báo cáo tài chính tiếng Việt. Project đọc báo cáo dạng Markdown, chuẩn hóa bảng/thuyết minh vào SQLite, build chỉ mục tìm kiếm bằng Qdrant + embedding, rồi dùng graph agent để lập kế hoạch, lấy bằng chứng và tổng hợp câu trả lời.
 
-## Yeu cau
+Repo hiện có 4 luồng sử dụng chính:
 
-- Chay lenh trong thu muc project: `/Users/thanhhai/itec`
-- Moi truong Python va dependencies cua repo da duoc cai dat
+- `test.py`: CLI chính để đăng ký/build dataset và hỏi một câu.
+- `dataset_batch_runner.py`: chạy một hoặc nhiều câu hỏi trên các dataset đã đăng ký, tạo `batch_test_results.json`.
+- `dataset_batch_result.py` + `ragas_eval_runner.py`: tạo prediction/context và chấm RAGAS.
+- `web/`: frontend tĩnh + FastAPI backend cho demo chat/upload.
 
-## Cau hinh vector store
+## Cấu Trúc
 
-Vector store dung Qdrant Cloud. `.env` can co:
+```text
+agents/                 Planner, router/keyworder, analysis agents, synth
+config/                 Cấu hình mặc định và keyword whitelist
+data/                   Báo cáo Markdown đầu vào
+datasets/               Registry API cho dataset
+dataset_store/          Registry, manifest, SQLite/raw-table sinh ra khi build
+graph/                  LangGraph workflow, routing, evidence pack
+ingestion/              Parser Markdown/table/frontmatter/note, build KB
+kb/                     SQLite repository
+llm/                    LangChain Ollama client và invoke helper
+ragas_runs/             Kết quả prediction/RAGAS JSON + CSV
+schemas/                Pydantic models và normalizer
+tests/                  Unit tests
+tools/                  Retrieval tools cho agents
+vectorstore/            Qdrant adapter, lexical index, reranker
+web/                    Demo frontend/backend
+```
+
+Các file dữ liệu/evaluation thường dùng:
+
+- `dau_tu_APEC.json`: bộ câu hỏi/tham chiếu gốc.
+- `dau_tu_APEC_ragas_seed.json`: seed cho RAGAS.
+- `queries_test.json`: câu hỏi batch thông thường.
+- `batch_test_results.json`: output batch query.
+
+## Cài Đặt
+
+Khuyến nghị dùng Python 3.12 trong virtual environment.
 
 ```bash
+python -m venv .venv
+source .venv/bin/activate
+python -m pip install -r requirements.txt
+```
+
+`requirements.txt` là file dependency chính của repo. Nó bao gồm pipeline, RAGAS, Streamlit viewer, FastAPI backend, optional neural reranker và pytest.
+
+## Biến Môi Trường
+
+Tạo file `.env` ở root repo. Các biến tối thiểu thường cần:
+
+```bash
+OLLAMA_API_KEY=<ollama-api-key>
+OLLAMA_BASE_URL=https://ollama.com
+OLLAMA_MODEL=gpt-oss:120b-cloud
+
+OLLAMA_EMBEDDING_MODEL=bge-m3
+OLLAMA_EMBEDDING_BASE_URL=http://127.0.0.1:11434
+
 QDRANT_URL=https://<cluster-url>.qdrant.io:6333
 QDRANT_API_KEY=<qdrant-api-key>
 ```
 
-Embedding mac dinh chay qua Ollama local voi model `qwen3-embedding:0.6b`.
-Neu moi truong chua co Qdrant client, cai bang `python -m pip install qdrant-client`.
-
-## Cach chay nhanh
-
-Chay voi dataset mac dinh (document.md):
+Nếu dùng Qdrant local/in-memory, có thể cấu hình `QDRANT_LOCATION` thay cho `QDRANT_URL`. Nếu dùng RAGAS với Claude judge, thêm:
 
 ```bash
-python test.py --query "ROE quy 2/2025 la bao nhieu?"
+RAGAS_JUDGE=anthropic
+ANTHROPIC_API_KEY=<anthropic-api-key>
+RAGAS_JUDGE_MODEL=claude-opus-4-8
 ```
 
-Neu chay tu terminal interactive ma khong truyen `--query`, chuong trinh se hoi:
+Optional neural reranker chỉ chạy khi bật:
 
 ```bash
-python test.py
+NEURAL_RERANK=1
+NEURAL_RERANK_MODEL=keepitreal/vietnamese-sbert
 ```
 
-## Dataset duoc chon nhu the nao
+## Chạy Một Câu Hỏi
 
-`test.py` resolve dataset theo thu tu sau:
-
-1. Neu co `--file-path`: tao hoac cap nhat dataset tu file nay.
-2. Neu co `--dataset-id`: lay dung dataset theo id.
-3. Neu co bo loc nhu `--company`, `--ticker`, `--fiscal-year`...: tim dataset trong registry.
-4. Neu dang chay interactive va co nhieu dataset phu hop: yeu cau chon dataset.
-5. Neu khong truyen bo loc nao va registry chua co du lieu phu hop: tu dong dung dataset mac dinh trong `data/document.md`.
-
-Registry dataset nam o `dataset_store/registry.json`.
-
-## Cac lenh hay dung
-
-Liet ke dataset da dang ky:
+Liệt kê dataset đã đăng ký:
 
 ```bash
 python test.py --list-datasets
 ```
 
-Chay batch tren tat ca dataset da dang ky va ghi output ra JSON:
+Chạy một câu hỏi trên dataset mặc định hoặc dataset đã match:
+
+```bash
+python test.py --query "ROE quý 2/2025 là bao nhiêu?"
+```
+
+Chạy theo dataset id:
+
+```bash
+python test.py \
+  --dataset-id apec \
+  --query "Tổng tài sản cuối kỳ là bao nhiêu?"
+```
+
+Đăng ký hoặc build dataset mới từ file Markdown:
+
+```bash
+python test.py \
+  --file-path data/dau_tu_APEC.md \
+  --dataset-id apec \
+  --company "Công ty Cổ phần Chứng khoán Châu Á Thái Bình Dương" \
+  --ticker APEC \
+  --fiscal-year 2025 \
+  --fiscal-quarter 2 \
+  --scope standalone \
+  --audit-status unaudited \
+  --query "Tổng tài sản cuối kỳ là bao nhiêu?"
+```
+
+Khi dataset chưa được build hoặc ingestion version thay đổi, CLI sẽ tự tạo/cập nhật SQLite KB, raw table files, manifest và Qdrant collection.
+
+## Chọn Dataset
+
+`test.py` resolve dataset theo thứ tự:
+
+1. Có `--file-path`: tạo hoặc cập nhật dataset từ file đó.
+2. Có `--dataset-id`: lấy đúng dataset id.
+3. Có filter như `--company`, `--ticker`, `--fiscal-year`: tìm trong registry.
+4. Chạy interactive và có nhiều match: yêu cầu chọn dataset.
+5. Không có filter: dùng dataset mặc định trong `config/settings.py`.
+
+Registry nằm ở `dataset_store/registry.json`.
+
+## Xóa Dataset
+
+```bash
+python test.py --delete-dataset --dataset-id apec
+```
+
+Chạy non-interactive thì thêm `--yes`:
+
+```bash
+python test.py --delete-dataset --dataset-id apec --yes
+```
+
+Lệnh xóa chỉ xóa registry/manifest/SQLite/raw tables/Qdrant collection của dataset, không xóa source document gốc.
+
+## Batch Query
+
+`dataset_batch_runner.py` chạy cùng một bộ câu hỏi trên tất cả dataset hoặc một nhóm dataset được chọn.
+
+Chạy một câu:
 
 ```bash
 python dataset_batch_runner.py \
@@ -61,194 +156,148 @@ python dataset_batch_runner.py \
   --output batch_test_results.json
 ```
 
-Mac dinh, neu file output da ton tai, script se merge them ket qua theo tung `query` vao cung file JSON. Query moi se duoc them vao `query_reports`; neu chay lai cung mot query, ket qua query do se duoc cap nhat. Neu muon ghi de hoan toan, them `--overwrite-output`.
-
-De cap nhat trace cho 1 dataset cu the trong file batch JSON:
+Chạy từ file JSON:
 
 ```bash
 python dataset_batch_runner.py \
-  --dataset-id hoaphat \
-  --query "Biên lợi nhuận ròng của công ty là bao nhiêu?" \
+  --queries-file queries_test.json \
+  --output batch_test_results.json
+```
+
+Chạy một dataset cụ thể và lưu trace:
+
+```bash
+python dataset_batch_runner.py \
+  --dataset-id apec \
+  --queries-file queries_test.json \
   --output batch_test_results.json \
   --include-trace
 ```
 
-Voi `--dataset-id`, script chi chay cac dataset duoc chi dinh va khi merge se chi cap nhat ket qua cua cac dataset do trong `query_report`, khong xoa ket qua cu cua dataset khac.
+Mặc định script merge kết quả mới vào output cũ theo từng query/dataset. Muốn ghi đè hoàn toàn, thêm `--overwrite-output`.
 
-Xoa mot dataset da dang ky theo id:
-
-```bash
-python test.py --delete-dataset --dataset-id song-da-financial-statement-2024-unknown-unknown
-```
-
-Chay voi dataset theo id:
+Xem kết quả batch bằng Streamlit:
 
 ```bash
-python test.py --dataset-id hoa-phat-financial-statement-2025-q2-consolidated-unaudited --query "Loi nhuan sau thue la bao nhieu?"
+streamlit run streamlit_batch_results_viewer.py
 ```
 
-Loc dataset theo metadata:
+## RAGAS Evaluation
+
+Luồng RAGAS có 2 bước: tạo prediction/retrieved contexts, rồi chấm điểm.
+
+Smoke run 10 câu:
 
 ```bash
-python test.py --company "Hoa Phat" --fiscal-year 2025 --fiscal-quarter 2 --scope consolidated --query "ROE la bao nhieu?"
+python dataset_batch_result.py \
+  --dataset-id apec \
+  --seed-file dau_tu_APEC_ragas_seed.json \
+  --limit 10 \
+  --output ragas_runs/apec_smoke_predictions.json
 ```
 
-Bat buoc chon thu cong trong cac dataset match:
+Chấm RAGAS:
 
 ```bash
-python test.py --company "Hoa Phat" --select-dataset
+python ragas_eval_runner.py \
+  --predictions-file ragas_runs/apec_smoke_predictions.json \
+  --output ragas_runs/apec_smoke_scored.json
 ```
 
-Dang ky dataset moi tu file:
+Chạy full seed:
+
+```bash
+python dataset_batch_result.py \
+  --dataset-id apec \
+  --seed-file dau_tu_APEC_ragas_seed.json \
+  --full \
+  --output ragas_runs/apec_full_predictions.json
+```
+
+Resume khi bị gián đoạn:
+
+```bash
+python dataset_batch_result.py \
+  --dataset-id apec \
+  --seed-file dau_tu_APEC_ragas_seed.json \
+  --full \
+  --resume \
+  --output ragas_runs/apec_full_predictions.json
+```
+
+Chấm lại toàn bộ scores, bỏ qua điểm cũ:
+
+```bash
+python ragas_eval_runner.py \
+  --predictions-file ragas_runs/apec_full_predictions.json \
+  --output ragas_runs/apec_full_scored.json \
+  --force
+```
+
+Metrics hiện dùng: `faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`.
+
+## Web Demo
+
+Backend nằm trong `web/backend`, frontend tĩnh nằm trong `web`.
+
+Chạy backend:
+
+```bash
+cd web/backend
+python -m pip install -r requirements.txt
+uvicorn main:app --reload --port 8000
+```
+
+Mở frontend:
+
+```bash
+cd web
+python -m http.server 3000
+```
+
+Sau đó vào `http://localhost:3000`. API docs ở `http://localhost:8000/docs`.
+
+Các biến backend hữu ích:
+
+- `FINX_SECRET_KEY`
+- `FINX_CORS_ORIGINS`
+- `FINX_DB_PATH`
+- `FINX_UPLOAD_DIR`
+- `FINX_ALLOWED_UPLOAD_EXTS`
+
+## Debug
+
+Bật trace debug cho một câu hỏi:
 
 ```bash
 python test.py \
-  --file-path data/document.md \
-  --company "Cong ty Co phan Song Da" \
-  --fiscal-year 2024 \
-  --query "Tong tai san la bao nhieu?"
+  --dataset-id apec \
+  --query "Tổng tài sản cuối kỳ là bao nhiêu?" \
+  --debug-trace
 ```
 
-`--file-path` co the la duong dan tuong doi hoac tuyet doi. Neu la duong dan tuong doi, no se duoc resolve tu root cua repo.
-Neu khong truyen `--company`, CLI se khong con fallback sang cong ty mac dinh. Neu ban cung khong truyen `--dataset-id`, he thong se dung ten file lam `dataset_id` tam.
+Trace chính gồm các event planner/router/evidence/synth và `run:done` với runtime/token summary. Khi bật `--debug-trace`, một số event tool có thêm preview context để điều tra retrieval.
 
-## Cac tham so chinh
+## Test
 
-- `--list-datasets`: in danh sach dataset va thoat
-- `--delete-dataset`: xoa dataset da dang ky va thoat
-- `--yes`: bo qua prompt xac nhan cho thao tac pha huy nhu xoa dataset
-- `--dataset-id`: chon dataset da ton tai theo id
-- `--select-dataset`: bat prompt chon dataset trong cac ket qua match
-- `--company`
-- `--ticker`
-- `--industry`
-- `--report-type`
-- `--fiscal-year`
-- `--fiscal-quarter`
-- `--scope`
-- `--audit-status`
-- `--file-path`: dang ky/build dataset tu file tai lieu
-- `--query`: chay query khong tuong tac
-- `--debug-trace`: hien them log trace noi bo
-
-## Batch test JSON
-
-Script [dataset_batch_runner.py](/Users/thanhhai/itec/dataset_batch_runner.py) chay qua toan bo dataset hien co trong registry, thuc thi mot hoac nhieu cau hoi, roi luu ket qua vao file JSON.
-
-Vi du 1 cau hoi:
+Chạy toàn bộ test:
 
 ```bash
-python dataset_batch_runner.py \
-  --query "ROE là bao nhiêu?" \
-  --output batch_test_results.json
+python -m pytest tests
 ```
 
-Vi du nhieu cau hoi:
+Chạy nhóm liên quan batch/RAGAS:
 
 ```bash
-python dataset_batch_runner.py \
-  --query "ROE là bao nhiêu?" \
-  --query "Lợi nhuận sau thuế là bao nhiêu?" \
-  --output batch_test_results.json
+python -m pytest tests/test_dataset_batch_runner.py tests/test_ragas_eval_runner.py
 ```
 
-Vi du doc cau hoi tu file:
+Lưu ý: một số test/luồng có thể cần biến môi trường hoặc dependency LLM/Qdrant nếu chạm đến workflow thật. Các unit test đã mock phần LLM thường không cần gọi API thật.
 
-```bash
-python dataset_batch_runner.py \
-  --queries-file queries.txt \
-  --output batch_test_results.json
-```
+## Ghi Chú Vận Hành
 
-`queries.txt` co the la file text moi dong 1 cau hoi, hoac file `.json` dang list:
-
-```json
-[
-  "ROE là bao nhiêu?",
-  "Lợi nhuận sau thuế là bao nhiêu?"
-]
-```
-
-Trong JSON output, top-level se co `query_reports`. Moi `query_report` ung voi 1 cau hoi, va ben trong moi dataset co `run` cua query do.
-
-Moi `run` co:
-
-- `query`
-- `formatted_answer`
-- `answer`
-- `synth_status`
-- `errors`
-- `run_summary`
-
-Neu muon luu ca trace chi tiet, them `--include-trace`. Neu muon bat trace debug cho pipeline, them `--debug-trace`.
-
-## Trace va debug
-
-Mac dinh, trace chi giu lai cac event chinh de de nhin va de visualize.
-
-Bat debug trace:
-
-```bash
-python test.py --debug-trace --query "ROE quy 2/2025 la bao nhieu?"
-```
-
-Khi bat `--debug-trace`, cac event noi bo hon se duoc in them. Rieng cac event tool nhu `tool:done` va `tool:followup_done` se kem them `context_preview` de nhin noi dung ung voi `context_len`.
-
-## Xoa dataset
-
-`--delete-dataset` chi xoa dataset da ton tai. Lenh nay khong bao gio:
-
-- tu dong tao dataset mac dinh
-- dang ky dataset moi tu `--file-path`
-- xoa source document goc
-
-Lenh xoa se luon:
-
-- xoa dataset khoi `dataset_store/registry.json`
-- xoa manifest cua dataset
-- xoa SQLite DB cua dataset
-- xoa file raw tables
-- xoa vector collection trong Qdrant
-
-Neu dang chay interactive, CLI se yeu cau ban go `DELETE` de xac nhan. Neu chay khong interactive, can them `--yes`.
-
-## Output co y nghia gi
-
-Moi lan chay se in 3 phan:
-
-```text
-=== DATASET ===
-...
-
-=== TRACE ===
-{'event': 'planner:done', ...}
-...
-{'event': 'run:done', 'duration_ms': ..., 'input_tokens': ..., 'output_tokens': ..., 'total_tokens': ...}
-
-=== FINAL ANSWER ===
-ANSWER: ...
-```
-
-- `DATASET`: dataset dang duoc dung
-- `TRACE`: log live theo tung node trong luc graph dang chay
-- `run:done`: tong hop thoi gian chay va tong token cua ca run
-- `FINAL ANSWER`: cau tra loi da duoc format
-
-Neu pipeline gap loi, chuong trinh se in them `=== ERROR SUMMARY ===` ra `stderr` va thoat voi exit code `1`.
-
-## Luu y khi chay lan dau
-
-Khi dataset chua duoc build, `test.py` se tu dong:
-
-1. Tao knowledge base SQLite
-2. Build vector store
-3. Cap nhat manifest/registry cua dataset
-
-Vi vay, lan chay dau voi mot dataset moi co the cham hon cac lan sau.
-
-## Goi y su dung
-
-- Dung `--list-datasets` de kiem tra registry truoc khi query
-- Dung `--dataset-id` neu muon chay on dinh trong script hoac CI
-- Dung `--debug-trace` khi can debug flow agent/tool/synth
-- Dung `--file-path` khi muon nap nhanh mot bao cao moi vao he thong
+- `dataset_store/`, `ragas_runs/`, `batch_test_results.json` là output sinh ra trong quá trình chạy.
+- `data/` chứa source Markdown đầu vào; không nên xóa khi chỉ muốn reset dataset đã build.
+- `test.py` là CLI chính của project, không phải unit test.
+- `dataset_batch_runner.py` phục vụ batch answer thông thường.
+- `dataset_batch_result.py` phục vụ tạo prediction/context cho RAGAS, không trùng nhiệm vụ với `dataset_batch_runner.py`.

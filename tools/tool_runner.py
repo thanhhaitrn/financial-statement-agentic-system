@@ -249,6 +249,10 @@ def _prepare_scoped_info_args(
     prepared["table"] = table
     raw_query = str(prepared.get("query", "") or "").strip()
     prepared["query"] = raw_query
+    # Thread the full user question into agent-initiated scoped retrieval so the
+    # intent lexical fold + slot matching run there too — the agent's own query
+    # often drops the discriminating tokens (entity names, "khác", asset class).
+    prepared["intent"] = str((state or {}).get("user_query", "") or "").strip()
 
     if not prepared["query"]:
         return None, f"missing query for scoped retrieval table={table}", None
@@ -352,6 +356,7 @@ def _cache_key_for_prepared_args(state: dict, tool_name: str, prepared_args: dic
         table=str(prepared_args.get("table", "") or ""),
         query=str(prepared_args.get("query", "") or ""),
         mode="table",
+        intent=str(prepared_args.get("intent", "") or ""),
     )
 
 

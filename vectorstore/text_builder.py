@@ -91,6 +91,9 @@ def build_combined_text(row) -> str:
     if row.get("note_ref"):
         parts.append(f"Thuyết minh {row['note_ref']}.")
 
+    if row.get("subheading"):
+        parts.append(f"{row['subheading']}.")
+
     if row.get("item_name"):
         parts.append(f"{row['item_name']}.")
 
@@ -115,6 +118,10 @@ def build_documents_and_metadata(df):
         "source",
         "raw_value",
         "normalized_value",
+        # Slot disambiguators for value-lookup rerank/answer.
+        "period",
+        "value_type",
+        "unit",
     ]
     for column in metadata_columns:
         if column not in df.columns:

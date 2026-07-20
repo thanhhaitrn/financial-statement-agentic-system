@@ -1,0 +1,2656 @@
+id,question,answer,ground_truth,retrieved_contexts_n,retrieved_contexts,seed_contexts_n,errors,runtime,tokens,faithfulness,answer_relevancy,context_precision,context_recall
+151,Liệt kê các công ty bị lỗ trong năm từ danh sách các đơn vị được đầu tư.,"Không có số liệu lợi nhuận sau thuế (lợi nhuận ròng) của các công ty con, công ty liên kết và các đơn vị đầu tư trong dữ liệu hiện có, vì vậy không thể xác định được công ty nào bị lỗ trong năm.","Các công ty bị lỗ trong năm từ danh sách các đơn vị được đầu tư bao gồm: CTCP Quản lý Khách sạn và Dịch vụ Mandala, CTCP Thương mại và Du lịch Kim Bôi, CTCP Quản lý Bất động sản Mandala.",5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty liên kết
+Value: Số cuối kỳ Giá gốc: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Đầu tư Quốc tế Dubai
+Value: Số cuối kỳ Giá gốc: 77.112.500.000 | Số đầu năm Giá gốc: 77.112.500.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Đầu tư Apec Túc Duyên | Số đầu năm Số lượng CP
+Period: đầu
+Value: 1.895.769
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Đầu tư Quốc tế Dubai | Số đầu năm Số lượng CP
+Period: đầu
+Value: 7.711.250",1,,34748,8966,1.0,0.0,0.0,0.0
+152,Đánh giá mức độ rủi ro tiềm ẩn từ các công ty con chưa đi vào hoạt động hoặc đang chờ giải thể.,"Dựa trên số liệu hiện có (cuối kỳ):
+
+**2. Thanh khoản và an toàn tài chính**
+- **Vốn đầu tư vào các công ty con**: Giá gốc cuối kỳ 265.354.194.016 VND, dự phòng (giảm giá) 40.839.502.596 VND → giá trị còn lại ≈ 224.515 tỷ VND (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Tổng nợ phải trả**: 778.449.407.564 VND (cuối kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Tổng tài sản**: 1.662.694.128.863 VND (cuối kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Tỷ lệ nợ / tài sản**: 46.8 % (tính từ các số trên).
+- **Vốn chủ sở hữu ước tính**: 884.245 tỷ VND (tài sản – nợ).
+- **Đòn bẩy (Debt/Equity)**: 0.88 (≈ 88 %).
+- **Tiền và các khoản tương đương**: 80.000.000.000 VND (cuối năm) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Các khoản phải thu ngắn hạn**: 362.793.062.285 VND (cuối năm) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Hàng tồn kho (tổng)**: 474.117.608.966 VND (cuối kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Tổng tài sản ngắn hạn ước tính**: ≈ 916.9 tỷ VND (tổng của tiền và các khoản tương đương, phải thu ngắn hạn, hàng tồn kho).
+
+*Nhận xét*:
+- Các công ty con chưa đi vào hoạt động (Dubai) và đang chờ giải thể (Apec Túc Duyên) không tạo ra doanh thu, không có dòng tiền tự tài trợ.
+- Giá trị đầu tư còn lại đã giảm mạnh so với giá gốc, cho thấy khả năng suy giảm giá trị tài sản và rủi ro mất vốn.
+- Tỷ lệ nợ/tài sản 46.8 % và Debt/Equity 0.88 cho thấy mức đòn bẩy cao; nếu các công ty con không thể thu hồi vốn, công ty mẹ sẽ phải chịu gánh nợ lớn.
+- Dù tổng tài sản ngắn hạn cao, nhưng thiếu số liệu về **nợ ngắn hạn** và **chi phí lãi vay/EBIT**, nên không thể tính Current Ratio, Quick Ratio hay Interest Coverage; do đó khả năng thanh toán nợ ngắn hạn còn chưa chắc chắn.
+- Rủi ro tiềm ẩn: mất vốn đầu tư, tăng dự phòng, áp lực nợ nếu không thu hồi được khoản đầu tư hoặc phải thanh lý tài sản.
+
+**Kết luận tổng thể**: Rủi ro tài chính từ các công ty con chưa hoạt động là đáng lưu ý; vốn đầu tư còn lại đã giảm, đòn bẩy cao và thiếu thanh khoản thực tế do thiếu dữ liệu, vì vậy công ty mẹ có khả năng chịu tổn thất nếu các công ty con không phục hồi.","Các công ty con chưa đi vào hoạt động (như CTCP Đầu tư Quốc tế Dubai) hoặc đang chờ giải thể (như CTCP Đầu tư APEC Túc Duyên và CTCP Lagoon Lăng Cô đã ngừng hoạt động) tiềm ẩn mức độ rủi ro đáng kể. Đối với các công ty chưa đi vào hoạt động, vốn đầu tư bị đình trệ, không tạo ra doanh thu hay lợi nhuận, đồng thời phát sinh chi phí duy trì. Đối với các công ty đang chờ giải thể hoặc đã ngừng hoạt động, rủi ro lớn nhất là mất vốn đầu tư (như đã thấy với CTCP Lagoon Lăng Cô), chi phí thanh lý, và tổn thất có thể được ghi nhận trên báo cáo tài chính của công ty mẹ. Những công ty này làm tăng gánh nặng tài chính và giảm hiệu quả sử dụng vốn của Công ty APEC Investment.",34,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Giá gốc
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 265.354.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Dự phòng
+Period: đầu
+Value: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (40.839.502.596)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ phải trả
+Item: C - NỢ PHẢI TRẢ | Số đầu năm
+Period: đầu
+Value: 1.011.000.037.337
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ phải trả
+Item: C - NỢ PHẢI TRẢ | Số cuối năm
+Period: cuối
+Value: 778.449.407.564
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Tổng | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 321.517.322.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Tổng | Số đầu kỳ Khả năng trả nợ
+Period: đầu
+Value: 449.955.557.454
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Các khoản tương đương tiền
+Value: Số cuối năm: 80.000.000.000 | Số đầu năm: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 528.207.406.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số đầu năm
+Period: đầu
+Value: 13.506.255.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số cuối năm
+Period: cuối
+Value: 211.455.297.112
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số đầu năm
+Period: đầu
+Value: 115.369.440.931
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | b) Vay dài hạn
+Value: Khoản mục: b) Vay dài hạn | Số cuối kỳ Giá trị: 165.014.900.000 | Số cuối kỳ Khả năng trả nợ: 165.014.900.000 | Trong kỳ Tăng: 114.959.800.000 | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Công ty Cổ phần Đầu tư Quốc tế Dubai chưa đi vào hoạt động, chưa có doanh thu trong kỳ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác
+Value: (i) Trong kỳ, Công ty đã đầu tư thêm 4.000.000 VND bằng tiền gửi ngân hàng. Theo Nghị quyết số 04/NQ-HĐQT ngày 30/01/2024, Hội đồng quản trị Công ty quyết định giải thể Công ty Cổ phần Apec Túc Duyên do hoạt động kinh doanh không hiệu quả. Cho đến thời điểm lập báo cáo tài chính này, Công ty Cổ phần Apec Túc Duyên chưa hoàn thành thủ tục giải thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Công ty Cổ phần Apec Túc Duyên đang chờ giải thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.",1,,191183,27182,0.5357142857142857,0.5552715918609754,0.6257993273713215,0.0
+153,Phân tích tác động của việc chuyển loại khoản đầu tư từ các khoản đầu tư khác sang đầu tư vào công ty liên kết đối với báo cáo tài chính của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Lợi nhuận sau thuế quý IV 2024: **12.090.244.768 đ** (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- Lũy kế đến quý IV 2024: **‑10.849.716.013 đ** (lỗ) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- Tổng tài sản cuối kỳ: **1.662.694.128.863 đ** (được trích từ tổng tài sản cuối năm trong answer của agent_liquidity_solvency).
+- Vốn chủ sở hữu cuối kỳ: **884.244.721.299 đ** (được trích từ vốn chủ sở hữu cuối năm trong answer của agent_liquidity_solvency).
+- **ROA (tỷ suất sinh lợi trên tổng tài sản)** ≈ **‑0,65 %** (‑10.849.716.013 ÷ 1.662.694.128.863).
+- **ROE (tỷ suất sinh lợi trên vốn chủ sở hữu)** ≈ **‑1,23 %** (‑10.849.716.013 ÷ 884.244.721.299).
+- Đầu tư tài chính dài hạn giảm từ **422.404.832.365 đ** xuống **306.186.691.420 đ** (‑116.218.140.945) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Đầu tư vào công ty liên kết cuối kỳ: **81.672.000.000 đ** (BẢNG CÂN ĐỐI KẾ TOÁN).
+
+*Nhận xét*:
+- Chuyển đổi khoản đầu tư mang lại lợi nhuận dương trong quý IV, giúp giảm lỗ tích lũy của công ty.
+- Tuy nhiên, lợi nhuận chưa đủ để tạo ROA và ROE dương vì tổng tài sản và vốn chủ sở hữu vẫn lớn so với lợi nhuận tích lũy.
+- Việc giảm đầu tư tài chính dài hạn và tăng đầu tư vào công ty liên kết phản ánh thay đổi chiến lược sở hữu, góp phần cải thiện kết quả kinh doanh.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Tổng tài sản: **1.906.094.474.649 đ** (đầu năm) → **1.662.694.128.863 đ** (cuối năm).
+- Vốn chủ sở hữu: **895.094.437.312 đ** (đầu năm) → **884.244.721.299 đ** (cuối năm).
+- Nợ tổng: 1.011.000.037.337 đ (đầu năm) → 778.449.407.564 đ (cuối năm).
+- **Tỷ lệ nợ/vốn chủ sở hữu**: 1.13 (đầu năm) → **0.88** (cuối năm) → cải thiện.
+- **Tỷ lệ nợ/tổng tài sản**: 53 % (đầu năm) → **47 %** (cuối năm) → giảm áp lực nợ.
+- Đầu tư vào công ty liên kết (giá gốc) – Số cuối kỳ: **81.672.000.000 đ**.
+
+*Nhận xét*:
+- Chuyển loại khoản đầu tư không làm thay đổi đáng kể tổng tài sản, nhưng giảm nợ và tỷ lệ nợ/vốn, cho thấy cải thiện khả năng chịu đựng tài chính.
+- Thiếu số liệu chi tiết về tài sản ngắn hạn và nợ ngắn hạn nên không thể tính được hệ số thanh khoản hiện hành, nhanh và tiền; do đó đánh giá đầy đủ thanh khoản chưa khả thi.
+
+**3. Dòng tiền** (agent_cashflow_analysis)
+- Tiền chi đầu tư góp vốn vào đơn vị khác (không phải công ty liên kết):
+  - Năm trước: **‑6.486.981.982 đ** (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+  - Năm nay: **‑300.000.000 đ** (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+  - **Giảm** **6.186.981.982 đ** so với năm trước.
+- Đầu tư góp vốn vào đơn vị khác – Giá gốc:
+  - Số đầu năm: **91.172.000.000 đ**.
+  - Số cuối kỳ: **9.500.000.000 đ** → giảm **81.672.000.000 đ** (đầu tư chuyển sang công ty liên kết).
+- Đầu tư vào công ty liên kết (giá gốc cuối kỳ): **81.672.000.000 đ**.
+
+*Nhận xét*:
+- Chuyển loại khoản đầu tư làm giảm mạnh dòng tiền ra từ hoạt động đầu tư (giảm hơn 6 tỷ đ), cho thấy công ty không chi thêm vốn mới vào các khoản đầu tư không kiểm soát.
+- Giá trị đầu tư vào công ty liên kết tăng lên, nhưng không có dữ liệu về tiền thu hồi từ khoản này, nên không thể đánh giá tác động bổ sung vào lưu chuyển tiền thuần từ hoạt động đầu tư.
+
+**4. Hiệu quả hoạt động** (agent_efficiency)
+- Doanh thu bán hàng và cung cấp dịch vụ năm nay: **209.580.465.103 đ** (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- Vòng quay tài sản = Doanh thu / [(1.906.094.474.649 + 1.662.694.128.863) / 2] ≈ **0,12 lần**.
+- Tỷ trọng đầu tư vào công ty liên kết trong tổng tài sản cuối kỳ: **≈ 4,9 %** (81,672 tỷ ÷ 1.662.694 tỷ).
+
+*Nhận xét*:
+- Khi tài sản cố định (đầu tư vào liên kết) tăng, vòng quay tài sản có xu hướng giảm nếu doanh thu không tăng tương ứng; hiện tại vòng quay tài sản khoảng 0,12 lần, cho thấy hiệu quả sử dụng tài sản chưa cao.
+- Đầu tư vào công ty liên kết chiếm khoảng 5 % tổng tài sản, ảnh hưởng không lớn nhưng đáng chú ý.
+
+**Kết luận tổng thể**
+- Việc chuyển loại khoản đầu tư từ “đầu tư khác” sang “đầu tư vào công ty liên kết” đã làm thay đổi cấu trúc tài sản, giảm nợ và tỷ lệ nợ/vốn, đồng thời giảm đáng kể dòng tiền ra từ hoạt động đầu tư.
+- Lợi nhuận quý IV chuyển sang dương, giúp giảm lỗ tích lũy, nhưng do tổng tài sản và vốn chủ sở hữu lớn, ROA và ROE vẫn còn âm.
+- Các chỉ số thanh khoản không thể tính đầy đủ vì thiếu dữ liệu ngắn hạn; tuy nhiên, chỉ số đòn bẩy đã cải thiện.
+- Hiệu quả sử dụng tài sản (vòng quay) vẫn thấp, cho thấy cần tăng doanh thu hoặc tối ưu hoá cấu trúc tài sản để nâng cao hiệu suất.
+- Tổng quan, chuyển đổi khoản đầu tư mang lại lợi ích về giảm nợ và cải thiện dòng tiền, nhưng chưa đủ để nâng cao lợi nhuận trên tài sản và vốn, và cần thêm dữ liệu chi tiết để đánh giá toàn diện ảnh hưởng đến thanh khoản và hiệu suất hoạt động.","Việc chuyển loại khoản đầu tư vào CTCP Thương mại và Du lịch Kim Bôi từ các khoản đầu tư khác sang đầu tư vào công ty liên kết có tác động quan trọng đến báo cáo tài chính. Trước đây, khoản đầu tư này có thể được ghi nhận theo giá gốc và chỉ lập dự phòng khi có bằng chứng rõ ràng về suy giảm giá trị. Khi chuyển sang đầu tư vào công ty liên kết, nó sẽ được ghi nhận theo phương pháp vốn chủ sở hữu (equity method). Theo phương pháp này, công ty mẹ sẽ ghi nhận phần lợi nhuận hoặc lỗ của công ty liên kết tương ứng với tỷ lệ sở hữu vào báo cáo kết quả hoạt động kinh doanh của mình. Điều này giúp phản ánh tốt hơn ảnh hưởng của khoản đầu tư đến lợi nhuận của công ty mẹ, nhưng cũng có thể làm tăng biến động lợi nhuận nếu công ty liên kết có kết quả kinh doanh không ổn định. Ngoài ra, việc thay đổi này cũng có thể ảnh hưởng đến các chỉ số tài chính liên quan đến đầu tư và cơ cấu tài sản.",49,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty liên kết
+Value: Số cuối kỳ Giá gốc: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty liên kết | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 81.672.000.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư vào công ty liên doanh, liên kết | Số cuối năm
+Period: cuối
+Value: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Giá gốc
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Dự phòng
+Period: đầu
+Value: (15.567.613.741)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính dài hạn | Số đầu năm
+Period: đầu
+Value: 422.404.832.365
+Note ref: V.2c
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính dài hạn | Số cuối năm
+Period: cuối
+Value: 306.186.691.420
+Note ref: V.2c
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số đầu năm
+Period: đầu
+Value: 202.406.369.251
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số cuối năm
+Period: cuối
+Value: 24.034.952.927
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số cuối năm
+Period: cuối
+Value: (7.708.754.109)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số đầu năm
+Period: đầu
+Value: (12.494.119.719)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định vô hình
+Item: Nguyên giá | Số đầu năm
+Period: đầu
+Value: 337.728.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng vốn chủ sở hữu
+Item: D - NGUỒN VỐN CHỦ SỞ HỮU | Số đầu năm
+Period: đầu
+Value: 895.094.437.312
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng vốn chủ sở hữu
+Item: D - NGUỒN VỐN CHỦ SỞ HỮU | Số cuối năm
+Period: cuối
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: với 23.356.000 cổ phần. Công ty sở hữu 5.200.000 cổ phần với tỷ lệ sở hữu là 22,26% (số đầu năm 5.200.000 cổ phần với tỷ lệ sở hữu 19,05%). Công ty Cổ phần Thương mại và Du lịch Kim Bôi từ khoản đầu tư khác trở thành công ty liên kết trong kỳ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Các khoản đầu tư vào công cụ vốn của đơn vị khác Đầu tư vào công cụ vốn của đơn vị khác bao gồm các khoản đầu tư công cụ vốn Công ty không có quyền kiểm soát, đồng kiểm soát hoặc có ảnh hưởng đáng kể đối với bên được đầu tư.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Dự phòng tổn thất cho các khoản đầu tư vào công cụ vốn của đơn vị khác được trích lập như sau: Đối với khoản đầu tư vào cổ phiếu niêm yết hoặc giá trị hợp lý khoản đầu tư được xác định tin cậy, việc lập dự phòng dựa trên giá trị thị trường của cổ phiếu. Đối với khoản đầu tư không xác định được giá trị hợp lý tại thời điểm báo cáo, việc lập dự phòng được thực hiện căn cứ vào khoản lỗ của bên được đầu tư với mức trích lập bằng chênh lệch giữa vốn đầu tư thực tế của các chủ sở hữu và vốn chủ sở hữu tại ngày kết thúc năm tài chính nhân với tỷ lệ vốn điều lệ của Công ty so với tổng vốn điều lệ thực góp tại đơn vị khác.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu cung cấp dịch vụ, cho thuê mặt bằng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 5.168.271.585
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm nay
+Value: (300.000.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm trước
+Value: (6.486.981.982)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 9.500.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (9.500.000.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Cộng | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 356.526.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Giá gốc
+Period: đầu
+Value: 91.172.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Dự phòng
+Period: đầu
+Value: (8.249.747.910)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Các khoản đầu tư vào công cụ vốn của đơn vị khác được ghi nhận ban đầu theo giá gốc, bao gồm giá mua hoặc khoản góp vốn cộng các chi phí trực tiếp liên quan đến hoạt động đầu tư. Cổ tức của các kỳ trước khi khoản đầu tư được mua được hạch toán giảm giá trị của chính khoản đầu tư đó. Cổ tức của các kỳ sau khi khoản đầu tư được mua được ghi nhận doanh thu. Cổ tức được nhận bằng cổ phiếu chỉ được theo dõi số lượng cổ phiếu tăng thêm, không ghi nhận giá trị cổ phiếu nhận được.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Đầu tư Quốc tế Dubai
+Value: Số cuối kỳ Giá gốc: 77.112.500.000 | Số đầu năm Giá gốc: 77.112.500.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Đầu tư Apec Túc Duyên (i)
+Value: Số cuối kỳ Giá gốc: 18.961.694.016 | Số cuối kỳ Dự phòng: (14.595.908.610) | Số đầu năm Giá gốc: 18.957.694.016 | Số đầu năm Dự phòng: (12.386.604.292)",1,,309540,67936,0.36363636363636365,0.4831340727982489,0.4708150390800137,1.0
+154,Tính toán tổng số tiền còn phải góp của Công ty APEC Investment cho các cam kết góp vốn.,"Dựa trên số liệu hiện có:
+- Số đầu năm Giá gốc của cam kết góp vốn vào đơn vị khác: 91.172.000.000 VND (THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+- Số cuối kỳ Giá gốc đã góp: 9.500.000.000 VND (THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+- Công thức: Số còn phải góp = Số đầu năm Giá gốc – Số cuối kỳ Giá gốc
+- Kết quả: 91.172.000.000 – 9.500.000.000 = **81.672.000.000 VND**
+
+Lưu ý: Dữ liệu chỉ có cho cam kết “Đầu tư góp vốn vào đơn vị khác”. Tổng số tiền còn phải góp cho *tất cả* các cam kết không thể tính được vì không có giá trị “Số cuối kỳ Giá gốc” tổng hợp của toàn bộ các khoản đầu tư.",Tổng số tiền còn phải góp của Công ty APEC Investment cho các cam kết góp vốn là:\n-   CTCP Đầu tư Quốc tế Dubai: 280.387.500.000 VND\n-   CTCP Quản lý Khách sạn và Dịch vụ Mandala: 11.000.000.000 VND\n-   CTCP Quản lý Bất động sản Mandala: 17.500.000.000 VND\n-   CTCP Giáo dục Eacademy: 6.100.000.000 VND\nTổng cộng số tiền còn phải góp là 280.387.500.000 + 11.000.000.000 + 17.500.000.000 + 6.100.000.000 = 314.987.500.000 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Giá gốc
+Period: đầu
+Value: 91.172.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 9.500.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (9.500.000.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Dự phòng
+Period: đầu
+Value: (8.249.747.910)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Cộng | Số đầu năm Giá gốc
+Period: đầu
+Value: 446.222.194.016",1,,43740,9322,0.6666666666666666,0.627693763490292,0.0,0.0
+155,Dự báo ảnh hưởng của việc các công ty liên kết và công ty con bị lỗ đến lợi nhuận hợp nhất của Công ty APEC Investment.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời**
+- **Lãi ròng sau thuế (Quý IV/2024)**: 12.090.244.768 VND (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Dự phòng tổn thất cho công ty con**: 40.839.502.596 VND (số cuối kỳ, Thuyết minh BCTC – khoản đầu tư vào công ty con).
+- **Giá gốc đầu tư vào công ty liên kết**: 81.672.000.000 VND (Thuyết minh BCTC – đầu tư vào công ty liên kết).
+
+*Nhận xét*:
+- Dự phòng cho công ty con được ghi nhận là chi phí dự phòng, giảm trực tiếp lợi nhuận hợp nhất khoảng **‑40,84 tỷ VND** – đây là yếu tố tiêu cực lớn so với lợi nhuận sau thuế hiện tại.
+- Đối với công ty liên kết, chỉ có số vốn đầu tư (giá gốc) mà không có thông tin về khoản lỗ thực tế hoặc dự phòng tương ứng, vì vậy không thể định lượng được ảnh hưởng tiêu cực tới lợi nhuận hợp nhất.
+- Nếu các công ty liên kết và công ty con tiếp tục ghi nhận lỗ, dự phòng sẽ tăng và làm giảm lợi nhuận hợp nhất hơn nữa; ngược lại, nếu lỗ được phục hồi hoặc dự phòng giảm, lợi nhuận hợp nhất sẽ cải thiện.
+
+**Kết luận tổng thể**
+- Hiện tại, dự phòng lỗ của công ty con đã làm giảm lợi nhuận hợp nhất khoảng 40,84 tỷ VND, tạo áp lực tiêu cực đáng kể. Thiếu số liệu lỗ thực tế của công ty liên kết nên ảnh hưởng của khoản đầu tư này không thể định lượng đầy đủ. Để đưa ra dự báo chi tiết, cần bổ sung dữ liệu lỗ thực tế của công ty liên kết.","Việc các công ty con (như CTCP Đầu tư Quốc tế Dubai chưa có doanh thu, CTCP APEC Land Huế đang giai đoạn đầu tư) và công ty liên kết (CTCP Thương mại và Du lịch Kim Bôi) cùng với các đơn vị khác (CTCP Quản lý Khách sạn và Dịch vụ Mandala, CTCP Quản lý Bất động sản Mandala) bị lỗ trong năm sẽ có ảnh hưởng tiêu cực trực tiếp đến lợi nhuận hợp nhất của Công ty APEC Investment. Theo phương pháp vốn chủ sở hữu (áp dụng cho công ty liên kết) và hợp nhất toàn bộ (áp dụng cho công ty con), phần lỗ của các đơn vị này sẽ được ghi nhận vào báo cáo kết quả hoạt động kinh doanh hợp nhất, làm giảm tổng lợi nhuận hợp nhất. Ngoài ra, việc này có thể dẫn đến việc tăng dự phòng giảm giá đầu tư, gây thêm chi phí cho công ty mẹ. Điều này cho thấy công ty mẹ phải gánh chịu rủi ro và kết quả kinh doanh kém hiệu quả của các đơn vị đầu tư, ảnh hưởng đến khả năng sinh lời tổng thể của tập đoàn.",20,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Dự phòng tổn thất cho các khoản đầu tư vào công ty con Dự phòng tổn thất cho các khoản đầu tư vào công ty con được trích lập khi công ty con bị lỗ, với mức trích lập bằng chênh lệch giữa vốn đầu tư thực tế của các bên tại công ty con và vốn chủ sở hữu thực có tại ngày kết thúc năm tài chính nhân với tỷ lệ sở hữu vốn điều lệ thực góp của Công ty tại công ty con.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 18: Bên liên quan
+Value: Các bên được coi là liên quan nếu một bên có khả năng kiểm soát hoặc có ảnh hưởng đáng kể đối với bên kia trong việc ra quyết định các chính sách tài chính và hoạt động. Các bên cũng được xem là bên liên quan nếu cùng chịu sự kiểm soát chung hay chịu ảnh hưởng đáng kể chung.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 18: Bên liên quan
+Value: Trong việc xem xét mối quan hệ của các bên liên quan, bản chất của mối quan hệ được chú trọng nhiều hơn hình thức pháp lý.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Đối với chứng khoán niêm yết trên thị trường chứng khoán: giá đóng cửa tại ngày gần nhất có giao dịch tính đến thời điểm kết thúc năm tài chính. Đối với cổ phiếu đã đăng ký giao dịch trên thị trường giao dịch của các công ty đại chúng chưa niêm yết (UPCOM): giá tham chiếu bình quân trong 30 ngày giao dịch liền kề gần nhất trước thời điểm kết thúc năm tài chính do Sở Giao dịch chứng khoán công bố. Trường hợp cổ phiếu đã niêm yết trên thị trường chứng khoán hoặc cổ phiếu của công ty cổ phần đã đăng ký giao dịch trên thị trường Upcom không có giao dịch trong vòng 30 ngày trước ngày trích lập dự phòng, cổ phiếu đã niêm yết bị hủy niêm yết, bị đình chỉ giao dịch, bị ngừng giao dịch: việc lập dự phòng được thực hiện căn cứ vào khoản lỗ của công ty được đầu tư mức trích lập bằng chênh lệch giữa vốn đầu tư thực tế của các chủ sở hữu và vốn chủ sở hữu tại ngày kết thúc năm tài chính nhân với tỷ lệ sở hữu vốn điều lệ của Công ty so với tổng số vốn điều lệ thực góp.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty liên kết
+Value: Số cuối kỳ Giá gốc: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Lagoon Lăng Cô
+Value: Khoản mục: Công ty Cổ phần Lagoon Lăng Cô | Trong kỳ Tăng: - | Trong kỳ Giảm: 89.449.835.100 | Số đầu kỳ Giá trị: 89.449.835.100 | Số đầu kỳ Khả năng trả nợ: 89.449.835.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Apec Land Huế
+Value: Khoản mục: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Giá trị: 119.857.622.354 | Số cuối kỳ Khả năng trả nợ: 119.857.622.354 | Trong kỳ Tăng: - | Trong kỳ Giảm: 11.500.000.000 | Số đầu kỳ Giá trị: 131.357.622.354 | Số đầu kỳ Khả năng trả nợ: 131.357.622.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Giáo dục E-ACADEMY
+Value: Công ty: Công ty Cổ phần Giáo dục E-ACADEMY | Số vốn Công ty cam kết góp: 6.400.000.000 | Số đã góp tại 31/12/2024: 300.000.000 | Số còn phải góp: 6.100.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Các khoản đầu tư vào công cụ vốn của đơn vị khác Đầu tư vào công cụ vốn của đơn vị khác bao gồm các khoản đầu tư công cụ vốn Công ty không có quyền kiểm soát, đồng kiểm soát hoặc có ảnh hưởng đáng kể đối với bên được đầu tư.",1,,127669,21291,1.0,0.518958934329718,0.7107969576660343,1.0
+156,Tổng phải thu ngắn hạn của khách hàng cuối kỳ là bao nhiêu VND?,Tổng phải thu ngắn hạn của khách hàng vào cuối kỳ là 83.697.533.531 VND.,Tổng phải thu ngắn hạn của khách hàng cuối kỳ là 83.697.533.530 VND.,1,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số cuối năm
+Period: cuối
+Value: 83.697.533.531
+Note ref: V.3a",1,,10758,6321,1.0,0.7821563207268195,0.9999999999,0.0
+157,Số dư trả trước cho người bán ngắn hạn cuối kỳ là bao nhiêu VND?,"Không có số dư ""trả trước"" cho người bán ngắn hạn cuối kỳ trong dữ liệu hiện có.",Số dư trả trước cho người bán ngắn hạn cuối kỳ là 11.748.605.329 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 71.005.972.408
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số cuối kỳ
+Period: cuối
+Value: 44.740.534.882
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các nhà cung cấp khác | Số cuối kỳ
+Period: cuối
+Value: 26.265.437.526
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Các nhà cung cấp khác | Số cuối kỳ
+Period: cuối
+Value: 26.265.437.526
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Công ty CP Tập Đoàn APEC GROUP | Số cuối kỳ
+Period: cuối
+Value: 234.935.072",1,,14037,8178,1.0,0.7826884093609462,0.0,0.0
+158,Dự án nào có số dư phải thu từ khách hàng bất động sản giảm nhiều nhất từ đầu năm đến cuối kỳ?,"Dựa trên số liệu hiện có:
+
+- **Dự án giảm nhiều nhất:** Dự án **Mũi Né**
+  - Số dư phải thu đầu năm: 13.812.280.739 VND (THUYẾT MINH BÁO CÁO TÀI CHÍNH, mục ""Dự án Mũi Né | Số đầu năm"")
+  - Số dư phải thu cuối kỳ: 513.203.706 VND (BẢNG CÂN ĐỐI KẾ TOÁN, mục ""Dự án Mũi Né | Số cuối kỳ"")
+  - **Giảm:** 13.299.077.033 VND
+  - **So sánh:** Giảm của dự án Mũi Né lớn hơn tổng giảm của toàn bộ các dự án BĐS (65.925.262.843 → 60.579.645.168, giảm 5.345.617.675 VND) và lớn hơn bất kỳ dự án nào khác (ví dụ Dự án Đa hội không thay đổi).
+
+*Nhận xét*:
+- Dự án Mũi Né đã giảm mạnh số dư phải thu, có thể do hoàn thành giao dịch, thu hồi tiền khách hàng hoặc ghi giảm nợ khó đòi.
+- Sự giảm đáng kể này có tác dụng cải thiện thanh khoản ngắn hạn của công ty, giảm rủi ro nợ phải thu.
+- Cần xem chi tiết trong thuyết minh để hiểu nguyên nhân cụ thể (ví dụ: thanh toán tiến độ dự án, điều chỉnh dự án, ...) và đánh giá tính bền vững của xu hướng này.","Dự án Apec Aqua Park Bắc Giang có số dư phải thu từ khách hàng bất động sản giảm nhiều nhất, từ 32.014.908.837 VND đầu năm xuống 27.110.410.792 VND cuối kỳ, giảm khoảng 4.904.498.045 VND.",9,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số đầu năm
+Period: đầu
+Value: 84.342.831.550
+Note ref: V.3a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số cuối năm
+Period: cuối
+Value: 83.697.533.531
+Note ref: V.3a
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Phải thu các khách hàng (Dự án BĐS)
+Value: Số cuối kỳ: 60.579.645.168 | Số đầu năm: 65.925.262.843
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 101.716.698.889
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Đa hội | Số cuối kỳ
+Period: cuối
+Value: 4.773.842.332
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Phú Yên | Số cuối kỳ
+Period: cuối
+Value: 71.075.343.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Mũi Né | Số cuối kỳ
+Period: cuối
+Value: 513.203.706
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 175.052.735.650
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Mũi Né | Số đầu năm
+Period: đầu
+Value: 13.812.280.739",1,,183220,29110,0.3333333333333333,0.7222878116440598,0.0,0.0
+159,Phải thu dài hạn của khách hàng phát sinh từ dự án nào và theo chính sách gì?,"Phải thu dài hạn của khách hàng phát sinh từ dự án bất động sản **Apec Aquapark Bắc Giang** và được ghi nhận theo **chính sách bán hàng trả chậm**, với thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán.","Phải thu dài hạn của khách hàng phát sinh từ Dự án Apec Aqua Park Bắc Giang, theo chính sách trả chậm với thời hạn thanh toán còn lại trên 12 tháng kể từ ngày lập bảng cân đối kế toán.",7,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số đầu năm
+Period: đầu
+Value: 84.342.831.550
+Note ref: V.3a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số cuối năm
+Period: cuối
+Value: 83.697.533.531
+Note ref: V.3a
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3b. Phải thu khách hàng dài hạn
+Value: Là các khoản phải thu khách hàng mua bất động sản Dự án Apec Aquapark Bắc Giang theo chính sách bán hàng trả chậm, có thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Phải thu các khách hàng (Dự án BĐS)
+Value: Số cuối kỳ: 60.579.645.168 | Số đầu năm: 65.925.262.843
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | b) Dài hạn
+Value: Số cuối kỳ Giá trị: 27.431.011.835 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 27.134.011.835 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu dài hạn khác
+Value: Số cuối kỳ Giá trị: 328.250.000 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 31.250.000 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.",1,,72726,8908,1.0,0.651493205922851,0.3333333333,1.0
+160,Đánh giá xu hướng biến động của các khoản phải thu từ khách hàng bất động sản và trả trước cho người bán ngắn hạn.,"Dựa trên số liệu hiện có:
+
+**1. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Các khoản phải thu khách hàng bất động sản (ngắn hạn):
+  - Số đầu năm: 84.342.831.550 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Số cuối kỳ: 83.697.533.531 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Thay đổi: giảm 645.298.019 đ (~‑0.77%)
+  - Tỷ lệ trên tổng tài sản ngắn hạn:
+    - Đầu năm: 8.1 %
+    - Cuối kỳ: 8.5 % (tính từ tổng tài sản ngắn hạn 1.045.015.266.013 đ và 984.330.724.539 đ tương ứng)
+- Trả trước cho người bán ngắn hạn (tiền trả trước):
+  - Số cuối kỳ: 11.748.605.329 đ (BẢNG CÂN ĐỐI KẾ TOÁN, BÁO CÁO LƯU CHUYỂN TIỀN TỆ)
+  - Không có số đầu năm, do đó không thể đánh giá xu hướng thay đổi.
+  - Tỷ trọng trên tổng tài sản ngắn hạn (cuối kỳ): 1.2 % (11.748.605.329 đ / 984.330.724.539 đ)
+
+*Nhận xét*:
+- Các khoản phải thu bất động sản giảm nhẹ về giá trị nhưng tỷ trọng trên tài sản ngắn hạn tăng, cho thấy khả năng thu tiền vẫn duy trì ổn định.
+- Thiếu số liệu đầu năm của tiền trả trước, vì vậy không thể xác định xu hướng biến động của khoản này; tuy nhiên, mức độ chiếm tỷ trọng thấp cho thấy rủi ro thanh khoản từ tiền trả trước hiện tại là tương đối thấp.
+
+**2. Hiệu quả hoạt động** (agent_efficiency)
+- Phải thu khách hàng bất động sản ngắn hạn:
+  - Số đầu năm: 65.925.262.843 đ, Số cuối kỳ: 60.579.645.168 đ, giảm 5.345.617.675 đ (~8.1 %) (Thuyết minh 3a)
+- Trả trước cho người bán ngắn hạn (ngắn hạn):
+  - Số cuối kỳ: 11.748.605.329 đ (BẢNG CÂN ĐỐI KẾ TOÁN, BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+  - Thiếu số đầu năm, không thể đánh giá xu hướng.
+
+*Nhận xét*:
+- Xu hướng giảm của các khoản phải thu bất động sản cho thấy quá trình thu hồi nợ được cải thiện, giảm rủi ro nợ xấu và giải phóng vốn lưu động.
+- Do thiếu số liệu đầu năm của tiền trả trước, không thể xác định xu hướng thay đổi; cần dữ liệu đầu kỳ để so sánh.
+
+**Kết luận tổng thể**
+- Các khoản phải thu từ khách hàng bất động sản duy trì mức cao trong vốn lưu động, với xu hướng giảm nhẹ nhưng tỷ trọng trên tài sản ngắn hạn tăng, cho thấy khả năng thu tiền ổn định.
+- Tiền trả trước cho nhà cung cấp chiếm tỷ trọng nhỏ và hiện chưa có số liệu đầu năm, nên chưa thể đánh giá đầy đủ xu hướng; tuy nhiên, mức độ rủi ro liên quan tới khoản này vẫn thấp.
+- Nhìn chung, công ty duy trì sự ổn định về thanh khoản ngắn hạn, nhưng cần bổ sung số liệu đầu kỳ của tiền trả trước để theo dõi xu hướng chi tiết hơn.","Các khoản phải thu từ khách hàng bất động sản đã giảm nhẹ từ 84.342.831.550 VND đầu năm xuống 83.697.533.530 VND cuối kỳ. Điều này có thể cho thấy công ty đã thu được một phần nợ từ các dự án hoặc tốc độ bán hàng có sự thay đổi. Riêng các dự án lớn như Mandala Wyndham Phú Yên và Apec Aqua Park Bắc Giang đều giảm. Trong khi đó, trả trước cho người bán ngắn hạn cũng giảm đáng kể từ 17.709.353.952 VND xuống 11.748.605.329 VND. Xu hướng giảm của cả hai khoản mục này cho thấy công ty có thể đang thu hồi các khoản nợ cũ và giảm bớt các khoản tạm ứng cho nhà cung cấp, hoặc quy mô giao dịch mua bán đã giảm, ảnh hưởng đến nhu cầu vốn lưu động.",23,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 71.005.972.408
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 89.344.730.178
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số cuối kỳ
+Period: cuối
+Value: 44.740.534.882
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số đầu năm
+Period: đầu
+Value: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các nhà cung cấp khác | Số cuối kỳ
+Period: cuối
+Value: 26.265.437.526
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Period: cuối
+Value: 984.330.724.539
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Period: đầu
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Period: cuối
+Value: 9.720.712.203
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 16.759.724.289
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Trả trước cho người bán ngắn hạn
+Item: Trả trước cho nhà cung cấp | Số cuối kỳ
+Period: cuối
+Value: 11.748.605.329
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3b. Phải thu khách hàng dài hạn
+Value: Là các khoản phải thu khách hàng mua bất động sản Dự án Apec Aquapark Bắc Giang theo chính sách bán hàng trả chậm, có thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 101.716.698.889
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu bán bất động sản
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 187.743.704.036 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 175.052.735.650
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala | Số cuối kỳ
+Period: cuối
+Value: 19.682.287
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Phải thu các khách hàng (Dự án BĐS)
+Value: Số cuối kỳ: 60.579.645.168 | Số đầu năm: 65.925.262.843
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Các khách hàng khác
+Value: Số cuối kỳ: 23.117.888.363 | Số đầu năm: 18.417.568.707
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | a) Ngắn hạn
+Value: Số cuối kỳ Giá trị: 184.685.805.476 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 176.837.852.532 | Số đầu năm Dự phòng: -",1,,259006,30276,0.6,0.5641034889055204,0.04347826086521739,0.0
+161,Phân tích rủi ro thanh khoản nếu các khoản phải thu từ khách hàng tiếp tục giảm mạnh.,"Dựa trên số liệu hiện có:
+
+**1. Thanh khoản và an toàn tài chính**
+- **Tài sản ngắn hạn**: 984.330.724.539 đ (cuối năm) ↓ từ 1.045.015.266.013 đ (đầu năm) (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Tiền và các khoản tương đương tiền**: 97.964.405.114 đ (cuối năm) ↑ từ 60.575.342.749 đ (đầu năm) (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Phải thu ngắn hạn của khách hàng**: 83.697.533.531 đ (cuối năm) ↓ nhẹ so với 84.342.831.550 đ (đầu năm) – giảm ~0,8 % (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Các khoản phải trả ngắn hạn (một phần)**: 
+  - Phải trả người bán ngắn hạn: 44.740.534.882 đ (cuối năm) ↑ so với 42.763.541.686 đ (đầu năm)
+  - Phải trả ngắn hạn khác: 3.010.459.022 đ (cuối năm) ↓ mạnh so với 35.240.039 đ (đầu năm)
+  - *Chưa có số liệu tổng nợ ngắn hạn* (điều kiện tính các hệ số chính xác).
+- **Các hệ số thanh khoản (ước tính do thiếu tổng nợ ngắn hạn)**:
+  - Current Ratio ≈ 20,5 = Tổng tài sản ngắn hạn / (Phải trả người bán ngắn hạn + Phải trả ngắn hạn khác)
+  - Quick Ratio ≈ 3,8 = (Tiền và các khoản tương đương tiền + Phải thu ngắn hạn) / (Phải trả người bán ngắn hạn + Phải trả ngắn hạn khác)
+  - Cash Ratio ≈ 2,0 = Tiền và các khoản tương đương tiền / (Phải trả người bán ngắn hạn + Phải trả ngắn hạn khác)
+- *Nhận xét*: Các hệ số đều >1, cho thấy khả năng đáp ứng nghĩa vụ ngắn hạn hiện tại là an toàn. Tuy nhiên, chúng chỉ là tạm tính vì chưa bao gồm toàn bộ các khoản phải trả ngắn hạn; nếu tổng nợ ngắn hạn lớn hơn, các tỷ lệ có thể giảm đáng kể. Nếu khoản phải thu tiếp tục giảm mạnh mà không tăng đồng thời tiền mặt, **Quick Ratio** và **Cash Ratio** sẽ chịu áp lực, làm tăng rủi ro thanh khoản.
+
+**2. Dòng tiền**
+- **Lưu chuyển tiền thuần từ hoạt động kinh doanh (CFO)**: 36.158.929.436 đ (năm nay) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ)
+- **Phải thu khách hàng ngắn hạn**: giảm 0,646 tỷ đ (≈ -0,77 %) so với đầu năm (BẢNG CÂN ĐỐI KẾ TOÁN)
+- *Nhận xét*: Dù khoản phải thu giảm nhẹ, CFO tăng mạnh so với năm trước (từ âm -4,38 tỷ đ lên dương 36,16 tỷ đ), cho thấy công ty đã thu hồi nợ hiệu quả và chuyển đổi doanh thu thành tiền mặt. Tuy nhiên, nếu giảm khoản phải thu là do **suy giảm doanh thu** thay vì cải thiện thu hồi, CFO có thể mất đà tăng và gây áp lực lên thanh khoản.
+
+**Kết luận tổng thể**
+Hiện tại, công ty duy trì mức thanh khoản và khả năng sinh lời tốt nhờ tiền và các khoản tương đương tiền tăng mạnh, cũng như CFO tăng đáng kể. Tuy nhiên, nếu các khoản phải thu khách hàng giảm mạnh mà không đi kèm với tăng tiền mặt hoặc doanh thu, các hệ số thanh khoản sẽ suy giảm và dòng tiền hoạt động có thể bị áp lực, làm tăng rủi ro thanh khoản trong ngắn hạn. Do vậy, cần giám sát chặt chẽ xu hướng giảm phải thu và đồng thời duy trì hoặc tăng nguồn tiền mặt để bảo vệ thanh khoản.","Nếu các khoản phải thu từ khách hàng tiếp tục giảm mạnh mà không phải do thu hồi tiền mặt nhanh chóng hoặc doanh số giảm, điều này tiềm ẩn rủi ro thanh khoản. Mặc dù việc giảm phải thu có thể do khách hàng thanh toán nhanh hơn, nhưng nếu là do giảm doanh số bán hàng hoặc do các khoản phải thu trở nên khó đòi và phải xóa sổ/trích lập dự phòng, nó sẽ ảnh hưởng tiêu cực đến dòng tiền hoạt động. Công ty có thể gặp khó khăn trong việc duy trì hoạt động kinh doanh và thanh toán các nghĩa vụ ngắn hạn nếu nguồn tiền từ bán hàng bị suy giảm hoặc không được chuyển đổi thành tiền mặt kịp thời. Đặc biệt, đối với ngành bất động sản với chu kỳ thanh toán dài, việc quản lý dòng tiền từ các khoản phải thu là rất quan trọng.",28,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số đầu năm
+Period: đầu
+Value: 84.342.831.550
+Note ref: V.3a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn của khách hàng | Số cuối năm
+Period: cuối
+Value: 83.697.533.531
+Note ref: V.3a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Period: cuối
+Value: 984.330.724.539
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Period: đầu
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Period: cuối
+Value: 9.720.712.203
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 16.759.724.289
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Các chi phí phải trả ngắn hạn khác
+Value: Số cuối kỳ: - | Số đầu năm: 1.767.586.446
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Phải thu các khách hàng (Dự án BĐS)
+Value: Số cuối kỳ: 60.579.645.168 | Số đầu năm: 65.925.262.843
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Các khách hàng khác
+Value: Số cuối kỳ: 23.117.888.363 | Số đầu năm: 18.417.568.707
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3b. Phải thu khách hàng dài hạn
+Value: Là các khoản phải thu khách hàng mua bất động sản Dự án Apec Aquapark Bắc Giang theo chính sách bán hàng trả chậm, có thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3a. Phải thu khách hàng ngắn hạn
+Item: Phải thu các khách hàng (Dự án BĐS) | Số cuối kỳ
+Period: cuối
+Value: 60.579.645.168
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3a. Phải thu khách hàng ngắn hạn
+Item: Phải thu các khách hàng (Dự án BĐS) | Số đầu năm
+Period: đầu
+Value: 65.925.262.843
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3a. Phải thu khách hàng ngắn hạn
+Item: Các khách hàng khác | Số cuối kỳ
+Period: cuối
+Value: 23.117.888.363
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Tăng, giảm số dư dự phòng nợ phải thu khó đòi cần phải trích lập tại ngày kết thúc năm tài chính được ghi nhận vào chi phí quản lý doanh nghiệp.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -",1,,287630,34965,1.0,0.5174080800477431,0.31401297115134236,0.25
+162,Giải thích tác động của chính sách trả chậm đối với các khoản phải thu dài hạn của khách hàng đến dòng tiền của công ty.,"Dựa trên số liệu hiện có:
+- **Giá trị phải thu dài hạn cuối năm**: 3.411.400.228 VND (theo BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- **Chính sách trả chậm**: Khoản phải thu dài hạn thuộc khách hàng mua bất động sản dự án Apec Aquapark, thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán (theo THUYẾT MINH BÁO CÁO TÀI CHÍNH).
+- **Lưu chuyển tiền thuần trong năm** (tổng dòng tiền ròng): 37.389.062.365 VND (theo BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+
+*Nhận xét*:
+- Việc kéo dài thời gian thanh toán làm tăng số dư phải thu dài hạn, nghĩa là số tiền chưa thu được tăng, tạo áp lực giảm dòng tiền từ hoạt động kinh doanh.
+- Khi số dư phải thu dài hạn tăng so với đầu kỳ, phần tăng này sẽ được phản ánh tiêu cực trong CFO (giảm tiền thu nhập từ hoạt động kinh doanh) và công ty có thể phải tăng vay nợ ngắn hạn hoặc sử dụng tiền và tương đương tiền để duy trì hoạt động.
+- Ngược lại, nếu số dư phải thu dài hạn giảm, sẽ tạo ra dòng tiền dương từ hoạt động kinh doanh vì các khoản nợ đã được thu hồi.
+- Hiện chỉ có số dư cuối kỳ của khoản phải thu dài hạn và chưa có số dư đầu kỳ cũng như chi tiết CFO, CFI, CFF, nên không thể định lượng mức độ ảnh hưởng cụ thể của chính sách trả chậm đến từng phần của dòng tiền.
+- Các khoản dự phòng phải thu khó đòi (được trình bày trong thuyết minh) cũng ảnh hưởng đến giá trị ghi sổ của phải thu và do đó tới dòng tiền thực tế khi thu hồi được hoặc phải ghi giảm.
+- Dù tổng lưu chuyển tiền thuần dương (37,389 bn VND) cho thấy công ty vẫn tạo ra tiền ròng trong năm, nhưng chưa rõ bao nhiêu phần thuộc CFO và bao nhiêu phần bù đắp cho tăng phải thu dài hạn.
+
+**Kết luận tổng thể**:
+Chính sách trả chậm tăng số dư phải thu dài hạn, gây áp lực giảm dòng tiền từ hoạt động kinh doanh và có thể yêu cầu công ty sử dụng nguồn tài trợ ngắn hạn hoặc tiền dự trữ. Tuy nhiên, công ty vẫn duy trì lưu chuyển tiền thuần dương lớn trong năm, cho thấy khả năng sinh lời tổng thể vẫn tốt, nhưng cần theo dõi chặt chẽ xu hướng tăng của phải thu dài hạn và dự phòng phải thu khó đòi để tránh rủi ro thanh khoản.","Chính sách trả chậm đối với các khoản phải thu dài hạn của khách hàng (như tại Dự án Apec Aqua Park Bắc Giang) có tác động đáng kể đến dòng tiền của công ty. Mặc dù chính sách này có thể giúp công ty thu hút khách hàng và thúc đẩy doanh số, nó lại làm chậm quá trình thu tiền mặt. Thay vì nhận tiền ngay lập tức, công ty phải chờ đợi trong một khoảng thời gian dài hơn (trên 12 tháng) để thu hồi các khoản nợ này. Điều này làm giảm lưu chuyển tiền tệ từ hoạt động kinh doanh trong ngắn hạn, đòi hỏi công ty phải tìm kiếm các nguồn tài trợ khác (ví dụ: vay nợ) để bù đắp thâm hụt tiền mặt và duy trì hoạt động. Nếu công ty có nhiều dự án áp dụng chính sách trả chậm, rủi ro thanh khoản có thể tăng lên nếu việc quản lý dòng tiền không hiệu quả.",14,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3b. Phải thu khách hàng dài hạn
+Value: Là các khoản phải thu khách hàng mua bất động sản Dự án Apec Aquapark Bắc Giang theo chính sách bán hàng trả chậm, có thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Phải thu các khách hàng (Dự án BĐS)
+Value: Số cuối kỳ: 60.579.645.168 | Số đầu năm: 65.925.262.843
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Các khách hàng khác
+Value: Số cuối kỳ: 23.117.888.363 | Số đầu năm: 18.417.568.707
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Subheading: Lưu chuyển tiền thuần trong kỳ
+Item: Lưu chuyển tiền thuần trong năm | Năm nay
+Value: 37.389.062.365
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Subheading: Lưu chuyển tiền thuần trong kỳ
+Item: Lưu chuyển tiền thuần trong năm | Năm trước
+Value: 11.258.895.496
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu dài hạn của khách hàng | Số cuối năm
+Period: cuối
+Value: 3.411.400.228
+Note ref: V.3b
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Các khoản phải thu dài hạn khác | Số cuối kỳ Giá trị
+Period: cuối
+Value: 328.250.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Tăng, giảm số dư dự phòng nợ phải thu khó đòi cần phải trích lập tại ngày kết thúc năm tài chính được ghi nhận vào chi phí quản lý doanh nghiệp.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Dự phòng phải thu khó đòi được lập cho từng khoản nợ phải thu khó đòi căn cứ vào dự kiến mức tổn thất có thể xảy ra.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Phải thu về cho vay ngắn hạn
+Value: Là các khoản cho vay Bên liên quan, bao gồm:",1,,207652,22101,0.4583333333333333,0.779746530943752,0.3333333333,0.4
+163,Tổng các khoản phải thu về cho vay ngắn hạn cuối kỳ là bao nhiêu VND?,Số cuối kỳ của các khoản phải thu ngắn hạn là 362.793.062.285 VND.,Tổng các khoản phải thu về cho vay ngắn hạn cuối kỳ là 85.566.500.000 VND.,2,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285",1,,15630,7839,1.0,0.7343330855419327,0.0,0.0
+164,Số dư các khoản phải thu ngắn hạn khác cuối kỳ là bao nhiêu VND?,Số dư các khoản phải thu ngắn hạn cuối kỳ là 362.793.062.285 VND.,Số dư các khoản phải thu ngắn hạn khác cuối kỳ là 5.727.143.845 VND.,2,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285",1,,13251,6362,1.0,0.7463392515183577,0.0,0.0
+165,Khoản cho vay ngắn hạn nào đã được thu hồi hoàn toàn trong kỳ?,Dữ liệu không cung cấp chi tiết về khoản cho vay ngắn hạn nào đã được thu hồi hoàn toàn; chỉ có tổng số tiền thu hồi cho vay trong kỳ.,"Khoản cho vay ngắn hạn đối với Công ty TNHH Rose Paradise (lãi suất 15% năm) đã được thu hồi hoàn toàn trong kỳ, vì số dư cuối kỳ là 0 VND so với 9.000.000.000 VND đầu năm.",2,"Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác | Năm nay
+Value: 76.000.000.000
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác | Năm trước
+Value: 121.200.000.000",1,,24754,8382,1.0,0.0,0.0,0.0
+166,So sánh lãi vay phải thu từ CTCP Tập đoàn Apec cuối kỳ với đầu năm.,"Lãi vay phải thu từ CTCP Tập đoàn Apec cuối kỳ là 36.149.068.494 đồng, đầu năm là 25.778.630.137 đồng.","Lãi vay phải thu từ CTCP Tập đoàn Apec cuối kỳ là 36.149.068.494 VND, còn đầu năm là 25.778.630.137 VND. Khoản này đã tăng lên.",7,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 176.837.852.532
+Note ref: V.6a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn khác | Số cuối năm
+Period: cuối
+Value: 184.685.805.476
+Note ref: V.6a
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác
+Value: Số cuối kỳ Giá trị: 10.484.971.014 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 9.087.213.733 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Công ty Cổ phần Tập đoàn Apec Group - phải thu về lãi cho vay
+Value: Số cuối kỳ Giá trị: 36.149.068.494 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 25.778.630.137 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác | Số đầu năm Giá trị
+Period: đầu
+Value: 9.087.213.733
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Công ty Cổ phần Tập đoàn Apec Group - phải thu về lãi cho vay | Số đầu năm Giá trị
+Period: đầu
+Value: 25.778.630.137
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác | Số cuối kỳ Giá trị
+Period: cuối
+Value: 10.484.971.014",1,,60126,9187,1.0,0.7318776520243814,0.4166666666458333,1.0
+167,Đánh giá rủi ro từ các khoản phải thu về cho vay ngắn hạn với lãi suất 0%.,"Dựa trên số liệu hiện có:
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- **Khoản phải thu ngắn hạn tổng**: 362.793.062.285 VNĐ (cuối kỳ) – 401.680.516.983 VNĐ (đầu kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Khoản phải thu cho vay ngắn hạn lãi suất 0%**: 678.500.000 VNĐ (cả đầu kỳ và cuối kỳ) (Thuyết minh 5)
+- **Dự phòng phải thu ngắn hạn khó đòi**: 2.905.382.051 VNĐ (cuối kỳ) – 1.776.021.051 VNĐ (đầu kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Tỷ lệ khoản vay 0% so với tổng phải thu ngắn hạn**: ≈0,19 % (678,5 triệu / 362.793 triệu) 
+- **Mức dự phòng so với tổng phải thu ngắn hạn**: ≈0,80 % (2.905 triệu / 362.793 triệu)
+- **Tiền và các khoản tương đương tiền (cộng)**: 97.964.405.114 VNĐ (cuối kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN)
+
+*Nhận xét*:
+- Khoản vay 0% chiếm rất ít (<0,2 %) tổng phải thu, nên ảnh hưởng tài chính trực tiếp là giới hạn.
+- Dự phòng khó đòi hiện có chiếm ~0,8 % tổng phải thu, cao hơn nhiều so với khoản vay 0%, cho thấy công ty đã dự phòng hợp lý cho rủi ro nợ xấu.
+- Tiền và các khoản tương đương tiền > 97 tỷ VNĐ, đủ để bù đắp toàn bộ khoản vay 0% nếu không thu hồi được.
+
+**3. Dòng tiền** (agent_cashflow_analysis)
+- **Tiền thu hồi cho vay / bán lại công cụ nợ**: 76.000.000.000 VNĐ (năm nay) vs 121.200.000.000 VNĐ (năm trước) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ)
+- **Tiền chi cho vay / mua công cụ nợ**: (38.980.000.000) VNĐ (năm nay) vs (29.550.000.000) VNĐ (năm trước) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ)
+- **Lưu chuyển tiền ròng từ hoạt động cho vay** = Thu hồi – Chi cho vay
+  - Năm nay: 76.000.000.000 – 38.980.000.000 = **37.020.000.000** VNĐ
+  - Năm trước: 121.200.000.000 – 29.550.000.000 = **91.650.000.000** VNĐ
+
+*Nhận xét*:
+- Khoản vay 0% chỉ chiếm ~0,19 % tổng phải thu ngắn hạn (678,5 triệu / 362.793 triệu), quy mô rất nhỏ, nên rủi ro trực tiếp đối với dòng tiền nội bộ là hạn chế.
+- Không có dự phòng riêng cho khoản vay 0% (thuyết minh không đề cập), nếu bên vay không trả được gốc, công ty sẽ mất 678,5 triệu.
+- Tổng lưu chuyển tiền ròng từ hoạt động cho vay vẫn dương (37,02 tỷ VNĐ năm nay), cho thấy hoạt động cho vay không tiêu tốn nguồn tiền nội bộ mà mang lại tiền thu hồi.
+
+**Kết luận tổng thể**
+Rủi ro từ các khoản phải thu cho vay ngắn hạn lãi suất 0% là **rất thấp**: khoản vay chiếm <0,2 % tổng phải thu, dự phòng khó đòi cao hơn nhiều và tiền và các khoản tương đương tiền đủ để bù đắp toàn bộ khoản vay nếu không thu hồi. Dòng tiền ròng từ hoạt động cho vay vẫn dương, hỗ trợ tính bền vững dòng tiền nội bộ. Tuy nhiên, công ty nên cân nhắc thiết lập dự phòng tối thiểu cho khoản vay 0% hoặc xem xét điều chỉnh lãi suất để giảm thiểu tiềm năng mất vốn trong trường hợp nợ xấu.","Khoản cho vay ngắn hạn đối với CTCP Chứng khoán APEC với lãi suất 0% năm tiềm ẩn rủi ro đáng kể. Mặc dù số dư không thay đổi từ đầu năm đến cuối kỳ (678.500.000 VND), việc cho vay không lãi suất đồng nghĩa với việc công ty đang bỏ lỡ cơ hội thu nhập từ lãi vay. Hơn nữa, nếu khoản vay này không được thu hồi đúng hạn, công ty sẽ chịu tổn thất vốn mà không có bất kỳ khoản bù đắp nào từ lãi. Điều này có thể cho thấy một mối quan hệ đặc biệt giữa các bên liên quan hoặc một khoản hỗ trợ tài chính, nhưng xét về mặt tài chính thuần túy, nó làm giảm hiệu quả sử dụng vốn của công ty.",21,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Phải thu về cho vay ngắn hạn | Công ty Cổ phần Chứng khoán Châu Á Thái Bình Dương (lãi suất 0%/năm)
+Value: Số cuối kỳ: 678.500.000 | Số đầu năm: 678.500.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Phải thu về cho vay ngắn hạn
+Value: Là các khoản cho vay Bên liên quan, bao gồm:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là các khoản cho vay Bên liên quan, bao gồm:
+Item: Công ty Cổ phần Chứng khoán Châu Á Thái Bình Dương (lãi suất 0%/năm) | Số đầu năm
+Period: đầu
+Value: 678.500.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác
+Value: Số cuối kỳ Giá trị: 10.484.971.014 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 9.087.213.733 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Công ty Cổ phần Tập đoàn Apec Group - phải thu về lãi cho vay
+Value: Số cuối kỳ Giá trị: 36.149.068.494 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 25.778.630.137 | Số đầu năm Dự phòng: -
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng phải thu ngắn hạn khó đòi | Số đầu năm
+Period: đầu
+Value: (1.776.021.051)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng phải thu ngắn hạn khó đòi | Số cuối năm
+Period: cuối
+Value: (2.905.382.051)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác | Năm nay
+Value: 76.000.000.000
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền thu hồi cho vay, bán lại các công cụ nợ của đơn vị khác | Năm trước
+Value: 121.200.000.000
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi cho vay, mua các công cụ nợ của đơn vị khác | Năm nay
+Value: (38.980.000.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi cho vay, mua các công cụ nợ của đơn vị khác | Năm trước
+Value: (29.550.000.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản cho vay
+Value: Các khoản cho vay được xác định theo giá gốc trừ đi các khoản dự phòng phải thu khó đòi. Dự phòng phải thu khó đòi của các khoản cho vay được lập căn cứ vào dự kiến mức tổn thất có thể xảy ra.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | a) Ngắn hạn
+Value: Số cuối kỳ Giá trị: 184.685.805.476 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 176.837.852.532 | Số đầu năm Dự phòng: -",1,,239553,33063,0.2222222222222222,0.7435174876165407,0.36666666664833336,0.25
+168,Phân tích tác động của việc giảm đáng kể khoản cho vay ngắn hạn đối với Công ty TNHH Rose Paradise đến dòng tiền của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Thanh khoản và an toàn tài chính**
+- Giảm khoản vay ngắn hạn trong kỳ: **280.448.035.100 VND** (Bảng Cân đối Kế toán, mục “Vay ngắn hạn – Trong kỳ Giảm”).
+- Tiền và các khoản tương đương tiền tăng từ **60.575.342.749 VND** (đầu năm) lên **97.964.405.114 VND** (cuối năm), tăng tổng cộng **37.389.062.365 VND** (Bảng Cân đối Kế toán / BCTC Lưu chuyển tiền).
+- Khi vay ngắn hạn giảm, dòng tiền thuần từ hoạt động tài chính giảm khoảng **280,45 tỷ VND**, tạo ra một dòng tiền ra.
+
+*Nhận xét*:
+- Giảm vay ngắn hạn làm nguồn vốn tài chính giảm, nhưng tăng tiền mặt cho thấy hoạt động kinh doanh đã bù đắp.
+- Rủi ro thanh khoản vẫn tồn tại nếu CFO không duy trì mức cao.
+
+**2. Dòng tiền**
+- Dòng tiền hoạt động (CFO): **36.158.929.436 VND** (năm nay, BCTC Lưu chuyển tiền).
+- Dòng tiền tài chính (CFI): **-38.988.400.000 VND** (năm nay), bao gồm **tiền thu từ đi vay 171.434.700.000 VND** và **tiền trả nợ gốc vay 210.423.100.000 VND**.
+- Tổng lưu chuyển tiền trong kỳ: **37.389.062.365 VND** (năm nay).
+
+*Nhận xét*:
+- Giảm khoảng **479,4 tỷ VND** các khoản vay ngắn hạn (tổng giảm) đã làm CFI âm.
+- CFO dương mạnh (**36,16 tỷ VND**) bù đắp phần lớn chi phí tài chính, cho tổng lưu chuyển tiền vẫn dương.
+- So với năm trước, CFO chuyển từ âm sang dương, CFI giảm mức chi phí tài chính, cho thấy công ty đang giảm phụ thuộc vào vay ngắn hạn và cải thiện khả năng tạo tiền từ hoạt động kinh doanh.
+
+**Kết luận tổng thể**
+- Việc giảm đáng kể khoản vay ngắn hạn đã giảm nguồn vốn tài chính, tạo áp lực thanh khoản, nhưng công ty bù đắp nhờ dòng tiền hoạt động mạnh, khiến tổng lưu chuyển tiền vẫn dương. Tuy nhiên, CFI âm cho thấy công ty vẫn phải trả nợ gốc vượt khoản vay mới, vì vậy rủi ro thanh khoản cần được giám sát và cải thiện bằng cách duy trì hoặc tăng CFO hoặc tái cấu trúc nguồn vay dài hạn.","Việc khoản cho vay ngắn hạn đối với Công ty TNHH Rose Paradise giảm đáng kể từ 9.000.000.000 VND đầu năm xuống 0 VND cuối kỳ cho thấy công ty đã thu hồi hoàn toàn khoản cho vay này. Tác động trực tiếp đến dòng tiền là tạo ra một dòng tiền vào từ hoạt động thu hồi nợ, làm tăng lượng tiền mặt hoặc các khoản tương đương tiền. Điều này có ý nghĩa tích cực đối với thanh khoản của công ty, cung cấp nguồn vốn để tài trợ cho các hoạt động khác, giảm bớt nhu cầu vay mượn mới hoặc tăng cường đầu tư.",37,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số cuối năm
+Period: cuối
+Value: 156.502.422.354
+Note ref: V.18a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số đầu năm
+Period: đầu
+Value: 380.475.557.454
+Note ref: V.18a
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Phải trả các tổ chức và cá nhân
+Value: Số cuối kỳ: 81.623.567.164 | Số đầu năm: 92.849.850.808
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các nhà cung cấp khác
+Value: Số cuối kỳ: 26.265.437.526 | Số đầu năm: 46.581.188.492
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nguồn vốn
+Item: TỔNG CỘNG NGUỒN VỐN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nguồn vốn
+Item: TỔNG CỘNG NGUỒN VỐN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Trong kỳ Giảm
+Value: 280.448.035.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Vay ngắn hạn các cá nhân | Trong kỳ Giảm
+Value: 179.498.200.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Phải thu về cho vay ngắn hạn | Công ty TNHH Đầu tư Châu Á - Thái Bình Dương - Bắc Ninh (lãi suất 12%/năm)
+Value: Số cuối kỳ: 7.000.000.000 | Số đầu năm: 7.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Chuyển sang nợ vay ngắn hạn | Trong kỳ Giảm
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản cho vay
+Value: Các khoản cho vay được xác định theo giá gốc trừ đi các khoản dự phòng phải thu khó đòi. Dự phòng phải thu khó đòi của các khoản cho vay được lập căn cứ vào dự kiến mức tổn thất có thể xảy ra.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động tài chính | Năm nay
+Value: (38.988.400.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động tài chính | Năm trước
+Value: (71.573.059.240)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền thu từ đi vay | Năm nay
+Value: 171.434.700.000
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền thu từ đi vay | Năm trước
+Value: 71.371.492.969
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền trả nợ gốc vay | Năm nay
+Value: (210.423.100.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền trả nợ gốc vay | Năm trước
+Value: (142.944.552.209)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Subheading: Lưu chuyển tiền thuần trong kỳ
+Item: Lưu chuyển tiền thuần trong năm | Năm nay
+Value: 37.389.062.365
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Subheading: Lưu chuyển tiền thuần trong kỳ
+Item: Lưu chuyển tiền thuần trong năm | Năm trước
+Value: 11.258.895.496
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cho thuê tài sản hoạt động Doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Trường hợp thời gian cho thuê chiếm trên 90% thời gian sử dụng hữu ích của tài sản, doanh thu được ghi nhận một lần đối với toàn bộ số tiền cho thuê nhận trước nếu thỏa mãn đồng thời các điều kiện sau: Bên đi thuê không có quyền hủy ngang hợp đồng thuê và Công ty không có nghĩa vụ phải trả lại số tiền đã nhận trước trong mọi trường hợp và dưới mọi hình thức. Số tiền nhận trước từ việc cho thuê không nhỏ hơn 90% tổng số tiền cho thuê dự kiến thu được theo hợp đồng trong suốt thời hạn cho thuê và bên đi thuê phải thanh toán toàn bộ số tiền thuê trong vòng 12 tháng kể từ thời điểm khởi đầu thuê tài sản. Hầu như toàn bộ rủi ro và lợi ích gắn liền với quyền sở hữu tài sản thuê đã chuyển giao cho bên đi thuê. Giá vốn của hoạt động cho thuê được ước tính tương đối đầy đủ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Tiền lãi Tiền lãi được ghi nhận trên cơ sở thời gian và lãi suất thực tế từng kỳ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Giá gốc hàng tồn kho được xác định như sau: Chi phí sản xuất kinh doanh dở dang của các dự án bất động sản: bao gồm các chi phí thuê nhà thầu thực hiện các hạng mục của dự án bất động sản và các chi phí có liên quan trực tiếp khác. Hàng hóa bất động sản (là các bất động sản được xây dựng để bán trong quá trình hoạt động bình thường của Công ty): bao gồm chi phí quyền sử dụng đất, các chi phí trực tiếp và các chi phí chung có liên quan phát sinh trong quá trình đầu tư xây dựng bất động sản. Hàng hóa khác: bao gồm chi phí mua và các chi phí liên quan trực tiếp khác phát sinh để có được hàng tồn kho ở địa điểm và trạng thái hiện tại.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Phải thu về cho vay ngắn hạn
+Value: Là các khoản cho vay Bên liên quan, bao gồm:",1,,242114,37165,0.7037037037037037,0.5928893615303225,0.12165032679434436,0.0
+169,Giải thích lý do tại sao thuế TNDN tạm nộp đối với bất động sản lại được ghi nhận trong các khoản phải thu ngắn hạn khác.,"Dựa trên số liệu hiện có:
+- Thuế TNDN tạm nộp 1% của bất động sản được ghi nhận trong mục ""Các khoản phải thu ngắn hạn khác"" (Thuyết minh 6: Các khoản phải thu khác | Thuế TNDN tạm nộp 1% của BĐS) – đây là khoản thuế đã tạm thời nộp và dự kiến sẽ được hoàn trả hoặc bù trừ trong kỳ tài chính hiện tại.
+- Vì tính chất ngắn hạn và khả năng thu hồi trong cùng năm tài chính, khoản thuế này được xếp vào nhóm các khoản phải thu ngắn hạn khác, thay vì ghi nhận là chi phí hoặc nợ dài hạn.
+*Nhận xét*: Việc ghi nhận như vậy phản ánh nguyên tắc kế toán về phân loại các khoản thuế tạm thời có khả năng thu hồi nhanh chóng vào tài sản ngắn hạn.",Thuế TNDN tạm nộp đối với bất động sản được ghi nhận trong các khoản phải thu ngắn hạn khác bởi vì đây là khoản tiền thuế mà công ty đã tạm nộp cho Nhà nước trong kỳ nhưng có thể được khấu trừ hoặc hoàn lại khi quyết toán thuế cuối năm hoặc trong các kỳ tiếp theo. Nó được coi là một tài sản ngắn hạn vì công ty kỳ vọng sẽ thu hồi được lợi ích kinh tế từ khoản tiền này trong vòng 12 tháng. Việc này không phải là một khoản phải thu thương mại thông thường từ khách hàng mà là một khoản phải thu phát sinh từ nghĩa vụ thuế của công ty.,8,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Thuế TNDN tạm nộp 1% của BĐS
+Value: Số cuối kỳ Giá trị: 2.845.119.703 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 4.724.702.354 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 15: Thuế và các khoản phải nộp Nhà nước | Thuế TNDN
+Value: Số cuối kỳ: - | Số đầu năm: 177.561.256
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Thuế TNDN tạm nộp 1% của BĐS | Số cuối kỳ Giá trị
+Period: cuối
+Value: 2.845.119.703
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Thuế TNDN tạm nộp 1% của BĐS | Số đầu năm Giá trị
+Period: đầu
+Value: 4.724.702.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 15. Thuế và các khoản phải nộp Nhà nước
+Item: Thuế TNDN | Số đầu năm
+Period: đầu
+Value: 177.561.256
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Tăng, giảm số dư dự phòng nợ phải thu khó đòi cần phải trích lập tại ngày kết thúc năm tài chính được ghi nhận vào chi phí quản lý doanh nghiệp.",1,,95961,11563,0.2857142857142857,0.5572411453909347,0.8766666666491334,0.6666666666666666
+170,Dự báo rủi ro tín dụng đối với các khoản phải thu dài hạn không có dự phòng.,"Dựa trên số liệu hiện có (cuối kỳ):
+
+**2. Thanh khoản và an toàn tài chính**
+- Phải thu dài hạn (b) Dài hạn: 27.431.011.835 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- Các khoản phải thu dài hạn khác: 328.250.000 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác: 10.484.971.014 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+
+**Tổng cộng** các khoản phải thu dài hạn không có dự phòng = **38.244.232.849 đ**
+
+*Nhận xét*:
+- Tất cả các khoản trên được ghi sổ ở mức ""Giá trị"" và không có mục ""Dự phòng"", cho thấy công ty không lập dự phòng giảm giá cho chúng.
+- Số tiền chưa được bảo vệ bằng dự phòng lên tới khoảng 38,2 tỷ đồng, là nguồn rủi ro tín dụng đáng lưu ý.
+- Nếu một phần đáng kể trong các khoản này trở nên khó đòi, công ty có thể phải ghi nhận tổn thất lớn.
+
+**Kết luận tổng thể**
+Công ty đang có rủi ro tín dụng đáng quan ngại đối với các khoản phải thu dài hạn không có dự phòng; nên xem xét thiết lập dự phòng phù hợp dựa trên đánh giá rủi ro thực tế.","Các khoản phải thu dài hạn khác hiện không có dự phòng (giá trị dự phòng là 0 VND) đối với các khoản như Công ty TNHH Xử lý Môi trường Từ Sơn và CTCP Đầu tư APEC Thái Nguyên. Điều này tiềm ẩn rủi ro tín dụng đáng kể. Nếu một trong các bên vay gặp khó khăn tài chính hoặc không thể thanh toán đúng hạn, công ty sẽ đối mặt với nguy cơ mất một phần hoặc toàn bộ số tiền đã cho vay hoặc phải thu mà không có bất kỳ khoản dự phòng nào để bù đắp. Việc không trích lập dự phòng có thể làm cho lợi nhuận và giá trị tài sản được ghi nhận cao hơn thực tế nếu có rủi ro vỡ nợ tiềm ẩn, đồng thời làm giảm tính thận trọng của báo cáo tài chính.",21,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng đầu tư tài chính dài hạn | Số cuối năm
+Period: cuối
+Value: (50.339.502.596)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng đầu tư tài chính dài hạn | Số đầu năm
+Period: đầu
+Value: (23.817.361.651)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng giảm giá chứng khoán kinh doanh | Số cuối năm
+Period: cuối
+Value: (5.054.591.307)
+Note ref: V.2a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng giảm giá chứng khoán kinh doanh | Số đầu năm
+Period: đầu
+Value: (5.017.251.307)
+Note ref: V.2a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng phải thu ngắn hạn khó đòi | Số đầu năm
+Period: đầu
+Value: (1.776.021.051)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Dự phòng phải thu khó đòi được lập cho từng khoản nợ phải thu khó đòi căn cứ vào dự kiến mức tổn thất có thể xảy ra.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng phải thu ngắn hạn khó đòi | Số cuối năm
+Period: cuối
+Value: (2.905.382.051)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Tăng, giảm số dư dự phòng nợ phải thu khó đòi cần phải trích lập tại ngày kết thúc năm tài chính được ghi nhận vào chi phí quản lý doanh nghiệp.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu dài hạn khác
+Value: Số cuối kỳ Giá trị: 328.250.000 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 31.250.000 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | b) Dài hạn
+Value: Số cuối kỳ Giá trị: 27.431.011.835 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 27.134.011.835 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác
+Value: Số cuối kỳ Giá trị: 10.484.971.014 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 9.087.213.733 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3b. Phải thu khách hàng dài hạn
+Value: Là các khoản phải thu khách hàng mua bất động sản Dự án Apec Aquapark Bắc Giang theo chính sách bán hàng trả chậm, có thời gian thanh toán còn lại trên 12 tháng kể từ ngày kết thúc kỳ kế toán
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí dự phòng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 1.129.361.000 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 1.562.543.956
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.559.480.945 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Cổ phiếu không niêm yết | Số đầu năm Dự phòng
+Period: đầu
+Value: (2.345.275.507)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Cổ phiếu không niêm yết | Số cuối năm Dự phòng
+Period: cuối
+Value: (2.345.275.507)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Ngân hàng TMCP Việt Nam Thịnh Vượng | Số đầu năm Dự phòng
+Period: đầu
+Value: (2.165.800)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 6. Các khoản phải thu khác
+Item: Các khoản phải thu dài hạn khác | Số cuối kỳ Giá trị
+Period: cuối
+Value: 328.250.000",1,,140642,21050,1.0,0.6238232345651146,0.6135869664961175,1.0
+171,Tổng giá trị hàng tồn kho cuối kỳ là bao nhiêu VND?,Giá trị hàng tồn kho cuối kỳ là 474.117.608.966 VND.,Tổng giá trị hàng tồn kho cuối kỳ là 474.117.608.966 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 18.073.012.689
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Dự án Golden Palace Lạng Sơn | Số cuối kỳ
+Period: cuối
+Value: 88.024.895.519",1,,9454,6582,1.0,0.6995807958381081,0.49999999995,1.0
+172,"Chi phí trả trước cho hoa hồng môi giới, thưởng bán hàng cuối kỳ là bao nhiêu VND?","Dựa trên số liệu hiện có (BẢNG CÂN ĐỐI KẾ TOÁN, số cuối kỳ): Chi phí trả trước cho hoa hồng môi giới, thưởng bán hàng cuối kỳ là **22.694.655.761 VND**.","Chi phí trả trước cho hoa hồng môi giới, thưởng bán hàng cuối kỳ là 22.694.655.761 VND.",9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Phú Yên | Số cuối kỳ
+Period: cuối
+Value: 41.929.707.706
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Bắc Giang | Số cuối kỳ
+Period: cuối
+Value: 25.512.823.827
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Mũi Né | Số cuối kỳ
+Period: cuối
+Value: 2.610.053.657
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí công cụ, dụng cụ | Số cuối kỳ
+Period: cuối
+Value: 1.141.547.635
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 23.836.203.396
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 1.305.599.377
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Dự án Mandala Phú Yên (Condotel) | Số cuối kỳ
+Period: cuối
+Value: 19.106.949.648
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí hoa hồng môi giới, thưởng bán hàng | Số cuối kỳ
+Period: cuối
+Value: 22.694.655.761",1,,25998,16416,0.5,0.6841993126595242,0.11111111109999999,1.0
+173,Dự án nào có giá trị bất động sản giữ để bán giảm đáng kể từ đầu năm đến cuối kỳ?,"Dựa trên số liệu hiện có:
+
+**4. Hiệu quả hoạt động** (agent_efficiency)
+- Dự án **Mũi Né**: giá trị bất động sản giữ để bán giảm từ **13.812.280.739 đồng** (đầu năm) xuống **513.203.706 đồng** (cuối kỳ) → giảm **13.299.077.033 đồng**, tương đương **≈96,3 %** (Nguồn: BẢNG CÂN ĐỐI KẾ TOÁN).
+- Dự án **Phú Yên**: giảm từ **146.477.845.146 đồng** (đầu năm) xuống **71.075.343.687 đồng** (cuối kỳ) → giảm **75.402.501.459 đồng**, tương đương **≈51,5 %** (Nguồn: BẢNG CÂN ĐỐI KẾ TOÁN).
+- Dự án **Đa hội**: không có thay đổi, giá trị **4.773.842.332 đồng** cả đầu năm và cuối kỳ (Nguồn: BẢNG CÂN ĐỐI KẾ TOÁN).
+
+*Nhận xét*:
+- Dự án Mũi Né cho thấy mức giảm mạnh nhất, gần như toàn bộ giá trị bất động sản giữ để bán đã được thanh lý hoặc giảm giá trị.
+- Dự án Phú Yên cũng giảm đáng kể, cho thấy giảm doanh thu/hoàn vốn từ bất động sản.
+- Dự án Đa hội không có biến động, có thể chưa có hoạt động bán trong kỳ.
+
+**Kết luận tổng thể**: Dự án Mũi Né và Phú Yên đều có giảm đáng kể giá trị bất động sản giữ để bán từ đầu năm đến cuối kỳ, trong đó Mũi Né giảm mạnh nhất (~96%). Dự án Đa hội không có giảm.","Dự án Mandala Phú Yên có giá trị bất động sản giữ để bán giảm đáng kể từ 197.781.786.133 VND đầu năm xuống 152.321.344.623 VND cuối kỳ, giảm 45.460.441.510 VND.",13,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Bất động sản đầu tư | Số đầu năm
+Period: đầu
+Value: 105.856.776.554
+Note ref: V.11
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Bất động sản đầu tư | Số cuối năm
+Period: cuối
+Value: 234.660.811.747
+Note ref: V.11
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Phú Yên | Số đầu năm
+Period: đầu
+Value: 146.477.845.146
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Mũi Né | Số đầu năm
+Period: đầu
+Value: 13.812.280.739
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Phú Yên | Số cuối kỳ
+Period: cuối
+Value: 71.075.343.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 175.052.735.650
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Đa hội | Số đầu năm
+Period: đầu
+Value: 4.773.842.332
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Đa hội | Số cuối kỳ
+Period: cuối
+Value: 4.773.842.332
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Mũi Né | Số cuối kỳ
+Period: cuối
+Value: 513.203.706
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Apec Aquapark Bắc Giang | Số đầu năm
+Period: đầu
+Value: 9.988.767.433
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+Item: Dự án Apec Aquapark Bắc Giang | Số cuối kỳ
+Period: cuối
+Value: 25.354.309.164",1,,122596,20103,0.6363636363636364,0.5985928532248904,0.0,0.0
+174,So sánh chi phí công cụ dụng cụ cuối kỳ với đầu năm. Mức độ thay đổi là bao nhiêu?,"Dựa trên số liệu hiện có: Số đầu năm của chi phí công cụ, dụng cụ là 1.365.022.737 đồng; số cuối kỳ là 1.141.547.635 đồng. Thay đổi = 1.141.547.635 − 1.365.022.737 = ‑223.475.102 đồng, tương đương giảm khoảng 16,4 %.","Chi phí công cụ dụng cụ cuối kỳ là 1.141.547.635 VND, còn đầu năm là 1.365.022.737 VND. Mức độ thay đổi là giảm 223.475.102 VND.",5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Chi phí công cụ, dụng cụ
+Value: Số cuối kỳ: 1.141.547.635 | Số đầu năm: 1.365.022.737
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Giá trị còn lại
+Item: Số đầu năm | Thiết bị, dụng cụ quản lý
+Value: 35.279.003
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Giá trị còn lại
+Item: Số cuối kỳ | Thiết bị, dụng cụ quản lý
+Value: 10.415.879
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Thanh lý | Thiết bị, dụng cụ quản lý
+Value: (49.989.670)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Số đầu năm | Thiết bị, dụng cụ quản lý
+Value: 518.475.186",1,,22901,8974,0.5,0.8409420281283005,0.9999999999,1.0
+175,Đánh giá tình hình quản lý hàng tồn kho của công ty dựa trên sự biến động của bất động sản giữ để bán.,"- **Bất động sản giữ để bán (hàng hóa bất động sản)**
+  - Số đầu năm: 222.245.021.866 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Số cuối kỳ: 167.636.178.947 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Thay đổi: ↓ 54.608.842.919 đ (giảm ~24.6%)
+- **Giá vốn bất động sản bán trong kỳ**: 101.262.100.705 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- **Thời gian tồn kho trung bình của bất động sản**
+  - Trung bình = (Số đầu năm + Số cuối kỳ) / 2 = 194.940.600.406,5 đ
+  - DIO = (Trung bình / Giá vốn) × 365 ≈ (194.94 tỷ / 101.26 tỷ) × 365 ≈ 702 ngày
+
+*Nhận xét*:
+- Số dư bất động sản giữ để bán giảm đáng kể, cho thấy công ty đã thực hiện bán hoặc chuyển đổi một phần tài sản này trong kỳ.
+- Tuy nhiên, DIO khoảng 702 ngày cho thấy vòng quay bất động sản rất chậm; tài sản này vẫn chiếm một phần lớn trong giá trị tồn kho trung bình.
+- Thời gian tồn kho dài có thể gây trơn tru vốn lưu động và tăng chi phí tài chính, đồng thời phản ánh rủi ro về khả năng bán được tài sản nhanh chóng.
+- Theo Thuyết minh 9, việc chuyển đổi bất động sản khỏi hàng tồn kho sang bất động sản đầu tư không làm thay đổi nguyên giá, nhưng có thể làm thay đổi cách ghi nhận lợi nhuận và giá trị còn lại. Điều này có thể làm giảm số dư tồn kho mà không giảm thực chất giá trị tài sản, do đó cần quan tâm tới chính sách chuyển đổi và mức độ thực hiện bán thực tế.
+- Để cải thiện hiệu quả quản lý hàng tồn kho, công ty cần rút ngắn chu kỳ bán bất động sản, tăng tốc bán ra hoặc tái cấu trúc danh mục tài sản để giảm lượng bất động sản giữ để bán.","Giá trị bất động sản giữ để bán đã giảm từ 222.245.021.866 VND đầu năm xuống 167.636.178.947 VND cuối kỳ, chủ yếu do giảm ở Dự án Mandala Phú Yên và Aqua Park Bắc Giang - Tòa OCT8. Sự sụt giảm này có thể cho thấy công ty đã bán được một phần đáng kể các sản phẩm bất động sản này trong kỳ, điều này là một dấu hiệu tích cực về việc chuyển hóa hàng tồn kho thành doanh thu và dòng tiền. Nếu việc giảm tồn kho được kiểm soát tốt và đi kèm với doanh thu, nó phản ánh hiệu quả trong việc quản lý hàng tồn kho. Tuy nhiên, nếu tốc độ giảm tồn kho nhanh hơn so với việc bổ sung sản phẩm mới, có thể dẫn đến thiếu nguồn cung trong tương lai.",17,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 18.073.012.689
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Dự án Golden Palace Lạng Sơn | Số cuối kỳ
+Period: cuối
+Value: 88.024.895.519
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Hàng hóa Bất động sản
+Value: Số cuối kỳ: 167.636.178.947 | Số đầu năm: 222.245.021.866
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số đầu năm
+Period: đầu
+Value: 222.245.021.866
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Việc chuyển từ bất động sản chủ sở hữu sử dụng hoặc hàng tồn kho thành bất động sản đầu tư chỉ khi chủ sở hữu chấm dứt sử dụng tài sản đó và bắt đầu cho bên khác thuê hoạt động hoặc khi kết thúc giai đoạn xây dựng. Việc chuyển từ bất động sản đầu tư sang bất động sản chủ sở hữu sử dụng hay hàng tồn kho chỉ khi chủ sở hữu bắt đầu sử dụng tài sản này hoặc bắt đầu triển khai cho mục đích bán. Việc chuyển từ bất động sản đầu tư sang bất động sản chủ sở hữu sử dụng hoặc hàng tồn kho không làm thay đổi nguyên giá hay giá trị còn lại của bất động sản tại ngày chuyển đổi.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Tài sản cố định hữu hình | Chuyển sang bất động sản đầu tư
+Value: Nguyên giá: Chuyển sang bất động sản đầu tư | Nhà cửa, vật kiến trúc: (178.321.426.654) | Phương tiện vận tải, truyền dẫn: - | Thiết bị, dụng cụ quản lý: - | Cộng: (178.321.426.654)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 8.583.372.428
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 5.826.158.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 133.703.128.164
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 130.209.711.138
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 101.262.100.705
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Giá gốc hàng tồn kho được xác định như sau: Chi phí sản xuất kinh doanh dở dang của các dự án bất động sản: bao gồm các chi phí thuê nhà thầu thực hiện các hạng mục của dự án bất động sản và các chi phí có liên quan trực tiếp khác. Hàng hóa bất động sản (là các bất động sản được xây dựng để bán trong quá trình hoạt động bình thường của Công ty): bao gồm chi phí quyền sử dụng đất, các chi phí trực tiếp và các chi phí chung có liên quan phát sinh trong quá trình đầu tư xây dựng bất động sản. Hàng hóa khác: bao gồm chi phí mua và các chi phí liên quan trực tiếp khác phát sinh để có được hàng tồn kho ở địa điểm và trạng thái hiện tại.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu bán bất động sản
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 187.743.704.036 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Khi bất động sản đầu tư được bán, nguyên giá và giá trị hao mòn lũy kế được xóa sổ và lãi, lỗ nào phát sinh được hạch toán vào thu nhập hay chi phí trong năm.",1,,112583,20935,1.0,0.5907628241034382,0.16666666665,0.25
+176,Phân tích rủi ro tài chính nếu các chi phí trả trước cho hoa hồng môi giới và thưởng bán hàng tiếp tục giảm mà không đi kèm với việc giảm hàng tồn kho.,"Dựa trên số liệu hiện có:
+
+**1. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- **Chi phí trả trước cho hoa hồng môi giới và thưởng bán hàng**: cuối kỳ 22.694.655.761 VND (giảm so với đầu năm 36.526.479.235 VND).  
+- **Hàng tồn kho**: cuối kỳ 474.117.608.966 VND.  
+- **Các khoản tương đương tiền**: cuối kỳ 80.000.000.000 VND, đầu năm 42.000.000.000 VND.  
+
+*Nhận xét*:
+- Giảm chi phí trả trước làm giảm tài sản ngắn hạn không lưu động, giảm áp lực chi phí trong kỳ.  
+- Tuy nhiên, mức hàng tồn kho vẫn rất cao và không giảm, nghĩa là phần lớn vốn lưu động vẫn bị khóa trong hàng tồn kho, gây áp lực lên khả năng chi trả ngắn hạn.  
+- Vì không có dữ liệu về nợ ngắn hạn và tổng tài sản ngắn hạn, không thể tính Current Ratio, Quick Ratio hay Cash Ratio để đo lường mức độ an toàn thanh khoản một cách định lượng.
+
+**2. Dòng tiền** (agent_cashflow_analysis)
+- **Chi phí trả trước (hoa hồng môi giới, thưởng bán hàng)**: giảm 13.831.823.474 VND so với đầu năm (giảm ≈ 38 %).  
+- **Lưu chuyển tiền thuần từ hoạt động kinh doanh (CFO)**: 36.158.929.436 VND (năm nay), so với năm trước âm ‑4.379.663.565 VND.  
+
+*Nhận xét*:
+- Việc giảm mạnh chi phí trả trước giúp duy trì CFO dương, giảm một khoản tiền mặt ra trong kỳ.  
+- Tuy nhiên, hàng tồn kho vẫn ở mức cao (≈ 474 tỷ VND) và không có dấu hiệu giảm, dẫn tới tiền mặt bị đóng băng trong tồn kho, kéo dài chu kỳ chuyển đổi tiền mặt.  
+- Nếu xu hướng này tiếp tục, CFO có thể vẫn dương nhờ giảm chi phí trả trước, nhưng độ bền của lợi nhuận dựa trên tiền mặt sẽ yếu; công ty sẽ phụ thuộc vào việc thanh lý hàng tồn kho để giải phóng tiền.  
+- Rủi ro tài chính tiềm ẩn:  
+  1. **Rủi ro thanh khoản** do tiền bị khóa trong hàng tồn kho lớn.  
+  2. **Rủi ro hoạt động** do tồn kho không giảm có thể chỉ ra doanh thu bán hàng không tăng, gây áp lực lên lợi nhuận gộp.  
+  3. **Rủi ro tài chính** nếu công ty phải vay để bù đắp nhu cầu vốn lưu động khi CFO giảm dần.
+
+**Kết luận tổng thể**
+Giảm chi phí trả trước cho hoa hồng môi giới và thưởng bán hàng giúp duy trì dòng tiền hoạt động dương trong ngắn hạn, nhưng nếu hàng tồn kho không giảm, công ty sẽ đối mặt với rủi ro thanh khoản do vốn lưu động bị kẹt trong tồn kho và rủi ro hoạt động do doanh thu chưa tăng. Thiếu dữ liệu về nợ ngắn hạn và tổng tài sản ngắn hạn khiến không thể đo lường chính xác mức độ an toàn thanh khoản; do đó, cần bổ sung các chỉ tiêu này và thực hiện các biện pháp giảm tồn kho để cải thiện sức khỏe tài chính bền vững.","Các chi phí trả trước cho hoa hồng môi giới và thưởng bán hàng đã giảm đáng kể từ 36.526.479.235 VND đầu năm xuống 22.694.655.761 VND cuối kỳ. Nếu xu hướng này tiếp tục mà không đi kèm với việc giảm hàng tồn kho tương ứng, điều này có thể báo hiệu một số rủi ro tài chính:\n-   **Giảm hoạt động bán hàng:** Công ty có thể đang giảm chi phí bán hàng do dự kiến giảm doanh số hoặc hoạt động bán hàng chậm lại, điều này có thể dẫn đến việc tích lũy hàng tồn kho nếu sản phẩm không được bán ra.\n-   **Hiệu quả marketing kém:** Chi phí marketing giảm có thể ảnh hưởng đến khả năng tiếp cận khách hàng và bán sản phẩm, đặc biệt là bất động sản.\n-   **Gánh nặng tồn kho:** Hàng tồn kho không được bán sẽ tiếp tục phát sinh chi phí lưu kho, rủi ro lỗi thời hoặc giảm giá, ảnh hưởng tiêu cực đến lợi nhuận.  \nTrong trường hợp này, việc giảm chi phí bán hàng mà không thấy hàng tồn kho giảm sẽ là một tín hiệu không tốt về khả năng chuyển đổi tài sản thành tiền mặt và doanh thu.",31,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Phú Yên | Số cuối kỳ
+Period: cuối
+Value: 41.929.707.706
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Bắc Giang | Số cuối kỳ
+Period: cuối
+Value: 25.512.823.827
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Mũi Né | Số cuối kỳ
+Period: cuối
+Value: 2.610.053.657
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí công cụ, dụng cụ | Số cuối kỳ
+Period: cuối
+Value: 1.141.547.635
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 18.073.012.689
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Dự án Golden Palace Lạng Sơn | Số cuối kỳ
+Period: cuối
+Value: 88.024.895.519
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Các khoản tương đương tiền
+Value: Số cuối năm: 80.000.000.000 | Số đầu năm: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Chi phí hoa hồng môi giới, thưởng bán hàng
+Value: Số cuối kỳ: 22.694.655.761 | Số đầu năm: 36.526.479.235
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí hoa hồng môi giới, thưởng bán hàng | Số cuối kỳ
+Period: cuối
+Value: 22.694.655.761
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí hoa hồng môi giới, thưởng bán hàng | Số đầu năm
+Period: đầu
+Value: 36.526.479.235
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Chi phí bán hàng dự án Chi phí bán hàng dự án (bao gồm: chi phí hoa hồng môi giới, chi phí thưởng bán hàng,...) được phân bổ vào chi phí tương ứng số căn hộ đã bàn giao cho khách hàng trong năm.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 6. Chi phí trả trước Chi phí trả trước bao gồm các chi phí thực tế đã phát sinh nhưng có liên quan đến kết quả hoạt động sản xuất kinh doanh của nhiều kỳ kế toán. Chi phí trả trước của Công ty là chi phí công cụ dụng cụ và chi phí bán hàng dự án chưa bàn giao. Các chi phí trả trước này được phân bổ trong khoảng thời gian trả trước hoặc thời gian các lợi ích kinh tế tương ứng được tạo ra từ các chi phí này.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Trả trước cho người bán ngắn hạn
+Item: Trả trước cho nhà cung cấp | Số cuối kỳ
+Period: cuối
+Value: 11.748.605.329
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Trả trước cho người bán ngắn hạn
+Item: Trả trước cho nhà cung cấp | Số đầu năm
+Period: đầu
+Value: 17.709.353.952
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu cung cấp dịch vụ, cho thuê mặt bằng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 5.168.271.585 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 7.582.607.948
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu bán hàng hóa
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 16.668.489.482 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Chu kỳ sản xuất, kinh doanh thông thường
+Value: Chu kỳ sản xuất kinh doanh bình quân của hoạt động chuyển nhượng bất động sản của Công ty bắt đầu từ thời điểm xin giấy phép đầu tư, thực hiện giải phóng mặt bằng, xây dựng cơ bản cho đến thời điểm hoàn thiện. Do vậy, chu kỳ sản xuất kinh doanh của hoạt động chuyển nhượng bất động sản của Công ty thường trên 12 tháng.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 3: Ngành nghề kinh doanh
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư, kinh doanh bất động sản.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí tài chính khác
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 461.720.100 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 7.623.521.969",1,,132298,35235,0.2564102564102564,0.4727683371755073,0.2671568627361928,1.0
+177,Tính toán tỷ lệ hàng tồn kho trên tổng tài sản ngắn hạn (tham khảo chunk tài sản ngắn hạn) cuối kỳ.,"Dựa trên số liệu hiện có: Hàng tồn kho cuối kỳ = 474.117.608.966 đồng; Tổng tài sản ngắn hạn cuối kỳ = 984.330.724.539 đồng. Tỷ lệ hàng tồn kho trên tổng tài sản ngắn hạn = (474.117.608.966 ÷ 984.330.724.539) ≈ 48,2 %.",Tổng giá trị hàng tồn kho cuối kỳ là 474.117.608.966 VND. Tổng tài sản ngắn hạn cuối kỳ (từ chunk 3) là 984.330.724.539 VND. Tỷ lệ hàng tồn kho trên tổng tài sản ngắn hạn cuối kỳ là (474.117.608.966 / 984.330.724.539) * 100% ≈ 48.17%.,9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 18.073.012.689
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Dự án Golden Palace Lạng Sơn | Số cuối kỳ
+Period: cuối
+Value: 88.024.895.519
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Period: cuối
+Value: 984.330.724.539
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Period: đầu
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Period: cuối
+Value: 9.720.712.203
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala | Số cuối kỳ
+Period: cuối
+Value: 19.682.287",1,,16885,9043,1.0,0.5567833734168738,0.16666666665,1.0
+178,Dự báo tác động của việc tăng chi phí trả trước dài hạn khác đến cơ cấu tài chính của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Chi phí trả trước dài hạn khác – số đầu năm: 77.774.900 VND (Bảng cân đối kế toán).
+- Dự báo tác động:
+  - Không ảnh hưởng trực tiếp tới lợi nhuận trước thuế và sau thuế trong kỳ hiện tại vì là chi phí trả trước.
+  - Khi tài sản trả trước được khấu hao trong các kỳ tiếp theo, chi phí khấu hao sẽ làm lợi nhuận giảm, do đó **ROA** (Lợi nhuận / Tổng tài sản) và **ROE** (Lợi nhuận / Vốn chủ sở hữu) dự kiến giảm.
+*Nhận xét*:
+- Ảnh hưởng lợi nhuận chỉ xuất hiện trong các kỳ sau khi khấu hao.
+- Không thể định lượng mức giảm % ROA, ROE vì thiếu số cuối kỳ của ""Các chi phí trả trước dài hạn khác"", ""Tổng cộng tài sản"" và ""Vốn chủ sở hữu"".
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Chi phí trả trước dài hạn khác (đầu năm): 77 774 900 VND (Thuyết minh 8, Bảng cân đối kế toán).
+- Tổng tài sản (nguồn vốn) cuối năm: 1 662 694 128 863 VND.
+- Nợ dài hạn cuối năm: 211 455 297 112 VND.
+- Nợ ngắn hạn cuối năm: 566 994 110 452 VND.
+- Vốn chủ sở hữu cuối năm: 884 244 721 299 VND.
+- Tỷ lệ nợ / vốn: 0,78 (≈78%).
+- Nợ / Tài sản: 0,47 (≈47%).
+- Tỷ trọng chi phí trả trước dài hạn khác trong tài sản: 77 774 900 / 1 662 694 128 863 ≈ 0,0047 % (rất nhỏ).
+*Nhận xét*:
+- Với tỷ trọng hiện tại, việc tăng chi phí trả trước dài hạn khác sẽ **không gây ảnh hưởng đáng kể** tới cấu trúc nợ‑vốn nếu tài trợ bằng tiền mặt.
+- Nếu tăng được tài trợ bằng vay mới hoặc nợ ngắn hạn, **tổng nợ** sẽ tăng, làm **tỷ lệ nợ / vốn** và **tỷ lệ nợ / tài sản** tăng, gây áp lực lên đòn bẩy tài chính.
+- Thiếu số liệu cuối kỳ của khoản này và chi tiết nguồn tài trợ nên **không thể định lượng** mức thay đổi cụ thể.
+
+**3. Hiệu quả sử dụng tài sản** (agent_efficiency)
+- Các chi phí trả trước dài hạn khác – số đầu năm: 77 774 900 VND.
+- Tổng tài sản đầu năm: 1 906 094 474 649 VND → cuối năm: 1 662 694 128 863 VND.
+*Nhận xét*:
+- Chi phí trả trước dài hạn khác chỉ chiếm khoảng **0,004 %** tổng tài sản ở đầu năm, cho thấy quy mô rất nhỏ.
+- Tăng đáng kể (ví dụ gấp đôi) vẫn chỉ làm tăng tài sản tổng thể dưới 0,01 %, nên **ảnh hưởng đến vòng quay vốn lưu động và hiệu suất tài sản là hạn chế**, trừ khi tài trợ bằng nợ ngắn hạn lớn.
+- Thiếu số liệu cuối kỳ của khoản này và dữ liệu về ""Vốn chủ sở hữu"" cuối kỳ làm **không thể xác định** chính xác thay đổi tỷ lệ tài sản lưu động / tài sản cố định.
+
+**Kết luận tổng thể**
+- Chi phí trả trước dài hạn khác hiện tại chiếm tỷ trọng cực nhỏ trong tổng tài sản, do đó **tác động trực tiếp lên cấu trúc tài chính là hạn chế** nếu tăng được tài trợ bằng nguồn vốn nội bộ.
+- Nếu tăng được tài trợ bằng vay nợ (đặc biệt là nợ ngắn hạn), **đòn bẩy tài chính sẽ tăng**, làm giảm thanh khoản và tăng rủi ro tài chính.
+- Từ góc độ sinh lời, tăng tài sản cố định sẽ **giảm ROA và ROE** trong các kỳ kế tiếp do lợi nhuận không tăng đồng thời tài sản tăng.
+- **Giới hạn dữ liệu**: chưa có số cuối kỳ của ""Các chi phí trả trước dài hạn khác"", không có số liệu cuối kỳ của ""Vốn chủ sở hữu"" và ""Tiền và các khoản tương đương tiền"", nên không thể đưa ra định lượng chính xác các chỉ số tài chính sau khi tăng.","Chi phí trả trước dài hạn khác đã tăng từ 0 VND đầu năm lên 77.774.900 VND cuối kỳ. Mặc dù số tiền này còn nhỏ, nếu xu hướng tăng lên của các chi phí trả trước dài hạn tiếp tục, nó sẽ làm tăng tài sản dài hạn của công ty. Điều này có thể ảnh hưởng đến cơ cấu tài chính bằng cách dịch chuyển tỷ trọng tài sản sang các khoản mục không thanh khoản ngay lập tức. Nếu các chi phí này liên quan đến các dự án hoặc hoạt động dài hạn có khả năng sinh lời, đó có thể là một khoản đầu tư chiến lược. Tuy nhiên, nếu các chi phí này không tạo ra lợi ích kinh tế tương xứng trong tương lai, chúng có thể trở thành gánh nặng, làm giảm hiệu quả sử dụng vốn và cần được xem xét cẩn trọng.",61,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 23.836.203.396
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí công cụ, dụng cụ | Số cuối kỳ
+Period: cuối
+Value: 1.141.547.635
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 1.305.599.377
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Dự án Mandala Phú Yên (Condotel) | Số cuối kỳ
+Period: cuối
+Value: 19.106.949.648
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí hoa hồng môi giới, thưởng bán hàng | Số cuối kỳ
+Period: cuối
+Value: 22.694.655.761
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số cuối năm
+Period: cuối
+Value: 211.455.297.112
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số đầu năm
+Period: đầu
+Value: 115.369.440.931
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | b) Vay dài hạn
+Value: Khoản mục: b) Vay dài hạn | Số cuối kỳ Giá trị: 165.014.900.000 | Số cuối kỳ Khả năng trả nợ: 165.014.900.000 | Trong kỳ Tăng: 114.959.800.000 | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ ngắn hạn
+Item: I. Nợ ngắn hạn | Số cuối năm
+Period: cuối
+Value: 566.994.110.452
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ ngắn hạn
+Item: I. Nợ ngắn hạn | Số đầu năm
+Period: đầu
+Value: 895.630.596.406
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 156.502.422.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Số đầu kỳ Khả năng trả nợ
+Period: đầu
+Value: 380.475.557.454
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng vốn chủ sở hữu
+Item: D - NGUỒN VỐN CHỦ SỞ HỮU | Số đầu năm
+Period: đầu
+Value: 895.094.437.312
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng vốn chủ sở hữu
+Item: D - NGUỒN VỐN CHỦ SỞ HỮU | Số cuối năm
+Period: cuối
+Value: 884.244.721.299
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nguồn vốn
+Item: TỔNG CỘNG NGUỒN VỐN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nguồn vốn
+Item: TỔNG CỘNG NGUỒN VỐN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Phải trả các tổ chức và cá nhân
+Value: Số cuối kỳ: 81.623.567.164 | Số đầu năm: 92.849.850.808
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các nhà cung cấp khác
+Value: Số cuối kỳ: 26.265.437.526 | Số đầu năm: 46.581.188.492
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: 43.404.961.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Lợi nhuận sau thuế chưa phân phối
+Value: 54.254.677.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: 54.254.677.312
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Các dự án khác | Số cuối kỳ
+Period: cuối
+Value: 18.073.012.689
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Dự án Golden Palace Lạng Sơn | Số cuối kỳ
+Period: cuối
+Value: 88.024.895.519
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn khác | Số cuối năm
+Period: cuối
+Value: 184.685.805.476
+Note ref: V.6a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải thu ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 176.837.852.532
+Note ref: V.6a
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Chi phí công cụ, dụng cụ
+Value: Số cuối kỳ: 1.141.547.635 | Số đầu năm: 1.365.022.737
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Các chi phí trả trước dài hạn khác | Số đầu năm
+Period: đầu
+Value: 77.774.900
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 8. Chi phí trả trước dài hạn
+Item: Chi phí công cụ, dụng cụ | Số đầu năm
+Period: đầu
+Value: 1.365.022.737
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 26.984.670.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các dự án khác
+Value: Số cuối kỳ: 1.305.599.377 | Số đầu năm: 1.244.284.892",1,,227906,48614,0.2127659574468085,0.0,0.37559570451619,0.6
+179,Nguyên giá nhà cửa và vật kiến trúc đầu năm là bao nhiêu VND?,Nguyên giá nhà cửa và vật kiến trúc đầu năm là 196.560.414.828 VND.,Nguyên giá nhà cửa và vật kiến trúc đầu năm là 196.560.414.828 VND.,3,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Số đầu năm | Nhà cửa, vật kiến trúc
+Value: 196.560.414.828
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là chương trình phần mềm, chi tiết như sau: — Nguyên giá
+Item: Số đầu năm | Nhà
+Value: 107.081.636.718
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Chuyển sang bất động sản đầu tư | Nhà cửa, vật kiến trúc
+Value: (178.321.426.654)",1,,9911,7883,1.0,0.7722612539649806,0.9999999999,1.0
+180,Giá trị còn lại thuần của phương tiện vận tải cuối kỳ là bao nhiêu VND?,Giá trị còn lại thuần của phương tiện vận tải cuối kỳ là 679.812.181 VND.,Giá trị còn lại thuần của phương tiện vận tải cuối kỳ là 679.812.181 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Giá trị còn lại
+Item: Số cuối kỳ | Phương tiện vận tải, truyền dẫn
+Value: 679.812.181
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là chương trình phần mềm, chi tiết như sau:
+Item: Số cuối kỳ | Giá trị còn lại
+Value: 17.566.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là chương trình phần mềm, chi tiết như sau: — Giá trị còn lại
+Item: Số cuối kỳ | Nhà
+Value: 66.378.867.796
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là chương trình phần mềm, chi tiết như sau: — Giá trị còn lại
+Item: Số cuối kỳ | Cộng
+Value: 234.660.811.747
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Giá trị còn lại
+Item: Số cuối kỳ | Cộng
+Value: 16.326.198.818",1,,9723,8057,1.0,0.7293000922554252,0.9999999999,1.0

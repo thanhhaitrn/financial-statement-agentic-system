@@ -169,7 +169,7 @@ def _not_found_messages(state: dict) -> list[str]:
                 continue
             if str(fact.get("status", "") or "").strip() != "not_found_after_search":
                 continue
-            message = str(fact.get("interpretation_hint", "") or "").strip()
+            message = str(fact.get("message", "") or "").strip()
             if message:
                 messages.append(message)
     return _dedupe_keep_order(messages)

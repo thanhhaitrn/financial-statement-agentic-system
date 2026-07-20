@@ -52,10 +52,31 @@ _SUPPLEMENTAL_REPORT_TOPIC_RE = re.compile(
     r"thực\s+hiện\s+kiểm\s+toán)",
     flags=re.IGNORECASE,
 )
+# Digital-signature / PDF-scanner artifacts emitted on the cover page. These leak
+# into facts as garbage headings and values (e.g. the cert DN/OID line becomes a
+# subheading, the signing timestamp and reader version become a fact value), so
+# they must be dropped before any line becomes a heading or paragraph.
+_SIGNATURE_NOISE_RE = re.compile(
+    r"^(?:"
+    r"digitally\s+signed\s+by\b"
+    r"|dn:\s*c=.*\boid\."  # certificate distinguished name
+    r"|.*\boid\.\d"  # any line carrying an OID dotted number
+    r"|reason:\s*$"  # empty signature fields
+    r"|location:\s*$"
+    r"|date:\s*\d{4}\.\d{2}\.\d{2}\s+\d{1,2}:\d{2}:\d{2}"  # signing timestamp
+    r"|.*\bpdf\s+reader\s+version\b"
+    r"|.*\bfoxit\b"
+    r")",
+    flags=re.IGNORECASE,
+)
 
 
 def _clean_line(line: str) -> str:
     return _strip_inline_formatting(str(line or "")).strip()
+
+
+def _is_signature_noise_line(line: str) -> bool:
+    return bool(_SIGNATURE_NOISE_RE.match(_clean_line(line)))
 
 
 def _is_all_caps_heading(text: str) -> bool:
@@ -78,7 +99,12 @@ def _readable_heading(text: str) -> str:
 
 
 def _is_report_header_line(line: str) -> bool:
-    cleaned = _clean_line(line)
+    if _is_signature_noise_line(line):
+        return True
+    # Strip leading markdown heading markers so bare cover-page titles
+    # ("# CÔNG TY ...", "# BÁO CÁO TÀI CHÍNH ...") are recognised as headers
+    # instead of leaking through as paragraph values.
+    cleaned = _clean_line(line).lstrip("#").strip()
     lowered = cleaned.lower()
     if not cleaned:
         return False

@@ -174,7 +174,12 @@ def requirement_name_matches_fact(requirement: Any, fact: dict, *, table: str = 
         return True
 
     requirement_tokens = set(re.findall(r"\w+", requirement_text))
-    item_tokens = set(re.findall(r"\w+", item_name))
+    # The disambiguating context (parent line / matrix section) lives in the
+    # subheading (e.g. "Tài sản cố định hữu hình"); fold it into the matchable
+    # name so a hierarchical fact like "Nguyên giá | Số đầu năm" still matches a
+    # query such as "nguyên giá tài sản cố định hữu hình".
+    subheading = normalize_requirement_text(fact.get("subheading", ""), table=fact_table or table)
+    item_tokens = set(re.findall(r"\w+", f"{item_name} {subheading}".strip()))
     if not requirement_tokens or not item_tokens:
         return False
     return item_tokens.issubset(requirement_tokens) or requirement_tokens.issubset(item_tokens)

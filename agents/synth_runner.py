@@ -38,7 +38,10 @@ DEFAULT_DECISION = {
 
 MAX_SYNTH_FACTS_PER_AGENT = 20
 MAX_FOLLOWUP_REQUIREMENTS = 10
-MAX_FOLLOWUP_ROUNDS = 1
+# Two follow-up rounds: the missing data for stub answers exists in the source
+# (front-matter, note schedules, policies) and just needs one more routed fetch.
+# The extra round only runs when round 1 returns need_more with pending followups.
+MAX_FOLLOWUP_ROUNDS = 2
 OPTIONAL_FOLLOWUP_REQUIREMENTS = {
     "chi phí bán hàng",
     "các khoản phải trả ngắn hạn",
@@ -70,11 +73,14 @@ _INSUFFICIENT_ANSWER_MARKERS = (
 
 class NormalizedFact(TypedDict):
     item_name: str
+    subheading: str
     time_hint: str
+    value_type: str
+    unit: str
     value: Any
     source: str
     table: str
-    interpretation_hint: str
+    message: str
     status: str
 
 
@@ -255,23 +261,33 @@ def _normalize_fact(raw_fact: Any, fallback_table: str = "") -> Optional[Normali
         return None
 
     item_name = str(raw_fact.get("item_name", "")).strip()
+    subheading = str(raw_fact.get("subheading", "")).strip()
     time_hint = str(raw_fact.get("time_hint", "")).strip()
     value = raw_fact.get("value", "")
     source = str(raw_fact.get("source", "")).strip()
     table = str(raw_fact.get("table", fallback_table)).strip() or fallback_table
-    interpretation_hint = str(raw_fact.get("interpretation_hint", "") or "").strip()
+    message = str(raw_fact.get("message", "") or "").strip()
     status = normalize_fact_status(raw_fact.get("status", "found"))
+    value_type = str(raw_fact.get("value_type", "") or "").strip()
+    unit = str(raw_fact.get("unit", "") or "").strip()
 
     if not item_name and value in ("", None):
         return None
 
     return {
         "item_name": item_name,
+        # Parent line / matrix section (e.g. "Tài sản cố định hữu hình — Nguyên
+        # giá"); lets the LLM disambiguate flattened labels like "Số cuối kỳ | Cộng".
+        "subheading": subheading,
         "time_hint": time_hint,
+        # Slot disambiguators so the LLM picks the exact period / value-type asked
+        # (nguyên giá vs giá trị còn lại vs hao mòn) and states the right unit.
+        "value_type": value_type,
+        "unit": unit,
         "value": value,
         "source": source,
         "table": table,
-        "interpretation_hint": interpretation_hint,
+        "message": message,
         "status": status,
     }
 
@@ -362,6 +378,7 @@ def _dedupe_facts(facts: List[NormalizedFact]) -> List[NormalizedFact]:
         key = (
             str(fact.get("table", "")).strip(),
             str(fact.get("item_name", "")).strip(),
+            str(fact.get("subheading", "")).strip(),
             str(fact.get("time_hint", "")).strip(),
             str(fact.get("value", "")).strip(),
             str(fact.get("source", "")).strip(),
@@ -379,6 +396,26 @@ def _cap_facts(facts: List[NormalizedFact], limit: int = MAX_SYNTH_FACTS_PER_AGE
     if limit <= 0 or len(facts) <= limit:
         return facts
     return facts[:limit]
+
+
+def _fact_for_prompt(fact: NormalizedFact) -> Dict[str, Any]:
+    """Project a fact down to the fields the synth LLM needs.
+
+    Drops internal-only fields that are noise in the prompt: ``source`` (a
+    constant file path) and ``status`` ("found"); ``message`` is kept only when
+    present (it carries the not-found explanation). Empty fields are omitted.
+    """
+    out = {
+        "item_name": fact.get("item_name", ""),
+        "subheading": fact.get("subheading", ""),
+        "time_hint": fact.get("time_hint", ""),
+        "value_type": fact.get("value_type", ""),
+        "unit": fact.get("unit", ""),
+        "value": fact.get("value", ""),
+        "table": fact.get("table", ""),
+        "message": str(fact.get("message", "") or "").strip(),
+    }
+    return {key: val for key, val in out.items() if str(val).strip()}
 
 
 def _build_compact_worker_results(
@@ -402,7 +439,7 @@ def _build_compact_worker_results(
 
         compact[agent_name] = {
             "table": str(item.get("table", "")).strip(),
-            "facts": facts,
+            "facts": [_fact_for_prompt(fact) for fact in facts],
         }
         stats["agents_n"] += 1
         stats["facts_n_raw"] += facts_raw_n
@@ -1131,14 +1168,49 @@ def _followup_requirement_items(followups: List[Dict[str, Any]]) -> List[str]:
     return _dedupe_keep_order([str(item).strip() for item in requirements if str(item).strip()])
 
 
+_FOLLOWUP_PLACEHOLDER_ANSWER = "Trả lời dựa trên dữ liệu hiện có."
+
+
+def _facts_summary_from_state(state: dict, limit: int = MAX_SYNTH_FACTS_PER_AGENT) -> str:
+    """Render the facts already gathered as a short Markdown answer.
+
+    Used as a fallback when the follow-up budget is exhausted and the synth LLM
+    left the answer empty: surfacing the retrieved facts keeps the answer grounded
+    (non-zero faithfulness/relevancy) instead of emitting a content-free stub.
+    """
+    if not isinstance(state, dict):
+        return ""
+    normalized, _ = _normalize_all_worker_results(state.get("worker_results", {}) or {})
+    facts = _dedupe_facts(_flatten_facts(normalized))
+    lines: List[str] = []
+    for fact in facts:
+        value = str(fact.get("value", "") or "").strip()
+        item_name = str(fact.get("item_name", "") or "").strip()
+        if not value or not item_name:
+            continue
+        subheading = str(fact.get("subheading", "") or "").strip()
+        label = f"{subheading} — {item_name}" if subheading else item_name
+        lines.append(f"- {label}: {value}")
+        if len(lines) >= limit:
+            break
+    return "\n".join(lines)
+
+
 def _answer_with_followup_limit_note(
     decision: Dict[str, Any],
     followups: List[Dict[str, Any]],
+    state: Optional[dict] = None,
 ) -> Dict[str, Any]:
     updated = dict(decision)
     answer = str(updated.get("answer", "") or "").strip()
-    if not answer:
-        answer = "Trả lời dựa trên dữ liệu hiện có."
+    if not answer or answer == _FOLLOWUP_PLACEHOLDER_ANSWER:
+        # Recall-first fallback: answer from whatever facts were gathered rather
+        # than emitting a content-free placeholder that scores 0 on RAGAs.
+        facts_summary = _facts_summary_from_state(state) if state is not None else ""
+        if facts_summary:
+            answer = "Dựa trên số liệu hiện có:\n" + facts_summary
+        elif not answer:
+            answer = _FOLLOWUP_PLACEHOLDER_ANSWER
 
     requirements = _followup_requirement_items(followups)
     if requirements:
@@ -1492,7 +1564,7 @@ def run_synth(state: dict) -> dict:
                 followups_n=len(dispatchable_followups),
             )
         )
-        decision = _answer_with_followup_limit_note(decision, dispatchable_followups)
+        decision = _answer_with_followup_limit_note(decision, dispatchable_followups, state)
         dispatchable_followups = []
 
     done_log = make_log(

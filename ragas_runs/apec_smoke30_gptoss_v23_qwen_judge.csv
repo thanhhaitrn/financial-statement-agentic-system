@@ -1,0 +1,1971 @@
+id,question,answer,ground_truth,retrieved_contexts_n,retrieved_contexts,seed_contexts_n,errors,runtime,tokens,faithfulness,answer_relevancy,context_precision,context_recall
+1,Công ty Cổ phần Đầu tư APEC được cấp Giấy chứng nhận đăng ký kinh doanh lần đầu vào ngày nào?,Công ty Cổ phần Đầu tư APEC được cấp Giấy chứng nhận đăng ký kinh doanh lần đầu vào ngày 31 tháng 7 năm 2006.,Công ty Cổ phần Đầu tư APEC được cấp Giấy chứng nhận đăng ký kinh doanh lần đầu vào ngày 31 tháng 7 năm 2006.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trong quá trình hoạt động, Công ty đã 22 lần được Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp bổ sung các Giấy phép chứng nhận đăng ký kinh doanh điều chỉnh. Trong đó, Giấy chứng nhận đăng ký doanh nghiệp điều chỉnh lần thứ 22 được cấp ngày 23 tháng 5 năm 2024 về việc thay đổi người đại diện theo pháp luật.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương là Công ty cổ phần hoạt động theo Giấy chứng nhận đăng ký doanh nghiệp số 0102005769 ngày 31 tháng 7 năm 2006 do Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư và kinh doanh bất động sản.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trụ sở hoạt động - Địa chỉ: Tầng 3, tòa nhà Grand Plaza, số 117 Trần Duy Hưng, phường Trung Hòa, quận Cầu Giấy, thành phố Hà Nội, Việt Nam
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ngày 24 tháng 01 năm 2025
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nguyễn Phương Dung
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Tổng Giám đốc
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Báo cáo của ban tổng giám đốc
+Value: Ban Tổng Giám đốc Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) trình bày báo cáo của mình cùng với Báo cáo tài chính riêng của Công ty cho Quý IV năm 2024.",1,,15115,8347,0.0,0.9189682070031893,0.49999999995,1.0
+2,Địa chỉ trụ sở chính của Công ty APEC Investment là ở đâu?,"Trụ sở chính của Công ty APEC Investment nằm tại Tầng 3, tòa nhà Grand Plaza, số 117 Trần Duy Hưng, phường Trung Hòa, quận Cầu Giấy, thành phố Hà Nội, Việt Nam.","Địa chỉ trụ sở chính của Công ty APEC Investment là Tầng 3, Tòa nhà Grand Plaza, số 117 Trần Duy Hưng, Phường Trung Hòa, Quận Cầu Giấy, Thành phố Hà Nội, Việt Nam.",10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trụ sở hoạt động - Địa chỉ: Tầng 3, tòa nhà Grand Plaza, số 117 Trần Duy Hưng, phường Trung Hòa, quận Cầu Giấy, thành phố Hà Nội, Việt Nam
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư và kinh doanh bất động sản.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương là Công ty cổ phần hoạt động theo Giấy chứng nhận đăng ký doanh nghiệp số 0102005769 ngày 31 tháng 7 năm 2006 do Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trong quá trình hoạt động, Công ty đã 22 lần được Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp bổ sung các Giấy phép chứng nhận đăng ký kinh doanh điều chỉnh. Trong đó, Giấy chứng nhận đăng ký doanh nghiệp điều chỉnh lần thứ 22 được cấp ngày 23 tháng 5 năm 2024 về việc thay đổi người đại diện theo pháp luật.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Lập Báo cáo tài chính riêng trên cơ sở hoạt động liên tục trừ trường hợp không thể cho rằng Công ty sẽ tiếp tục hoạt động liên tục;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nguyễn Phương Dung
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Tổng Giám đốc
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ngày 24 tháng 01 năm 2025
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thay mặt Ban Tổng Giám đốc,
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Báo cáo của ban tổng giám đốc
+Value: Ban Tổng Giám đốc Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) trình bày báo cáo của mình cùng với Báo cáo tài chính riêng của Công ty cho Quý IV năm 2024.",1,,11753,6955,1.0,0.9664210341501392,0.9999999999,1.0
+3,Hoạt động kinh doanh chính của Công ty APEC Investment là gì?,Hoạt động kinh doanh chính của Công ty APEC Investment là đầu tư và kinh doanh bất động sản.,Hoạt động kinh doanh chính của Công ty APEC Investment bao gồm đầu tư và kinh doanh bất động sản.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư và kinh doanh bất động sản.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trong quá trình hoạt động, Công ty đã 22 lần được Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp bổ sung các Giấy phép chứng nhận đăng ký kinh doanh điều chỉnh. Trong đó, Giấy chứng nhận đăng ký doanh nghiệp điều chỉnh lần thứ 22 được cấp ngày 23 tháng 5 năm 2024 về việc thay đổi người đại diện theo pháp luật.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương là Công ty cổ phần hoạt động theo Giấy chứng nhận đăng ký doanh nghiệp số 0102005769 ngày 31 tháng 7 năm 2006 do Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trụ sở hoạt động - Địa chỉ: Tầng 3, tòa nhà Grand Plaza, số 117 Trần Duy Hưng, phường Trung Hòa, quận Cầu Giấy, thành phố Hà Nội, Việt Nam
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Lập Báo cáo tài chính riêng trên cơ sở hoạt động liên tục trừ trường hợp không thể cho rằng Công ty sẽ tiếp tục hoạt động liên tục;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nguyễn Phương Dung
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Tổng Giám đốc",1,,12132,6989,1.0,0.9630542424339116,0.9999999999,1.0
+4,Ai là Chủ tịch Hội đồng Quản lý của Công ty APEC Investment tính đến ngày 24 tháng 01 năm 2025?,Chủ tịch Hội đồng Quản trị của Công ty APEC Investment tính đến ngày 24/01/2025 là Ông Nguyễn Đức Quân.,Ông Nguyễn Đức Quân là Chủ tịch Hội đồng Quản lý của Công ty APEC Investment tính đến ngày 24 tháng 01 năm 2025.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị và Ban điều hành, quản lý
+Value: Các thành viên Hội đồng quản trị, Ban Kiểm soát, Ban Tổng Giám đốc và Kế toán trưởng của Công ty trong kỳ và cho đến thời điểm lập báo cáo này bao gồm:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Đức Quân
+Value: Họ và tên: Ông Nguyễn Đức Quân | Chức vụ: Chủ tịch | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Văn Ly
+Value: Họ và tên: Ông Nguyễn Văn Ly | Chức vụ: Chủ tịch | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Hồ Xuân Vinh
+Value: Họ và tên: Ông Hồ Xuân Vinh | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Đỗ Lăng
+Value: Họ và tên: Ông Nguyễn Đỗ Lăng | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Đinh Quốc Đức
+Value: Họ và tên: Ông Đinh Quốc Đức | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Bà Nguyễn Phương Dung
+Value: Họ và tên: Bà Nguyễn Phương Dung | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Bà Nguyễn Đỗ Hoàng Lan
+Value: Họ và tên: Bà Nguyễn Đỗ Hoàng Lan | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trong quá trình hoạt động, Công ty đã 22 lần được Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp bổ sung các Giấy phép chứng nhận đăng ký kinh doanh điều chỉnh. Trong đó, Giấy chứng nhận đăng ký doanh nghiệp điều chỉnh lần thứ 22 được cấp ngày 23 tháng 5 năm 2024 về việc thay đổi người đại diện theo pháp luật.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư và kinh doanh bất động sản.",1,,17806,8419,1.0,0.9723372432723026,0.49999999995,1.0
+5,Có bao nhiêu thành viên Hội đồng Quản lý được bổ nhiệm hoặc bổ nhiệm lại vào ngày 10 tháng 5 năm 2024?,Có 5 thành viên Hội đồng Quản lý được bổ nhiệm hoặc tái bổ nhiệm vào ngày 10 tháng 5 năm 2024.,"Có 5 thành viên Hội đồng Quản lý được bổ nhiệm hoặc bổ nhiệm lại vào ngày 10 tháng 5 năm 2024, bao gồm Ông Nguyễn Đức Quân, Bà Nguyễn Phương Dung, Bà Nguyễn Đỗ Hoàng Lan, Ông Đinh Quốc Đức và Ông Hồ Xuân Vinh.",10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị và Ban điều hành, quản lý
+Value: Các thành viên Hội đồng quản trị, Ban Kiểm soát, Ban Tổng Giám đốc và Kế toán trưởng của Công ty trong kỳ và cho đến thời điểm lập báo cáo này bao gồm:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Hồ Xuân Vinh
+Value: Họ và tên: Ông Hồ Xuân Vinh | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Bà Nguyễn Phương Dung
+Value: Họ và tên: Bà Nguyễn Phương Dung | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Đỗ Lăng
+Value: Họ và tên: Ông Nguyễn Đỗ Lăng | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Đinh Quốc Đức
+Value: Họ và tên: Ông Đinh Quốc Đức | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Bà Nguyễn Đỗ Hoàng Lan
+Value: Họ và tên: Bà Nguyễn Đỗ Hoàng Lan | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Văn Ly
+Value: Họ và tên: Ông Nguyễn Văn Ly | Chức vụ: Chủ tịch | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Đức Quân
+Value: Họ và tên: Ông Nguyễn Đức Quân | Chức vụ: Chủ tịch | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.",1,,13642,8664,0.0,0.9110594201320867,0.0,1.0
+6,Phân tích tầm quan trọng của việc thay đổi người đại diện theo pháp luật đối với hoạt động của công ty.,"Không có thông tin về việc thay đổi người đại diện theo pháp luật trong dữ liệu hiện có, do đó không thể phân tích tầm quan trọng của việc này đối với hoạt động của công ty.","Việc thay đổi người đại diện theo pháp luật có tầm quan trọng lớn đối với hoạt động của công ty vì người đại diện theo pháp luật là cá nhân chịu trách nhiệm cao nhất về mặt pháp lý và đại diện cho công ty trong mọi giao dịch và quan hệ pháp lý. Sự thay đổi này có thể ảnh hưởng đến các quyết định chiến lược, hoạt động kinh doanh, mối quan hệ với đối tác, nhà đầu tư và cơ quan quản lý. Nó thường báo hiệu một sự thay đổi trong lãnh đạo cấp cao hoặc định hướng quản trị.",5,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trong quá trình hoạt động, Công ty đã 22 lần được Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp bổ sung các Giấy phép chứng nhận đăng ký kinh doanh điều chỉnh. Trong đó, Giấy chứng nhận đăng ký doanh nghiệp điều chỉnh lần t...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư và kinh doanh bất động sản.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương là Công ty cổ phần hoạt động theo Giấy chứng nhận đăng ký doanh nghiệp số 0102005769 ngày 31 tháng 7 năm 2006 do Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trụ sở hoạt động - Địa chỉ: Tầng 3, tòa nhà Grand Plaza, số 117 Trần Duy Hưng, phường Trung Hòa, quận Cầu Giấy, thành phố Hà Nội, Việt Nam
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài...",1,,33571,14751,1.0,0.0,0.0,0.0
+7,Đánh giá mức độ ổn định của ban lãnh đạo công ty dựa trên các thay đổi trong Hội đồng Quản lý.,"Dựa trên số liệu hiện có: Trong kỳ báo cáo, Hội đồng quản trị đã có các thay đổi đáng kể vào ngày 10/5/2024, bao gồm việc **miễn nhiệm Chủ tịch** (Ông Nguyễn Văn Ly) và **tái bổ nhiệm** hoặc **bổ nhiệm** 4 thành viên khác (Ông Nguyễn Đỗ Lăng, Ông Hồ Xuân Vinh, Bà Nguyễn Phương Dung, Ông Đinh Quốc Đức). Sự thay đổi đồng thời của nhiều vị trí quan trọng cho thấy **mức độ ổn định của ban lãnh đạo không cao** trong kỳ này.","Dựa trên các thay đổi trong Hội đồng Quản lý, vào ngày 10 tháng 5 năm 2024, có sự thay đổi đáng kể về nhân sự: Ông Nguyễn Văn Lý (Chủ tịch) và Ông Nguyễn Đỗ Lăng (Thành viên) đã từ nhiệm, trong khi Ông Nguyễn Đức Quân (Chủ tịch mới), Bà Nguyễn Phương Dung và Bà Nguyễn Đỗ Hoàng Lan được bổ nhiệm. Ngoài ra, Ông Đinh Quốc Đức và Ông Hồ Xuân Vinh được bổ nhiệm lại. Sự thay đổi đồng loạt này, bao gồm cả vị trí Chủ tịch, cho thấy ban lãnh đạo có sự biến động lớn trong năm, có thể ảnh hưởng đến mức độ ổn định trong quản trị và định hướng chiến lược của công ty.",15,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Đỗ Lăng
+Value: Họ và tên: Ông Nguyễn Đỗ Lăng | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Hồ Xuân Vinh
+Value: Họ và tên: Ông Hồ Xuân Vinh | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Bà Nguyễn Phương Dung
+Value: Họ và tên: Bà Nguyễn Phương Dung | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Nguyễn Văn Ly
+Value: Họ và tên: Ông Nguyễn Văn Ly | Chức vụ: Chủ tịch | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Hội đồng quản trị | Ông Đinh Quốc Đức
+Value: Họ và tên: Ông Đinh Quốc Đức | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Dự phòng tổn thất cho các khoản đầu tư vào công cụ vốn của đơn vị khác được trích lập như sau: Đối với khoản đầu tư vào cổ phiếu niêm yết hoặc giá trị hợp lý khoản đầu tư được xác định tin cậy, việc lập dự phòng dựa trên giá trị thị trường của cổ phiếu. Đối với khoản đầu tư không xác định được giá trị hợp lý tại thời điểm báo cáo, việc lập dự phòng được thực hiện căn cứ vào khoản lỗ của bên được đầu tư với mức trích lập bằng chênh lệch giữa vốn đầu tư thực tế của các chủ sở hữu và vốn chủ sở hữu tại ngày kết thúc năm tài chính nhân với tỷ lệ vốn điều lệ của Công ty so với tổng vốn điều lệ thực góp tại đơn vị khác.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Các khoản chi phí
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: III. CHUẨN MỰC VÀ CHẾ ĐỘ KẾ TOÁN ÁP DỤNG
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2014/TT-BTC ngày 22 tháng 12 năm 2014, Thông tư số 53/2016/TT-BTC ngày 21 tháng 03 năm 2016 cũng như các thông tư hướng dẫn thực hiện chuẩn mực kế toán của Bộ Tài chính trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Các chi phí liên quan đến bất động sản đầu tư phát sinh sau ghi nhận ban đầu được ghi nhận vào chi phí, trừ khi chi phí này có khả năng chắc chắn làm cho bất động sản đầu tư tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Công ty Cổ phần Quản lý Khách sạn & Dịch vụ Mandala
+Value: Số cuối kỳ Giá trị: 12.000.000.000 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 2.406.535.958 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Công ty Cổ phần Quản lý vận hành Bất động sản Mandala - Chi hộ
+Value: Số cuối kỳ Giá trị: 7.890.358.009 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 7.127.444.882 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala
+Value: Số cuối kỳ Số lượng CP: 150.000 | Số cuối kỳ Tỷ lệ sở hữu: 19,00% | Số đầu năm Số lượng CP: 150.000 | Số đầu năm Tỷ lệ sở hữu: 19,00%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala
+Value: Số cuối kỳ Số lượng CP: 800.000 | Số cuối kỳ Tỷ lệ sở hữu: 19,00% | Số đầu năm Số lượng CP: 800.000 | Số đầu năm Tỷ lệ sở hữu: 19,00%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala
+Value: Công ty: Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala | Số vốn Công ty cam kết góp: 19.000.000.000 | Số đã góp tại 31/12/2024: 1.500.000.000 | Số còn phải góp: 17.500.000.000",1,,30900,12990,0.7142857142857143,0.5452754155163839,0.249999999975,0.6666666666666666
+8,Ai là Tổng Giám đốc của Công ty APEC Investment tính đến ngày 24 tháng 01 năm 2025?,Tổng Giám đốc của Công ty APEC Investment tính đến ngày 24/01/2025 là Nguyễn Phương Dung.,Bà Nguyễn Phương Dung là Tổng Giám đốc của Công ty APEC Investment tính đến ngày 24 tháng 01 năm 2025.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ngày 24 tháng 01 năm 2025
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thực hiện các xét đoán và ước tính một cách hợp lý và thận trọng;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Tổng Giám đốc
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nguyễn Phương Dung
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thay mặt Ban Tổng Giám đốc,
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Chọn lựa các chính sách kế toán thích hợp và áp dụng các chính sách này một cách nhất quán;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Báo cáo của ban tổng giám đốc
+Value: Ban Tổng Giám đốc Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) trình bày báo cáo của mình cùng với Báo cáo tài chính riêng của Công ty cho Quý IV năm 2024.",1,,16811,8314,1.0,0.9917359049391883,0.14285714284285714,1.0
+9,Ngày bổ nhiệm Kế toán trưởng (Quyền) của công ty là khi nào?,Kế toán trưởng (Quyền) được bổ nhiệm ngày 01 tháng 09 năm 2023.,Ngày bổ nhiệm Kế toán trưởng (Quyền) của công ty là ngày 01 tháng 9 năm 2023.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2014/TT-BTC ngày 22 tháng 12 năm 2014, Thông tư số 53/2016/TT-BTC ngày 21 tháng 03 năm 2016 cũng như các thông tư hướng dẫn thực hiện chuẩn mực kế toán của Bộ Tài chính trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị hợp lý của các bất động sản đầu tư do chưa tìm được công ty định giá phù hợp để thực hiện công việc này.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 1. Chế độ kế toán áp dụng
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: ## III. CHUẨN MỰC VÀ CHẾ ĐỘ KẾ TOÁN ÁP DỤNG
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Tổng Giám đốc, Kế toán trưởng | Bà Vũ Thị Thanh Loan
+Value: Họ và tên: Bà Vũ Thị Thanh Loan | Chức vụ: Quyền Kế toán trưởng | Ngày bổ nhiệm/miễn nhiệm: Bổ nhiệm ngày 01 tháng 09 năm 2023
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Tổng Giám đốc, Kế toán trưởng | Bà Nguyễn Phương Dung
+Value: Họ và tên: Bà Nguyễn Phương Dung | Chức vụ: Tổng Giám đốc | Ngày bổ nhiệm/miễn nhiệm: Bổ nhiệm ngày 01 tháng 4 năm 2024",1,,17211,7323,1.0,0.6654115166474096,0.11111111109999999,1.0
+10,Trách nhiệm chính của Ban Giám đốc trong việc lập Báo cáo tài chính là gì?,"- Ban Giám đốc chịu trách nhiệm lập Báo cáo tài chính phản ánh trung thực và hợp lý tình hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của công ty trong kỳ.
+- Đảm bảo thực hiện và duy trì hệ thống kiểm soát nội bộ hiệu quả, tuân thủ các chuẩn mực kế toán và các chính sách kế toán được lựa chọn một cách nhất quán.
+- Cam kết lưu trữ đầy đủ các số kế toán, thực hiện các xét đoán và ước tính một cách thận trọng, đồng thời khẳng định tính liên tục hoạt động của công ty.","Trách nhiệm chính của Ban Giám đốc trong việc lập Báo cáo tài chính là trình bày trung thực và hợp lý tình hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty. Để thực hiện, Ban Giám đốc phải lựa chọn và áp dụng chính sách kế toán phù hợp, đưa ra xét đoán và ước tính thận trọng, tuân thủ chuẩn mực kế toán Việt Nam, lập báo cáo trên cơ sở hoạt động liên tục và thiết kế hệ thống kiểm soát nội bộ hiệu quả.",10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thiết lập và thực hiện hệ thống kiểm soát nội bộ một cách hữu hiệu nhằm hạn chế rủi ro có sai sót trong yêu cầu do gian lận hoặc nhân lên trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc cam kết đã tuân thủ các yêu cầu nêu trong việc lập Báo cáo tài chính riêng.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Lập Báo cáo tài chính riêng trên cơ sở hoạt động liên tục trừ trường hợp không thể cho rằng Công ty sẽ tiếp tục hoạt động liên tục;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Chọn lựa các chính sách kế toán thích hợp và áp dụng các chính sách này một cách nhất quán;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thực hiện các xét đoán và ước tính một cách hợp lý và thận trọng;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thay mặt Ban Tổng Giám đốc,",1,,12495,7125,1.0,0.7899077733726722,0.9999999999,1.0
+11,Các Báo cáo tài chính được phê duyệt dựa trên chuẩn mực và hệ thống kế toán nào?,"Báo cáo tài chính được lập và phê duyệt dựa trên Chuẩn mực Kế toán Việt Nam và Chế độ Kế toán doanh nghiệp Việt Nam, theo tuyên bố của Ban Tổng Giám đốc rằng công ty đã tuân thủ các chuẩn mực và chế độ này.",Các Báo cáo tài chính được phê duyệt dựa trên Chuẩn mực và Chế độ kế toán Việt Nam và các quy định pháp luật khác liên quan đến việc lập và trình bày Báo cáo tài chính.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 1. Chế độ kế toán áp dụng
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: ## III. CHUẨN MỰC VÀ CHẾ ĐỘ KẾ TOÁN ÁP DỤNG
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2014/TT-BTC ngày 22 tháng 12 năm 2014, Thông tư số 53/2016/TT-BTC ngày 21 tháng 03 năm 2016 cũng như các thông tư hướng dẫn thực hiện chuẩn mực kế toán của Bộ Tài chính trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị hợp lý của các bất động sản đầu tư do chưa tìm được công ty định giá phù hợp để thực hiện công việc này.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Tổng Giám đốc, Kế toán trưởng | Bà Nguyễn Phương Dung
+Value: Họ và tên: Bà Nguyễn Phương Dung | Chức vụ: Tổng Giám đốc | Ngày bổ nhiệm/miễn nhiệm: Bổ nhiệm ngày 01 tháng 4 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Tổng Giám đốc, Kế toán trưởng | Ông Phạm Văn Dũng
+Value: Họ và tên: Ông Phạm Văn Dũng | Chức vụ: Tổng Giám đốc | Ngày bổ nhiệm/miễn nhiệm: Miễn nhiệm ngày 01 tháng 4 năm 2024",1,,20186,8865,0.6666666666666666,0.7706530378507325,0.9999999999875,1.0
+12,Đánh giá tầm quan trọng của hệ thống kiểm soát nội bộ trong việc đảm bảo tính trung thực của báo cáo tài chính.,Không có thông tin cụ thể về hệ thống kiểm soát nội bộ trong dữ liệu hiện có để đánh giá tầm quan trọng của nó trong việc bảo đảm tính trung thực của báo cáo tài chính.,"Hệ thống kiểm soát nội bộ đóng vai trò cực kỳ quan trọng trong việc đảm bảo tính trung thực và hợp lý của báo cáo tài chính. Theo tuyên bố của Ban Giám đốc, hệ thống này được thiết kế và thực hiện hiệu quả nhằm ngăn chặn và phát hiện các sai sót trọng yếu do gian lận hoặc lỗi, đồng thời đảm bảo việc ghi chép sổ kế toán đầy đủ và phản ánh trung thực tình hình tài chính. Một hệ thống kiểm soát nội bộ yếu kém có thể dẫn đến thông tin tài chính sai lệch, ảnh hưởng nghiêm trọng đến quyết định của nhà đầu tư và sự tuân thủ pháp luật.",10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2014/TT-BTC ngày 22 tháng 12 năm 2014, Thông tư số 53/2016/TT-BTC ngày 21 tháng 03 năm 2016 cũng như các thông tư hướng dẫn thực hiện chuẩn mực kế toán của Bộ Tài chính trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị hợp lý của các bất động sản đầu tư do chưa tìm được công ty định giá phù hợp để thực hiện công việc này.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Báo cáo của ban tổng giám đốc
+Value: Ban Tổng Giám đốc Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) trình bày báo cáo của mình cùng với Báo cáo tài chính riêng của Công ty cho Quý IV năm 2024.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 1. Chế độ kế toán áp dụng
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: ## III. CHUẨN MỰC VÀ CHẾ ĐỘ KẾ TOÁN ÁP DỤNG
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Kiểm soát | Bà Nguyễn Phương Dung
+Value: Họ và tên: Bà Nguyễn Phương Dung | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Miễn nhiệm ngày 10 tháng 5 năm 2024",1,,22918,7892,0.0,0.0,0.249999999975,0.6666666666666666
+13,Phân tích tác động của việc lập báo cáo trên cơ sở hoạt động liên tục đối với các nhà đầu tư.,"Dựa trên số liệu hiện có trong phần đầu báo cáo tài chính, Ban Tổng Giám đốc khẳng định rằng báo cáo tài chính được lập theo chuẩn mực và chế độ kế toán Việt Nam, phản ánh trung thực và hợp lý tình hình tài chính, kết quả hoạt động kinh doanh và tình hình tài sản của công ty tại thời điểm ngày 31/12/2024. Việc tuân thủ chuẩn mực kế toán và cam kết duy trì hoạt động liên tục (going concern) giúp nhà đầu tư có được thông tin tài chính đáng tin cậy, giảm thiểu bất định và rủi ro liên quan đến khả năng tiếp tục hoạt động của công ty.","Việc lập báo cáo tài chính trên cơ sở hoạt động liên tục (going concern basis) có tác động lớn đối với các nhà đầu tư. Nó ngụ ý rằng công ty dự kiến sẽ tiếp tục hoạt động trong tương lai gần mà không có ý định hoặc nhu cầu thanh lý hoặc ngừng hoạt động đáng kể. Đối với nhà đầu tư, đây là một tín hiệu tích cực về sự ổn định và bền vững của doanh nghiệp, làm tăng niềm tin vào khả năng sinh lời và hoàn trả khoản đầu tư của họ. Ngược lại, nếu giả định hoạt động liên tục không phù hợp, điều đó sẽ báo hiệu rủi ro phá sản hoặc tái cơ cấu nghiêm trọng, khiến nhà đầu tư xem xét lại các quyết định đầu tư.",5,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2014/TT-BTC ngày 22 tháng 12 năm 2014, Thông tư số 53/2016/TT-BTC ngày 21 tháng 03 năm 2016 cũng như các thông tư hướng dẫn thực hiện chuẩn mực kế toán của Bộ Tài chính trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị hợp lý của các bất động sản đầu tư do chưa tìm được công ty định giá phù hợp để thực hiện công việc này.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Báo cáo của ban tổng giám đốc
+Value: Ban Tổng Giám đốc Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) trình bày báo cáo của mình cùng với Báo cáo tài chính riêng của Công ty cho Quý IV năm 2024.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.",1,,26476,7544,0.5555555555555556,0.43185514153351096,0.0,1.0
+14,Giải thích vai trò của Ban Giám đốc trong việc ngăn chặn gian lận và sai phạm tài chính.,"- Ban Tổng Giám đốc chịu trách nhiệm thiết lập và thực hiện hệ thống kiểm soát nội bộ hiệu quả nhằm hạn chế rủi ro sai sót, gian lận trong việc lập và trình bày báo cáo tài chính.\n- Ban cũng đảm bảo các số kế toán được lưu giữ đầy đủ, trung thực, tuân thủ chế độ kế toán và các chuẩn mực, qua đó ngăn ngừa các sai phạm tài chính.","Ban Giám đốc có vai trò then chốt trong việc ngăn chặn gian lận và sai phạm tài chính. Theo báo cáo, Ban Giám đốc chịu trách nhiệm thiết kế và thực hiện hiệu quả hệ thống kiểm soát nội bộ nhằm đảm bảo báo cáo tài chính không có sai sót trọng yếu do gian lận hoặc lỗi. Đồng thời, Ban Giám đốc cam đoan rằng tất cả các sổ kế toán được ghi chép đầy đủ, phản ánh trung thực tình hình tài chính, tuân thủ hệ thống kế toán hiện hành và đã thực hiện các biện pháp thích hợp để quản lý tài sản, ngăn chặn và phát hiện gian lận và các sai phạm khác. Điều này cho thấy trách nhiệm quản lý rủi ro và tuân thủ pháp luật là một phần không thể thiếu trong vai trò của họ.",10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Tổng Giám đốc, Kế toán trưởng | Ông Phạm Văn Dũng
+Value: Họ và tên: Ông Phạm Văn Dũng | Chức vụ: Tổng Giám đốc | Ngày bổ nhiệm/miễn nhiệm: Miễn nhiệm ngày 01 tháng 4 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thiết lập và thực hiện hệ thống kiểm soát nội bộ một cách hữu hiệu nhằm hạn chế rủi ro có sai sót trong yêu cầu do gian lận hoặc nhân lên trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc cam kết đã tuân thủ các yêu cầu nêu trong việc lập Báo cáo tài chính riêng.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Chọn lựa các chính sách kế toán thích hợp và áp dụng các chính sách này một cách nhất quán;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thực hiện các xét đoán và ước tính một cách hợp lý và thận trọng;",1,,15092,7296,0.8,0.6243852115904819,0.6782312925073178,0.75
+15,Tổng tài sản ngắn hạn cuối kỳ là bao nhiêu VND?,"Trong dữ liệu không có số liệu tổng tài sản ngắn hạn cuối kỳ; chỉ có các mục riêng lẻ như ""A - TÀI SẢN NGẮN HẠN | Số cuối năm"" = 984.330.724.539 VND và ""Tài sản ngắn hạn khác | Số cuối năm"" = 9.720.712.203 VND.",Tổng tài sản ngắn hạn cuối kỳ là 984.330.724.539 VND.,5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Value: 16.759.724.289
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Value: 9.720.712.203
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Value: 984.330.724.539
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:",1,,19347,6530,0.0,0.8116982567481245,0.249999999975,1.0
+16,Số dư tiền và các khoản tương đương tiền cuối kỳ là bao nhiêu VND?,"Số dư tiền và các khoản tương đương tiền cuối kỳ là 97.964.405.114 VND (theo mục ""Cộng | Số cuối năm"" trong Bảng cân đối kế toán).",Số dư tiền và các khoản tương đương tiền cuối kỳ là 97.964.405.114 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số đầu năm
+Value: 118.292.930
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Value: 97.964.405.114",1,,13475,6455,0.5,0.7625701049852216,0.19999999998,1.0
+17,So sánh hàng tồn kho cuối kỳ và đầu năm. Mức độ thay đổi là bao nhiêu?,"Dựa trên số liệu hiện có (BẢNG CÂN ĐỐI KẾ TOÁN, hạng mục ""Hàng tồn kho"", kỳ cuối năm):
+- Số cuối kỳ: 474.117.608.966
+- Số đầu năm: 528.207.406.021
+- Thay đổi = Số cuối kỳ – Số đầu năm = -54.089.797.055
+- Mức độ thay đổi (%) = (Thay đổi / Số đầu năm) × 100% ≈ -10,24%
+
+Vì vậy, hàng tồn kho giảm khoảng 10,24% so với đầu năm.","Hàng tồn kho cuối kỳ là 474.117.608.966 VND, còn hàng tồn kho đầu năm là 528.207.406.021 VND. Mức độ thay đổi là giảm 54.089.797.055 VND.",5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số đầu năm
+Value: 13.506.255.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số đầu năm
+Value: 528.207.406.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Value: 167.636.178.947",1,,21995,8020,1.0,0.8147152891164652,0.0,1.0
+18,Tỷ trọng các khoản phải thu ngắn hạn trong tổng tài sản ngắn hạn cuối kỳ là bao nhiêu phần trăm?,"Dựa trên số liệu cuối kỳ:
+- Các khoản phải thu ngắn hạn = 362.793.062.285 đồng
+- Tổng tài sản ngắn hạn = 984.330.724.539 đồng
+
+Tỷ trọng = (362.793.062.285 / 984.330.724.539) × 100 ≈ **36,86 %**",Tổng tài sản ngắn hạn cuối kỳ là 984.330.724.539 VND. Các khoản phải thu ngắn hạn cuối kỳ là 362.793.062.285 VND. Tỷ trọng là (362.793.062.285 / 984.330.724.539) * 100% ≈ 36.86%.,7,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Value: 362.793.062.285
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Value: 16.759.724.289
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Value: 9.720.712.203
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Value: 984.330.724.539
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:",1,,28115,9161,1.0,0.8256506210101963,0.49999999995,1.0
+19,Đánh giá xu hướng biến động của các khoản đầu tư tài chính ngắn hạn từ đầu năm đến cuối kỳ.,"Dựa trên số liệu hiện có:
+
+**1. Thanh khoản và an toàn tài chính**
+- Giá trị đầu tư tài chính ngắn hạn tại đầu năm: 37.792.275.971 đồng (BẢNG CÂN ĐỐI KẾ TOÁN)
+- Giá trị đầu tư tài chính ngắn hạn tại cuối năm: 39.734.935.971 đồng (BẢNG CÂN ĐỐI KẾ TOÁN)
+- Thay đổi: +1.942.660.000 đồng, tăng **5,1 %** so với đầu năm (Công thức: (Cuối ‑ Đầu)/Đầu × 100%)
+- *Nhận xét*: Khoản đầu tư này được phân loại là “đầu tư nắm giữ đến ngày đáo hạn (ngắn hạn)”, là tiền gửi ngân hàng có kỳ hạn 6‑12 tháng, ghi sổ theo giá gốc (THUYẾT MINH BÁO CÁO TÀI CHÍNH, mục 2b). Nguồn vốn đầu tư vào công cụ có rủi ro thấp, tính thanh khoản cao; mức tăng 5 % phản ánh chiến lược duy trì hoặc cải thiện lợi nhuận tài chính ngắn hạn mà không tăng đáng kể rủi ro.
+
+**Kết luận tổng thể**
+- Đầu tư tài chính ngắn hạn tăng nhẹ 5 % trong kỳ, cho thấy xu hướng tích cực và ổn định về thanh khoản; rủi ro vẫn thấp do đầu tư vào công cụ ngắn hạn an toàn.","Các khoản đầu tư tài chính ngắn hạn đã tăng từ 37.792.275.971 VND vào đầu năm lên 39.734.935.971 VND vào cuối kỳ, cho thấy xu hướng tăng nhẹ. Cụ thể, Đầu tư nắm giữ đến ngày đáo hạn tăng từ 36.045.412.278 VND lên 38.025.412.278 VND, trong khi Chứng khoán kinh doanh không đổi và Dự phòng giảm giá chứng khoán kinh doanh tăng.",12,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính ngắn hạn | Số đầu năm
+Value: 37.792.275.971
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính ngắn hạn | Số cuối năm
+Value: 39.734.935.971
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư nắm giữ đến ngày đáo hạn
+Value: Khoản đầu tư được phân loại là nắm giữ đến ngày đáo hạn khi Công ty có ý định và khả năng giữ đến ngày đáo hạn. Các khoản đầu tư nắm giữ đến ngày đáo hạn của Công ty chỉ bao gồm các khoản tiền gửi ngân hàng có kỳ hạn. Thu nhập lãi từ các khoản tiền gửi ngân hàng có kỳ hạn được ghi nhận trên Báo cáo kết quả hoạt động kinh doanh trên cơ sở dự thu.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2b. Đầu tư nắm giữ đến ngày đáo hạn (ngắn hạn)
+Value: Là khoản tiền gửi ngân hàng có kỳ hạn từ 6 tháng đến 12 tháng. Các khoản tiền gửi này có giá trị ghi sổ bằng giá gốc.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Vay ngắn hạn các cá nhân
+Value: Khoản mục: Vay ngắn hạn các cá nhân | Số cuối kỳ Giá trị: 17.219.900.000 | Số cuối kỳ Khả năng trả nợ: 17.219.900.000 | Trong kỳ Tăng: 37.050.000.000 | Trong kỳ Giảm: 179.498.200.000 | Số đầu kỳ Giá trị: 159.668.100.000 | Số đầu kỳ Khả năng trả nợ: 159.668.100.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.073.957.620
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Doanh thu tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 3.055.526.889
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 17.648.145.868
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Cổ tức, lợi nhuận được chia | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 43.844.718
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Lãi tiền gửi ngân hàng, Lãi cho vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.030.112.902",1,,49476,17724,0.6,0.5822524301618929,0.0,0.5
+20,Tính toán tỷ lệ thanh toán hiện hành (Current Ratio) dựa trên thông tin tài sản ngắn hạn và nợ ngắn hạn (sẽ có ở chunk sau).,"Dựa trên số liệu cuối năm:
+- Tài sản ngắn hạn (A - TÀI SẢN NGẮN HẠN) = 984.330.724.539 VND
+- Nợ ngắn hạn (I. Nợ ngắn hạn) = 566.994.110.452 VND
+
+Công thức: Current Ratio = Tài sản ngắn hạn ÷ Nợ ngắn hạn
+
+Kết quả: Current Ratio = 984.330.724.539 ÷ 566.994.110.452 ≈ 1.74",Thông tin về nợ ngắn hạn không có trong dữ liệu này. Vui lòng cung cấp dữ liệu về nợ ngắn hạn để tính toán tỷ lệ thanh toán hiện hành.,10,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Value: 16.759.724.289
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Value: 9.720.712.203
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Value: 984.330.724.539
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số đầu năm
+Value: 895.630.596.406
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số cuối năm
+Value: 566.994.110.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | a) Vay ngắn hạn
+Value: Khoản mục: a) Vay ngắn hạn | Số cuối kỳ Giá trị: 156.502.422.354 | Số cuối kỳ Khả năng trả nợ: 156.502.422.354 | Trong kỳ Tăng: 56.474.900.000 | Trong kỳ Giảm: 280.448.035.100 | Số đầu kỳ Giá trị: 380.475.557.454 | Số đầu kỳ Khả năng trả nợ: 380.475.557.454",1,,16462,8560,0.6666666666666666,0.6596788268258104,0.22619047617916663,0.0
+21,Phân tích rủi ro tiềm ẩn khi dự phòng phải thu ngắn hạn khó đòi tăng lên đáng kể.,"Dựa trên số liệu hiện có (kỳ cuối năm):
+
+**2. Thanh khoản và an toàn tài chính**
+- **Tài sản ngắn hạn (A) cuối kỳ:** 984.330.724.539 VND (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Tiền và các khoản tương đương tiền:** 97.964.405.114 VND (Thuyết minh BÁO CÁO TÀI CHÍNH)
+- **Nợ ngắn hạn:** 566.994.110.452 VND (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Current Ratio (tạm tính, chưa trừ dự phòng):** 984.330.724.539 ÷ 566.994.110.452 ≈ **1.74**
+- **Các khoản phải thu ngắn hạn (gộp):** 362.793.062.285 VND (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Phải thu khách hàng ngắn hạn: 60.579.645.168 VND
+  - Phải thu khác (ngắn hạn): 184.685.805.476 VND
+  - Phải thu ngắn hạn khác: 5.727.143.845 VND
+- **Dự phòng phải thu khó đòi:** chỉ có mô tả quy trình trong *Thuyết minh 4: Các khoản phải thu* – **không có số liệu cụ thể** về dư số đầu năm và cuối năm.
+
+*Nhận xét:* 
+- Khi dự phòng phải thu khó đòi tăng đáng kể, giá trị thuần của các khoản phải thu sẽ giảm, làm giảm tài sản ngắn hạn và do đó kéo theo giảm Current Ratio (và Quick Ratio nếu không có tăng tương ứng của tiền và hàng tồn kho).
+- Giảm tài sản lưu động có thể buộc công ty phải dựa vào tiền mặt hiện có hoặc huy động vay thêm để đáp ứng các nghĩa vụ ngắn hạn, tăng rủi ro vi phạm covenant vay và suy giảm khả năng thanh khoản.
+- Việc tăng dự phòng đồng thời làm chi phí quản lý doanh nghiệp tăng, giảm lợi nhuận sau thuế, làm tăng tỷ lệ nợ trên tổng tài sản và nợ trên vốn chủ sở hữu, tạo áp lực lên khả năng trả nợ dài hạn.
+- Do chưa có số liệu cụ thể về dự phòng phải thu khó đòi (đầu năm và cuối năm), không thể định lượng mức suy giảm chính xác của Current Ratio hay mức tăng đòn bẩy tài chính.
+
+**Kết luận tổng thể**
+- Rủi ro tiềm ẩn chủ yếu là giảm thanh khoản và tăng áp lực trả nợ nếu dự phòng phải thu khó đòi tăng mạnh. Để đưa ra đánh giá định lượng, cần có số liệu thực tế về số dư dự phòng phải thu khó đòi (đầu năm và cuối năm) và dòng tiền thuần từ hoạt động kinh doanh.","Dự phòng phải thu ngắn hạn khó đòi tăng từ 1.776.021.051 VND đầu năm lên 2.905.382.051 VND cuối kỳ, cho thấy sự gia tăng đáng kể. Điều này tiềm ẩn rủi ro tài chính vì nó phản ánh khả năng công ty không thu hồi được các khoản nợ từ khách hàng hoặc các bên khác. Sự gia tăng này có thể cho thấy chất lượng tín dụng của các khoản phải thu đang xấu đi, hoặc chính sách trích lập dự phòng của công ty thận trọng hơn. Nếu các khoản này thực sự trở thành nợ khó đòi, công ty sẽ phải ghi nhận tổn thất, ảnh hưởng đến lợi nhuận và dòng tiền, đồng thời làm giảm tài sản.",26,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số đầu năm
+Value: 118.292.930
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số đầu năm
+Value: 895.630.596.406
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số cuối năm
+Value: 566.994.110.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | a) Vay ngắn hạn
+Value: Khoản mục: a) Vay ngắn hạn | Số cuối kỳ Giá trị: 156.502.422.354 | Số cuối kỳ Khả năng trả nợ: 156.502.422.354 | Trong kỳ Tăng: 56.474.900.000 | Trong kỳ Giảm: 280.448.035.100 | Số đầu kỳ Giá trị: 380.475.557.454 | Số đầu kỳ Khả năng trả nợ: 380.475.557.454
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Value: 16.759.724.289
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Value: 9.720.712.203
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Value: 984.330.724.539
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu ngắn hạn khác
+Value: Số cuối kỳ Giá trị: 5.727.143.845 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 5.659.974.185 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | a) Ngắn hạn
+Value: Số cuối kỳ Giá trị: 184.685.805.476 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 176.837.852.532 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 3a. Phải thu khách hàng ngắn hạn | Phải thu các khách hàng (Dự án BĐS)
+Value: Số cuối kỳ: 60.579.645.168 | Số đầu năm: 65.925.262.843
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Các khoản phải thu dài hạn khác
+Value: Số cuối kỳ Giá trị: 328.250.000 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 31.250.000 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác
+Value: Số cuối kỳ Giá trị: 10.484.971.014 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 9.087.213.733 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Dự phòng phải thu khó đòi được lập cho từng khoản nợ phải thu khó đòi căn cứ vào dự kiến mức tổn thất có thể xảy ra.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Tăng, giảm số dư dự phòng nợ phải thu khó đòi cần phải trích lập tại ngày kết thúc năm tài chính được ghi nhận vào chi phí quản lý doanh nghiệp.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản cho vay
+Value: Các khoản cho vay được xác định theo giá gốc trừ đi các khoản dự phòng phải thu khó đòi. Dự phòng phải thu khó đòi của các khoản cho vay được lập căn cứ vào dự kiến mức tổn thất có thể xảy ra.",1,,95908,22688,0.3225806451612903,0.4307091776675427,0.05263157894210526,0.75
+22,"Nếu hàng tồn kho tiếp tục giảm như cuối kỳ so với đầu năm, điều này có tác động gì đến hoạt động kinh doanh của công ty?","Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Hàng tồn kho giảm 54.089.797.055 VNĐ, từ 528.207.406.021 VNĐ (đầu năm) xuống 474.117.608.966 VNĐ (cuối kỳ) (~10 %).
+- Lợi nhuận gộp quý IV năm 2023: 2.249.284.279 VNĐ (theo ghi chú VI.6).
+- Chi phí bán hàng quý IV năm 2023: 4.399.981.760 VNĐ (theo ghi chú VI.6).
+- Giá vốn hàng bán tích lũy đến nay: 133.703.128.164 VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+
+*Nhận xét*:
+- Giảm hàng tồn kho thường làm giảm chi phí lưu kho và rủi ro hao hụt, có khả năng hạ chi phí bán hàng nếu công ty cắt giảm các khoản chi liên quan.
+- Tuy nhiên, hiện chưa có số liệu **giá vốn hàng bán riêng cho quý IV** và **doanh thu thuần quý IV**, nên chưa thể tính chính xác biên lợi nhuận gộp và đánh giá mức độ cải thiện lợi nhuận.
+- Nếu giảm tồn kho không làm suy giảm doanh thu, lợi nhuận gộp có khả năng tăng; ngược lại, nếu tồn kho giảm gây mất khả năng cung ứng, doanh thu có thể bị ảnh hưởng tiêu cực.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Tiền và các khoản tương đương tiền cuối kỳ: 80.000.000.000 VNĐ, trong đó tiền mặt 24.085.667 VNĐ (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh trong năm: 36.158.929.436 VNĐ (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- Giảm 54.089.797.055 VNĐ hàng tồn kho giải phóng tiền mặt, tăng khả năng thanh khoản ngắn hạn.
+
+*Nhận xét*:
+- Tiền được giải phóng từ việc giảm tồn kho hỗ trợ tăng dòng tiền lưu động và cải thiện thanh khoản.
+- Để xác định mức độ cải thiện thực tế cần số liệu **nợ ngắn hạn** và **tài sản ngắn hạn** để tính các chỉ tiêu như Current Ratio, Quick Ratio; dữ liệu này hiện chưa có.
+
+**3. Hiệu quả hoạt động** (agent_efficiency)
+- Trung bình hàng tồn kho = (528.207.406.021 + 474.117.608.966) ÷ 2 = 501.162.507.493,5 VNĐ.
+- Vòng quay hàng tồn kho = Giá vốn bán / Trung bình hàng tồn kho ≈ 133.703.128.164 ÷ 501.162.507.493,5 ≈ **0.27 lần/năm** (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- Số ngày tồn kho (DIO) ≈ (Trung bình hàng tồn kho ÷ Giá vốn) × 365 ≈ 1 368 ngày.
+
+*Nhận xét*:
+- Giảm khoảng 10 % hàng tồn kho làm trung bình hàng tồn kho giảm, nhờ đó **vòng quay hàng tồn kho tăng** và **số ngày tồn kho giảm** (khoảng 10 % so với mức trước).
+- Tuy nhiên, vòng quay vẫn rất thấp (0.27 lần/năm) và DIO > 1 300 ngày, cho thấy công ty vẫn duy trì mức tồn kho cao; nếu giảm tiếp mà không tăng doanh thu, có nguy cơ **đứt nguồn cung, mất doanh thu**.
+- Đánh giá đầy đủ cần dữ liệu **doanh thu thuần**, **các khoản phải thu ngắn hạn** và **các khoản phải trả ngắn hạn**; hiện chưa có.
+
+**Kết luận tổng thể**
+- Giảm hàng tồn kho sẽ giải phóng ~54 tỷ đồng tiền mặt, cải thiện thanh khoản và giảm chi phí lưu kho, hỗ trợ hiệu quả hoạt động.
+- Tuy nhiên, do mức vòng quay hiện rất thấp và DIO cao, công ty vẫn phải cải thiện quản lý tồn kho và tăng doanh thu để tránh rủi ro mất nguồn cung.
+- Thiếu dữ liệu về doanh thu, chi phí bán hàng chi tiết và các khoản ngắn hạn hạn chế khả năng đánh giá chi tiết ảnh hưởng tới lợi nhuận và các chỉ tiêu thanh khoản; việc thu thập các số liệu này sẽ cho phép đưa ra kết luận chính xác hơn.","Nếu hàng tồn kho tiếp tục giảm từ 528.207.406.021 VND đầu năm xuống 474.117.608.966 VND cuối kỳ, điều này có thể có cả tác động tích cực và tiêu cực. Tích cực là có thể do công ty bán hàng hiệu quả hơn, giảm chi phí lưu kho và rủi ro lỗi thời. Tuy nhiên, nếu mức giảm này quá nhanh và không được kiểm soát, nó có thể dẫn đến thiếu hàng để bán, mất cơ hội doanh thu, hoặc phải tăng cường sản xuất/mua sắm với chi phí cao hơn. Đối với một công ty kinh doanh bất động sản, việc giảm hàng tồn kho có thể cho thấy các dự án đang được bán tốt, nhưng cũng cần đảm bảo có đủ dự án mới để duy trì hoạt động kinh doanh liên tục.",38,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số đầu năm
+Value: 13.506.255.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số đầu năm
+Value: 528.207.406.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Value: 167.636.178.947
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Hàng tồn kho | Số cuối năm
+Value: 474.117.608.966
+Note ref: V.7
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Hàng tồn kho | Số cuối năm
+Value: 474.117.608.966
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Hàng tồn kho | Số đầu năm
+Value: 528.207.406.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số đầu năm
+Value: 118.292.930
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 8.583.372.428
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 5.826.158.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 101.262.100.705
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 95.490.061.807
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 133.703.128.164
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Chi phí bán hàng | Quý IV năm 2023
+Value: 4.399.981.760
+Note ref: VI.6
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2024
+Value: 34.352.002.130
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2023
+Value: 2.249.284.279
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2024
+Value: 75.877.336.939
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2023
+Value: 52.040.652.356
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Value: (12.918.933.440)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Chi phí sản xuất, kinh doanh dở dang | Số cuối kỳ
+Value: 293.925.078.259
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Chi phí sản xuất, kinh doanh dở dang
+Value: Số cuối kỳ: 293.925.078.259 | Số đầu năm: 292.456.128.703
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư nắm giữ đến ngày đáo hạn
+Value: Khoản đầu tư được phân loại là nắm giữ đến ngày đáo hạn khi Công ty có ý định và khả năng giữ đến ngày đáo hạn. Các khoản đầu tư nắm giữ đến ngày đáo hạn của Công ty chỉ bao gồm các khoản tiền gửi ngân hàng có kỳ hạn. Thu nhập lãi từ các khoản tiền gửi ngân hàng có kỳ hạn được ghi nhận trên Báo cáo kết quả hoạt động kinh doanh trên cơ sở dự thu.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Giá gốc hàng tồn kho được xác định như sau: Chi phí sản xuất kinh doanh dở dang của các dự án bất động sản: bao gồm các chi phí thuê nhà thầu thực hiện các hạng mục của dự án bất động sản và các chi phí có liên quan trực tiếp khác. Hàng hóa bất động sản (là các bất động sản được xây dựng để bán trong quá trình hoạt động bình thường của Công ty): bao gồm chi phí quyền sử dụng đất, các chi phí trực tiếp và các chi phí chung có liên quan phát sinh trong quá trình đầu tư xây dựng bất động sản. Hàng hóa khác: bao gồm chi phí mua và các chi phí liên quan trực tiếp khác phát sinh để có được hàng tồn kho ở địa điểm và trạng thái hiện tại.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Lãi tiền gửi ngân hàng, Lãi cho vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 14.592.618.979
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Lãi tiền gửi ngân hàng, Lãi cho vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.030.112.902
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Doanh thu tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 3.055.526.889
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 17.648.145.868
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.073.957.620",1,,89927,39065,0.4583333333333333,0.8254470938809724,0.20114942527729882,0.25
+23,Tổng tài sản dài hạn cuối kỳ là bao nhiêu VND?,"Tổng tài sản dài hạn cuối kỳ là 678.363.404.324 VND (theo mục ""B - TÀI SẢN DÀI HẠN | Số cuối năm"" trong BẢNG CÂN ĐỐI KẾ TOÁN).",Tổng tài sản dài hạn cuối kỳ là 678.363.404.324 VND.,5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản dài hạn khác | Số đầu năm
+Value: 37.969.276.872
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản dài hạn khác | Số cuối năm
+Value: 23.836.203.396
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: B - TÀI SẢN DÀI HẠN | Số cuối năm
+Value: 678.363.404.324
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: B - TÀI SẢN DÀI HẠN | Số đầu năm
+Value: 861.079.208.636
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900",1,,15357,6267,1.0,0.8085077652917244,0.3333333333,1.0
+24,Giá trị tài sản cố định hữu hình cuối kỳ là bao nhiêu VND?,Giá trị tài sản cố định hữu hình cuối kỳ là 24.034.952.927 VND (theo Nguyên giá | Số cuối năm).,Giá trị tài sản cố định hữu hình cuối kỳ là 16.326.198.818 VND.,5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số đầu năm
+Value: 202.406.369.251
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số cuối năm
+Value: 24.034.952.927
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số cuối năm
+Value: (7.708.754.109)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số đầu năm
+Value: (12.494.119.719)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Thanh lý | Cộng
+Value: (49.989.670)",1,,16658,6617,1.0,0.7287945965984259,0.0,1.0
+25,So sánh giá trị bất động sản đầu tư cuối kỳ với đầu năm.,"Dựa trên số liệu hiện có: 
+- Nguyên giá bất động sản đầu tư **số đầu năm**: 107,081,636,718 đồng (BẢNG CÂN ĐỐI KẾ TOÁN). 
+- Nguyên giá bất động sản đầu tư **số cuối năm**: 247,051,384,582 đồng (BẢNG CÂN ĐỐI KẾ TOÁN). 
+So sánh cho thấy giá trị bất động sản đầu tư tăng lên đáng kể vào cuối kỳ so với đầu năm.","Giá trị bất động sản đầu tư cuối kỳ là 234.660.811.747 VND, trong khi đầu năm là 105.856.776.554 VND. Giá trị này đã tăng đáng kể.",5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Nguyên giá | Số đầu năm
+Value: 107.081.636.718
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Giá trị hao mòn lũy kế | Số đầu năm
+Value: (1.224.860.164)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Nguyên giá | Số cuối năm
+Value: 247.051.384.582
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Giá trị hao mòn lũy kế | Số cuối năm
+Value: (12.390.572.835)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Bất động sản đầu tư sử dụng để cho thuê được khấu hao theo phương pháp đường thẳng dựa trên thời gian hữu dụng ước tính. Số năm khấu hao của bất động sản đầu tư như sau:
+Item: Shophouse |
+Value: 44",1,,28444,7280,1.0,0.7115747151124218,0.249999999975,1.0
+26,Tỷ lệ tài sản cố định trên tổng tài sản dài hạn cuối kỳ là bao nhiêu phần trăm?,Dựa trên số liệu hiện có: \n- Tài sản cố định (nguyên giá cuối năm) = 24.034.952.927 (hữu hình) + 337.728.000 (vô hình) = 24.372.680.927 đồng.\n- Tổng tài sản dài hạn cuối kỳ = 678.363.404.324 đồng.\n- Tỷ lệ = (24.372.680.927 ÷ 678.363.404.324) × 100 ≈ 3.59 %.,Tổng tài sản dài hạn cuối kỳ là 678.363.404.324 VND. Tài sản cố định cuối kỳ là 16.343.765.485 VND. Tỷ lệ là (16.343.765.485 / 678.363.404.324) * 100% ≈ 2.41%.,10,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số đầu năm
+Value: 202.406.369.251
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định vô hình
+Item: Nguyên giá | Số đầu năm
+Value: 337.728.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định vô hình
+Item: Nguyên giá | Số cuối năm
+Value: 337.728.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số cuối năm
+Value: 24.034.952.927
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số cuối năm
+Value: (7.708.754.109)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản dài hạn khác | Số đầu năm
+Value: 37.969.276.872
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản dài hạn khác | Số cuối năm
+Value: 23.836.203.396
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: B - TÀI SẢN DÀI HẠN | Số cuối năm
+Value: 678.363.404.324
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: B - TÀI SẢN DÀI HẠN | Số đầu năm
+Value: 861.079.208.636
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900",1,,42060,8979,1.0,0.7683252883139599,0.7555555555303703,0.3333333333333333
+27,Đánh giá sự thay đổi trong nguyên giá và giá trị hao mòn lũy kế của tài sản cố định hữu hình.,"Dựa trên số liệu hiện có:
+
+**1. Hiệu suất hoạt động** (agent_efficiency)
+- **Nguyên giá TSCĐ hữu hình**
+  - Số đầu năm: 202.406.369.251 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Số cuối năm: 24.034.952.927 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Thay đổi: **-178.371.416.324 đ** (giảm 88 %)
+- **Giá trị hao mòn lũy kế TSCĐ hữu hình**
+  - Số đầu năm: (12.494.119.719) đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Số cuối năm: (7.708.754.109) đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+  - Thay đổi: **-4.785.365.610 đ** (giảm 38 %)
+- **Khấu hao trong năm (chi phí hao mòn)**: 1.481.650.800 đ (THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+
+*Nhận xét*:
+- Sự giảm mạnh về nguyên giá (≈ 88 %) cho thấy công ty đã thanh lý, chuyển sang, hoặc ghi giảm giá trị tài sản cố định hữu hình; phần lớn giảm không chỉ do thanh lý ghi sổ (≈ 50 triệu đ) mà có thể liên quan tới chuyển đổi sang tài sản vô hình hoặc tái cấu trúc.
+- Giảm giá trị hao mòn lũy kế chỉ khoảng 38 % phản ánh việc loại bỏ các khoản hao mòn của tài sản đã thanh lý; do đó, mức giảm hao mòn ít hơn mức giảm nguyên giá.
+- Giá trị sổ sách ròng (nguyên giá – hao mòn) giảm từ 189.912.249.532 đ xuống 16.326.198.818 đ, tương đương giảm 91 %, làm thu hẹp nền tảng tài sản để tạo doanh thu trong các kỳ tiếp theo.
+- Khấu hao trong năm vẫn còn cao (≈ 1,48 tỷ đ), tuy nhiên sẽ giảm nếu tài sản còn lại ít hơn, giúp giảm chi phí không tiền mặt trong kỳ sau và cải thiện dòng tiền hoạt động.
+- Về mặt tài chính, việc giảm tài sản cố định có thể ảnh hưởng tiêu cực đến khả năng sản xuất, mở rộng và các chỉ số hiệu quả sử dụng tài sản (Asset Turnover). Nếu công ty bán tài sản với lợi nhuận hoặc tái đầu tư hiệu quả, tác động tiêu cực có thể được bù đắp.
+
+**Kết luận tổng thể**
+- Nguyên giá tài sản cố định hữu hình giảm mạnh (≈ 88 %) và giá trị hao mòn lũy kế giảm 38 %, dẫn tới giảm 91 % giá trị sổ sách ròng. Điều này làm giảm năng lực tài sản của công ty, ảnh hưởng tiêu cực tới khả năng sản xuất và các chỉ số hiệu quả. Tuy nhiên, khấu hao vẫn cao và có khả năng giảm trong các kỳ tới nếu tài sản còn lại ít hơn, giúp cải thiện dòng tiền hoạt động. Công ty cần xem xét nguyên nhân giảm tài sản (thanh lý, chuyển đổi sang tài sản vô hình) và kế hoạch tái đầu tư để bù đắp mất mát tài sản cố định.","Nguyên giá tài sản cố định hữu hình đã giảm đáng kể từ 202.406.369.251 VND đầu năm xuống còn 24.034.952.927 VND cuối kỳ. Tương ứng, giá trị hao mòn lũy kế cũng giảm từ 12.494.119.719 VND xuống 7.708.754.109 VND. Sự giảm mạnh này cho thấy công ty có thể đã thanh lý hoặc chuyển đổi một lượng lớn tài sản cố định hữu hình sang loại hình khác (ví dụ: hình thành bất động sản đầu tư hoặc bán), làm thay đổi đáng kể cơ cấu tài sản cố định.",10,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số đầu năm
+Value: 202.406.369.251
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số cuối năm
+Value: 24.034.952.927
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số cuối năm
+Value: (7.708.754.109)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Giá trị hao mòn lũy kế | Số đầu năm
+Value: (12.494.119.719)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Thanh lý | Cộng
+Value: (49.989.670)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Tài sản cố định hữu hình | Giá trị hao mòn
+Value: Nguyên giá: Giá trị hao mòn
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Giá trị hao mòn
+Item: Khấu hao trong năm | Tài sản cố định khác
+Value: 366.013.596
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Giá trị hao mòn
+Item: Khấu hao trong năm | Cộng
+Value: 1.481.650.800
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Giá trị hao mòn
+Item: Số đầu năm | Tài sản cố định khác
+Value: 760.514.585
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Giá trị hao mòn
+Item: Thanh lý | Cộng
+Value: (49.989.670)",1,,57751,17905,0.4827586206896552,0.4852375316375419,0.18333333332416668,0.6666666666666666
+28,Phân tích tác động của việc giảm đầu tư vào công ty con đến chiến lược dài hạn của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- **Đầu tư tài chính dài hạn**: 422.404.832.365 đồng (đầu năm) → 306.186.691.420 đồng (cuối năm), giảm 116,2 tỷ đồng (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Giá gốc đầu tư vào công ty con**: 355.050.194.016 đồng (đầu kỳ) → 265.354.194.016 đồng (cuối kỳ) (Thuyết minh 2c – BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Lợi nhuận sau thuế**: lũy kế Q4/2024 = -10.849.716.013 đồng (trước đó Q4/2023 = -48.187.112.561 đồng) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Vốn chủ sở hữu**: cuối kỳ Q4/2024 = 884.244.721.299 đồng (đầu kỳ = 895.094.437.312 đồng) (Bảng đối chiếu biến động vốn chủ sở hữu).
+
+*Nhận xét*:
+- Giảm đầu tư vào công ty con và đầu tư tài chính dài hạn làm giảm tài sản dài hạn, làm hạn chế nguồn lợi nhuận tương lai.
+- Lợi nhuận sau thuế vẫn âm; do vậy ROA và ROE tiếp tục tiêu cực, giảm đầu tư không cải thiện khả năng sinh lời hiện tại.
+- Dự phòng tổn thất cho các khoản đầu tư vào công ty con được trích, cho thấy rủi ro giảm giá trị đầu tư và tiềm năng thu hồi lợi nhuận còn thấp.
+- Thiếu số liệu về tổng tài sản và doanh thu từ công ty con nên không thể định lượng chính xác mức ảnh hưởng tới lợi nhuận dài hạn.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- **Giá gốc đầu tư vào công ty con**: giảm 89,696,000,000 đồng (giảm 25,3 %) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH → Thuyết minh 2c).
+- **Tổng tài sản**: 1.906.094.474.649 đồng (đầu năm) → 1.662.694.128.863 đồng (cuối năm), giảm 243.400.345.786 đồng.
+- **Nợ dài hạn**: 115.369.440.931 đồng → 211.455.297.112 đồng (+96.085.856.181 đồng).
+- **Tỷ lệ nợ/Tổng tài sản**: 7,1 % (đầu năm) → 13,9 % (cuối năm).
+- **Tỷ lệ nợ/Vốn chủ sở hữu**: 7,6 % (đầu năm) → 16,1 % (cuối năm).
+- **Chi phí lãi vay cuối kỳ**: 38.076.798.251 đồng (Thuyết minh BCTC – mục 5).
+
+*Nhận xét*:
+- Giảm đầu tư đã làm giảm tài sản tổng, đồng thời nợ dài hạn tăng mạnh, dẫn tới tỷ lệ nợ trên tài sản và nợ trên vốn chủ sở hữu tăng gấp gần 2 lần, làm tăng rủi ro tài chính.
+- Thiếu dữ liệu chi tiết về tiền và các khoản tương đương tiền, khoản phải thu ngắn hạn, hàng tồn kho nên không thể tính Current Ratio, Quick Ratio, Cash Ratio.
+- Thiếu EBIT nên không thể tính Interest Coverage.
+
+**3. Dòng tiền** (agent_cashflow_analysis)
+- **Đầu tư tài chính dài hạn**: số đầu năm 422.404.832.365 đồng → số cuối kỳ 306.186.691.420 đồng (giảm ~27 %) (BẢNG CÂN ĐỐI KẾ TOÁN, note V.2c).
+- **Tiền chi đầu tư góp vốn vào đơn vị khác**: 6.486.981.982 đồng (năm trước) → 300.000.000 đồng (năm nay) (giảm ~6,19 tỷ đồng) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- **Lưu chuyển tiền thuần từ hoạt động đầu tư**: 87.211.618.301 đồng (năm trước) → 40.218.532.929 đồng (năm nay) (giảm ~47 tỷ đồng) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- **Lưu chuyển tiền thuần từ hoạt động kinh doanh**: -4.379.663.565 đồng (âm, năm trước) → 36.158.929.436 đồng (dương) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+
+*Nhận xét*:
+- Giảm mạnh các khoản chi đầu tư (đặc biệt là góp vốn vào công ty con) đã làm giảm dòng tiền ra từ hoạt động đầu tư, tạo dư lưu chuyển tiền tích cực hơn, nhưng tổng mức thuần vẫn giảm vì khoản tiền rút ra trước đó còn lớn.
+- Dòng tiền hoạt động kinh doanh chuyển từ âm sang dương, cho thấy khả năng tài trợ hoạt động kinh doanh được cải thiện nhờ giảm áp lực chi trả đầu tư.
+- Tuy nhiên, việc giảm đầu tư vào công ty con có thể hạn chế nguồn lợi nhuận trong tương lai và ảnh hưởng đến tăng trưởng doanh thu dài hạn.
+
+**Kết luận tổng thể**
+Việc giảm đầu tư vào công ty con đã làm giảm tài sản dài hạn và tiềm năng sinh lời trong tương lai, đồng thời làm tăng đòn bẩy tài chính do nợ dài hạn tăng và tỷ lệ nợ trên tài sản, vốn chủ sở hữu cao hơn. Dòng tiền hoạt động kinh doanh cải thiện nhờ giảm chi đầu tư, nhưng thiếu dữ liệu chi tiết về thanh khoản và khả năng trả lãi khiến việc đánh giá toàn diện về sức khỏe tài chính còn hạn chế. Tổng quan, chiến lược giảm đầu tư có lợi trong ngắn hạn về thanh khoản và giảm áp lực chi trả, nhưng có thể gây rủi ro cho tăng trưởng lợi nhuận và tài chính dài hạn nếu không được bù đắp bằng các nguồn doanh thu và lợi nhuận khác.","Đầu tư vào công ty con đã giảm đáng kể từ 355.050.194.016 VND đầu năm xuống 265.354.194.016 VND cuối kỳ. Sự giảm này có thể phản ánh một sự thay đổi trong chiến lược dài hạn của công ty, chẳng hạn như thoái vốn khỏi một số công ty con không hiệu quả, tái cấu trúc danh mục đầu tư, hoặc tập trung nguồn lực vào các hoạt động cốt lõi khác. Tác động có thể là giảm bớt rủi ro liên quan đến các công ty con hoạt động kém, hoặc ngược lại, mất đi cơ hội tăng trưởng và mở rộng thông qua các công ty con. Điều này cần được xem xét cùng với lý do cụ thể của việc giảm đầu tư để đánh giá tác động toàn diện.",77,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính dài hạn | Số đầu năm
+Value: 422.404.832.365
+Note ref: V.2c
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính dài hạn | Số cuối năm
+Value: 306.186.691.420
+Note ref: V.2c
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi íc...
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư nắm giữ đến ngày đáo hạn
+Value: Khoản đầu tư được phân loại là nắm giữ đến ngày đáo hạn khi Công ty có ý định và khả năng giữ đến ngày đáo hạn. Các khoản đầu tư nắm giữ đến ngày đáo hạn của Công ty chỉ bao gồm các khoản tiền gửi ngân hàng có kỳ hạn. Th...
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực...
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Ghi nhận ban đầu
+Value: Các khoản đầu tư vào công ty con được ghi nhận ban đầu theo giá gốc, bao gồm giá mua hoặc khoản góp vốn cộng các chi phí liên quan trực tiếp đến việc đầu tư. Trường hợp đầu tư bằng tài sản phi tiền tệ, giá phí khoản đầu...
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính ngắn hạn | Số đầu năm
+Value: 37.792.275.971
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư tài chính ngắn hạn | Số cuối năm
+Value: 39.734.935.971
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG NGUỒN VỐN | Số đầu năm
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG NGUỒN VỐN | Số cuối năm
+Value: 1.662.694.128.863
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Trong kỳ
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ
+Value: 19.424.900.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số đầu năm
+Value: 115.369.440.931
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số cuối năm
+Value: 211.455.297.112
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư nắm giữ đến ngày đáo hạn
+Value: Khoản đầu tư được phân loại là nắm giữ đến ngày đáo hạn khi Công ty có ý định và khả năng giữ đến ngày đáo hạn. Các khoản đầu tư nắm giữ đến ngày đáo hạn của Công ty chỉ bao gồm các khoản tiền gửi ngân hàng có kỳ hạn. Thu nhập lãi từ các khoản tiền gửi ngân hàng có kỳ hạn được ghi nhận trên Báo cáo kết quả hoạt động kinh doanh trên cơ sở dự thu.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Ghi nhận ban đầu
+Value: Các khoản đầu tư vào công ty con được ghi nhận ban đầu theo giá gốc, bao gồm giá mua hoặc khoản góp vốn cộng các chi phí liên quan trực tiếp đến việc đầu tư. Trường hợp đầu tư bằng tài sản phi tiền tệ, giá phí khoản đầu tư được ghi nhận theo giá trị hợp lý của tài sản phi tiền tệ tại thời điểm phát sinh.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm nay
+Value: (300.000.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm trước
+Value: (6.486.981.982)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư vào công ty con | Số đầu năm
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm
+Value: 91.172.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm
+Value: (8.249.747.910)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Cộng | Số đầu năm
+Value: 446.222.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Cộng | Số đầu năm
+Value: (23.817.361.651)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ
+Value: 9.500.000.000
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm nay
+Value: 40.218.532.929
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm trước
+Value: 87.211.618.301
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty
+Value: Các công ty con
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty
+Value: Bản thuyết minh này là một bộ phận hợp thành và phải được đọc cùng với Báo cáo tài chính | -----------Page 11
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Dự phòng tổn thất cho các khoản đầu tư vào công ty con Dự phòng tổn thất cho các khoản đầu tư vào công ty con được trích lập khi công ty con bị lỗ, với mức trích lập bằng chênh lệch giữa vốn đầu tư thực tế của các bên tạ...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư và kinh doanh bất động sản.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trụ sở hoạt động - Địa chỉ: Tầng 3, tòa nhà Grand Plaza, số 117 Trần Duy Hưng, phường Trung Hòa, quận Cầu Giấy, thành phố Hà Nội, Việt Nam
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Trong quá trình hoạt động, Công ty đã 22 lần được Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp bổ sung các Giấy phép chứng nhận đăng ký kinh doanh điều chỉnh. Trong đó, Giấy chứng nhận đăng ký doanh nghiệp điều chỉnh lần t...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Khái quát về Công ty
+Value: Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương là Công ty cổ phần hoạt động theo Giấy chứng nhận đăng ký doanh nghiệp số 0102005769 ngày 31 tháng 7 năm 2006 do Sở Kế hoạch và Đầu tư thành phố Hà Nội cấp.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thiết lập và thực hiện hệ thống kiểm soát nội bộ một cách hữu hiệu nhằm hạn chế rủi ro có sai sót trong yêu cầu do gian lận hoặc nhân lên trong việc lập và trình bày Báo cáo tài chính.
+---
+Item: tác động giảm đầu tư vào công ty con đến chiến lược dài hạn
+Value: Sample return from web.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Value: (12.918.933.440)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 8.583.372.428
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 5.826.158.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 101.262.100.705
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 95.490.061.807
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 133.703.128.164
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 23.256.368.970
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 34.322.091.879
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 18.509.488.336
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 27.526.591.673
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí vật liệu quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 117.707.612
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 461.720.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 7.623.521.969
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.984.670.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí thu xếp vốn | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 4.547.267.785",1,,143866,69604,0.32142857142857145,0.8146434674525344,0.3359545135729405,1.0
+29,Dự báo rủi ro nếu giá trị hao mòn lũy kế của bất động sản đầu tư tiếp tục tăng nhanh chóng.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Giá trị hao mòn lũy kế tăng từ (1.224.860.164) đầu năm lên (12.390.572.835) cuối năm (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Nguyên giá bất động sản đầu tư cuối năm: 247.051.384.582 VND → giá trị sổ còn lại = 234.660.811.747 VND.
+- Lợi nhuận thuần từ hoạt động kinh doanh (Q4 2024) = 12.205.164.159 VND, nhưng lũy kế tới Q4 2024 vẫn **lỗ 12.918.933.440 VND** (BÁO CÁO KẾ QUẢ HOẠT ĐỘNG KINH DOANH).
+- Nếu hao mòn tiếp tục tăng, chi phí khấu hao sẽ tăng, làm giảm lợi nhuận ròng hơn nữa và làm suy giảm các chỉ số sinh lời (biên lợi nhuận ròng, ROA, ROE). **[Thiếu chi phí khấu hao hằng năm và tổng tài sản để tính ROA/ROE]**.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Tiền mặt: 24.085.667 VND; Tiền gửi ngân hàng không kỳ hạn: 17.830.416.837 VND; Tiền gửi tại công ty chứng khoán: 109.902.610 VND → **Tổng tiền và tương đương tiền = 17.964.405.114 VND** (BÁO CÁO KẾ TOÁN).
+- Nợ ngắn hạn (cuối kỳ): 566.994.110.452 VND; Nợ dài hạn (cuối kỳ): 211.455.297.112 VND → **Tổng nợ = 778.449.407.564 VND**.
+- Vốn chủ sở hữu cuối kỳ: 884.244.721.299 VND.
+- Các tỉ lệ ước tính: **Debt/Equity ≈ 0.88**, **Debt/Assets ≈ 0.47** (giả sử tài sản = nợ + vốn).
+- **Current Ratio ≈ 0.03** (tiền và tương đương tiền / nợ ngắn hạn) – rất thấp, cho thấy rủi ro thanh khoản cao.
+- Hao mòn tăng làm giảm giá trị sổ sách tài sản cố định, làm giảm tổng tài sản và làm tăng tỷ lệ nợ trên vốn, tăng áp lực thanh khoản.
+- **[Thiếu thông tin về khoản phải thu ngắn hạn, hàng tồn kho và tổng tài sản chi tiết]**.
+
+**3. Hiệu quả sử dụng tài sản** (agent_efficiency)
+- Hao mòn lũy kế tăng mạnh (≈ 11,2 tỷ VND, tăng ≈ 917 % so với đầu năm).
+- Sự tăng này làm giảm giá trị sổ sách bất động sản, ảnh hưởng đến khả năng tạo ra lợi nhuận trong tương lai.
+- Dữ liệu hiện có không có thông tin chi tiết về dự báo rủi ro (tác động tới vốn chủ sở hữu, khả năng vay, giá trị còn lại), vì vậy không thể đưa ra đánh giá chi tiết về hệ lụy tài chính.
+
+**Kết luận tổng thể**
+- Hao mòn lũy kế tăng nhanh sẽ **giảm giá trị tài sản cố định**, làm **giảm vốn chủ sở hữu**, **tăng đòn bẩy nợ** và **giảm thanh khoản** (Current Ratio ≈ 0.03). 
+- Lãi ròng đã âm; tăng thêm chi phí khấu hao sẽ đẩy lỗ sâu hơn, gây áp lực lên khả năng trả nợ và duy trì hoạt động.
+- Rủi ro chính: mất khả năng thanh khoản ngắn hạn, tăng khả năng vi phạm covenants nợ, và giảm khả năng sinh lời lâu dài.
+- Để dự báo rủi ro chi tiết hơn, cần bổ sung: chi phí khấu hao hàng năm, tổng tài sản, các khoản phải thu ngắn hạn, hàng tồn kho và các tài sản lưu động khác.","Giá trị hao mòn lũy kế của bất động sản đầu tư tăng rất nhanh từ 1.224.860.164 VND đầu năm lên 12.390.572.835 VND cuối kỳ. Nếu xu hướng này tiếp tục, rủi ro dự báo là giá trị sổ sách của bất động sản đầu tư sẽ giảm nhanh chóng. Điều này có thể dẫn đến việc giảm lợi nhuận từ hoạt động cho thuê (do chi phí khấu hao cao hơn), giảm giá trị tài sản ròng của công ty, và có thể ảnh hưởng đến khả năng vay vốn dựa trên tài sản. Mức độ tăng nhanh của khấu hao cũng có thể đặt câu hỏi về tuổi thọ hữu ích ước tính hoặc chất lượng của các tài sản này.",51,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Nguyên giá | Số đầu năm
+Value: 107.081.636.718
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Giá trị hao mòn lũy kế | Số đầu năm
+Value: (1.224.860.164)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Nguyên giá | Số cuối năm
+Value: 247.051.384.582
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Bất động sản đầu tư
+Item: Giá trị hao mòn lũy kế | Số cuối năm
+Value: (12.390.572.835)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Bất động sản đầu tư sử dụng để cho thuê được khấu hao theo phương pháp đường thẳng dựa trên thời gian hữu dụng ước tính. Số năm khấu hao của bất động sản đầu tư như sau:
+Item: Shophouse |
+Value: 44
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Việc chuyển từ bất động sản chủ sở hữu sử dụng hoặc hàng tồn kho thành bất động sản đầu tư chỉ khi chủ sở hữu chấm dứt sử dụng tài sản đó và bắt đầu cho bên khác thuê hoạt động hoặc khi kết thúc giai đoạn xây dựng. Việc chuyển từ bất động sản đầu tư sang bất động sản chủ sở hữu sử dụng hay hàng tồn kho chỉ khi chủ sở hữu bắt đầu sử dụng tài sản này hoặc bắt đầu triển khai cho mục đích bán. Việc chuyển từ bất động sản đầu tư sang bất động sản chủ sở hữu sử dụng hoặc hàng tồn kho không làm thay đổi nguyên giá hay giá trị còn lại của bất động sản tại ngày chuyển đổi.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Bất động sản đầu tư là các căn hộ khách sạn, shophouse thuộc sở hữu của Công ty. Bất động sản đầu tư cho thuê được thể hiện theo nguyên giá trừ hao mòn lũy kế. Nguyên giá của bất động sản đầu tư là toàn bộ các chi phí mà Công ty phải bỏ ra hoặc giá trị hợp lý của các khoản đưa ra để trao đổi nhằm có được bất động sản đầu tư tính đến thời điểm mua hoặc xây dựng hoàn thành.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Bất động sản đầu tư sử dụng để cho thuê được khấu hao theo phương pháp đường thẳng dựa trên thời gian hữu dụng ước tính. Số năm khấu hao của bất động sản đầu tư như sau:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Các chi phí liên quan đến bất động sản đầu tư phát sinh sau ghi nhận ban đầu được ghi nhận vào chi phí, trừ khi chi phí này có khả năng chắc chắn làm cho bất động sản đầu tư tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Khi bất động sản đầu tư được bán, nguyên giá và giá trị hao mòn lũy kế được xóa sổ và lãi, lỗ nào phát sinh được hạch toán vào thu nhập hay chi phí trong năm.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Value: 1.662.694.128.863
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Trong kỳ
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ
+Value: 19.424.900.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số đầu năm
+Value: 115.369.440.931
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số cuối năm
+Value: 211.455.297.112
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số đầu năm
+Value: 895.630.596.406
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số cuối năm
+Value: 566.994.110.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | a) Vay ngắn hạn
+Value: Khoản mục: a) Vay ngắn hạn | Số cuối kỳ Giá trị: 156.502.422.354 | Số cuối kỳ Khả năng trả nợ: 156.502.422.354 | Trong kỳ Tăng: 56.474.900.000 | Trong kỳ Giảm: 280.448.035.100 | Số đầu kỳ Giá trị: 380.475.557.454 | Số đầu kỳ Khả năng trả nợ: 380.475.557.454
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số đầu năm
+Value: 118.292.930
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi ngân hàng không kỳ hạn | Số cuối năm
+Value: 17.830.416.837
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi ngân hàng không kỳ hạn | Số đầu năm
+Value: 18.346.624.260
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi tại công ty chứng khoán | Số cuối năm
+Value: 109.902.610
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 8.583.372.428
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 5.826.158.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 101.262.100.705
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 95.490.061.807
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 133.703.128.164
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Value: (12.918.933.440)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Tài sản cố định hữu hình | Chuyển sang bất động sản đầu tư
+Value: Nguyên giá: Chuyển sang bất động sản đầu tư | Nhà cửa, vật kiến trúc: (178.321.426.654) | Phương tiện vận tải, truyền dẫn: - | Thiết bị, dụng cụ quản lý: - | Cộng: (178.321.426.654)",1,,129147,46167,0.3829787234042553,0.5733751584874502,0.21266820233348482,0.25
+30,Đánh giá hiệu quả quản lý chi phí xây dựng cơ bản dở dang khi giá trị không thay đổi qua các kỳ.,"Dựa trên số liệu hiện có (BẢNG CÂN ĐỐI KẾ TOÁN):
+
+**4. Hiệu quả hoạt động**
+- Chi phí xây dựng cơ bản dở dang:
+  - Số đầu năm: 66,493,520,213 VND
+  - Số cuối năm: 66,493,520,213 VND
+  - Thay đổi = 0%
+*Nhận xét*:
+- Giá trị không thay đổi cho thấy không có khoản chi mới thêm vào dự án trong kỳ, có thể là do dự án đang tạm dừng/đình trệ, gây rủi ro về thời gian hoàn thành và chi phí phát sinh sau này.
+- Nếu dự án đã hoàn thành trước kỳ hoặc đã chuyển sang tài sản cố định, việc không tăng chi phí có thể được xem là quản lý chi phí hiệu quả; tuy nhiên, không có thông tin về việc chuyển đổi tài sản nên khả năng cao là hiệu suất quản lý chi phí không đạt.
+- Để khẳng định, cần thêm dữ liệu về tiến độ dự án, thời gian hoàn thành dự kiến và các khoản chi khác liên quan.
+
+**Kết luận tổng thể**
+- Chi phí xây dựng cơ bản dở dang không thay đổi trong kỳ, cho thấy khả năng quản lý chi phí chưa thể đánh giá đầy đủ do thiếu thông tin về tiến độ và chuyển đổi tài sản; hiện tại có dấu hiệu rủi ro tiềm tàng nếu dự án bị trì hoãn.","Giá trị chi phí xây dựng cơ bản dở dang không thay đổi qua các kỳ, duy trì ở mức 66.493.520.213 VND. Việc giá trị này không thay đổi có thể cho thấy hoạt động xây dựng đang bị đình trệ hoặc không có sự tiến triển đáng kể trong năm. Nếu đây là trường hợp đình trệ, nó phản ánh hiệu quả quản lý kém vì nguồn vốn bị mắc kẹt trong các dự án chưa hoàn thành, không tạo ra doanh thu hoặc lợi nhuận. Điều này cũng có thể dẫn đến chi phí phát sinh bổ sung do trì hoãn và giảm khả năng sinh lời của các dự án.",8,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: Chi phí xây dựng cơ bản dở dang phản ánh các chi phí liên quan trực tiếp (bao gồm cả chi phí lãi vay có liên quan phù hợp với chính sách kế toán của Công ty) đến các tài sản đang trong quá trình xây dựng, máy móc thiết bị đang lắp đặt để phục vụ cho mục đích sản xuất, cho thuê và quản lý cũng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: CÔNG TY CỔ PHẦN ĐẦU TƯ CHÂU Á – THÁI BÌNH DƯƠNG QUÝ IV/2024
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Chi phí xây dựng cơ bản dở dang | Số đầu năm
+Value: 66.493.520.213
+Note ref: V.12
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Chi phí xây dựng cơ bản dở dang | Số cuối năm
+Value: 66.493.520.213
+Note ref: V.12
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 12. Chi phí xây dựng cơ bản dở dang
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Chi phí sản xuất, kinh doanh dở dang
+Value: Số cuối kỳ: 293.925.078.259 | Số đầu năm: 292.456.128.703
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 18.509.488.336",1,,56353,18242,0.2631578947368421,0.0,0.2916666666520833,0.5

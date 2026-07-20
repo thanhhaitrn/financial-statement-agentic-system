@@ -1,0 +1,1980 @@
+id,question,answer,ground_truth,retrieved_contexts_n,retrieved_contexts,seed_contexts_n,errors,runtime,tokens,faithfulness,answer_relevancy,context_precision,context_recall
+31,Tổng nợ phải trả cuối kỳ là bao nhiêu VND?,"Nợ phải trả cuối kỳ là 778.449.407.564 VND (theo mục ""C - NỢ PHẢI TRẢ | Số cuối năm"" trong BẢNG CÂN ĐỐI KẾ TOÁN).",Tổng nợ phải trả cuối kỳ là 778.449.407.564 VND.,5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: C - NỢ PHẢI TRẢ | Số cuối năm
+Period: cuối
+Value: 778.449.407.564
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Cổ tức, lợi nhuận phải trả | Số cuối kỳ
+Period: cuối
+Value: 656.640.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số cuối kỳ
+Period: cuối
+Value: 44.740.534.882",1,,10383,6373,,,,
+32,Nợ ngắn hạn cuối kỳ là bao nhiêu VND?,Nợ ngắn hạn cuối kỳ là 566.994.110.452 VND (theo mục “I. Nợ ngắn hạn | Số cuối năm” trong Bảng Cân Đối Kế Toán).,Nợ ngắn hạn cuối kỳ là 566.994.110.452 VND.,5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số cuối năm
+Period: cuối
+Value: 566.994.110.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ
+Period: cuối
+Value: (19.424.900.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ
+Period: cuối
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số cuối năm
+Period: cuối
+Value: 156.502.422.354
+Note ref: V.18a",1,,12536,6483,,,,
+33,So sánh vay và nợ thuê tài chính ngắn hạn cuối kỳ với đầu năm.,"Dựa trên số liệu hiện có: Vay và nợ thuê tài chính ngắn hạn Số đầu năm = 380.475.557.454; Số cuối năm = 156.502.422.354. Thay đổi = Số cuối năm – Số đầu năm = -223.973.135.100 (giảm). Tỷ lệ biến đổi = (Thay đổi / Số đầu năm) × 100 ≈ -58,9%.","Vay và nợ thuê tài chính ngắn hạn cuối kỳ là 156.502.422.354 VND, trong khi đầu năm là 380.475.557.454 VND. Khoản mục này đã giảm đáng kể.",2,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số cuối năm
+Period: cuối
+Value: 156.502.422.354
+Note ref: V.18a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số đầu năm
+Period: đầu
+Value: 380.475.557.454
+Note ref: V.18a",1,,26075,7962,,,,
+34,Tỷ lệ nợ dài hạn trên tổng nợ phải trả cuối kỳ là bao nhiêu phần trăm?,"Dựa trên số liệu cuối năm: Nợ dài hạn = 211.455.297.112 VND, Nợ phải trả = 778.449.407.564 VND. Tỷ lệ nợ dài hạn trên tổng nợ phải trả = (211.455.297.112 ÷ 778.449.407.564) × 100% ≈ 27.2 %.",Tổng nợ phải trả cuối kỳ là 778.449.407.564 VND. Nợ dài hạn cuối kỳ là 211.455.297.112 VND. Tỷ lệ là (211.455.297.112 / 778.449.407.564) * 100% ≈ 27.16%.,10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ
+Period: cuối
+Value: 19.424.900.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số cuối năm
+Period: cuối
+Value: 211.455.297.112
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Trong kỳ
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ
+Period: cuối
+Value: (19.424.900.000)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: C - NỢ PHẢI TRẢ | Số cuối năm
+Period: cuối
+Value: 778.449.407.564
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Cổ tức, lợi nhuận phải trả | Số cuối kỳ
+Period: cuối
+Value: 656.640.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số cuối kỳ
+Period: cuối
+Value: 44.740.534.882",1,,18986,9251,,,,
+35,Đánh giá rủi ro thanh khoản ngắn hạn dựa trên sự thay đổi của các khoản phải trả người bán ngắn hạn và người mua trả tiền trước ngắn hạn.,"- **Phải trả người bán ngắn hạn (tổng cộng)**: 71.005.972.408 (cuối kỳ) vs 89.344.730.178 (đầu năm) → **Giảm 18.338.757.770** VND.
+- **Người mua trả tiền trước ngắn hạn**: 101.716.698.889 (cuối kỳ) vs 175.052.735.650 (đầu năm) → **Giảm 73.336.036.761** VND.
+
+*Nhận xét*:
+- Việc giảm **phải trả người bán** phản ánh công ty đã thanh toán nhiều hơn các nhà cung cấp, làm giảm nguồn tiền lưu động.
+- Đồng thời, giảm mạnh **tiền khách hàng trả trước** cho thấy lượng tiền nhận được từ khách hàng giảm đáng kể, làm giảm nguồn tiền mặt ngắn hạn.
+- Tổng hợp, cả hai xu hướng giảm đều tạo áp lực lên thanh khoản ngắn hạn, tăng rủi ro không đủ tiền mặt để đáp ứng các nghĩa vụ ngắn hạn.
+- Nếu công ty không có các nguồn dự trữ tiền mặt hoặc dòng tiền từ hoạt động kinh doanh tăng đủ để bù đắp, rủi ro thanh khoản ngắn hạn sẽ cao.","Các khoản phải trả người bán ngắn hạn giảm từ 89.344.730.178 VND đầu năm xuống 71.005.972.408 VND cuối kỳ, và người mua trả tiền trước ngắn hạn giảm từ 175.052.735.650 VND xuống 101.716.698.889 VND. Cả hai khoản mục này đều giảm cho thấy công ty đã thanh toán nhiều hơn cho người bán và đã bàn giao sản phẩm/dịch vụ cho người mua. Điều này có thể làm giảm áp lực thanh toán ngắn hạn và cải thiện tình hình thanh khoản, nhưng cũng có thể cho thấy hoạt động mua sắm và huy động vốn từ người mua đã chậm lại. Tuy nhiên, nếu nợ ngắn hạn nói chung giảm đáng kể như đã thấy (từ 895.630.596.406 VND xuống 566.994.110.452 VND), rủi ro thanh khoản ngắn hạn có thể đã giảm.",14,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 71.005.972.408
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 89.344.730.178
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số cuối kỳ
+Period: cuối
+Value: 44.740.534.882
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số đầu năm
+Period: đầu
+Value: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các nhà cung cấp khác | Số cuối kỳ
+Period: cuối
+Value: 26.265.437.526
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Người mua trả tiền trước ngắn hạn | Số đầu năm
+Period: đầu
+Value: 175.052.735.650
+Note ref: V.14
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Người mua trả tiền trước ngắn hạn | Số cuối năm
+Period: cuối
+Value: 101.716.698.889
+Note ref: V.14
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn | Cộng
+Value: Số cuối kỳ: 101.716.698.889 | Số đầu năm: 175.052.735.650
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn | Dự án Phú Yên
+Value: Số cuối kỳ: 71.075.343.687 | Số đầu năm: 146.477.845.146
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác
+Value: () Khoản nhận tiền góp vốn của các tổ chức, cá nhân vào các dự án Công ty đang thực hiện để được phân chia sản phẩm là nhà ở của Dự án mà không phải thông qua sàn giao dịch bất động sản. Khi các dự án đủ điều kiện pháp lý để ký hợp đồng mua bán và các bên ký hợp đồng mua bán nhà ở thì toàn bộ tiền vốn góp thực tế sẽ được chuyển thành khoản tiền thanh toán đầu tiên của Giá bán nhà ở.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các nhà cung cấp khác
+Value: Số cuối kỳ: 26.265.437.526 | Số đầu năm: 46.581.188.492",1,,110799,18856,,,,
+36,Tính hệ số khả năng thanh toán nợ (Debt Ratio) cuối kỳ.,"Dựa trên số liệu cuối kỳ: Nợ phải trả = 778.449.407.564 đồng, Tổng tài sản = 1.662.694.128.863 đồng. Hệ số khả năng thanh toán nợ (Debt Ratio) = Nợ phải trả ÷ Tổng tài sản = 0,468 (≈46,8 %).",Thông tin về Tổng tài sản cuối kỳ không có trong chunk này. Vui lòng cung cấp thông tin Tổng tài sản cuối kỳ để tính toán hệ số khả năng thanh toán nợ (Debt Ratio).,7,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: C - NỢ PHẢI TRẢ | Số cuối năm
+Period: cuối
+Value: 778.449.407.564
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các bên liên quan | Số cuối kỳ
+Period: cuối
+Value: 44.740.534.882
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 13. Phải trả người bán ngắn hạn
+Item: Phải trả các nhà cung cấp khác | Số cuối kỳ
+Period: cuối
+Value: 26.265.437.526
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649",1,,38982,9013,,,,
+37,Phân tích tác động của việc tăng nợ dài hạn đến cấu trúc vốn và rủi ro tài chính của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Nợ dài hạn (cuối kỳ): 165.014.900.000 đồng [BẢNG CÂN ĐỐI KẾ TOÁN]
+- Vốn chủ sở hữu (cuối kỳ): 884.244.721.299 đồng [BẢNG CÂN ĐỐI KẾ TOÁN – Bảng đối chiếu biến động vốn chủ sở hữu]
+- Lợi nhuận sau thuế (lũy kế đến Q4/2024): -10.849.716.013 đồng [BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH]
+- Debt‑Equity Ratio cuối kỳ: 165.014.900.000 ÷ 884.244.721.299 ≈ **0,187** (≈ 18,7 %)
+- ROE cuối kỳ: -10.849.716.013 ÷ 884.244.721.299 ≈ **-0,0123** (≈ -1,23 %)
+
+*Nhận xét*:
+- Tỷ lệ Debt‑Equity tăng từ khoảng 7,8 % đầu kỳ lên 18,7 % cuối kỳ, cho thấy đòn bẩy tài chính đã tăng gấp đôi.
+- Lợi nhuận sau thuế âm dẫn đến ROE âm, phản ánh khả năng sinh lời giảm mạnh và áp lực trả nợ tăng.
+- **Hạn chế dữ liệu**: thiếu tổng tài sản (để tính Debt‑Asset Ratio) và chi phí lãi vay (để tính Interest Coverage Ratio), nên không thể đánh giá toàn diện mức độ rủi ro thanh khoản và khả năng phục vụ nợ.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Nợ dài hạn:
+  - Đầu năm: 115.369.440.931 đồng [BẢNG CÂN ĐỐI KẾ TOÁN]
+  - Cuối năm: 211.455.297.112 đồng [BẢNG CÂN ĐỐI KẾ TOÁN]
+- Vốn chủ sở hữu (tổng nguồn vốn):
+  - Đầu năm: 1.906.094.474.649 đồng [BẢNG CÂN ĐỐI KẾ TOÁN]
+  - Cuối năm: 1.662.694.128.863 đồng [BẢN​G CÂN ĐỐI KẾ TOÁN]
+- Tổng tài sản (cùng thời điểm):
+  - Đầu năm: 1.906.094.474.649 đồng [BẢNG CÂN ĐỐI KẾ TOÁN]
+  - Cuối năm: 1.662.694.128.863 đồng [BẢNG CÂN ĐỐI KẾ TOÁN]
+- Debt‑Equity Ratio:
+  - Đầu năm: 115.369.440.931 ÷ 1.906.094.474.649 ≈ **0,060** (6,0 %)
+  - Cuối năm: 211.455.297.112 ÷ 1.662.694.128.863 ≈ **0,127** (12,7 %)
+- Debt‑Asset Ratio (tỷ lệ nợ dài hạn / tổng tài sản):
+  - Đầu năm: 115.369.440.931 ÷ 1.906.094.474.649 ≈ **0,060** (6,0 %)
+  - Cuối năm: 211.455.297.112 ÷ 1.662.694.128.863 ≈ **0,127** (12,7 %)
+
+*Nhận xét*:
+- Nợ dài hạn tăng 96,09 tỷ đồng (≈ 83 % so với đầu năm) trong khi vốn chủ sở hữu giảm 243,4 tỷ đồng (≈ 13 %).
+- Tỷ lệ nợ‑vốn và nợ‑tài sản gần như gấp đôi, cho thấy cấu trúc vốn chuyển sang mức đòn bẩy cao hơn, làm giảm khả năng chịu đựng cú sốc tài chính.
+- Nếu dòng tiền hoạt động không đủ mạnh, mức đòn bẩy cao có thể làm tăng rủi ro thanh khoản và khả năng vi phạm các điều kiện vay.
+
+**Kết luận tổng thể**
+- Việc tăng nợ dài hạn đã làm cấu trúc vốn trở nên nặng hơn nợ, đồng thời làm giảm vốn chủ sở hữu, dẫn tới tỷ lệ Debt‑Equity và Debt‑Asset tăng đáng kể. 
+- Lợi nhuận âm và ROE âm cho thấy công ty hiện đang chịu áp lực tài chính mạnh, tăng rủi ro không đủ khả năng trả nợ và khả năng thanh khoản suy giảm. 
+- Để giảm rủi ro tài chính, công ty cần cải thiện lợi nhuận, tăng vốn chủ sở hữu hoặc giảm nợ dài hạn, đồng thời thu thập thêm dữ liệu về chi phí lãi vay và tổng tài sản để đánh giá đầy đủ khả năng phục vụ nợ.","Nợ dài hạn của công ty đã tăng đáng kể từ 115.369.440.931 VND đầu năm lên 211.455.297.112 VND cuối kỳ. Sự gia tăng này có tác động đáng kể đến cấu trúc vốn và rủi ro tài chính. Về cấu trúc vốn, nó cho thấy công ty đang sử dụng nhiều vốn vay dài hạn hơn để tài trợ cho hoạt động hoặc đầu tư, làm tăng đòn bẩy tài chính. Về rủi ro tài chính, mặc dù nợ dài hạn thường ổn định hơn nợ ngắn hạn, việc gia tăng khối lượng nợ sẽ làm tăng gánh nặng lãi vay và nghĩa vụ trả nợ gốc trong tương lai, đặc biệt nếu công ty không tạo ra đủ dòng tiền từ hoạt động kinh doanh để phục vụ các khoản nợ này. Điều này có thể làm tăng rủi ro vỡ nợ nếu điều kiện kinh tế xấu đi hoặc hoạt động kinh doanh không như kỳ vọng.",30,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số cuối năm
+Period: cuối
+Value: 211.455.297.112
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: II. Nợ dài hạn | Số đầu năm
+Period: đầu
+Value: 115.369.440.931
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Kết chuyển từ vay và nợ dài hạn | Trong kỳ
+Value: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | b) Vay dài hạn
+Value: Khoản mục: b) Vay dài hạn | Số cuối kỳ Giá trị: 165.014.900.000 | Số cuối kỳ Khả năng trả nợ: 165.014.900.000 | Trong kỳ Tăng: 114.959.800.000 | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG NGUỒN VỐN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG NGUỒN VỐN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Vay dài hạn các cá nhân
+Value: Khoản mục: Vay dài hạn các cá nhân | Số cuối kỳ Giá trị: 184.439.800.000 | Số cuối kỳ Khả năng trả nợ: 184.439.800.000 | Trong kỳ Tăng: 114.959.800.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính dài hạn | Số cuối năm
+Period: cuối
+Value: 165.014.900.000
+Note ref: V.18b
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty
+Value: Bản thuyết minh này là một bộ phận hợp thành và phải được đọc cùng với Báo cáo tài chính | -----------Page 11
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17b. Phải trả dài hạn khác | Công ty Cổ phần Bất động sản An Phát Land
+Value: Số cuối kỳ: 45.860.005.476 | Số đầu năm: 45.860.005.476
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Thặng dư vốn cổ phần Thặng dư vốn cổ phần được ghi nhận theo số chênh lệch giữa giá phát hành và mệnh giá cổ phiếu khi phát hành lần đầu hoặc phát hành bổ sung, chênh lệch giữa giá tái phát hành và giá trị sổ sách của cổ phiếu quỹ và cấu phần vốn của trái phiếu chuyển đổi khi đáo hạn. Chi phí trực tiếp liên quan đến việc phát hành bổ sung cổ phiếu và tái phát hành cổ phiếu quỹ được ghi giảm thặng dư vốn cổ phần.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Apec Land Huế
+Value: Tên công ty: Công ty Cổ phần Apec Land Huế | Địa chỉ trụ sở chính: 30 Lê Lợi, phường Phú Nhuận, thành phố Huế, tỉnh Thừa Thiên Huế | Hoạt động kinh doanh chính: Đầu tư, kinh doanh bất động sản | Tỷ lệ vốn góp: 99,99% | Tỷ lệ lợi ích: 99,99% | Tỷ lệ quyền biểu quyết: 99,99%",1,,160901,36366,,,,
+38,Đánh giá mức độ phụ thuộc vào các khoản vay và nợ thuê tài chính ngắn hạn của công ty.,"Dựa trên số liệu hiện có:
+
+- Vay và nợ thuê tài chính ngắn hạn (cuối kỳ): 156 502 422 354 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+- Tổng tài sản (cuối kỳ): 1 662 694 128 863 đ (BẢNG CÂN ĐỐI KẾ TOÁN)
+- Vốn chủ sở hữu (cuối kỳ): 884 244 721 299 đ (BẢNG ĐỐI CHIẾU BIẾN ĐỘNG VỐN CHỦ SỞ HỮU)
+- **Tỷ lệ vay ngắn hạn / tổng tài sản** = 156 502 422 354 ÷ 1 662 694 128 863 ≈ **9.4 %**
+- **Tỷ lệ vay ngắn hạn / vốn chủ sở hữu** = 156 502 422 354 ÷ 884 244 721 299 ≈ **17.7 %**
+
+*Nhận xét*:
+- Tỷ lệ 9.4 % cho thấy công ty chỉ dùng khoảng 1/10 tổng tài sản để tài trợ cho các khoản vay/nghĩa vụ tài chính ngắn hạn, mức độ phụ thuộc không cao.
+- Tuy nhiên, so với vốn chủ sở hữu, tỷ lệ 17.7 % cho thấy phần đáng kể lợi nhuận của cổ đông có thể bị ảnh hưởng khi các khoản vay tới hạn.
+- So sánh với đầu năm (vay ngắn hạn 380,48 tỷ / tổng tài sản 1,906 tỷ ≈ 19.9 %), công ty đã giảm đáng kể mức phụ thuộc tài chính ngắn hạn, phản ánh cải thiện cấu trúc tài chính trong kỳ.
+- Nếu tỷ lệ vay ngắn hạn duy trì dưới 15 %/tổng tài sản và dưới 20 %/vốn chủ sở hữu, rủi ro thanh khoản ngắn hạn thường được coi là chấp nhận được, nhưng cần theo dõi chặt chẽ dòng tiền hoạt động để đảm bảo khả năng trả nợ.","Khoản vay và nợ thuê tài chính ngắn hạn của công ty đã giảm đáng kể từ 380.475.557.454 VND vào đầu năm xuống 156.502.422.354 VND vào cuối kỳ. Mặc dù vẫn là một khoản mục lớn trong nợ ngắn hạn, sự sụt giảm này cho thấy mức độ phụ thuộc vào các nguồn tài trợ ngắn hạn này đã giảm bớt. Điều này có thể được xem là một dấu hiệu tích cực về việc cải thiện cơ cấu tài chính và giảm rủi ro thanh khoản ngắn hạn, hoặc công ty đã chuyển đổi một phần nợ ngắn hạn sang nợ dài hạn như thể hiện qua sự gia tăng của vay và nợ thuê tài chính dài hạn.",14,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số cuối năm
+Period: cuối
+Value: 156.502.422.354
+Note ref: V.18a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính ngắn hạn | Số đầu năm
+Period: đầu
+Value: 380.475.557.454
+Note ref: V.18a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | a) Vay ngắn hạn
+Value: Khoản mục: a) Vay ngắn hạn | Số cuối kỳ Giá trị: 156.502.422.354 | Số cuối kỳ Khả năng trả nợ: 156.502.422.354 | Trong kỳ Tăng: 56.474.900.000 | Trong kỳ Giảm: 280.448.035.100 | Số đầu kỳ Giá trị: 380.475.557.454 | Số đầu kỳ Khả năng trả nợ: 380.475.557.454
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Vay ngắn hạn các cá nhân
+Value: Khoản mục: Vay ngắn hạn các cá nhân | Số cuối kỳ Giá trị: 17.219.900.000 | Số cuối kỳ Khả năng trả nợ: 17.219.900.000 | Trong kỳ Tăng: 37.050.000.000 | Trong kỳ Giảm: 179.498.200.000 | Số đầu kỳ Giá trị: 159.668.100.000 | Số đầu kỳ Khả năng trả nợ: 159.668.100.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Apec Land Huế
+Value: Khoản mục: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Giá trị: 119.857.622.354 | Số cuối kỳ Khả năng trả nợ: 119.857.622.354 | Trong kỳ Tăng: - | Trong kỳ Giảm: 11.500.000.000 | Số đầu kỳ Giá trị: 131.357.622.354 | Số đầu kỳ Khả năng trả nợ: 131.357.622.354",1,,104119,20702,,,,
+39,Tổng vốn chủ sở hữu cuối kỳ là bao nhiêu VND?,"Tổng vốn chủ sở hữu cuối kỳ là 884.244.721.299 VND (theo bảng ""BẢNG CÂN ĐỐI KẾ TOÁN"", mục ""Số dư cuối kỳ | Cộng"" – Kỳ này).",Tổng vốn chủ sở hữu cuối kỳ là 884.244.721.299 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)",1,,8398,6586,,,,
+40,Giá trị vốn đầu tư của chủ sở hữu cuối kỳ là bao nhiêu VND?,Giá trị vốn đầu tư của chủ sở hữu vào cuối kỳ là 840.839.760.000 VND.,Giá trị vốn đầu tư của chủ sở hữu cuối kỳ là 840.839.760.000 VND.,1,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vốn góp của chủ sở hữu | Số cuối năm
+Period: cuối
+Value: 840.839.760.000",1,,9978,7544,,,,
+41,Lợi nhuận sau thuế chưa phân phối cuối kỳ là bao nhiêu VND?,Lợi nhuận sau thuế chưa phân phối cuối kỳ là 43.404.961.299 VND.,Lợi nhuận sau thuế chưa phân phối cuối kỳ là 43.404.961.299 VND.,1,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Lợi nhuận sau thuế chưa phân phối | Số cuối năm
+Period: cuối
+Value: 43.404.961.299",1,,9294,6103,,,,
+42,So sánh lợi nhuận sau thuế chưa phân phối cuối kỳ với đầu năm. Mức độ thay đổi là bao nhiêu?,"Dựa trên số liệu hiện có, chỉ có giá trị ""Lợi nhuận sau thuế chưa phân phối"" cuối năm là 43.404.961.299. Không có số liệu ""Lợi nhuận sau thuế chưa phân phối"" đầu năm, nên không thể tính mức độ thay đổi.","Lợi nhuận sau thuế chưa phân phối cuối kỳ là 43.404.961.299 VND, còn đầu năm là 54.254.677.312 VND. Mức độ thay đổi là giảm 10.849.716.013 VND.",1,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Lợi nhuận sau thuế chưa phân phối | Số cuối năm
+Period: cuối
+Value: 43.404.961.299",1,,18945,14292,,,,
+43,Có bao nhiêu cổ phiếu phổ thông có quyền biểu quyết đã được phát hành?,"Dựa trên số liệu hiện có, số cổ phiếu phổ thông có quyền biểu quyết đã được phát hành (cuối kỳ) là **84.083.976** cổ phiếu. (Nguồn: ""THUYẾT MINH BÁO CÁO TÀI CHÍNH"" – mục ""Số lượng cổ phiếu phổ thông đã phát hành | Số cuối kỳ"")",Thông tin về số lượng cổ phiếu không có trong chunk này. Chỉ có giá trị vốn đầu tư của chủ sở hữu là 840.839.760.000 VND.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụ...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị...
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19b. Cổ phiếu | Số lượng cổ phiếu phổ thông đã phát hành
+Value: Số cuối kỳ: 84.083.976 | Số đầu năm: 84.083.976
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19b. Cổ phiếu | Số lượng cổ phiếu phổ thông đang lưu hành
+Value: Số cuối kỳ: 84.083.976 | Số đầu năm: 84.083.976
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19b. Cổ phiếu | Số lượng cổ phiếu đăng ký phát hành
+Value: Số cuối kỳ: 84.083.976 | Số đầu năm: 84.083.976
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19b. Cổ phiếu
+Item: Số lượng cổ phiếu phổ thông đã phát hành | Số đầu năm
+Period: đầu
+Value: 84.083.976
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19b. Cổ phiếu
+Item: Số lượng cổ phiếu phổ thông đã phát hành | Số cuối kỳ
+Period: cuối
+Value: 84.083.976",1,,25915,16855,,,,
+44,Đánh giá tác động của việc không có quỹ đầu tư phát triển hoặc các quỹ khác thuộc vốn chủ sở hữu đến chiến lược tăng trưởng của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời (agent_profitability)**
+- Vốn chủ sở hữu đầu kỳ: 840 839 760 000 ₫ (Bảng cân đối kế toán).
+- Vốn chủ sở hữu cuối kỳ: 884 244 721 299 ₫ (Bảng cân đối kế toán).
+- Lợi nhuận sau thuế chưa phân phối cuối kỳ: 43 404 961 299 ₫.
+- Lợi nhuận gộp (Quý IV 2024): 34 352 002 130 ₫.
+- Lợi nhuận thuần từ hoạt động kinh doanh (Quý IV 2024): 12 205 164 159 ₫.
+- Doanh thu bán hàng và cung cấp dịch vụ (tích lũy đến cuối kỳ): 209 580 465 103 ₫.
+- **ROE (tạm tính)** = Lợi nhuận sau thuế chưa phân phối / Vốn chủ sở hữu ≈ 5,16 %.
+
+*Nhận xét*:
+- ROE chỉ khoảng 5 % cho thấy khả năng sinh lời trên vốn chủ sở hữu còn hạn chế.
+- Khi không có quỹ đầu tư phát triển, lợi nhuận giữ lại sẽ phải cung cấp vốn cho các dự án tăng trưởng, làm giảm khả năng chi trả cổ tức và tăng áp lực tài chính.
+
+**2. Thanh khoản và an toàn tài chính (agent_liquidity_solvency)**
+- Tiền và các khoản tương đương tiền cuối kỳ: 97 964 405 114 ₫.
+- Các khoản phải thu ngắn hạn: 362 793 062 285 ₫.
+- Hàng tồn kho (cộng) cuối kỳ: 474 117 608 966 ₫.
+- Tổng tài sản ngắn hạn ≈ 934 875 076 365 ₫.
+- Nợ ngắn hạn tổng ≈ 641 010 541 882 ₫.
+- **Current Ratio** ≈ 1,46.
+- **Quick Ratio** ≈ 0,72.
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh (năm nay): 36 158 929 436 ₫.
+
+*Nhận xét*:
+- Current Ratio trên 1 cho thấy khả năng thanh toán nợ ngắn hạn tương đối ổn, nhưng Quick Ratio dưới 1 phản ánh khả năng chuyển nhanh tài sản sang tiền mặt còn hạn chế.
+- Thiếu các quỹ thuộc vốn chủ sở hữu làm giảm nguồn vốn nội bộ, buộc công ty phải dựa vào nợ ngắn hạn để duy trì hoạt động, tạo rủi ro thanh khoản khi môi trường tín dụng thắt chặt.
+
+**3. Dòng tiền (agent_cashflow_analysis)**
+- Vốn chủ sở hữu đầu năm: 943 281 549 873 ₫; cuối năm: 895 094 437 312 ₫ → **giảm 48 187 112 561 ₫**.
+- Lợi nhuận sau thuế chưa phân phối giảm cùng mức.
+- CFO (lưu chuyển tiền thuần từ hoạt động kinh doanh): **36 158 929 436 ₫**.
+- CFI (lưu chuyển tiền thuần từ hoạt động đầu tư): **40 218 532 929 ₫** (dương, cho thấy công ty thu hồi tiền từ việc bán tài sản).
+- CFF (lưu chuyển tiền thuần từ hoạt động tài chính): **‑38 988 400 000 ₫** (tiền ra trả nợ hoặc cổ tức).
+- Tiền và các khoản tương đương tiền cuối kỳ: 97 964 405 114 ₫; đầu kỳ: 60 575 342 749 ₫ → **tăng 37 389 062 365 ₫**.
+
+*Nhận xét*:
+- Dòng tiền hoạt động dương hỗ trợ thanh khoản ngắn hạn, nhưng dòng tiền đầu tư dương cho thấy công ty không đang chi tiêu vào tài sản cố định mới mà chỉ thu hồi vốn.
+- Dòng tiền tài chính âm phản ánh việc trả nợ/cổ tức, giảm vốn nội bộ để tài trợ cho các dự án tăng trưởng.
+- Khi không có quỹ đầu tư phát triển, công ty phải dựa vào việc bán tài sản hoặc vay nợ để có tiền, làm tăng rủi ro tài chính.
+
+**4. Hiệu quả hoạt động (agent_efficiency)**
+- **Vòng quay tài sản** = Doanh thu / Trung bình tài sản = 209 580 465 103 ÷ 1 784 394 301 756 ≈ **0,12** (rất thấp).
+- **Số ngày tồn kho (DIO)** = (Hàng tồn kho cuối kỳ ÷ Giá vốn hàng bán) × 365 = (474 117 608 966 ÷ 133 703 128 164) × 365 ≈ **1 294 ngày**.
+- Tổng tài sản cuối kỳ: 1 662 694 128 863 ₫; Vốn chủ sở hữu cuối kỳ: 884 244 721 299 ₫ → **đòn bẩy tài chính ≈ 1,88**.
+
+*Nhận xét*:
+- Vòng quay tài sản thấp và DIO quá cao cho thấy tài sản, đặc biệt là hàng tồn kho, không được sử dụng hiệu quả để tạo doanh thu.
+- Đòn bẩy 1,88 cho thấy công ty phụ thuộc đáng kể vào nợ để tài trợ tài sản, điều này làm tăng rủi ro khi không có nguồn vốn từ quỹ đầu tư phát triển.
+
+**Kết luận tổng thể**
+- Thiếu các quỹ đầu tư thuộc vốn chủ sở hữu làm giảm nguồn vốn nội bộ, buộc công ty phải dựa vào nợ ngắn hạn và việc bán tài sản để duy trì dòng tiền, dẫn đến thanh khoản kém và đòn bẩy tài chính cao.
+- Độ sinh lời trên vốn chủ sở hữu còn thấp, vòng quay tài sản và tốc độ tiêu tồn kho không hiệu quả, khiến chiến lược tăng trưởng bị kìm hãm.
+- Để thực hiện chiến lược tăng trưởng bền vững, công ty cần tái cấu trúc vốn, tăng vốn góp hoặc tạo quỹ đầu tư phát triển nội bộ, đồng thời cải thiện hiệu suất sử dụng tài sản và giảm thời gian tồn kho.","Việc công ty không có quỹ đầu tư phát triển hoặc các quỹ khác thuộc vốn chủ sở hữu cho thấy công ty không dành một phần lợi nhuận để tái đầu tư hoặc tích lũy cho các mục tiêu tăng trưởng chiến lược cụ thể trong tương lai. Điều này có thể hạn chế khả năng tự tài trợ cho các dự án mở rộng, nghiên cứu phát triển, hoặc mua lại trong tương lai, khiến công ty phải phụ thuộc nhiều hơn vào vốn vay hoặc phát hành cổ phiếu mới để tài trợ cho tăng trưởng. Điều này có thể làm chậm tốc độ tăng trưởng hoặc tăng chi phí vốn nếu công ty cần huy động thêm nguồn lực từ bên ngoài.",71,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Số đầu năm
+Value: Vốn đầu tư của chủ sở hữu: 840.839.760.000 | Lợi nhuận sau thuế chưa phân phối: 102.441.789.873 | Cộng: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Số dư đầu năm
+Value: Vốn đầu tư của chủ sở hữu: 840.839.760.000 | Lợi nhuận sau thuế chưa phân phối: 54.254.677.312 | Cộng: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Vốn đầu tư của chủ sở hữu
+Value: 840.839.760.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Vốn đầu tư của chủ sở hữu
+Value: 840.839.760.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Lợi nhuận sau thuế chưa phân phối | Số cuối năm
+Period: cuối
+Value: 43.404.961.299
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số đầu năm
+Period: đầu
+Value: 13.506.255.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 528.207.406.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi ngân hàng không kỳ hạn | Số cuối năm
+Period: cuối
+Value: 17.830.416.837
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các nhà cung cấp khác
+Value: Số cuối kỳ: 26.265.437.526 | Số đầu năm: 46.581.188.492
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số cuối năm
+Period: cuối
+Value: 566.994.110.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: I. Nợ ngắn hạn | Số đầu năm
+Period: đầu
+Value: 895.630.596.406
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | a) Vay ngắn hạn
+Value: Khoản mục: a) Vay ngắn hạn | Số cuối kỳ Giá trị: 156.502.422.354 | Số cuối kỳ Khả năng trả nợ: 156.502.422.354 | Trong kỳ Tăng: 56.474.900.000 | Trong kỳ Giảm: 280.448.035.100 | Số đầu kỳ Giá trị: 380.475.557.454 | Số đầu kỳ Khả năng trả nợ: 380.475.557.454
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 12. Vốn chủ sở hữu Vốn góp của chủ sở hữu Vốn góp của chủ sở hữu được ghi nhận theo số vốn thực tế đã góp của các cổ đông.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 133.703.128.164
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 130.209.711.138
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 8.583.372.428
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 5.826.158.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 101.262.100.705
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2024
+Period: cuối
+Value: 34.352.002.130
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 75.877.336.939
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2023
+Period: đầu
+Value: 2.249.284.279
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: 52.040.652.356
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 23.256.368.970
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 34.322.091.879
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 18.509.488.336
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 27.526.591.673
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí vật liệu quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 117.707.612
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động tài chính | Năm nay
+Value: (38.988.400.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động tài chính | Năm trước
+Value: (71.573.059.240)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm nay
+Value: 40.218.532.929
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm trước
+Value: 87.211.618.301
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Hình thức sở hữu vốn
+Value: Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) là Công ty cổ phần.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Báo cáo của ban tổng giám đốc
+Value: Ban Tổng Giám đốc Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương (sau đây gọi tắt là “Công ty”) trình bày báo cáo của mình cùng với Báo cáo tài chính riêng của Công ty cho Quý IV năm 2024.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Lập Báo cáo tài chính riêng trên cơ sở hoạt động liên tục trừ trường hợp không thể cho rằng Công ty sẽ tiếp tục hoạt động liên tục;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.",1,,316701,68560,,,,
+45,Phân tích ý nghĩa của sự sụt giảm lợi nhuận sau thuế chưa phân phối từ đầu kỳ trước đến cuối kỳ này.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời**
+- Lợi nhuận sau thuế chưa phân phối – số đầu năm: 102.441.789.873 đồng (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Lợi nhuận sau thuế chưa phân phối – số cuối năm: 43.404.961.299 đồng (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Giảm lượng = 102.441.789.873 − 43.404.961.299 = 59.036.828.574 đồng.
+- Tỷ lệ giảm = (59.036.828.574 / 102.441.789.873) × 100% ≈ 57.6 %.
+
+*Nhận xét*:
+- Lợi nhuận chưa phân phối đã giảm mạnh hơn nửa so với đầu kỳ, cho thấy công ty đã sử dụng phần lớn lợi nhuận tích lũy để trả cổ tức, mua lại cổ phiếu hoặc thực hiện các khoản trả nợ/điều chỉnh.
+- Dòng ""Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối"" có giá trị 10.849.716.013 đồng, phản ánh việc giảm lợi nhuận chưa phân phối trong kỳ hiện tại, hỗ trợ giải thích phần giảm này.
+- Sự sụt giảm đáng kể có thể ảnh hưởng tiêu cực tới khả năng tích luỹ nội bộ cho các dự án đầu tư trong tương lai; tuy nhiên nếu nguyên nhân chính là chi trả cổ tức cho cổ đông, đây cũng là dấu hiệu công ty đang thực hiện chính sách chia lợi nhuận hợp lý.
+- Cần lưu ý các yếu tố khác như thay đổi chuẩn mực kế toán, điều chỉnh lỗi trước đó, hoặc lỗ trong các khoản mục khác có thể đã góp phần vào mức giảm này.
+
+**Kết luận tổng thể**
+Sự giảm 57.6 % lợi nhuận sau thuế chưa phân phối cho thấy công ty đã tiêu hao một phần lớn lợi nhuận tích lũy, có thể do trả cổ tức hoặc các hoạt động tài chính khác. Điều này có thể làm giảm khả năng tái đầu tư nội bộ, nhưng nếu xuất phát từ việc trả lợi nhuận cho cổ đông thì phản ánh chính sách chia lợi nhuận hợp lý. Các nhà quản trị nên cân nhắc cân bằng giữa việc chi trả cổ đông và duy trì nguồn lợi nhuận nội bộ cho các dự án tương lai.","Lợi nhuận sau thuế chưa phân phối lũy kế đến cuối kỳ trước là 102.441.789.873 VND, sau đó lợi nhuận năm trước là 48.187.112.561 VND, dẫn đến số dư cuối năm trước (cũng là đầu năm hiện tại) là 54.254.677.312 VND. Đến cuối năm hiện tại, do lợi nhuận năm hiện tại là (10.849.716.013) VND (số âm), lợi nhuận sau thuế chưa phân phối đã giảm xuống 43.404.961.299 VND. Sự sụt giảm liên tục này, đặc biệt là lợi nhuận âm trong năm hiện tại, cho thấy công ty đang gặp khó khăn trong việc tạo ra lợi nhuận và tích lũy vốn từ hoạt động kinh doanh. Điều này có thể ảnh hưởng đến khả năng phân phối cổ tức, khả năng tài trợ cho hoạt động trong tương lai và giảm giá trị sổ sách của vốn chủ sở hữu, là một tín hiệu tiêu cực đối với các nhà đầu tư.",8,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Lợi nhuận sau thuế chưa phân phối | Số cuối năm
+Period: cuối
+Value: 43.404.961.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: 43.404.961.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Lợi nhuận sau thuế chưa phân phối
+Value: 102.441.789.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: 54.254.677.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư đầu năm | Lợi nhuận sau thuế chưa phân phối
+Value: 54.254.677.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (48.187.112.561) | Cộng: (48.187.112.561)",1,,85871,18661,,,,
+46,"Nếu công ty không có thặng dư vốn cổ phần, điều này nói lên điều gì về các đợt phát hành cổ phiếu trước đây?","Dựa trên định nghĩa trong thuyết minh báo cáo tài chính, Thặng dư vốn cổ phần được ghi nhận khi giá phát hành cổ phiếu cao hơn mệnh giá (lần đầu hoặc phát hành bổ sung) hoặc khi giá tái phát hành cao hơn giá trị sổ sách. Vì vậy, nếu công ty không có Thặng dư vốn cổ phần, điều này cho thấy các đợt phát hành cổ phiếu trước đây đã được thực hiện ở mức giá bằng mệnh giá hoặc bằng giá trị sổ sách, không có khoản chênh lệch (premium) nào được ghi nhận.","Nếu công ty không có thặng dư vốn cổ phần (giá trị là 0), điều này nói lên rằng các đợt phát hành cổ phiếu trước đây của công ty, bao gồm IPO hoặc phát hành bổ sung, có thể đã được thực hiện ở mức mệnh giá hoặc thấp hơn mệnh giá. Thặng dư vốn cổ phần phát sinh khi giá phát hành cao hơn mệnh giá cổ phiếu. Việc không có thặng dư vốn cổ phần cho thấy công ty chưa bao giờ hoặc chưa thể huy động vốn từ việc phát hành cổ phiếu với giá cao hơn mệnh giá, có thể do điều kiện thị trường không thuận lợi hoặc định giá công ty thấp.",5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Thặng dư vốn cổ phần Thặng dư vốn cổ phần được ghi nhận theo số chênh lệch giữa giá phát hành và mệnh giá cổ phiếu khi phát hành lần đầu hoặc phát hành bổ sung, chênh lệch giữa giá tái phát hành và giá trị sổ sách của cổ phiếu quỹ và cấu phần vốn của trái phiếu chuyển đổi khi đáo hạn. Chi phí trực tiếp liên quan đến việc phát hành bổ sung cổ phiếu và tái phát hành cổ phiếu quỹ được ghi giảm thặng dư vốn cổ phần.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala
+Value: Công ty: Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala | Số vốn Công ty cam kết góp: 19.000.000.000 | Số đã góp tại 31/12/2024: 8.000.000.000 | Số còn phải góp: 11.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Thương mại và Du lịch Kim Bôi
+Value: Số cuối kỳ Số lượng CP: 5.200.000 | Số cuối kỳ Tỷ lệ sở hữu: 22,26% | Số đầu năm Số lượng CP: 5.200.000 | Số đầu năm Tỷ lệ sở hữu: 19,05%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala
+Value: Số cuối kỳ Số lượng CP: 800.000 | Số cuối kỳ Tỷ lệ sở hữu: 19,00% | Số đầu năm Số lượng CP: 800.000 | Số đầu năm Tỷ lệ sở hữu: 19,00%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Cổ phiếu không niêm yết
+Value: Số cuối năm Giá gốc: 2.839.310.000 | Số cuối năm Giá trị hợp lý: 494.034.493 | Số cuối năm Dự phòng: (2.345.275.507) | Số đầu năm Giá gốc: 2.839.310.000 | Số đầu năm Giá trị hợp lý: 494.034.493 | Số đầu năm Dự phòng: (2.345.275.507)",1,,23281,8936,,,,
+47,Doanh thu thuần về bán hàng và cung cấp dịch vụ năm 2024 là bao nhiêu VND?,Doanh thu thuần về bán hàng và cung cấp dịch vụ năm 2024 là 209.580.465.103 VND.,Doanh thu thuần về bán hàng và cung cấp dịch vụ năm 2024 là 209.580.465.103 VND.,4,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Quý IV năm 2024
+Period: cuối
+Value: 73.486.501.074
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Quý IV năm 2023
+Period: đầu
+Value: 32.022.987.862
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: 182.250.363.494
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 209.580.465.103",1,,9731,6358,,,,
+48,Lợi nhuận gộp quý IV/2024 là bao nhiêu VND?,Không có số liệu về lợi nhuận gộp quý IV/2024 trong dữ liệu hiện có.,Lợi nhuận gộp về bán hàng và cung cấp dịch vụ quý IV/2024 là 34.352.002.130 VND.,4,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Quý IV năm 2023
+Period: đầu
+Value: (4.884.962.434)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Quý IV năm 2024
+Period: cuối
+Value: 928.804.543
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 3.112.941.361
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (4.655.808.772)",1,,23168,14621,,,,
+49,So sánh tổng lợi nhuận kế toán trước thuế năm 2024 với năm 2023. Tình hình có cải thiện không?,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời**
+- **Tổng lợi nhuận kế toán trước thuế (lũy kế đến quý IV)**:
+  - Năm 2024: (9.805.992.079) VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+  - Năm 2023: (48.187.112.561) VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- **Biên độ thay đổi**: ΔLợi nhuận = Lợi nhuận 2024 – Lợi nhuận 2023 = (9.805.992.079) – (48.187.112.561) = **‑38.381.120.482 VNĐ**
+
+*Nhận xét*:
+- Năm 2024 vẫn ghi nhận lợi nhuận kế toán trước thuế âm (lỗ), nhưng mức lỗ đã giảm **38,38 tỷ VNĐ** so với năm 2023.
+- Giảm lỗ cho thấy khả năng sinh lời đã cải thiện, có thể do giảm chi phí hoặc tăng hiệu quả hoạt động.
+- Tuy nhiên, doanh nghiệp vẫn chưa đạt lợi nhuận dương, cần tiếp tục cải thiện để tạo giá trị cho cổ đông.
+
+**Kết luận tổng thể**
+Doanh nghiệp đã cải thiện đáng kể lợi nhuận kế toán trước thuế so với năm trước, tuy nhiên vẫn còn trong trạng thái lỗ và cần các biện pháp để chuyển sang lợi nhuận dương.","Tổng lợi nhuận kế toán trước thuế năm 2024 là 9.805.992.079 VND, trong khi năm 2023 là (48.187.112.561) VND (số âm). Tình hình có cải thiện đáng kể khi công ty đã chuyển từ lỗ trước thuế sang có lãi trước thuế trong năm 2024.",10,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (9.805.992.079)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2024
+Period: cuối
+Value: 13.133.968.702
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2023
+Period: đầu
+Value: (34.663.703.515)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: 1. Lợi nhuận trước thuế | Năm trước
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (10.849.716.013) | Cộng: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (48.187.112.561) | Cộng: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)",1,,70349,17471,,,,
+50,Tỷ lệ chi phí tài chính trên doanh thu thuần năm 2024 là bao nhiêu phần trăm?,"Không có số liệu tổng chi phí tài chính cho năm 2024 trong dữ liệu hiện có, nên không thể tính tỷ lệ chi phí tài chính trên doanh thu thuần năm 2024.",Doanh thu thuần về bán hàng và cung cấp dịch vụ năm 2024 là 209.580.465.103 VND. Chi phí tài chính năm 2024 là 58.553.138.851 VND. Tỷ lệ là (58.553.138.851 / 209.580.465.103) * 100% ≈ 27.94%.,9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 461.720.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 7.623.521.969
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.984.670.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí thu xếp vốn | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 4.547.267.785
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Quý IV năm 2024
+Period: cuối
+Value: 73.486.501.074
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Quý IV năm 2023
+Period: đầu
+Value: 32.022.987.862
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: 182.250.363.494
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Doanh thu thuần về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 209.580.465.103",1,,22297,8751,,,,
+51,Đánh giá xu hướng biến động của lợi nhuận thuần từ hoạt động kinh doanh giữa các kỳ.,"Dựa trên số liệu hiện có:
+**1. Khả năng sinh lời**
+- Lợi nhuận thuần từ hoạt động kinh doanh Q4 2023: **(29.778.741.081)** VND *(BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)*
+- Lợi nhuận thuần từ hoạt động kinh doanh Q4 2024: **12.205.164.159** VND *(BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)*
+- Lũy kế đến Q4 2023: **(43.531.303.789)** VND *(BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)*
+- Lũy kế đến Q4 2024: **(12.918.933.440)** VND *(BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)*
+
+*Nhận xét*:
+- So với cùng kỳ năm trước, lợi nhuận Q4 đã chuyển từ lỗ **29,78 tỷ** đồng sang lãi **12,21 tỷ** đồng, cho thấy cải thiện mạnh mẽ.
+- Mặc dù Q4 2024 đạt lợi nhuận dương, tổng lũy kế cả năm vẫn âm; tuy nhiên mức lỗ đã giảm khoảng **30,6 tỷ** đồng (từ -43,53 tỷ xuống -12,92 tỷ), phản ánh xu hướng lợi nhuận cải thiện.
+- Sự chuyển đổi này có thể bắt nguồn từ giảm chi phí, tăng doanh thu hoặc các yếu tố phi thường trong quý IV; cần tham khảo doanh thu và chi phí để xác định nguyên nhân cụ thể.
+- Nếu xu hướng tích cực này duy trì, công ty có tiềm năng chuyển sang giai đoạn sinh lợi ổn định, nhưng vẫn cần giám sát rủi ro vì năm vẫn chưa đạt lợi nhuận tích lũy dương.
+
+**Kết luận tổng thể**:
+Lợi nhuận thuần từ hoạt động kinh doanh đã có dấu hiệu cải thiện đáng kể trong Q4 2024 so với Q4 2023, giảm thiểu mức lỗ tích lũy của cả năm. Tuy nhiên, năm 2024 vẫn còn âm lũy kế, vì vậy công ty cần duy trì xu hướng tích cực và giải quyết các yếu tố gây lỗ để đạt lợi nhuận dương kéo dài.","Lợi nhuận thuần từ hoạt động kinh doanh cho thấy xu hướng cải thiện đáng kể. Cụ thể, trong Quý IV/2024, công ty có lợi nhuận thuần là 12.205.164.159 VND, so với mức lỗ (29.778.741.081) VND trong Quý IV/2023. Tương tự, cả năm 2024, lợi nhuận thuần từ hoạt động kinh doanh là 12.918.933.440 VND, trong khi năm 2023 là lỗ (43.531.303.789) VND. Điều này cho thấy hoạt động kinh doanh cốt lõi của công ty đã phục hồi và có lãi trong năm hiện tại.",9,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (48.187.112.561) | Cộng: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (10.849.716.013) | Cộng: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Cộng
+Value: (48.187.112.561)",1,,70468,18492,,,,
+52,Phân tích ảnh hưởng của chi phí lãi vay đến tổng lợi nhuận kế toán trước thuế của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- **Chi phí lãi vay (lũy kế đến cuối kỳ Năm nay)**: 26.984.670.021 vnđ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- **Tổng lợi nhuận kế toán trước thuế (lũy kế đến quý IV năm 2024)**: (9.805.992.079) vnđ (lỗ) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- **Tỷ lệ chi phí lãi vay trên lợi nhuận trước thuế**: \[ Tỷ lệ = 26.984.670.021 / -9.805.992.079 \approx -2,75 \] (≈ -275 %)
+- **Chi phí lãi vay phải trả (số cuối kỳ)**: 11.570.981.974 vnđ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+
+*Nhận xét*:
+- Chi phí lãi vay chiếm hơn 275 % lợi nhuận trước thuế, nghĩa là chi phí tài chính vượt toàn bộ lợi nhuận, gây lỗ ròng cho công ty.
+- So với năm trước, chi phí lãi vay đã giảm ~29 % (từ 38.076.798.251 vnđ xuống 26.984.670.021 vnđ), nhưng lợi nhuận trước thuế vẫn âm, nên tỷ lệ chi phí lãi vay trên lợi nhuận tăng cao, phản ánh áp lực tài chính vẫn lớn.
+- Số dư chi phí lãi vay phải trả cuối kỳ là 11.571 tỷ đồng, cho thấy phần lớn chi phí lãi vay là nợ ngắn hạn, tạo áp lực thanh khoản.
+
+**Kết luận tổng thể**: Chi phí lãi vay là yếu tố tiêu cực quan trọng, ảnh hưởng đáng kể tới khả năng tạo lợi nhuận trước thuế; giảm chi phí tài chính và/hoặc tái cấu trúc nợ là cần thiết để cải thiện sinh lời.","Chi phí lãi vay là một phần đáng kể trong chi phí tài chính của công ty. Trong năm 2024, chi phí lãi vay là 26.984.670.021 VND, và năm 2023 là 38.076.798.251 VND. Các khoản chi phí lãi vay này trực tiếp làm giảm lợi nhuận thuần từ hoạt động kinh doanh và do đó làm giảm tổng lợi nhuận kế toán trước thuế. Mặc dù chi phí lãi vay đã giảm trong năm 2024 so với 2023, nó vẫn là một gánh nặng tài chính đáng kể, đặc biệt khi công ty đã lỗ trước thuế trong năm 2023. Sự giảm của chi phí lãi vay trong năm 2024 đã góp phần vào sự cải thiện tổng lợi nhuận kế toán trước thuế từ mức âm sang dương.",12,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.984.670.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (9.805.992.079)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2024
+Period: cuối
+Value: 13.133.968.702
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2023
+Period: đầu
+Value: (34.663.703.515)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Tổng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 58.553.138.851 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 63.578.625.194
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Chi phí bán hàng | Tổng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 24.634.908.426 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 23.745.196.692",1,,90422,18966,,,,
+53,Đánh giá sự hiệu quả của hoạt động kinh doanh chính khi lợi nhuận gộp tăng nhưng tổng lợi nhuận trước thuế vẫn âm trong năm 2023.,"Dựa trên số liệu hiện có (lũy kế đến quý IV năm 2023):
+
+**1. Khả năng sinh lời**
+- Lợi nhuận gộp: **52.040.652.356 VND** (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- Doanh thu thuần: **200.062.416.867 VND** (Thuyết minh 1)
+- Giá vốn hàng bán: **130.209.711.138 VND** (Thuyết minh 3)
+- Biên lợi nhuận gộp ≈ **26,0 %** (tính từ Lợi nhuận gộp ÷ Doanh thu)
+- Lợi nhuận trước thuế: **(48.187.112.561) VND** (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH) – âm
+- Chi phí tài chính: **63.578.625.194 VND** (Thuyết minh 5)
+- Lợi nhuận khác: **(4.655.808.772) VND** (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+
+*Nhận xét*:
+- Lợi nhuận gộp tăng đáng kể so với năm 2022 (+23,8 tỷ VND, ≈ 45 %).
+- Tuy nhiên, lợi nhuận trước thuế vẫn âm do chi phí tài chính lớn và lợi nhuận khác âm, cho thấy áp lực nợ và chi phí tài chính cao.
+- Biên lợi nhuận gộp 26 % tích cực, nhưng chi phí tài chính đã “ăn” hết phần lợi nhuận.
+
+**Kết luận tổng thể**: Hoạt động kinh doanh cốt lõi đã cải thiện, nhưng hiệu quả cuối cùng chưa đạt vì chi phí tài chính và các khoản lỗ khác làm lợi nhuận trước thuế âm; công ty cần giảm chi phí tài chính và kiểm soát các khoản lỗ để nâng cao lợi nhuận.","Trong năm 2023, lợi nhuận gộp về bán hàng và cung cấp dịch vụ là 52.040.652.356 VND, nhưng tổng lợi nhuận kế toán trước thuế lại âm (48.187.112.561) VND. Điều này cho thấy mặc dù hoạt động kinh doanh cốt lõi (bán hàng và cung cấp dịch vụ) có lãi gộp, các chi phí khác như chi phí tài chính (63.578.625.194 VND, trong đó lãi vay 38.076.798.251 VND), chi phí bán hàng (23.745.196.692 VND), và chi phí quản lý doanh nghiệp (34.322.091.879 VND) đã quá lớn, vượt xa lợi nhuận gộp và doanh thu hoạt động tài chính. Điều này cho thấy hoạt động kinh doanh chính chưa đủ hiệu quả để bù đắp các chi phí hoạt động và chi phí tài chính cao, dẫn đến lỗ tổng thể trước thuế trong năm 2023.",24,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Quý IV năm 2023
+Period: đầu
+Value: (4.884.962.434)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Quý IV năm 2024
+Period: cuối
+Value: 928.804.543
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 3.112.941.361
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận khác | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (4.655.808.772)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (9.805.992.079)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2024
+Period: cuối
+Value: 13.133.968.702
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2023
+Period: đầu
+Value: (34.663.703.515)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2024
+Period: cuối
+Value: 34.352.002.130
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 75.877.336.939
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2023
+Period: đầu
+Value: 2.249.284.279
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: 52.040.652.356
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc chịu trách nhiệm lập Báo cáo tài chính riêng phản ánh trung thực và hợp lý tính hình tài chính, kết quả hoạt động kinh doanh và lưu chuyển tiền tệ của Công ty trong kỳ. Trong việc lập Báo cáo tài chính riêng này, Ban Tổng Giám đốc phải:
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Lập Báo cáo tài chính riêng trên cơ sở hoạt động liên tục trừ trường hợp không thể cho rằng Công ty sẽ tiếp tục hoạt động liên tục;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Thiết lập và thực hiện hệ thống kiểm soát nội bộ một cách hữu hiệu nhằm hạn chế rủi ro có sai sót trong yêu cầu do gian lận hoặc nhân lên trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: 3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động | Năm trước
+Value: (14.602.003.684)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Tổng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 58.553.138.851 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 63.578.625.194
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Cộng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 209.580.465.103 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 3: Giá vốn hàng bán | Cộng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 133.703.128.164 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 130.209.711.138
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Cộng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 17.648.145.868 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 26.073.957.620
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (10.849.716.013) | Cộng: (10.849.716.013)",1,,154512,35160,,,,
+54,"Nếu chi phí bán hàng và chi phí quản lý doanh nghiệp tiếp tục tăng, điều này có tác động gì đến biên lợi nhuận của công ty?","Dựa trên số liệu hiện có (năm 2024, cuối kỳ):
+
+**1. Khả năng sinh lời**
+- Doanh thu bán hàng và cung cấp dịch vụ: 209 580 465 103 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- Giá vốn hàng bán: 133 703 128 164 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- Chi phí bán hàng: 24 634 908 426 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH, cuối kỳ)
+- Chi phí quản lý doanh nghiệp: 34 322 091 879 đ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH, cuối kỳ)
+- **Biên lợi nhuận hiện tại**
+  - Lợi nhuận gộp = 209 580 465 103 – 133 703 128 164 = 75 877 336 939 đ
+  - Biên lợi nhuận gộp ≈ 75 877 336 939 / 209 580 465 103 ≈ 36.2 %
+  - Lợi nhuận hoạt động (EBIT) = 75 877 336 939 – 24 634 908 426 – 34 322 091 879 = 16 920 336 634 đ
+  - Biên lợi nhuận hoạt động ≈ 16 920 336 634 / 209 580 465 103 ≈ 8.1 %
+- **Kịch bản tăng chi phí 5 %**
+  - Chi phí bán hàng mới = 24 634 908 426 × 1.05 = 25 866 653 847 đ
+  - Chi phí quản lý mới = 34 322 091 879 × 1.05 = 36 038 196 473 đ
+  - EBIT mới = 209 580 465 103 – 133 703 128 164 – 61 904 850 320 = 13 972 486 619 đ
+  - Biên EBIT mới ≈ 13 972 486 619 / 209 580 465 103 ≈ 6.7 %
+*Nhận xét*:
+- Hiện tại, chi phí bán hàng và quản lý chiếm khoảng 28 % doanh thu.
+- Nếu chi phí này tăng 5 % mà doanh thu không tăng, biên lợi nhuận hoạt động sẽ giảm từ 8.1 % xuống khoảng 6.7 % (giảm ~1.4  điểm).
+- Tăng chi phí mạnh hơn hoặc doanh thu không tăng có thể đẩy lợi nhuận hoạt động về mức âm.
+- Công ty cần kiểm soát chi phí và/hoặc tăng doanh thu để bảo vệ biên lợi nhuận.
+
+**Kết luận tổng thể**
+- Tăng chi phí bán hàng và chi phí quản lý sẽ làm giảm đáng kể biên lợi nhuận hoạt động của công ty; mức giảm phụ thuộc vào mức tăng chi phí và khả năng tăng doanh thu.
+- Dữ liệu hiện có không cung cấp chi phí theo năm, vì vậy phân tích dựa trên giả định các giá trị là của năm 2024 và áp dụng tăng trưởng đồng nhất cho cả hai khoản chi.","Nếu chi phí bán hàng và chi phí quản lý doanh nghiệp tiếp tục tăng mà doanh thu không tăng tương ứng hoặc tăng chậm hơn, điều này sẽ có tác động tiêu cực đến biên lợi nhuận của công ty. Cụ thể, nó sẽ làm giảm lợi nhuận thuần từ hoạt động kinh doanh và kéo theo giảm tổng lợi nhuận kế toán trước thuế, thậm chí có thể đẩy công ty vào tình trạng thua lỗ. Trong năm 2024, chi phí bán hàng và quản lý doanh nghiệp đều có sự thay đổi (chi phí bán hàng tăng nhẹ, chi phí quản lý doanh nghiệp giảm). Việc kiểm soát chặt chẽ các chi phí này là cần thiết để duy trì và cải thiện biên lợi nhuận, đặc biệt trong bối cảnh cạnh tranh hoặc khi doanh thu không tăng trưởng mạnh.",24,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 133.703.128.164
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 130.209.711.138
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 8.583.372.428
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 5.826.158.687
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 3. Giá vốn hàng bán
+Item: Giá vốn BĐS | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 101.262.100.705
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Chi phí bán hàng | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 24.634.908.426
+Note ref: VI.6
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 23.256.368.970
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 34.322.091.879
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 18.509.488.336
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí nhân viên quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 27.526.591.673
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí vật liệu quản lý | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 117.707.612
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí nhân viên quản lý
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 18.509.488.336 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 27.526.591.673
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí vật liệu quản lý
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 117.707.612 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 255.293.115
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí khấu hao
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 322.461.263 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 333.637.657
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí dự phòng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 1.129.361.000 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 1.562.543.956",1,,121737,22412,,,,
+55,Lợi nhuận sau thuế thu nhập doanh nghiệp năm 2024 là bao nhiêu VND?,Lợi nhuận sau thuế thu nhập doanh nghiệp năm 2024 (lũy kế đến quý IV) là -10.849.716.013 VND.,Lợi nhuận sau thuế thu nhập doanh nghiệp năm 2024 là 10.849.716.013 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.",1,,10720,6507,,,,
+56,Lợi nhuận trước thuế năm hiện tại là bao nhiêu VND?,Lợi nhuận trước thuế năm 2024 (lũy kế đến quý IV) là (9.805.992.079) VND.,Lợi nhuận trước thuế năm hiện tại là 9.805.992.079 VND.,4,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (9.805.992.079)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2024
+Period: cuối
+Value: 13.133.968.702
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2023
+Period: đầu
+Value: (34.663.703.515)",1,,10671,8035,,,,
+57,Lưu chuyển tiền thuần từ hoạt động kinh doanh năm hiện tại so với năm trước thay đổi như thế nào?,"Dữ liệu:\
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh Năm nay: 36.158.929.436 (BÁO CÁO LƯU CHUYỂN TIỀN TỆ)\
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh Năm trước: (4.379.663.565) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ)\
+\
+Công thức tính thay đổi:\
+Thay đổi = Năm nay - Năm trước = 36.158.929.436 - (‑4.379.663.565) = 40.538.593.001\
+\
+Kết quả: Lưu chuyển tiền thuần từ hoạt động kinh doanh tăng 40.538.593.001 đồng so với năm trước, chuyển từ âm sang dương.","Lưu chuyển tiền thuần từ hoạt động kinh doanh năm hiện tại là (36.158.929.436) VND, còn năm trước là (4.379.663.565) VND. Giá trị này vẫn âm nhưng đã giảm mạnh hơn trong năm hiện tại, cho thấy dòng tiền từ hoạt động kinh doanh đã xấu đi.",2,"Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)",1,,14336,8301,,,,
+58,Số tiền lãi vay đã trả trong năm hiện tại là bao nhiêu?,Tiền lãi vay đã trả trong năm hiện tại là 26.618.199.989 đồng.,Số tiền lãi vay đã trả trong năm hiện tại là 26.618.199.989 VND.,5,"Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: - Tiền lãi vay đã trả | Năm nay
+Value: (26.618.199.989)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: - Tiền lãi vay đã trả | Năm trước
+Value: (32.756.430.799)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Lãi tiền gửi ngân hàng, Lãi cho vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 14.592.618.979 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 26.030.112.902
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác
+Value: Số cuối kỳ Giá trị: 10.484.971.014 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 9.087.213.733 | Số đầu năm Dự phòng: -",1,,10810,6610,,,,
+59,Đánh giá các yếu tố chính dẫn đến lưu chuyển tiền thuần từ hoạt động kinh doanh âm trong cả hai năm.,"Dựa trên số liệu hiện có:
+
+**3. Dòng tiền (Cash Flow)**
+- **Năm trước (CFO âm)**:
+  - Lãi ròng từ hoạt động kinh doanh trước thay đổi vốn lưu động: **‑14.602.003.684 đồng** (lỗ) → giảm dòng tiền.
+  - Thuế thu nhập doanh nghiệp đã nộp: **‑6.330.960.609 đồng** (dòng tiền ra).
+  - Thay đổi các khoản phải thu ngắn hạn: giảm **38.887.454.698 đồng** (tạo dòng tiền vào).
+  - Thay đổi các khoản phải trả ngắn hạn: tăng **2.975.218.983 đồng** (tạo dòng tiền vào).
+  - Thay đổi hàng tồn kho: giảm **949.903.692 đồng** (tạo dòng tiền vào).
+  - Khấu hao: **1.481.650.800 đồng** (không ảnh hưởng tiền mặt).
+  - **Lưu chuyển tiền thuần từ hoạt động kinh doanh**: **‑4.379.663.565 đồng** (âm).
+  - *Nhận xét*: Lỗ trước thay đổi vốn lưu động (‑14,6 tỷ) và thuế phải nộp (‑6,33 tỷ) chiếm phần lớn, các yếu tố vốn lưu động chỉ tạo dòng tiền vào nhưng không đủ bù đắp.
+
+- **Năm nay (CFO dương)**:
+  - Lãi ròng từ hoạt động kinh doanh trước thay đổi vốn lưu động: **+37.688.511.500 đồng** (có lợi) → tăng mạnh dòng tiền.
+  - Thuế thu nhập doanh nghiệp đã nộp: **‑608.021.994 đồng** (dòng tiền ra nhỏ).
+  - Thay đổi các khoản phải thu ngắn hạn: giảm **38.887.454.698 đồng** (tạo dòng tiền vào).
+  - Thay đổi các khoản phải trả ngắn hạn: tăng **2.975.218.983 đồng** (tạo dòng tiền vào).
+  - Thay đổi hàng tồn kho: giảm **949.903.692 đồng** (tạo dòng tiền vào).
+  - Khấu hao: **1.481.650.800 đồng** (không ảnh hưởng tiền mặt).
+  - **Lưu chuyển tiền thuần từ hoạt động kinh doanh**: **+36.158.929.436 đồng** (dương).
+  - *Nhận xét*: Lãi ròng mạnh trước thay đổi vốn lưu động, kết hợp với các biến động vốn lưu động (giảm phải thu, tăng phải trả, giảm tồn kho) và thuế thấp đã chuyển CFO sang dương.
+
+**Kết luận tổng thể**
+- Năm trước, CFO âm chủ yếu do **lỗ lớn trước thay đổi vốn lưu động** và **thuế thu nhập doanh nghiệp phải nộp**, trong khi các yếu tố vốn lưu động chỉ tạo dòng tiền vào không đủ.
+- Năm nay, dù lợi nhuận sau thuế vẫn âm, **lãi trước thay đổi vốn lưu động mạnh**, **thuế giảm** và **các biến động vốn lưu động tích cực** đã làm CFO chuyển sang dương.
+- Vì thiếu số liệu chi tiết về *tiền thu khác* và *tiền chi khác* nên không thể phân tích sâu hơn ảnh hưởng của các mục này.","Lưu chuyển tiền thuần từ hoạt động kinh doanh âm trong cả hai năm cho thấy công ty không tạo ra đủ tiền từ các hoạt động cốt lõi của mình. Các yếu tố chính góp phần vào điều này bao gồm: Lợi nhuận trước thuế mặc dù dương trong năm hiện tại (9.805.992.079 VND) nhưng vẫn không đủ bù đắp các luồng tiền ra. Đặc biệt, Tăng/giảm các khoản phải trả là một khoản giảm tiền mặt lớn ((105.991.619.839) VND năm hiện tại và (129.681.581.233) VND năm trước) và Tăng/giảm các khoản phải thu cũng là một khoản giảm tiền ((25.113.710.437) VND năm hiện tại). Chi phí lãi vay đã trả (26.618.199.989 VND năm hiện tại) cũng là một gánh nặng đáng kể. Mặc dù có khoản tăng/giảm hàng tồn kho dương, nhưng các yếu tố giảm khác đã làm cho lưu chuyển tiền thuần từ hoạt động kinh doanh bị âm.",46,"Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Chu kỳ sản xuất, kinh doanh thông thường
+Value: Chu kỳ sản xuất kinh doanh bình quân của hoạt động chuyển nhượng bất động sản của Công ty bắt đầu từ thời điểm xin giấy phép đầu tư, thực hiện giải phóng mặt bằng, xây dựng cơ bản cho đến thời điểm hoàn thiện. Do vậy, chu kỳ sản xuất kinh doanh của hoạt động chuyển nhượng bất động sản của Công ty thường trên 12 tháng.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 3: Ngành nghề kinh doanh
+Value: Hoạt động kinh doanh chính của Công ty là: Đầu tư, kinh doanh bất động sản.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Doanh thu tài chính khác
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 3.055.526.889
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Doanh thu tài chính khác | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 3.055.526.889
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Lãi tiền gửi ngân hàng, Lãi cho vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 14.592.618.979
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 4. Doanh thu hoạt động tài chính
+Item: Lãi tiền gửi ngân hàng, Lãi cho vay | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.030.112.902
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 15: Thuế và các khoản phải nộp Nhà nước | Thuế TNDN
+Value: Số cuối kỳ: - | Số đầu năm: 177.561.256
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: - Thuế thu nhập doanh nghiệp đã nộp | Năm nay
+Value: (608.021.994)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: - Thuế thu nhập doanh nghiệp đã nộp | Năm trước
+Value: (6.330.960.609)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 15: Thuế và các khoản phải nộp Nhà nước
+Value: Thuế thu nhập doanh nghiệp Công ty phải nộp thuế thu nhập doanh nghiệp cho các khoản thu nhập tính thuế với thuế suất 20%.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số đầu năm
+Period: đầu
+Value: 401.680.516.983
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Các khoản phải thu ngắn hạn | Số cuối năm
+Period: cuối
+Value: 362.793.062.285
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các nhà cung cấp khác
+Value: Số cuối kỳ: 26.265.437.526 | Số đầu năm: 46.581.188.492
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số cuối kỳ
+Period: cuối
+Value: 12.556.351.760
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa | Số đầu năm
+Period: đầu
+Value: 13.506.255.452
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 474.117.608.966
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 528.207.406.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Hàng tồn kho
+Item: Hàng hóa Bất động sản | Số cuối kỳ
+Period: cuối
+Value: 167.636.178.947
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Các chi phí phải trả ngắn hạn khác
+Value: Số cuối kỳ: - | Số đầu năm: 1.767.586.446
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Phú Yên | Số cuối kỳ
+Period: cuối
+Value: 41.929.707.706
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Phú Yên | Số đầu năm
+Period: đầu
+Value: 49.650.705.253
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Trích trước chi phí dự án Bắc Giang | Số cuối kỳ
+Period: cuối
+Value: 25.512.823.827
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: 3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động | Năm trước
+Value: (14.602.003.684)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: 3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động | Năm nay
+Value: 37.688.511.500
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Tài sản cố định hữu hình | Khấu hao trong năm
+Value: Nguyên giá: Khấu hao trong năm | Nhà cửa, vật kiến trúc: 911.949.408 | Phương tiện vận tải, truyền dẫn: 178.824.672 | Thiết bị, dụng cụ quản lý: 24.863.124 | Tài sản cố định khác: 366.013.596 | Cộng: 1.481.650.800
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí khấu hao
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 322.461.263 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 333.637.657
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Khấu hao trong kỳ
+Value: Giá trị hao mòn: (34.165.355) | Giá trị còn lại: (34.165.355)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Khấu hao trong kỳ
+Value: Nguyên giá: Khấu hao trong kỳ | Nhà: - | Cơ sở hạ tầng: 6.217.026.740 | Cộng: 6.217.026.740
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Giá trị hao mòn
+Item: Khấu hao trong năm | Cộng
+Value: 1.481.650.800",1,,200537,35122,,,,
+60,Phân tích tác động của việc tăng các khoản dự phòng và trích lập đến lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động.,"- Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động:
+  - Năm trước: **-14.602.003.684** đồng (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+  - Năm nay: **37.688.511.500** đồng (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- Chi phí dự phòng (chi phí quản lý doanh nghiệp):
+  - Năm trước: **1.562.543.956** đồng
+  - Năm nay: **1.129.361.000** đồng (THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+- Dự phòng tổn thất đầu tư & dự phòng giảm giá chứng khoán kinh doanh (chi phí tài chính):
+  - Năm trước: **14.384.270.936** đồng
+  - Năm nay: **26.559.480.945** đồng (THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+
+*Nhận xét*:
+- So sánh năm nay với năm trước, lợi nhuận trước thay đổi vốn lưu động tăng **52.290.514.184** đồng, chuyển từ lỗ sang lãi.
+- Giảm chi phí dự phòng quản lý doanh nghiệp giúp tăng lợi nhuận khoảng **0,433 tỷ** đồng.
+- Tăng mạnh dự phòng tổn thất đầu tư và giảm giá chứng khoán làm tăng chi phí khoảng **12,175 tỷ** đồng, góp phần giảm lợi nhuận.
+- Tổng ảnh hưởng ròng của các khoản dự phòng là **-11,742 tỷ** đồng (tăng chi phí).
+- Như vậy, phần cải thiện đáng kể của lợi nhuận trước thay đổi vốn lưu động (~+52,3 tỷ) chủ yếu đến từ các yếu tố hoạt động kinh doanh khác (doanh thu, giảm chi phí bán hàng, chi phí khác,…) chứ không phải do giảm chi phí dự phòng.
+- Việc tăng mạnh dự phòng tổn thất đầu tư cho thấy rủi ro về các khoản đầu tư tài chính đang gia tăng; cần theo dõi xu hướng này vì nó sẽ tiêu tốn lợi nhuận trong các kỳ tới.
+- Tổng quan, mặc dù các khoản dự phòng đã tăng chi phí, lợi nhuận vẫn cải thiện mạnh nhờ hoạt động kinh doanh cốt lõi, cho thấy khả năng sinh lời vẫn tốt, nhưng cần chú ý đến rủi ro đầu tư trong tương lai.","Các khoản dự phòng và trích lập đã tăng đáng kể từ 15.376.626.292 VND năm trước lên 27.688.841.945 VND năm hiện tại. Vì các khoản dự phòng và trích lập thường là chi phí không bằng tiền mặt và được cộng ngược lại vào lợi nhuận trước thuế để tính lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động, việc tăng các khoản này sẽ làm tăng con số 'Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động'. Điều này có vẻ tích cực trên báo cáo lưu chuyển tiền tệ, nhưng thực tế nó phản ánh việc ghi nhận các chi phí tiềm ẩn hoặc đã phát sinh (ví dụ: dự phòng giảm giá tài sản, nợ khó đòi), mà nếu không được điều chỉnh, đã làm giảm lợi nhuận kế toán ban đầu. Tác động của nó là làm cho dòng tiền hoạt động có vẻ tốt hơn so với lợi nhuận kế toán nếu chỉ nhìn vào con số này mà không phân tích sâu.",15,"Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: 3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động | Năm trước
+Value: (14.602.003.684)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Tăng, giảm số dư dự phòng nợ phải thu khó đòi cần phải trích lập tại ngày kết thúc năm tài chính được ghi nhận vào chi phí quản lý doanh nghiệp.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: 3. Lợi nhuận từ hoạt động kinh doanh trước thay đổi vốn lưu động | Năm nay
+Value: 37.688.511.500
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Dự phòng tổn thất cho các khoản đầu tư vào công cụ vốn của đơn vị khác được trích lập như sau: Đối với khoản đầu tư vào cổ phiếu niêm yết hoặc giá trị hợp lý khoản đầu tư được xác định tin cậy, việc lập dự phòng dựa trên giá trị thị trường của cổ phiếu. Đối với khoản đầu tư không xác định được giá trị hợp lý tại thời điểm báo cáo, việc lập dự phòng được thực hiện căn cứ vào khoản lỗ của bên được đầu tư với mức trích lập bằng chênh lệch giữa vốn đầu tư thực tế của các chủ sở hữu và vốn chủ sở hữu tại ngày kết thúc năm tài chính nhân với tỷ lệ vốn điều lệ của Công ty so với tổng vốn điều lệ thực góp tại đơn vị khác.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Lợi nhuận trong kỳ | Lợi nhuận sau thuế chưa phân phối
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí dự phòng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 1.129.361.000 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 1.562.543.956
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.559.480.945 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 26.559.480.945
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí dự phòng | Luỹ kế từ đầu năm đến cuối kỳ này
+Value: 1.129.361.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.",1,,112622,20175,,,,

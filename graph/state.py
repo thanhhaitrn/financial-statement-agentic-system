@@ -28,6 +28,7 @@ class GraphState(TypedDict, total=False):
     planner_plan: dict
     worker_plan: dict
     evidence_pack: dict
+    ragas_facts_by_table: dict
     expected_workers: list[str]
     dispatch_phase: str
     followup_rounds: int

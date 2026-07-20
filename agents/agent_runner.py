@@ -384,7 +384,7 @@ def _compact_analysis_fact_for_prompt(fact: dict) -> dict:
         "item_name",
         "time_hint",
         "value",
-        "interpretation_hint",
+        "message",
         "note_ref",
         "note_number",
         "note_title",

@@ -4,6 +4,7 @@
 from __future__ import annotations
 
 import json
+import os
 import re
 import time
 from typing import Any
@@ -25,13 +26,25 @@ from tools.evidence import (
     set_runtime_cache_item,
 )
 from tools.tool_runner import get_collection
-from tools.tools import get_related_info, web_search
+from tools.tools import get_related_info, needs_full_schedule, web_search
 
 
-EVIDENCE_FACTS_LIMIT = 5
-NOTE_EVIDENCE_FACTS_LIMIT = EVIDENCE_FACTS_LIMIT
+# Defaults validated on batch apec q181-210 v3 (2026-07-19): raising 5->10/12
+# lifted context_recall 0.545->0.609 AND context_precision 0.466->0.528 — the
+# gold rows previously cut at rank 6-15 (entity/per-class note rows) carry both.
+EVIDENCE_FACTS_LIMIT = int(os.getenv("EVIDENCE_FACTS_LIMIT", "10"))
+NOTE_EVIDENCE_FACTS_LIMIT = int(os.getenv("NOTE_FACTS_LIMIT", "12"))
 EASY_NOTE_OR_REPORT_SECTION_FACTS_LIMIT = 10
 NOTE_LLM_FACTS_LIMIT = NOTE_EVIDENCE_FACTS_LIMIT
+# List / superlative / per-entity questions need EVERY row of a note schedule
+# (per-project receivables, per-borrower loans, ~20 rows) in the evidence pack —
+# the default 5-fact cap structurally zeroes their context_recall. Matches the
+# retrieval-side _SCHEDULE_LIMIT in tools/tools.py.
+SCHEDULE_FACTS_LIMIT = int(os.getenv("SCHEDULE_FACTS_LIMIT", "24"))
+# Main-statement routes on schedule questions carry a cross-table note slice
+# (e.g. the 4-class × 2-value V.9 block), not a whole 24-row schedule — a
+# tighter cap keeps precision while the NOTE route holds the full schedule.
+SCHEDULE_MAIN_FACTS_LIMIT = int(os.getenv("SCHEDULE_MAIN_FACTS_LIMIT", "16"))
 NOTE_REF_FACTS_SCAN_LIMIT = 15
 EVIDENCE_VALUE_PREVIEW_LIMIT = 220
 EVIDENCE_HINT_PREVIEW_LIMIT = 180
@@ -119,7 +132,7 @@ def _compact_fact_for_prompt(fact: dict) -> dict:
         "value",
         "source",
         "status",
-        "interpretation_hint",
+        "message",
         "note_ref",
         "note_number",
         "note_title",
@@ -379,6 +392,14 @@ def _easy_note_or_report_section_only(state: dict, worker_plan: dict) -> bool:
 
 def _facts_limit_for_table(state: dict, worker_plan: dict, table: str) -> int:
     table_name = normalize_evidence_table(table)
+    # Any-table, not just NOTE: get_related_info already widens its rerank cut to
+    # _SCHEDULE_LIMIT for schedule questions on main-table routes, and a per-class
+    # note schedule (V.9) answering a BS-routed question would otherwise be sliced
+    # back to EVIDENCE_FACTS_LIMIT by result_to_facts.
+    if needs_full_schedule(str((state or {}).get("user_query", "") or "")):
+        if table_name == TABLE_NOTE:
+            return SCHEDULE_FACTS_LIMIT
+        return SCHEDULE_MAIN_FACTS_LIMIT
     if (
         table_name in {TABLE_NOTE, TABLE_REPORT_SECTION}
         and _easy_note_or_report_section_only(state, worker_plan)
@@ -418,7 +439,7 @@ def _web_result_to_payload(result: dict, query: str) -> dict:
                 "source": str((result or {}).get("source", "") or "").strip(),
                 "table": "",
                 "status": "found" if context else "not_found_after_search",
-                "interpretation_hint": context[:300],
+                "evidence_text": context,
             }
         ] if context else [],
     }
@@ -485,6 +506,12 @@ def _merge_worker_results(existing: dict, current: dict) -> dict:
 
 def _llm_facts_limit_for_table(state: dict, worker_plan: dict, table: str) -> int:
     table_name = normalize_evidence_table(table)
+    if table_name == TABLE_NOTE and needs_full_schedule(
+        str((state or {}).get("user_query", "") or "")
+    ):
+        # ragas_facts_by_table (RAGAS retrieved_contexts) flows through this cap
+        # too, so schedule questions must keep the whole per-entity schedule.
+        return SCHEDULE_FACTS_LIMIT
     if (
         table_name in {TABLE_NOTE, TABLE_REPORT_SECTION}
         and _easy_note_or_report_section_only(state, worker_plan)
@@ -822,6 +849,7 @@ def build_evidence_pack(state: dict) -> dict:
                 table=table,
                 query=search_query,
                 mode="table",
+                intent=str(state.get("user_query", "") or ""),
             )
             if cache_key in processed_keys:
                 continue
@@ -893,6 +921,7 @@ def build_evidence_pack(state: dict) -> dict:
                     collection=collection,
                     strict_table=(table in {TABLE_NOTE, TABLE_REPORT_SECTION}),
                     limit=retrieval_limit,
+                    intent=str(state.get("user_query", "") or "").strip(),
                 )
                 cache_facts = result_to_facts(
                     raw_result,
@@ -975,6 +1004,7 @@ def build_evidence_pack(state: dict) -> dict:
                 table=TABLE_NOTE,
                 query=query,
                 mode="table",
+                intent=str(state.get("user_query", "") or ""),
             )
             if cache_key in processed_keys:
                 continue
@@ -1044,6 +1074,7 @@ def build_evidence_pack(state: dict) -> dict:
                     collection=collection,
                     strict_table=True,
                     limit=NOTE_REF_FACTS_SCAN_LIMIT,
+                    intent=str(state.get("user_query", "") or "").strip(),
                 )
                 cache_facts = _filter_note_ref_facts(
                     result_to_facts(
@@ -1160,6 +1191,11 @@ def build_evidence_pack(state: dict) -> dict:
 
     updates = {
         "evidence_pack": evidence_pack,
+        "ragas_facts_by_table": {
+            result_key: payload
+            for result_key, payload in merged_worker_results.items()
+            if not is_analysis_agent(str(result_key or "").strip())
+        },
         "evidence_cache": evidence_cache_updates,
         "worker_results": compact_worker_results,
         "web_summary": json.dumps(web_summary_payload, ensure_ascii=False) if web_summary_payload else state.get("web_summary", ""),

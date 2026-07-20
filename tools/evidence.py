@@ -3,6 +3,7 @@
 
 from __future__ import annotations
 
+import os
 import re
 from threading import RLock
 from typing import Any
@@ -45,6 +46,8 @@ ANALYSIS_DEFAULT_TOOL = {
     "agent_efficiency": "get_income_statement_info",
 }
 MAIN_REPORT_TABLES = {TABLE_BS, TABLE_IS, TABLE_CF}
+# Legacy behavior (=1): one exact label match discards all other candidates.
+_EXACT_MATCH_COLLAPSE = str(os.getenv("EXACT_MATCH_COLLAPSE", "0")).strip() == "1"
 
 _SPACE_RE = re.compile(r"\s+")
 _RUNTIME_CACHE_LOCK = RLock()
@@ -70,7 +73,12 @@ def evidence_cache_key(
     table: str = "",
     query: str = "",
     mode: str = "table",
+    intent: str = "",
 ) -> str:
+    # intent participates in the key because retrieval results depend on the full
+    # user question (intent lexical fold + slot matching) while the runtime cache
+    # is process-global: a batch run asks many different questions whose scoped
+    # queries can collide on the same (table, query) pair.
     table_name = normalize_evidence_table(table)
     query_text = collapse_text(query)
     return "|".join(
@@ -79,6 +87,7 @@ def evidence_cache_key(
             collapse_text(mode) or "table",
             table_name,
             query_text,
+            collapse_text(intent),
         ]
     )
 
@@ -368,7 +377,7 @@ def not_found_fact(table: str, query: str, *, source: str = "") -> dict:
         "source": str(source or "").strip(),
         "table": table_name,
         "status": FACT_STATUS_NOT_FOUND,
-        "interpretation_hint": not_found_after_search_message(item_name, table_name),
+        "message": not_found_after_search_message(item_name, table_name),
     }
 
 
@@ -394,6 +403,13 @@ def filter_facts_for_query(
 
         if table_name in MAIN_REPORT_TABLES:
             if fact_table and fact_table != table_name:
+                # Cross-table fallback fact (A5): a query routed to a main
+                # statement sometimes finds its answer in another table — e.g. a
+                # detail that only exists in a note schedule. The fact was already
+                # vetted and ranked by the retrieval reranker, so keep it rather
+                # than hard-dropping; a same-table exact match still wins below.
+                if str(fact_payload.get("value", "") or "").strip():
+                    clean_facts.append(fact_payload)
                 continue
             if requirement_matches_fact(query_text, fact_payload, table=table_name):
                 clean_facts.append(fact_payload)
@@ -403,8 +419,17 @@ def filter_facts_for_query(
 
         clean_facts.append(fact_payload)
 
-    if exact_facts:
+    if exact_facts and _EXACT_MATCH_COLLAPSE:
         clean_facts = exact_facts
+    elif exact_facts:
+        # Exact-first ordering instead of collapse: an exact label match on the
+        # aggregate row must not discard the reranker-vetted siblings (per-class
+        # V.9 rows, opposite-period rows) that comparison/breakdown questions
+        # need. Exact facts keep rank 1; the per-table fact cap bounds the tail.
+        exact_keys = {_fact_key(fact) for fact in exact_facts}
+        clean_facts = exact_facts + [
+            fact for fact in clean_facts if _fact_key(fact) not in exact_keys
+        ]
 
     if table_name in MAIN_REPORT_TABLES and query_text and not clean_facts:
         return [not_found_fact(table_name, query_text, source=source)]
@@ -424,11 +449,12 @@ def result_to_facts(
     facts = []
 
     for doc, meta in list(zip(docs, metas))[:limit]:
+        evidence_text = doc.strip()
         heading = normalize_evidence_table(meta.get("heading", "")) or table_name
         item_name = str(meta.get("item_name", "") or "").strip() or normalize_evidence_query(query, table=heading)
         raw_value = str(meta.get("raw_value", "") or "").strip()
         normalized_value = str(meta.get("normalized_value", "") or "").strip()
-        value = raw_value or normalized_value or doc.strip()
+        value = raw_value or normalized_value or evidence_text
         source = str(meta.get("source", "") or result.get("source", "") or "").strip()
         facts.append(
             {
@@ -444,8 +470,10 @@ def result_to_facts(
                 "item_code": str(meta.get("item_code", "") or "").strip(),
                 "note_ref": str(meta.get("note_ref", "") or "").strip(),
                 "subheading": str(meta.get("subheading", "") or "").strip(),
+                "value_type": str(meta.get("value_type", "") or "").strip(),
+                "unit": str(meta.get("unit", "") or "").strip(),
                 "status": FACT_STATUS_FOUND if value else FACT_STATUS_NOT_FOUND,
-                "interpretation_hint": doc.strip()[:300],
+                "evidence_text": evidence_text,
             }
         )
 
@@ -460,7 +488,7 @@ def result_to_facts(
                     "source": str((result or {}).get("source", "") or "").strip(),
                     "table": table_name,
                     "status": FACT_STATUS_FOUND,
-                    "interpretation_hint": line[:300],
+                    "evidence_text": line,
                 }
             )
 
@@ -475,7 +503,7 @@ def result_to_facts(
                 "source": "",
                 "table": table_name,
                 "status": FACT_STATUS_NOT_FOUND,
-                "interpretation_hint": not_found_after_search_message(item_name, table_name),
+                "message": not_found_after_search_message(item_name, table_name),
             }
         )
 
@@ -520,13 +548,17 @@ def observation_text(tool_name: str, item: dict) -> str:
             if not isinstance(fact, dict):
                 continue
             item_name = str(fact.get("item_name", "") or "").strip()
+            subheading = str(fact.get("subheading", "") or "").strip()
             value = str(fact.get("value", "") or "").strip()
             status = normalize_fact_status(fact.get("status", FACT_STATUS_FOUND))
             if status == FACT_STATUS_NOT_FOUND:
-                hint = str(fact.get("interpretation_hint", "") or "").strip()
-                fact_lines.append(hint or f"Không tìm thấy {item_name}.")
+                message = str(fact.get("message", "") or "").strip()
+                fact_lines.append(message or f"Không tìm thấy {item_name}.")
             elif item_name or value:
-                fact_lines.append(f"{item_name}: {value}".strip(": "))
+                # Prefix the parent/section context so the agent can tell apart
+                # flattened labels (e.g. "Số cuối kỳ | Cộng") across sections.
+                label = f"{subheading} — {item_name}" if subheading else item_name
+                fact_lines.append(f"{label}: {value}".strip(": "))
 
     if fact_lines:
         context = "\n".join(fact_lines)

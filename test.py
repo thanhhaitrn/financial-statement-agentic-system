@@ -17,8 +17,10 @@ from datasets.registry import (
     load_registry,
     save_dataset,
 )
+from config.allowed_keywords import set_dynamic_keywords
 from ingestion.pipeline import build_knowledge_base
 from kb.sqlite_repo import (
+    derive_keyword_augmentation,
     init_db,
     sqlite_count_facts,
     sqlite_has_fact_columns,
@@ -339,6 +341,15 @@ def ensure_built(dataset):
                 }
             )
         )
+
+    # Augment the routing vocabulary with this dataset's own note-schedule
+    # titles and note-linked primary lines, so the keyworder can route line
+    # items the static list never anticipated. Best-effort: routing falls back
+    # to the static vocabulary if derivation fails.
+    try:
+        set_dynamic_keywords(derive_keyword_augmentation(conn))
+    except Exception:
+        pass
 
     return dataset, conn, collection
 

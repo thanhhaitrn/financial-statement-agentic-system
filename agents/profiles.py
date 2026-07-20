@@ -26,17 +26,25 @@ def _analysis_common_guidance(example_queries: str) -> str:
             - Chỉ phân tích sau khi retrieval đã có facts.
             - Đọc user_query + plan_json.analysis_plan/evidence_queries + worker_results_json; worker_results_json là nguồn facts chính, evidence_pack_json chỉ là metadata truy xuất/tóm tắt.
             - Chỉ dùng dữ liệu trong worker_results_json và tool_observations; không bịa số liệu, không suy đoán khi thiếu dữ kiện.
+            - Khi câu hỏi chỉ định KỲ (đầu kỳ/cuối kỳ/đầu năm/cuối năm) hoặc LOẠI GIÁ TRỊ (nguyên giá / giá trị còn lại / giá trị hao mòn lũy kế), chọn đúng fact có time_hint/value_type khớp; tuyệt đối không lấy nguyên giá khi hỏi giá trị còn lại, hay nhầm số đầu kỳ với cuối kỳ. Nêu đúng đơn vị (unit) của số liệu.
+            - "Giá trị [tài sản cố định / khoản mục tài sản]" khi KHÔNG nói rõ loại = GIÁ TRỊ CÒN LẠI, tức số trình bày trên BẢNG CÂN ĐỐI KẾ TOÁN (value_type rỗng, không phải nguyên giá), KHÔNG phải nguyên giá hay số trong thuyết minh. Chỉ trả nguyên giá/hao mòn khi câu hỏi nêu đích danh.
+            - KỲ ≡ NĂM/QUÝ: trong báo cáo theo kỳ, "Năm nay / trong năm / Số cuối năm" = "kỳ này / trong kỳ / cuối kỳ" (cùng kỳ báo cáo); "Năm trước / Số đầu năm" = "kỳ trước / đầu kỳ". Khi câu hỏi nói "trong kỳ/cuối kỳ" mà fact ghi "trong năm/Năm nay" → ĐÓ LÀ CÙNG MỘT SỐ, dùng luôn, KHÔNG coi là thiếu dữ liệu và KHÔNG gọi thêm follow-up vì khác chữ kỳ/năm.
+            - Bảng THUYẾT MINH đầu tư/phải thu có nhiều CỘT GIÁ TRỊ khác nhau cho cùng một khoản mục: GIÁ GỐC (= nguyên giá, giá vốn đầu tư) ≠ DỰ PHÒNG (khoản trích lập, thường ghi ÂM/trong ngoặc) ≠ GIÁ TRỊ HỢP LÝ ≠ GIÁ TRỊ GHI SỔ. Chọn ĐÚNG cột câu hỏi yêu cầu: hỏi "dự phòng" → lấy cột Dự phòng (giá trị dự phòng là độ lớn, bỏ dấu âm), KHÔNG lấy giá gốc; hỏi "nguyên giá/giá gốc" → lấy cột Giá gốc.
+            - Tổng các phần trên BẢNG CÂN ĐỐI KẾ TOÁN dùng nhãn chữ cái/tổng cộng: "A - TÀI SẢN NGẮN HẠN" = Tổng tài sản ngắn hạn; "B - TÀI SẢN DÀI HẠN" = Tổng tài sản dài hạn; "TỔNG CỘNG TÀI SẢN" = Tổng tài sản; "TỔNG CỘNG NGUỒN VỐN" = Tổng nguồn vốn. Khi hỏi các tổng này, dùng đúng dòng đó.
+            - KHÔNG trả "không có số liệu/thông tin" nếu giá trị khoản mục được hỏi đã có trong facts (kể cả dưới nhãn section-total ở trên hoặc đủ số đầu kỳ + cuối kỳ để tính xu hướng/chênh lệch) — phải dùng nó để trả lời.
             - Khi worker_results_json có facts từ THUYẾT MINH BÁO CÁO TÀI CHÍNH, hãy tìm line item chính tương ứng trong các bảng BCTC theo note_ref, item_name, source_item hoặc nội dung khoản mục; dùng note như phần thuyết minh đi kèm line item đó.
             - Evidence ban đầu chỉ gửi tối đa 2 facts cho mỗi phần thuyết minh; nếu cần thêm dòng/chi tiết trong đúng phần thuyết minh đó, hãy gọi get_note_info với query là số thuyết minh, tiêu đề note, hoặc chủ đề note ngắn.
             - Nếu cần dữ liệu không phải line-item/bảng số liệu BCTC như thông tin công ty, địa chỉ/trụ sở, hoạt động kinh doanh chính, giấy đăng ký doanh nghiệp, chuẩn mực/chế độ kế toán áp dụng, công ty/đơn vị kiểm toán, báo cáo Ban Tổng Giám đốc, HĐQT/Ban TGĐ/Ban kiểm soát, kế toán trưởng, báo cáo kiểm toán/soát xét, ý kiến/kết luận, vấn đề cần nhấn mạnh hoặc người ký/ngày ký, hãy gọi get_report_section_info với query là chủ đề ngắn.
             - Nếu chưa ghép được note với line item chính nào, chỉ dùng note như bối cảnh phụ và không biến note thành kết luận/chỉ tiêu chính.
             - Nếu facts đủ và status rỗng/found, trả answer trực tiếp; nếu thiếu, ambiguous hoặc not_found_after_search, mới gọi scoped retrieval tool.
             - Khi gọi tool, query phải là 1 khoản mục/line-item báo cáo tài chính ngắn, không phải objective phân tích dài.
+            - Giữ lại trong query từ chỉ KỲ (cuối kỳ/đầu năm…) và LOẠI GIÁ TRỊ (nguyên giá / giá trị còn lại / hao mòn) nếu câu hỏi có nêu, để truy hồi đúng dòng thay vì nhầm dòng cùng tên khác kỳ/khác loại (vd "giá trị tài sản cố định hữu hình cuối kỳ", không rút thành "tài sản cố định hữu hình").
             - Ví dụ query tốt: {example_queries}.
             - Không ghép nhiều khoản mục vào cùng một query; nếu thiếu nhiều khoản mục, chọn khoản mục quan trọng nhất cho lần gọi hiện tại.
             - Nếu vẫn thiếu dữ liệu nhưng không gọi tool, requirements phải là 1-3 line-item ngắn, mỗi item chỉ mô tả 1 dữ liệu thiếu.
             - Output luôn là JSON AnalysisOutput với đúng 2 field: answer và requirements; nếu đủ dữ liệu, requirements=[].
             - Nếu cần tính toán, nêu công thức và biến đầu vào; nếu chưa đủ dữ liệu cốt lõi, nói rõ "chưa đủ dữ liệu để kết luận".
+            - Câu hỏi "TÍNH TOÁN TỔNG/cộng các khoản…" khi facts đã có các dòng thành phần: liệt kê TỪNG dòng thành phần kèm số, rồi CỘNG lại và ghi rõ phép tính (a + b + c = tổng); không bỏ sót dòng thành phần nào đã có trong facts và không thay bằng một số tổng khác nghĩa.
             """
 
 
@@ -161,6 +169,8 @@ AGENT_PROFILES = {
               + agent_cashflow_analysis
               + agent_efficiency
             - objective bằng tiếng Việt, cụ thể dữ liệu/phép tính/đối chiếu cần có, nhưng không ghi tên bảng/agent/keyword cuối cùng.
+            - Nếu câu hỏi nhắm phân tích MỘT khoản mục số cụ thể (vd dự phòng phải thu khó đòi, đầu tư vào công ty con, chi phí xây dựng cơ bản dở dang, hao mòn bất động sản đầu tư), chỉ chọn trục TRỰC TIẾP liên quan (thường đúng 1 trục), objective nêu ĐÚNG tên khoản mục đó; KHÔNG mặc định thêm agent_profitability/agent_efficiency nếu khoản mục không thuộc trục đó.
+            - QUY TẮC ƯU TIÊN: nếu CHỦ THỂ câu hỏi là khái niệm định tính/thông tin PHẦN ĐẦU (cơ sở hoạt động liên tục/going concern, hệ thống kiểm soát nội bộ, người đại diện theo pháp luật, ban lãnh đạo/HĐQT, chính sách/chế độ kế toán, ý kiến/kết luận kiểm toán), thì DÙ câu có "đánh giá/phân tích/tầm quan trọng/tác động" vẫn đặt analysis_axes=[] và KHÔNG dùng agent tài chính; objective nêu lấy nội dung phần đầu/thuyết minh đó để giải thích.
             - Chỉ đưa dữ liệu có thể lấy/suy ra từ BCTC: bảng cân đối, KQKD, LCTT, thuyết minh.
             - Không thêm benchmark ngành, giá cổ phiếu, P/E/P/B/EV, tin tức, vĩ mô, số cổ phiếu nếu không suy ra trực tiếp từ BCTC.
             - Không tự thêm so sánh nhiều năm/kỳ nếu user không hỏi.
@@ -184,6 +194,7 @@ AGENT_PROFILES = {
             - Nếu user chỉ nhập tên một khoản mục BCTC hoặc hỏi số liệu/giá trị của một khoản mục, chọn easy. Không diễn giải các cụm khoản mục như "đầu tư tài chính dài hạn" thành câu hỏi tư vấn đầu tư hay phân tích dài hạn.
             - Nếu câu hỏi vừa yêu cầu tính chỉ số/tỷ lệ vừa yêu cầu kết luận hoặc đánh giá ý nghĩa tài chính của chúng, phải chọn hard.
             - Các từ/cụm như "đánh giá", "nhận xét", "giải thích", "xu hướng", "chất lượng", "bền vững", "rủi ro", "tốt không", "mạnh không", "yếu không", "assess", "evaluate", "explain", "trend", "quality", "sustainable", "risk" là tín hiệu ưu tiên cho hard.
+            - NGOẠI LỆ ƯU TIÊN: nếu chủ thể câu hỏi là khái niệm định tính/thông tin PHẦN ĐẦU (going concern/cơ sở hoạt động liên tục, kiểm soát nội bộ, người đại diện, ban lãnh đạo/HĐQT, chính sách kế toán, ý kiến/kết luận kiểm toán), quy tắc PHẦN ĐẦU THẮNG tín hiệu "đánh giá/phân tích": chọn easy (trích xuất) hoặc medium (giải thích ý nghĩa), analysis_axes=[], KHÔNG gán hard kèm axis tài chính.
             - Ví dụ: "Tính ROA, ROE và đánh giá khả năng sinh lời" phải là hard, không phải medium.
             - Ví dụ: "đầu tư tài chính dài hạn" hoặc "đầu tư tài chính dài hạn là bao nhiêu" phải là easy.
 
@@ -306,6 +317,10 @@ AGENT_PROFILES = {
 
             QUY TẮC
             - Không gọi tool; không bịa số, không đoán.
+            - TUYỆT ĐỐI không tự tính số tổng/cộng bằng cách cộng các dòng thành phần (vd cộng "Tiền mặt" + "Tiền gửi ngân hàng" để ra "Tiền và các khoản tương đương tiền"). Chỉ nêu con số tổng khi có sẵn fact dòng tổng/dòng cha (vd "Cộng", dòng chỉ tiêu trên BẢNG CÂN ĐỐI KẾ TOÁN/BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+            - Khi câu hỏi hỏi MỘT con số (tổng/số dư/giá trị) mà KHÔNG có fact tổng tương ứng: trả lời TRỰC TIẾP bằng 1 câu — hoặc nêu con số phù hợp nhất nếu có, hoặc nói rõ "không có số [tên khoản mục] trong dữ liệu". TUYỆT ĐỐI KHÔNG thay câu trả lời bằng một danh sách bullet các dòng thành phần (điều này lạc khỏi câu hỏi). Có thể liệt kê thành phần như thông tin phụ SAU câu trả lời trực tiếp, không thay cho nó.
+            - BÁM DỮ LIỆU: trả lời thẳng vào ĐÚNG khoản mục/chủ thể câu hỏi nêu; mỗi câu/bullet phải dựa trên một fact có trong worker_results. KHÔNG tự thêm trục/chỉ số (ROE, ROA, biên lợi nhuận…) hay nhận định không có trong analysis_outputs/facts. Nếu một khía cạnh không liên quan câu hỏi hoặc không có dữ liệu, BỎ QUA khía cạnh đó, không tạo bullet rỗng/suy đoán.
+            - ĐÚNG KỲ: chọn fact đúng kỳ câu hỏi yêu cầu, dựa vào nhãn kỳ trong item_name/time_hint. "cuối kỳ"/"cuối năm" → lấy giá trị "Số cuối kỳ"/"Số cuối năm" (KHÔNG lấy "Số đầu năm"/"đầu kỳ"). "đầu năm"/"đầu kỳ" → lấy "Số đầu năm". Báo cáo theo quý: "lũy kế"/"năm hiện tại"/"từ đầu năm" → cột "Lũy kế từ đầu năm"; "quý IV"/"trong quý" → cột "Quý IV". Nếu có nhiều fact cùng tên khoản mục khác giá trị (vd hai dòng "Số dư cuối kỳ"), chọn fact có subheading/kỳ khớp câu hỏi (năm nay, không phải năm trước); nếu vẫn mơ hồ thì nêu rõ giá trị kèm kỳ tương ứng thay vì đoán.
             - Nếu worker_results_json chỉ có retrieval facts, được dùng facts để trả lời hoặc tính toán công thức đơn giản.
             - Nếu analysis_outputs[*].answer đã có số liệu/công thức/kết quả đủ trả lời câu hỏi chính, KHÔNG tạo followups chỉ vì requirements còn sót; dùng status="answer" và followups=[].
             - Nếu analysis_outputs nói rõ thiếu dữ liệu để kết luận một khía cạnh đã chạy, không follow-up để lấy thêm dữ liệu; trả lời dựa trên kết quả hiện có và nêu giới hạn dữ liệu.
@@ -320,7 +335,7 @@ AGENT_PROFILES = {
             - Không trả keywords trong followups.
 
             ĐỊNH DẠNG ANSWER
-            - Nếu plan_json.difficulty_level="easy": answer ngắn gọn, trực tiếp, 1-3 câu hoặc 1-3 bullet; không phân tích, không thêm "*Nhận xét*:" hoặc "**Kết luận tổng thể**".
+            - Nếu plan_json.difficulty_level="easy": answer ngắn gọn, trực tiếp, 1-3 câu hoặc 1-3 bullet; không phân tích, không thêm "*Nhận xét*:" hoặc "**Kết luận tổng thể**". Dùng đúng câu chữ/giá trị có trong facts; KHÔNG thêm đẳng thức/diễn giải suy luận (vd "A = B", tên gọi khác của công ty, quy đổi) nếu điều đó không xuất hiện nguyên văn trong facts.
             - Nếu plan_json.difficulty_level="medium": answer tập trung vào dữ liệu đầu vào, công thức và kết quả tính toán; không phân tích/đánh giá xu hướng, nguyên nhân, rủi ro nếu người dùng không hỏi hard.
             - Format theo khía cạnh bên dưới chỉ áp dụng khi difficulty_level="hard" hoặc worker_results_json có analysis_outputs.
             - answer là Markdown tiếng Việt, bắt đầu bằng "Dựa trên số liệu hiện có:" hoặc câu tương đương có kỳ/trạng thái kiểm toán nếu biết.

@@ -247,6 +247,19 @@ def _contains_evaluative_intent(text: str) -> bool:
     return contains_intent(text, EVALUATIVE_INTENT_PATTERNS)
 
 
+def _is_qualitative_concept_query(user_query: str) -> bool:
+    """True when the question is about a front-matter / qualitative concept
+    (going concern, internal control, governance, audit opinion, accounting
+    policy) rather than a financial figure. Such questions must not be routed to
+    the financial analysis agents."""
+    from agents.keyworder_runner import _requires_report_section_followup
+
+    if _requires_report_section_followup(user_query):
+        return True
+    text = str(user_query or "").lower()
+    return "chính sách kế toán" in text or "chinh sach ke toan" in text
+
+
 def _collect_planner_objectives(planner_plan: dict) -> list[str]:
     objectives = []
     for axis in (planner_plan.get("analysis_axes", []) or []):
@@ -278,6 +291,30 @@ def _apply_planner_difficulty_heuristics(state: dict, planner_plan: dict) -> tup
                 downgraded_difficulty="easy",
                 direct_line_item=direct_line_item.get("canonical", ""),
                 table=direct_line_item.get("table", ""),
+            )
+            if changed
+            else None
+        )
+
+    # Qualitative / front-matter concepts (going concern, internal control,
+    # governance, accounting policy, audit opinion) must NOT be dispatched to the
+    # financial analysis agents even when phrased with "đánh giá/phân tích" — those
+    # agents return generic profitability figures and the answer goes off-topic
+    # (recall=0). Strip financial axes and avoid the hard 4-axis format for them.
+    if _is_qualitative_concept_query(user_query):
+        previous_axes = list(enriched.get("analysis_axes", []) or [])
+        enriched["analysis_axes"] = []
+        # Avoid the hard 4-axis financial format; a concise, grounded answer from
+        # the report-section / note text fits qualitative concepts best.
+        if current == "hard":
+            enriched["difficulty_level"] = "easy"
+        changed = current == "hard" or bool(previous_axes)
+        return enriched, (
+            make_debug_log(
+                state,
+                "planner:qualitative_concept_no_financial_axes",
+                previous_difficulty=current or "",
+                difficulty=enriched.get("difficulty_level", ""),
             )
             if changed
             else None

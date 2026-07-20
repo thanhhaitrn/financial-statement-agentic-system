@@ -14,7 +14,7 @@ from qdrant_client.http.exceptions import UnexpectedResponse
 
 load_dotenv()
 
-EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "qwen3-embedding:0.6b")
+EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "bge-m3")
 EMBEDDING_BASE_URL = os.getenv("OLLAMA_EMBEDDING_BASE_URL") or os.getenv(
     "OLLAMA_LOCAL_BASE_URL",
     "http://127.0.0.1:11434",
@@ -63,13 +63,22 @@ def _ollama_client_kwargs(base_url: str | None):
     return {"headers": {"Authorization": f"Bearer {api_key}"}}
 
 
+# The Qwen3 embedding family expects an "Instruct:/Query:" wrapper; other models
+# (e.g. bge-m3) retrieve best on plain text, so the wrapper is model-gated.
+_USE_QWEN_INSTRUCT = "qwen" in EMBEDDING_MODEL.lower()
+
+
 def _format_qwen_query(text: str) -> str:
     query = str(text or "").strip()
+    if not _USE_QWEN_INSTRUCT:
+        return query
     return f"Instruct: {EMBEDDING_QUERY_INSTRUCTION.strip()}\nQuery: {query}"
 
 
 def _format_qwen_document(text: str) -> str:
     document = str(text or "").strip()
+    if not _USE_QWEN_INSTRUCT:
+        return document
     instruction = EMBEDDING_DOCUMENT_INSTRUCTION.strip()
     if not instruction:
         return document

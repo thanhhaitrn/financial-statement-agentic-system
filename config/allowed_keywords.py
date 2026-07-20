@@ -25,9 +25,21 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "các khoản phải thu ngắn hạn",
         "phải thu ngắn hạn của khách hàng",
         "phải thu ngắn hạn khác",
+        # Receivable/prepayment lines the keyworder previously lacked — it fell
+        # back to near-sounding but WRONG lines ("phải trả người bán" for "trả
+        # trước cho người bán"; BS total receivables for "phải thu về cho vay").
+        "phải thu về cho vay ngắn hạn",
+        "phải thu về cho vay dài hạn",
+        "trả trước cho người bán ngắn hạn",
+        "trả trước cho người bán dài hạn",
+        "phải thu dài hạn của khách hàng",
+        "phải thu dài hạn khác",
         "hàng tồn kho",
         "đầu tư tài chính ngắn hạn",
         "đầu tư tài chính dài hạn",
+        "đầu tư vào công ty con",
+        "đầu tư vào công ty liên kết",
+        "đầu tư góp vốn vào đơn vị khác",
         "tài sản cố định",
         "tài sản cố định hữu hình",
         "tài sản cố định vô hình",
@@ -53,6 +65,13 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "vốn góp của chủ sở hữu",
         "lợi nhuận sau thuế chưa phân phối",
         "tổng cộng nguồn vốn",
+
+        # Provisions (contra-asset line items) — asked frequently but were missing,
+        # so the keyworder could not route them and answered "không có số liệu".
+        "dự phòng",
+        "dự phòng giảm giá chứng khoán kinh doanh",
+        "dự phòng đầu tư tài chính dài hạn",
+        "dự phòng phải thu ngắn hạn khó đòi",
     },
 
     TABLE_IS: {
@@ -62,6 +81,7 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "doanh thu thuần về bán hàng và cung cấp dịch vụ",
         "giá vốn hàng bán",
         "lợi nhuận gộp về bán hàng và cung cấp dịch vụ",
+        "lợi nhuận gộp",
         "doanh thu hoạt động tài chính",
         "chi phí tài chính",
         "chi phí lãi vay",
@@ -125,6 +145,14 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "bất động sản đầu tư",
         "chi phí trả trước",
         "đầu tư tài chính",
+        # Investment detail lives ONLY in the notes (2a/2c): per-subsidiary values
+        # and the giá gốc / dự phòng / giá trị hợp lý columns. Route these here, not
+        # to the BS which carries only the net total.
+        "đầu tư vào công ty con",
+        "đầu tư góp vốn vào đơn vị khác",
+        "chứng khoán kinh doanh",
+        "dự phòng",
+        "dự phòng giảm giá chứng khoán kinh doanh",
         "vay và nợ thuê tài chính",
         "phải trả người bán",
         "thuế và các khoản phải nộp nhà nước",
@@ -197,6 +225,41 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
     },
 }
 
+# Dataset-derived keywords (note-schedule titles, primary lines carrying a
+# note_ref) merged on top of the static vocabulary above. Populated once per
+# process by ensure_built via set_dynamic_keywords; static-only when empty so
+# routing still works without a built KB. Rationale: the static list cannot
+# anticipate every report's schedule names, and a missing keyword makes the
+# keyworder fall back to a near-sounding WRONG line ("phải trả người bán" for
+# "trả trước cho người bán").
+_DYNAMIC_KEYWORDS: Dict[str, Set[str]] = {}
+
+
+def set_dynamic_keywords(mapping: Dict[str, Iterable[str]] | None) -> None:
+    _DYNAMIC_KEYWORDS.clear()
+    for table, keywords in (mapping or {}).items():
+        table_name = str(table or "").strip()
+        if table_name not in ALLOWED_KEYWORDS:
+            continue
+        cleaned = {str(k or "").strip().lower() for k in keywords}
+        cleaned.discard("")
+        if cleaned:
+            _DYNAMIC_KEYWORDS[table_name] = cleaned
+
+
+def _merged_keywords(table: str) -> Set[str]:
+    return ALLOWED_KEYWORDS.get(table, set()) | _DYNAMIC_KEYWORDS.get(table, set())
+
+
+def iter_keyword_table_pairs() -> list[tuple[str, str]]:
+    """(keyword, table) pairs over the static + dynamic vocabulary."""
+    return [
+        (keyword, table)
+        for table in ALLOWED_KEYWORDS
+        for keyword in sorted(_merged_keywords(table))
+    ]
+
+
 def _selected_allowed_keyword_tables(selected_tables: Iterable[str] | None = None) -> list[str]:
     if selected_tables is None:
         return list(ALLOWED_KEYWORDS.keys())
@@ -214,7 +277,7 @@ def _selected_allowed_keyword_tables(selected_tables: Iterable[str] | None = Non
 
 def build_allowed_keywords_payload(selected_tables: Iterable[str] | None = None) -> str:
     allowed = {
-        table: sorted(ALLOWED_KEYWORDS.get(table, set()))
+        table: sorted(_merged_keywords(table))
         for table in _selected_allowed_keyword_tables(selected_tables)
     }
     return json.dumps(allowed, ensure_ascii=False)

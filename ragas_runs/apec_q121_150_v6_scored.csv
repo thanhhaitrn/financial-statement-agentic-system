@@ -1,0 +1,2026 @@
+id,question,answer,ground_truth,retrieved_contexts_n,retrieved_contexts,seed_contexts_n,errors,runtime,tokens,faithfulness,answer_relevancy,context_precision,context_recall
+121,Đánh giá tầm quan trọng của việc phân loại các khoản phải trả trong Bảng cân đối kế toán.,"Dựa trên số liệu hiện có:
+
+**2. Thanh khoản và an toàn tài chính**
+- Nợ ngắn hạn (cuối năm): 566.994.110.452 đơn vị tiền tệ (BẢNG CÂN ĐỐI KẾ TOÁN)\
+- Nợ dài hạn (cuối năm): 211.455.297.112 đơn vị tiền tệ (BẢNG CÂN ĐỐI KẾ TOÁN)\
+- Tổng nợ phải trả (cuối năm): 778.449.407.564 đơn vị tiền tệ (BẢNG CÂN ĐỐI KẾ TOÁN)\
+- Chi phí phải trả ngắn hạn (cuối kỳ): 81.623.567.164 đơn vị tiền tệ (THUYẾT MINH BÁO CÁO TÀI CHÍNH)\
+- Phải trả người bán ngắn hạn (cuối kỳ): 44.740.534.882 đơn vị tiền tệ (THUYẾT MINH BÁO CÁO TÀI CHÍNH)\
+- Phải trả các nhà cung cấp khác (cuối kỳ): 26.265.437.526 đơn vị tiền tệ (THUYẾT MINH BÁO CÁO TÀI CHÍNH)\
+- Các khoản phải trả ngắn hạn khác (cuối kỳ): 3.010.459.022 đơn vị tiền tệ (THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+
+*Nhận xét*:
+- Nợ ngắn hạn chiếm khoảng 73 % tổng nợ phải trả, cho thấy phần lớn các khoản nợ phải trả là các nghĩa vụ trả trong vòng một năm, ảnh hưởng trực tiếp đến khả năng thanh khoản.
+- Việc phân loại chi phí phải trả ngắn hạn và các khoản phải trả khác giúp xác định nguồn và thời gian đáo hạn của các khoản nợ, hỗ trợ đánh giá sức mạnh tài chính ngắn hạn.
+- Phân loại rõ ràng giữa nợ ngắn hạn và nợ dài hạn cho phép tính toán các chỉ số thanh khoản (VD: hệ số thanh khoản hiện hành) một cách chính xác và đưa ra quyết định tài chính phù hợp.
+
+**Kết luận tổng thể**
+Việc phân loại các khoản phải trả trong Bảng cân đối kế toán là rất quan trọng vì nó giúp phản ánh đúng cấu trúc thời gian của nợ, hỗ trợ đánh giá thanh khoản và an toàn tài chính của doanh nghiệp. Các số liệu cho thấy phần lớn nợ là ngắn hạn, do đó việc theo dõi và quản lý các khoản phải trả ngắn hạn là thiết yếu để duy trì khả năng thanh toán và giảm rủi ro tài chính.","Việc phân loại các khoản phải trả (phải trả người bán, chi phí trích trước, và các khoản phải trả khác) trong Bảng cân đối kế toán là rất quan trọng vì nó cung cấp cái nhìn chi tiết về bản chất và nguồn gốc của các nghĩa vụ tài chính của công ty. Phân loại này giúp các nhà phân tích và nhà đầu tư đánh giá rủi ro thanh khoản, cơ cấu tài chính, và các mối quan hệ kinh doanh của công ty. Ví dụ, phải trả người bán phản ánh nghĩa vụ thương mại, trong khi chi phí trích trước có thể liên quan đến các ước tính. Sự phân loại rõ ràng giúp dự báo dòng tiền ra, đánh giá hiệu quả quản lý chi phí và mối quan hệ với các bên liên quan, từ đó nâng cao độ tin cậy của thông tin tài chính.",30,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ ngắn hạn
+Item: I. Nợ ngắn hạn | Số cuối năm
+Period: cuối
+Value: 566.994.110.452
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ ngắn hạn
+Item: I. Nợ ngắn hạn | Số đầu năm
+Period: đầu
+Value: 895.630.596.406
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 156.502.422.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Số đầu kỳ Khả năng trả nợ
+Period: đầu
+Value: 380.475.557.454
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số cuối năm
+Period: cuối
+Value: 211.455.297.112
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số đầu năm
+Period: đầu
+Value: 115.369.440.931
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | b) Vay dài hạn
+Value: Khoản mục: b) Vay dài hạn | Số cuối kỳ Giá trị: 165.014.900.000 | Số cuối kỳ Khả năng trả nợ: 165.014.900.000 | Trong kỳ Tăng: 114.959.800.000 | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Vay dài hạn các cá nhân
+Value: Khoản mục: Vay dài hạn các cá nhân | Số cuối kỳ Giá trị: 184.439.800.000 | Số cuối kỳ Khả năng trả nợ: 184.439.800.000 | Trong kỳ Tăng: 114.959.800.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Cộng | Số cuối kỳ
+Period: cuối
+Value: 81.623.567.164
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Các chi phí phải trả ngắn hạn khác
+Value: Số cuối kỳ: - | Số đầu năm: 1.767.586.446
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 92.849.850.808
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Phải trả các tổ chức và cá nhân | Số cuối kỳ
+Period: cuối
+Value: 81.623.567.164
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Phải trả các tổ chức và cá nhân | Số đầu năm
+Period: đầu
+Value: 92.849.850.808
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Các chi phí phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 1.767.586.446
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Các khoản phải trả ngắn hạn khác
+Value: Số cuối kỳ: 3.010.459.022 | Số đầu năm: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số cuối kỳ
+Period: cuối
+Value: 3.010.459.022
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 17a. Phải trả ngắn hạn khác
+Item: Các khoản phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 35.240.039
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Các khoản phải thu
+Value: Các khoản nợ phải thu được trình bày theo giá trị ghi sổ trừ đi các khoản dự phòng phải thu khó đòi. Việc phân loại các khoản phải thu là phải thu khách hàng và phải thu khác được thực hiện theo nguyên tắc sau: Phải thu của khách hàng phản ánh các khoản phải thu mang tính chất thương mại phát sinh từ giao dịch có tính chất mua – bán giữa Công ty và người mua là đơn vị độc lập với Công ty. Phải thu khác phản ánh các khoản phải thu không có tính thương mại, không liên quan đến giao dịch mua – bán.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ phải trả
+Item: C - NỢ PHẢI TRẢ | Số cuối năm
+Period: cuối
+Value: 778.449.407.564
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ phải trả
+Item: C - NỢ PHẢI TRẢ | Số đầu năm
+Period: đầu
+Value: 1.011.000.037.337
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Thuế và các khoản phải nộp Nhà nước | Số cuối năm
+Period: cuối
+Value: 189.777.117
+Note ref: V.15
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Phải trả người lao động | Số cuối năm
+Period: cuối
+Value: 2.178.480.514
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các nhà cung cấp khác
+Value: Số cuối kỳ: 26.265.437.526 | Số đầu năm: 46.581.188.492",1,,108557,14333,0.47619047619047616,0.7084549845390997,0.5094641857587433,0.5
+122,Phân tích các yếu tố mà công ty xem xét khi phân phối lợi nhuận cho các cổ đông.,"- Công ty phân phối lợi nhuận sau thuế cho cổ đông sau khi đã trích lập các quỹ theo Điều lệ của công ty;
+- Đảm bảo tuân thủ các quy định của pháp luật liên quan;
+- Phải được Đại hội đồng cổ đông phê duyệt trước khi thực hiện phân phối.","Khi phân phối lợi nhuận cho các cổ đông, công ty xem xét các yếu tố sau:\n1.  **Trích lập các quỹ:** Sau khi trích lập các quỹ theo Điều lệ Công ty và các quy định pháp luật.\n2.  **Phê duyệt của Đại hội đồng cổ đông:** Việc phân phối phải được Đại hội đồng cổ đông phê duyệt.\n3.  **Các khoản mục phi tiền tệ trong lợi nhuận giữ lại:** Công ty có xem xét đến các khoản mục phi tiền tệ trong lợi nhuận giữ lại có thể ảnh hưởng đến lưu chuyển tiền tệ và chi trả cổ tức, như lợi nhuận do đánh giá lại tài sản góp vốn, lợi nhuận do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác.  \nViệc xem xét các yếu tố này giúp đảm bảo rằng quyết định phân phối lợi nhuận không chỉ dựa trên lợi nhuận kế toán mà còn tính đến khả năng thanh toán bằng tiền mặt của công ty, tránh rủi ro thanh khoản.",10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 17a. Phải trả ngắn hạn khác | Cổ tức, lợi nhuận phải trả
+Value: Số cuối kỳ: 656.640.000 | Số đầu năm: 531.525.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Len Hà Đông
+Value: Số cuối năm Giá gốc: 2.138.120.000 | Số cuối năm Giá trị hợp lý: - | Số cuối năm Dự phòng: (2.138.120.000) | Số đầu năm Giá gốc: 2.138.120.000 | Số đầu năm Giá trị hợp lý: - | Số đầu năm Dự phòng: (2.138.120.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Cổ tức, lợi nhuận được chia
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 43.844.718
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Công ty Cổ phần Tập đoàn Apec Group - phải thu về lãi cho vay
+Value: Số cuối kỳ Giá trị: 36.149.068.494 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 25.778.630.137 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Apec Land Huế
+Value: Tên công ty: Công ty Cổ phần Apec Land Huế | Địa chỉ trụ sở chính: 30 Lê Lợi, phường Phú Nhuận, thành phố Huế, tỉnh Thừa Thiên Huế | Hoạt động kinh doanh chính: Đầu tư, kinh doanh bất động sản | Tỷ lệ vốn góp: 99,99% | Tỷ lệ lợi ích: 99,99% | Tỷ lệ quyền biểu quyết: 99,99%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Lagoon Lăng Cô
+Value: Tên công ty: Công ty Cổ phần Lagoon Lăng Cô | Địa chỉ trụ sở chính: Tầng 9, tòa nhà HCC, 28 Lý Thường Kiệt, phường Vĩnh Ninh, thành phố Huế, tỉnh Thừa Thiên Huế | Hoạt động kinh doanh chính: Dịch vụ lưu trú ngắn ngày | Tỷ lệ vốn góp: 90,16% | Tỷ lệ lợi ích: 90,16% | Tỷ lệ quyền biểu quyết: 90,16%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Apec Land Huế
+Value: Khoản mục: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Giá trị: 119.857.622.354 | Số cuối kỳ Khả năng trả nợ: 119.857.622.354 | Trong kỳ Tăng: - | Trong kỳ Giảm: 11.500.000.000 | Số đầu kỳ Giá trị: 131.357.622.354 | Số đầu kỳ Khả năng trả nợ: 131.357.622.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Lagoon Lăng Cô
+Value: Khoản mục: Công ty Cổ phần Lagoon Lăng Cô | Trong kỳ Tăng: - | Trong kỳ Giảm: 89.449.835.100 | Số đầu kỳ Giá trị: 89.449.835.100 | Số đầu kỳ Khả năng trả nợ: 89.449.835.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Lagoon Lăng Cô
+Value: Số cuối kỳ Số lượng CP: - | Số cuối kỳ Tỷ lệ sở hữu: - | Số đầu năm Số lượng CP: 9.000.000 | Số đầu năm Tỷ lệ sở hữu: 100,00%",1,,19622,9348,1.0,0.6325792514079263,0.7499999999625,0.75
+123,Giải thích cách thức các chi phí lãi vay liên quan đến xây dựng cơ bản dở dang được xử lý theo chính sách kế toán của Công ty.,"Dựa trên Thuyết minh 10 về ""Chi phí xây dựng cơ bản dở dang"", công ty ghi nhận chi phí lãi vay có liên quan trực tiếp tới các tài sản đang trong quá trình xây dựng vào chi phí xây dựng cơ bản dở dang, theo chính sách kế toán của công ty. Theo Thuyết minh 15, chi phí đi vay (bao gồm lãi vay và các chi phí liên quan) được ghi nhận vào chi phí khi phát sinh; khi chi phí lãi vay liên quan tới dự án xây dựng, chúng được vốn hoá và đưa vào giá thành của tài sản đang xây dựng, chứ không ghi nhận ngay vào chi phí hoạt động.","Theo chính sách kế toán của Công ty, chi phí lãi vay liên quan trực tiếp đến việc xây dựng nhà máy và lắp đặt máy móc thiết bị phục vụ sản xuất, cho thuê và quản lý cũng như sửa chữa tài sản cố định, chưa hoàn thành, sẽ được tính vào chi phí xây dựng cơ bản dở dang (vốn hóa). Tức là, các chi phí lãi vay này không được ghi nhận là chi phí trong kỳ mà được cộng vào nguyên giá của tài sản đang được xây dựng. Điều này chỉ áp dụng cho các tài sản cần một khoảng thời gian đáng kể để hoàn thành hoặc trong trường hợp các khoản vay đặc biệt phục vụ mục đích xây dựng tài sản cố định và bất động sản đầu tư.",7,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: Chi phí xây dựng cơ bản dở dang phản ánh các chi phí liên quan trực tiếp (bao gồm cả chi phí lãi vay có liên quan phù hợp với chính sách kế toán của Công ty) đến các tài sản đang trong quá trình xây dựng, máy móc thiết bị đang lắp đặt để phục vụ cho mục đích sản xuất, cho thuê và quản lý cũng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: CÔNG TY CỔ PHẦN ĐẦU TƯ CHÂU Á – THÁI BÌNH DƯƠNG QUÝ IV/2024
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Các khoản chi phí
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Giá gốc hàng tồn kho được xác định như sau: Chi phí sản xuất kinh doanh dở dang của các dự án bất động sản: bao gồm các chi phí thuê nhà thầu thực hiện các hạng mục của dự án bất động sản và các chi phí có liên quan trực tiếp khác. Hàng hóa bất động sản (là các bất động sản được xây dựng để bán trong quá trình hoạt động bình thường của Công ty): bao gồm chi phí quyền sử dụng đất, các chi phí trực tiếp và các chi phí chung có liên quan phát sinh trong quá trình đầu tư xây dựng bất động sản. Hàng hóa khác: bao gồm chi phí mua và các chi phí liên quan trực tiếp khác phát sinh để có được hàng tồn kho ở địa điểm và trạng thái hiện tại.",1,,24735,7605,0.75,0.6945524271317994,0.8333333332916666,1.0
+124,Nêu các điều kiện để doanh thu từ kinh doanh bất động sản được ghi nhận.,"- Doanh thu bán bất động sản được ghi nhận khi **bất động sản đã hoàn thành toàn bộ và đã bàn giao cho người mua** (theo Thuyết minh báo cáo tài chính, mục 14).","Để doanh thu từ kinh doanh bất động sản được ghi nhận, tất cả các điều kiện sau phải được thỏa mãn:\n-   Bất động sản đã hoàn thành và bàn giao đầy đủ cho người mua, và Công ty chuyển giao hầu hết các rủi ro và lợi ích gắn liền với quyền sở hữu bất động sản cho người mua.\n-   Công ty không còn duy trì sự tham gia quản lý liên tục ở mức độ thường gắn liền với quyền sở hữu hoặc quyền kiểm soát hiệu quả đối với bất động sản đã bán.\n-   Số tiền doanh thu có thể được đo lường một cách đáng tin cậy.\n-   Công ty đã nhận được hoặc có khả năng sẽ nhận được lợi ích kinh tế gắn liền với giao dịch.\n-   Chi phí phát sinh hoặc sẽ phát sinh liên quan đến giao dịch có thể được đo lường một cách đáng tin cậy.",10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu bán bất động sản
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 187.743.704.036 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 14. Ghi nhận doanh thu và thu nhập Doanh thu bán bất động sản Doanh thu bán bất động sản của Công ty được ghi nhận khi đồng thời thỏa mãn tất cả các điều kiện sau: Bất động sản đã hoàn thành toàn bộ và bàn giao cho người mua, Công ty đã chuyển giao rủi ro và lợi ích gắn liền với quyền sở hữu bất động sản cho người mua; Công ty không còn nắm giữ quyền quản lý bất động sản như người sở hữu bất động sản hoặc quyền kiểm soát bất động sản;
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cho thuê tài sản hoạt động Doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Trường hợp thời gian cho thuê chiếm trên 90% thời gian sử dụng hữu ích của tài sản, doanh thu được ghi nhận một lần đối với toàn bộ số tiền cho thuê nhận trước nếu thỏa mãn đồng thời các điều kiện sau: Bên đi thuê không có quyền hủy ngang hợp đồng thuê và Công ty không có nghĩa vụ phải trả lại số tiền đã nhận trước trong mọi trường hợp và dưới mọi hình thức. Số tiền nhận trước từ việc cho thuê không nhỏ hơn 90% tổng số tiền cho thuê dự kiến thu được theo hợp đồng trong suốt thời hạn cho thuê và bên đi thuê phải thanh toán toàn bộ số tiền thuê trong vòng 12 tháng kể từ thời điểm khởi đầu thuê tài sản. Hầu như toàn bộ rủi ro và lợi ích gắn liền với quyền sở hữu tài sản thuê đã chuyển giao cho bên đi thuê. Giá vốn của hoạt động cho thuê được ước tính tương đối đầy đủ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cung cấp dịch vụ Doanh thu của giao dịch về cung cấp dịch vụ được ghi nhận khi kết quả của giao dịch đó được xác định một cách đáng tin cậy. Trường hợp giao dịch về cung cấp dịch vụ liên quan nhiều kỳ thì doanh thu được ghi nhận trong kỳ theo kết quả phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán của kỳ đó. Kết quả của giao dịch cung cấp dịch vụ được xác định khi thỏa mãn tất cả bốn (4) điều kiện sau: Doanh thu được xác định tương đối chắc chắn Có khả năng thu được lợi ích kinh tế từ giao dịch cung cấp dịch vụ đó. Xác định được phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán; và Xác định được chi phí phát sinh cho giao dịch và chi phí để hoàn thành giao dịch cung cấp dịch vụ đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 2: Các khoản giảm trừ doanh thu | Doanh thu
+Value: Năm trước: 17.812.053.373
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Hàng hóa Bất động sản
+Value: Số cuối kỳ: 167.636.178.947 | Số đầu năm: 222.245.021.866
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Tài sản cố định hữu hình | Chuyển sang bất động sản đầu tư
+Value: Nguyên giá: Chuyển sang bất động sản đầu tư | Nhà cửa, vật kiến trúc: (178.321.426.654) | Phương tiện vận tải, truyền dẫn: - | Thiết bị, dụng cụ quản lý: - | Cộng: (178.321.426.654)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Các chi phí liên quan đến bất động sản đầu tư phát sinh sau ghi nhận ban đầu được ghi nhận vào chi phí, trừ khi chi phí này có khả năng chắc chắn làm cho bất động sản đầu tư tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá.",1,,17916,8923,1.0,0.6057121006936041,0.49999999995,0.5
+125,Nêu ít nhất ba điều kiện để doanh thu từ cung cấp dịch vụ được ghi nhận.,"Dựa trên Thuyết minh báo cáo tài chính, doanh thu từ cung cấp dịch vụ được ghi nhận **khi kết quả của giao dịch đó được xác định một cách đáng tin cậy**. Các điều kiện khác (ví dụ: hoàn thành dịch vụ, khả năng thu tiền) không được nêu trong các fakta hiện có.",Ít nhất ba điều kiện để doanh thu từ cung cấp dịch vụ được ghi nhận là:\n-   Số tiền doanh thu có thể được đo lường một cách đáng tin cậy.\n-   Công ty đã nhận được hoặc có khả năng sẽ nhận được lợi ích kinh tế gắn liền với việc cung cấp dịch vụ.\n-   Giai đoạn hoàn thành của giao dịch vào cuối kỳ báo cáo có thể được đo lường một cách đáng tin cậy và;\n-   Chi phí phát sinh cho giao dịch và chi phí để hoàn thành giao dịch có thể được đo lường một cách đáng tin cậy.,7,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu cung cấp dịch vụ, cho thuê mặt bằng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 5.168.271.585 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 7.582.607.948
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cung cấp dịch vụ Doanh thu của giao dịch về cung cấp dịch vụ được ghi nhận khi kết quả của giao dịch đó được xác định một cách đáng tin cậy. Trường hợp giao dịch về cung cấp dịch vụ liên quan nhiều kỳ thì doanh...
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu cung cấp dịch vụ, cho thuê mặt bằng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 5.168.271.585",1,,46563,17650,0.25,0.6293365676905215,0.0,0.0
+126,Khi nào thì thu nhập từ cho thuê tài sản hoạt động được ghi nhận một lần cho toàn bộ số tiền thuê nhận trước?,Dữ liệu hiện có không nêu rõ khi nào thu nhập từ cho thuê tài sản hoạt động được ghi nhận một lần cho toàn bộ số tiền thuê nhận trước.,Thu nhập từ cho thuê tài sản hoạt động được ghi nhận một lần cho toàn bộ số tiền thuê nhận trước khi tất cả các điều kiện sau được thỏa mãn:\n-   Bên thuê không có quyền hủy hợp đồng thuê và Công ty không có nghĩa vụ hoàn trả số tiền nhận trước trong bất kỳ trường hợp nào và dưới bất kỳ hình thức nào.\n-   Số tiền nhận trước từ cho thuê không ít hơn 90% tổng số tiền thuê ước tính sẽ nhận được theo hợp đồng trong suốt thời gian thuê và bên thuê sẽ thanh toán toàn bộ tiền thuê trong vòng 12 tháng kể từ ngày thuê tài sản ban đầu.\n-   Hầu hết tất cả các rủi ro và lợi ích gắn liền với quyền sở hữu tài sản được chuyển giao cho bên thuê.\n-   Chi phí liên quan đến hoạt động cho thuê có thể được ước tính khá đầy đủ.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Kiểm soát | Bà Nguyễn Thu Hương
+Value: Họ và tên: Bà Nguyễn Thu Hương | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Ban Kiểm soát | Bà Đinh Thị Thu Hằng
+Value: Họ và tên: Bà Đinh Thị Thu Hằng | Chức vụ: Thành viên | Ngày bổ nhiệm/miễn nhiệm/tái bổ nhiệm: Tái bổ nhiệm ngày 10 tháng 5 năm 2024
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị hợp lý của các bất động sản đầu tư do chưa tìm được công ty định giá phù hợp để thực hiện công việc này.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cho thuê tài sản hoạt động Doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Trường hợp thời gian cho thuê chiếm trên 90% thời gian sử dụng hữu ích của tài sản, doanh thu được ghi nhận một lần đối với toàn bộ số tiền cho thuê nhận trước nếu thỏa mãn đồng thời các điều kiện sau: Bên đi thuê không có quyền hủy ngang hợp đồng thuê và Công ty không có nghĩa vụ phải trả lại số tiền đã nhận trước trong mọi trường hợp và dưới mọi hình thức. Số tiền nhận trước từ việc cho thuê không nhỏ hơn 90% tổng số tiền cho thuê dự kiến thu được theo hợp đồng trong suốt thời hạn cho thuê và bên đi thuê phải thanh toán toàn bộ số tiền thuê trong vòng 12 tháng kể từ thời điểm khởi đầu thuê tài sản. Hầu như toàn bộ rủi ro và lợi ích gắn liền với quyền sở hữu tài sản thuê đã chuyển giao cho bên đi thuê. Giá vốn của hoạt động cho thuê được ước tính tương đối đầy đủ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 14. Ghi nhận doanh thu và thu nhập Doanh thu bán bất động sản Doanh thu bán bất động sản của Công ty được ghi nhận khi đồng thời thỏa mãn tất cả các điều kiện sau: Bất động sản đã hoàn thành toàn bộ và bàn giao cho người mua, Công ty đã chuyển giao rủi ro và lợi ích gắn liền với quyền sở hữu bất động sản cho người mua; Công ty không còn nắm giữ quyền quản lý bất động sản như người sở hữu bất động sản hoặc quyền kiểm soát bất động sản;
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Tài sản cố định vô hình
+Value: Nguyên giá tài sản cố định vô hình bao gồm toàn bộ các chi phí mà Công ty phải bỏ ra để có được tài sản cố định tính đến thời điểm đưa tài sản đó vào trạng thái sẵn sàng sử dụng. Chi phí liên quan đến tài sản cố định vô hình phát sinh sau khi ghi nhận ban đầu được ghi nhận là chi phí sản xuất, kinh doanh trong kỳ trừ khi các chi phí này gắn liền với một tài sản cố định vô hình cụ thể và làm tăng lợi ích kinh tế từ các tài sản này.",1,,23295,8079,0.0,0.0,0.16666666665,1.0
+127,Phân tích các điều kiện để doanh thu từ kinh doanh bất động sản được ghi nhận là đáng tin cậy.,- Doanh thu bán bất động sản được ghi nhận khi bất động sản đã hoàn thành toàn bộ và được bàn giao cho người mua (theo thuyết minh báo cáo tài chính).,"Các điều kiện để doanh thu từ kinh doanh bất động sản được ghi nhận là đáng tin cậy bao gồm:\n-   **Bàn giao đầy đủ và chuyển giao rủi ro/lợi ích:** Bất động sản phải được hoàn thành, bàn giao và công ty đã chuyển giao hầu hết các rủi ro và lợi ích gắn liền với quyền sở hữu. Điều này đảm bảo giao dịch thực sự đã xảy ra và quyền kiểm soát không còn thuộc về công ty.\n-   **Không còn tham gia quản lý liên tục:** Công ty không duy trì sự tham gia quản lý liên tục ở mức độ thường gắn liền với quyền sở hữu hoặc kiểm soát hiệu quả. Điều này khẳng định giao dịch là hoàn tất và công ty không còn các nghĩa vụ đáng kể.\n-   **Số tiền doanh thu có thể đo lường đáng tin cậy:** Khả năng xác định chính xác số tiền thu được từ giao dịch là yếu tố cơ bản để ghi nhận doanh thu.  \n-   **Lợi ích kinh tế chắc chắn thu được:** Công ty đã hoặc sẽ nhận được lợi ích kinh tế từ giao dịch, đảm bảo giao dịch có giá trị kinh tế thực tế.  \n-   **Chi phí có thể đo lường đáng tin cậy:** Khả năng xác định chính xác các chi phí liên quan đến giao dịch giúp đảm bảo tính đúng đắn của lợi nhuận được ghi nhận.  \nViệc thỏa mãn đồng thời các điều kiện này là cần thiết để đảm bảo tính thận trọng và chính xác trong việc ghi nhận doanh thu, đặc biệt trong một lĩnh vực phức tạp như bất động sản.",10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu bán bất động sản
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 187.743.704.036 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 14. Ghi nhận doanh thu và thu nhập Doanh thu bán bất động sản Doanh thu bán bất động sản của Công ty được ghi nhận khi đồng thời thỏa mãn tất cả các điều kiện sau: Bất động sản đã hoàn thành toàn bộ và bàn giao cho người mua, Công ty đã chuyển giao rủi ro và lợi ích gắn liền với quyền sở hữu bất động sản cho người mua; Công ty không còn nắm giữ quyền quản lý bất động sản như người sở hữu bất động sản hoặc quyền kiểm soát bất động sản;
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cho thuê tài sản hoạt động Doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Trường hợp thời gian cho thuê chiếm trên 90% thời gian sử dụng hữu ích của tài sản, doanh thu được ghi nhận một lần đối với toàn bộ số tiền cho thuê nhận trước nếu thỏa mãn đồng thời các điều kiện sau: Bên đi thuê không có quyền hủy ngang hợp đồng thuê và Công ty không có nghĩa vụ phải trả lại số tiền đã nhận trước trong mọi trường hợp và dưới mọi hình thức. Số tiền nhận trước từ việc cho thuê không nhỏ hơn 90% tổng số tiền cho thuê dự kiến thu được theo hợp đồng trong suốt thời hạn cho thuê và bên đi thuê phải thanh toán toàn bộ số tiền thuê trong vòng 12 tháng kể từ thời điểm khởi đầu thuê tài sản. Hầu như toàn bộ rủi ro và lợi ích gắn liền với quyền sở hữu tài sản thuê đã chuyển giao cho bên đi thuê. Giá vốn của hoạt động cho thuê được ước tính tương đối đầy đủ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cung cấp dịch vụ Doanh thu của giao dịch về cung cấp dịch vụ được ghi nhận khi kết quả của giao dịch đó được xác định một cách đáng tin cậy. Trường hợp giao dịch về cung cấp dịch vụ liên quan nhiều kỳ thì doanh thu được ghi nhận trong kỳ theo kết quả phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán của kỳ đó. Kết quả của giao dịch cung cấp dịch vụ được xác định khi thỏa mãn tất cả bốn (4) điều kiện sau: Doanh thu được xác định tương đối chắc chắn Có khả năng thu được lợi ích kinh tế từ giao dịch cung cấp dịch vụ đó. Xác định được phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán; và Xác định được chi phí phát sinh cho giao dịch và chi phí để hoàn thành giao dịch cung cấp dịch vụ đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 2: Các khoản giảm trừ doanh thu | Doanh thu
+Value: Năm trước: 17.812.053.373
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 173.529.958.522
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Hàng hóa Bất động sản
+Value: Số cuối kỳ: 167.636.178.947 | Số đầu năm: 222.245.021.866
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán bất động sản | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 187.743.704.036
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Tài sản cố định hữu hình | Chuyển sang bất động sản đầu tư
+Value: Nguyên giá: Chuyển sang bất động sản đầu tư | Nhà cửa, vật kiến trúc: (178.321.426.654) | Phương tiện vận tải, truyền dẫn: - | Thiết bị, dụng cụ quản lý: - | Cộng: (178.321.426.654)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Các chi phí liên quan đến bất động sản đầu tư phát sinh sau ghi nhận ban đầu được ghi nhận vào chi phí, trừ khi chi phí này có khả năng chắc chắn làm cho bất động sản đầu tư tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá.",1,,10982,9034,1.0,0.5967250333217058,0.49999999995,1.0
+128,Giải thích sự khác biệt giữa cách ghi nhận lãi tiền gửi và cổ tức được chia trong chính sách kế toán của công ty.,"Lãi tiền gửi ngân hàng được ghi nhận dựa trên thời gian và lãi suất thực tế của từng kỳ, tức là công ty công nhận doanh thu tài chính khi lãi phát sinh. Cổ tức và lợi nhuận được chia chỉ được ghi nhận khi công ty có quyền nhận cổ tức hoặc lợi nhuận từ việc góp vốn (khi đã có quyền sở hữu), không phụ thuộc vào thời gian nhận thực tế.","Sự khác biệt giữa cách ghi nhận lãi tiền gửi và cổ tức được chia trong chính sách kế toán của công ty là:\n-   **Lãi tiền gửi:** Được ghi nhận dựa trên kỳ hạn và lãi suất thực tế áp dụng trong từng kỳ cụ thể. Điều này ngụ ý rằng lãi được ghi nhận một cách liên tục theo thời gian, phù hợp với nguyên tắc dồn tích.\n-   **Cổ tức và lợi nhuận được chia:** Được ghi nhận khi Công ty có quyền nhận cổ tức hoặc lợi nhuận từ vốn góp. Điều này có nghĩa là việc ghi nhận xảy ra tại một thời điểm cụ thể khi quyền được xác lập, thường là khi có thông báo chính thức hoặc quyết định chia cổ tức. Đặc biệt, cổ tức trả bằng cổ phiếu không được ghi nhận là khoản tăng giá trị, mà chỉ theo dõi số lượng tăng lên.",9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Cổ tức, lợi nhuận được chia
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 43.844.718
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Lãi tiền gửi ngân hàng, Lãi cho vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 14.592.618.979 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 26.030.112.902
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: Thời điểm ghi nhận các khoản chứng khoán kinh doanh là thời điểm Công ty có quyền sở hữu, cụ thể như sau: Đối với chứng khoán niêm yết: được ghi nhận tại thời điểm khớp lệnh (T+0). Đối với chứng khoán chưa niêm yết: được ghi nhận tại thời điểm chính thức có quyền sở hữu theo quy định của pháp luật.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Tiền gửi tại công ty chứng khoán
+Value: Số cuối năm: 109.902.610 | Số đầu năm: 110.425.559
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: 2. Tiền và các khoản tương đương tiền Tiền bao gồm tiền mặt và tiền gửi ngân hàng không kỳ hạn. Các khoản tương đương tiền là các khoản đầu tư ngắn hạn có thời hạn thu hồi không quá 3 tháng kể từ ngày đầu tư, có khả năng chuyển đổi dễ dàng thành một lượng tiền xác định và không có rủi ro trong việc chuyển đổi thành tiền tại thời điểm báo cáo.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Cổ tức và lợi nhuận được chia Cổ tức và lợi nhuận được chia được ghi nhận khi Công ty được quyền nhận cổ tức hoặc lợi nhuận từ việc góp vốn. Cổ tức được nhận bằng cổ phiếu chỉ được theo dõi số lượng cổ phiếu tăng thêm, không ghi nhận giá trị cổ phiếu nhận được.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Tiền lãi Tiền lãi được ghi nhận trên cơ sở thời gian và lãi suất thực tế từng kỳ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Tiền lãi, cổ tức và lợi nhuận của các kỳ trước khi chứng khoán kinh doanh được mua được hạch toán giảm giá trị của chính chứng khoán kinh doanh đó. Tiền lãi, cổ tức và lợi nhuận của các kỳ sau khi chứng khoán kinh doanh được mua được ghi nhận doanh thu. Cổ tức được nhận bằng cổ phiếu chỉ được theo dõi số lượng cổ phiếu tăng thêm, không ghi nhận giá trị cổ phiếu nhận được.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.",1,,34987,7835,0.8,0.6055066994647685,0.1249999999875,0.75
+129,Đánh giá rủi ro tài chính nếu chi phí đi vay liên quan đến một tài sản dở dang không đáp ứng điều kiện vốn hóa.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- **Chi phí lãi vay luỹ kế năm nay**: 26.984.670.021 VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Tiền lãi vay đã trả (tiền mặt)**: (26.618.199.989) VNĐ (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- **Chi phí lãi vay phải trả ngắn hạn (cuối kỳ)**: 11.570.981.974 VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Nhận xét**:
+  - Khi chi phí vay không đáp ứng tiêu chuẩn vốn hoá, toàn bộ 26,98 tỷ VNĐ sẽ được ghi nhận vào chi phí tài chính, làm giảm lợi nhuận thuần và lợi nhuận trước thuế.
+  - Do thiếu dữ liệu về lợi nhuận trước thuế, không thể tính toán mức giảm cụ thể của biên lợi nhuận ròng hay ROA.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- **Chi phí lãi vay (luỹ kế năm nay)**: 26.984.670.021 VNĐ; **năm trước**: 38.076.798.251 VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Chi phí lãi vay phải trả cuối kỳ**: 11.570.981.974 VNĐ (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Tiền lãi vay đã trả (tiền mặt)**: (26.618.199.989) VNĐ (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- **Nợ vay dài hạn**: tăng từ 69.480.000.000 VNĐ (đầu năm) lên 165.014.900.000 VNĐ (cuối năm) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Tỷ lệ chi phí lãi vay trả bằng tiền mặt trên nợ dài hạn**: ≈ 16.1 % (tính từ số liệu trên).
+- **Nhận xét**:
+  - Chi phí tài chính tăng mạnh và tiền lãi đã trả chiếm khoảng 16 % tiền mặt của nợ dài hạn, tạo áp lực lớn lên thanh khoản.
+  - Nợ dài hạn tăng hơn 2,3 lần, cho thấy đòn bẩy tài chính gia tăng đáng kể.
+  - Thiếu dữ liệu về tài sản ngắn hạn, tổng tài sản và vốn chủ sở hữu nên không thể tính được các hệ số thanh khoản (Current Ratio, Quick Ratio) và đòn bẩy (Debt/Equity, Debt/Asset), những chỉ tiêu quan trọng để đánh giá rủi ro thanh khoản một cách định lượng.
+
+**3. Dòng tiền** (agent_cashflow_analysis)
+- **Chi phí lãi vay (kỳ hiện tại)**: 26.984.670.021 VNĐ (tổng lũy kế năm nay) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- **Chi phí lãi vay phải trả (cuối kỳ)**: 11.570.981.974 VNĐ; **đầu kỳ**: 13.826.762.941 VNĐ (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Tiền lãi vay đã trả (tiền mặt)**: (26.618.199.989) VNĐ (dòng tiền ra) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- **Nợ vay dài hạn**: tăng từ 69.480.000.000 VNĐ (đầu năm) lên 165.014.900.000 VNĐ (cuối năm) (BẢNG CÂN ĐỐI KẾ TOÁN).
+- **Chính sách vốn hoá chi phí vay**: chỉ được vốn hoá khi chi phí vay liên quan trực tiếp tới tài sản dở dang có thời gian xây dựng >12 tháng và đáp ứng tiêu chí tăng lợi ích kinh tế; nếu không, chi phí phải ghi nhận ngay vào chi phí tài chính (THUYẾT MINH BÁO CÁO TÀI CHÍNH).
+- **Nhận xét**:
+  - Việc không vốn hoá chi phí vay làm tăng chi phí tài chính trong kết quả hoạt động, do đó dòng tiền từ hoạt động kinh doanh (CFO) có khả năng giảm mạnh hoặc âm.
+  - Tiền lãi vay đã trả 26,62 tỷ VNĐ giảm lượng tiền mặt sẵn có, gây áp lực tiêu cực lên dòng tiền tài chính (CFF).
+  - Tăng nợ dài hạn lên 95,5 tỷ VNĐ (tăng ~95 %) làm tăng rủi ro thanh khoản và khả năng phục vụ trả nợ trong các kỳ tới.
+
+**Kết luận tổng thể**
+Việc chi phí vay không được vốn hoá vì tài sản dở dang không đáp ứng tiêu chuẩn sẽ làm tăng đáng kể chi phí tài chính, giảm lợi nhuận và tạo áp lực mạnh lên dòng tiền hoạt động và tài chính. Đồng thời, nợ dài hạn tăng mạnh và tỷ lệ chi phí lãi vay trên nợ dài hạn (~16 %) làm tăng rủi ro thanh khoản. Do thiếu các chỉ số tài sản ngắn hạn, tổng tài sản và vốn chủ sở hữu, không thể đưa ra đánh giá định lượng chi tiết về khả năng thanh toán ngắn hạn, nhưng các yếu tố trên cho thấy rủi ro tài chính của doanh nghiệp là **cao** và cần có biện pháp kiểm soát nợ và cải thiện lợi nhuận.","Nếu chi phí đi vay liên quan đến một tài sản dở dang không đáp ứng điều kiện vốn hóa (ví dụ: thời gian xây dựng dưới 12 tháng và không phải khoản vay đặc biệt), công ty sẽ phải ghi nhận các chi phí này vào chi phí trong kỳ khi chúng phát sinh, thay vì cộng vào nguyên giá của tài sản. Điều này sẽ trực tiếp làm giảm lợi nhuận của công ty trong kỳ đó. Rủi ro tài chính là lợi nhuận có thể bị ảnh hưởng tiêu cực, đặc biệt nếu công ty có nhiều dự án đang xây dựng và chi phí đi vay cao. Điều này cũng có thể làm tăng biến động lợi nhuận giữa các kỳ và làm giảm khả năng tạo vốn từ hoạt động kinh doanh để tài trợ cho các chi phí này.",24,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số cuối kỳ
+Period: cuối
+Value: 11.570.981.974
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Chi phí lãi vay phải trả | Số đầu năm
+Period: đầu
+Value: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Chi phí lãi vay | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 26.984.670.021
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: Chi phí xây dựng cơ bản dở dang phản ánh các chi phí liên quan trực tiếp (bao gồm cả chi phí lãi vay có liên quan phù hợp với chính sách kế toán của Công ty) đến các tài sản đang trong quá trình xây dựng, máy móc thiết bị đang lắp đặt để phục vụ cho mục đích sản xuất, cho thuê và quản lý cũng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Chi phí sản xuất, kinh doanh dở dang
+Value: Số cuối kỳ: 293.925.078.259 | Số đầu năm: 292.456.128.703
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 12. Chi phí xây dựng cơ bản dở dang
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Giá gốc hàng tồn kho được xác định như sau: Chi phí sản xuất kinh doanh dở dang của các dự án bất động sản: bao gồm các chi phí thuê nhà thầu thực hiện các hạng mục của dự án bất động sản và các chi phí có liên quan trực tiếp khác. Hàng hóa bất động sản (là các bất động sản được xây dựng để bán trong quá trình hoạt động bình thường của Công ty): bao gồm chi phí quyền sử dụng đất, các chi phí trực tiếp và các chi phí chung có liên quan phát sinh trong quá trình đầu tư xây dựng bất động sản. Hàng hóa khác: bao gồm chi phí mua và các chi phí liên quan trực tiếp khác phát sinh để có được hàng tồn kho ở địa điểm và trạng thái hiện tại.
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: - Tiền lãi vay đã trả | Năm nay
+Value: (26.618.199.989)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: - Tiền lãi vay đã trả | Năm trước
+Value: (32.756.430.799)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 4: Doanh thu hoạt động tài chính | Lãi tiền gửi ngân hàng, Lãi cho vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 14.592.618.979 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 26.030.112.902
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Dự thu các khoản lãi tiền gửi có kỳ hạn, lãi cho vay khác
+Value: Số cuối kỳ Giá trị: 10.484.971.014 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 9.087.213.733 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cho thuê tài sản hoạt động Doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Trường hợp thời gian cho thuê chiếm trên 90% thời gian sử dụng hữu ích của tài sản, doanh thu được ghi nhận một lần đối với toàn bộ số tiền cho thuê nhận trước nếu thỏa mãn đồng thời các điều kiện sau: Bên đi thuê không có quyền hủy ngang hợp đồng thuê và Công ty không có nghĩa vụ phải trả lại số tiền đã nhận trước trong mọi trường hợp và dưới mọi hình thức. Số tiền nhận trước từ việc cho thuê không nhỏ hơn 90% tổng số tiền cho thuê dự kiến thu được theo hợp đồng trong suốt thời hạn cho thuê và bên đi thuê phải thanh toán toàn bộ số tiền thuê trong vòng 12 tháng kể từ thời điểm khởi đầu thuê tài sản. Hầu như toàn bộ rủi ro và lợi ích gắn liền với quyền sở hữu tài sản thuê đã chuyển giao cho bên đi thuê. Giá vốn của hoạt động cho thuê được ước tính tương đối đầy đủ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Các chi phí liên quan đến bất động sản đầu tư phát sinh sau ghi nhận ban đầu được ghi nhận vào chi phí, trừ khi chi phí này có khả năng chắc chắn làm cho bất động sản đầu tư tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính dài hạn | Số đầu năm
+Period: đầu
+Value: 69.480.000.000
+Note ref: V.18b
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Vay và nợ thuê tài chính dài hạn | Số cuối năm
+Period: cuối
+Value: 165.014.900.000
+Note ref: V.18b
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Các chi phí phải trả ngắn hạn khác
+Value: Số cuối kỳ: - | Số đầu năm: 1.767.586.446
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 16. Chi phí phải trả ngắn hạn
+Item: Các chi phí phải trả ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 1.767.586.446
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Chi phí trả trước dài hạn | Các chi phí trả trước dài hạn khác
+Value: Số đầu năm: 77.774.900
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 7. Tài sản cố định hữu hình Tài sản cố định hữu hình được thể hiện theo nguyên giá trừ hao mòn lũy kế. Nguyên giá tài sản cố định hữu hình bao gồm toàn bộ các chi phí mà Công ty phải bỏ ra để có được tài sản cố định tính đến thời điểm đưa tài sản đó vào trạng thái sẵn sàng sử dụng. Các chi phí phát sinh sau ghi nhận ban đầu chỉ được ghi tăng nguyên giá tài sản cố định nếu các chi phí này chắc chắn làm tăng lợi ích kinh tế trong tương lai do sử dụng tài sản đó. Các chi phí phát sinh không thỏa mãn điều kiện trên được ghi nhận là chi phí sản xuất, kinh doanh trong năm.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Tài sản cố định vô hình
+Value: Tài sản cố định vô hình của Công ty là chương trình phần mềm máy tính. Chi phí liên quan đến các chương trình phần mềm máy tính không phải là một bộ phận gắn kết với phần cứng có liên quan được vốn hóa. Nguyên giá của phần mềm máy tính là toàn bộ các chi phí mà Công ty đã chi ra tính đến thời điểm đưa phần mềm vào sử dụng. Phần mềm máy tính được khấu hao theo phương pháp đường thẳng trong 3 - 5 năm.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí tài chính khác
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 461.720.100 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 7.623.521.969",1,,161374,52703,0.3888888888888889,0.5977396486628316,0.3322228496075095,0.25
+130,"Trong trường hợp các khoản vay chung được sử dụng một phần cho việc mua, xây dựng hoặc sản xuất tài sản dở dang, chi phí đủ điều kiện vốn hóa sẽ được xác định như thế nào?","Dựa trên thuyết minh báo cáo tài chính, chi phí đủ điều kiện vốn hoá đối với khoản vay chung được sử dụng một phần cho việc mua, xây dựng hoặc sản xuất tài sản dở dang là chi phí vay (lãi vay và các chi phí phát sinh khác) có liên quan trực tiếp đến việc thực hiện các tài sản đang trong quá trình xây dựng, và được ghi nhận vào mục “Chi phí xây dựng cơ bản dở dang” theo chính sách kế toán của công ty.","Trong trường hợp các khoản vay chung được sử dụng một phần cho việc mua, xây dựng hoặc sản xuất một tài sản dở dang, chi phí đủ điều kiện vốn hóa sẽ được xác định bằng cách áp dụng tỷ lệ vốn hóa vào chi phí lũy kế bình quân cho việc xây dựng hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính bằng lãi suất bình quân gia quyền của các khoản vay chưa thanh toán trong kỳ, ngoại trừ các khoản vay cụ thể phục vụ mục đích có được một tài sản cụ thể.",10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: Chi phí xây dựng cơ bản dở dang phản ánh các chi phí liên quan trực tiếp (bao gồm cả chi phí lãi vay có liên quan phù hợp với chính sách kế toán của Công ty) đến các tài sản đang trong quá trình xây dựng, máy móc thiết bị đang lắp đặt để phục vụ cho mục đích sản xuất, cho thuê và quản lý cũng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Chi phí sản xuất, kinh doanh dở dang
+Value: Số cuối kỳ: 293.925.078.259 | Số đầu năm: 292.456.128.703
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí thu xếp vốn
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 4.547.267.785 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 3.494.034.038
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí tài chính khác
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 461.720.100 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 7.623.521.969
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Chi phí phải trả ngắn hạn | Chi phí lãi vay phải trả
+Value: Số cuối kỳ: 11.570.981.974 | Số đầu năm: 13.826.762.941
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Chi phí bán hàng | Chi phí dịch vụ mua ngoài
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 24.634.908.426 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 23.745.196.692
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí đồ dùng văn phòng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 32.796.725 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 70.084.168
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí dịch vụ mua ngoài
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 2.236.435.857 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 2.663.727.099",1,,22457,9269,0.6666666666666666,0.7410836102801848,0.9999999999,1.0
+131,"Nếu bên thuê có quyền hủy hợp đồng thuê hoặc công ty có nghĩa vụ hoàn trả tiền thuê nhận trước, điều này có tác động gì đến việc ghi nhận doanh thu cho thuê?","Theo thuyết minh báo cáo tài chính, doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Dữ liệu hiện có không cung cấp chi tiết về ảnh hưởng của quyền hủy hợp đồng của bên thuê hoặc nghĩa vụ hoàn trả tiền thuê nhận trước đối với việc ghi nhận doanh thu.","Nếu bên thuê có quyền hủy hợp đồng thuê hoặc công ty có nghĩa vụ hoàn trả số tiền thuê nhận trước, điều này sẽ ngăn cản việc ghi nhận toàn bộ số tiền thuê nhận trước một lần. Theo chính sách kế toán của công ty, để được ghi nhận một lần, phải thỏa mãn điều kiện \Bên thuê không có quyền hủy hợp đồng thuê và Công ty không có nghĩa vụ hoàn trả số tiền nhận trước trong bất kỳ trường hợp nào và dưới bất kỳ hình thức nào.\ Nếu điều kiện này không được đáp ứng, doanh thu từ cho thuê tài sản hoạt động sẽ phải được ghi nhận theo phương pháp đường thẳng trong suốt thời gian thuê, thay vì ghi nhận một lần. Điều này sẽ ảnh hưởng đến thời điểm và cách thức doanh thu được phản ánh trong báo cáo kết quả hoạt động kinh doanh, làm phẳng doanh thu qua các kỳ và có thể làm giảm doanh thu được ghi nhận trong kỳ đầu tiên.",8,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cho thuê tài sản hoạt động Doanh thu cho thuê tài sản hoạt động được ghi nhận theo phương pháp đường thẳng trong suốt thời gian cho thuê. Trường hợp thời gian cho thuê chiếm trên 90% thời gian sử dụng hữu ích của tài sản, doanh thu được ghi nhận một lần đối với toàn bộ số tiền cho thuê nhận trước nếu thỏa mãn đồng thời các điều kiện sau: Bên đi thuê không có quyền hủy ngang hợp đồng thuê và Công ty không có nghĩa vụ phải trả lại số tiền đã nhận trước trong mọi trường hợp và dưới mọi hình thức. Số tiền nhận trước từ việc cho thuê không nhỏ hơn 90% tổng số tiền cho thuê dự kiến thu được theo hợp đồng trong suốt thời hạn cho thuê và bên đi thuê phải thanh toán toàn bộ số tiền thuê trong vòng 12 tháng kể từ thời điểm khởi đầu thuê tài sản. Hầu như toàn bộ rủi ro và lợi ích gắn liền với quyền sở hữu tài sản thuê đã chuyển giao cho bên đi thuê. Giá vốn của hoạt động cho thuê được ước tính tương đối đầy đủ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Doanh thu bán hàng và cung cấp dịch vụ | Doanh thu cho thuê lại đất
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 8.468.436.030
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cung cấp dịch vụ Doanh thu của giao dịch về cung cấp dịch vụ được ghi nhận khi kết quả của giao dịch đó được xác định một cách đáng tin cậy. Trường hợp giao dịch về cung cấp dịch vụ liên quan nhiều kỳ thì doanh thu được ghi nhận trong kỳ theo kết quả phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán của kỳ đó. Kết quả của giao dịch cung cấp dịch vụ được xác định khi thỏa mãn tất cả bốn (4) điều kiện sau: Doanh thu được xác định tương đối chắc chắn Có khả năng thu được lợi ích kinh tế từ giao dịch cung cấp dịch vụ đó. Xác định được phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán; và Xác định được chi phí phát sinh cho giao dịch và chi phí để hoàn thành giao dịch cung cấp dịch vụ đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 2: Các khoản giảm trừ doanh thu | Doanh thu
+Value: Năm trước: 17.812.053.373
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Các khoản chi phí
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.",1,,37404,7980,0.3333333333333333,0.0,0.9999999999,1.0
+132,Khi nào thì chi phí được ghi nhận theo chính sách kế toán của công ty?,"Chi phí được ghi nhận đồng thời với doanh thu tạo ra, theo nguyên tắc phù hợp; nếu nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí sẽ được ghi nhận dựa trên bản chất của giao dịch.",Chi phí được ghi nhận tại thời điểm giao dịch hoặc khi phát sinh giao dịch được xác định một cách đáng tin cậy bất kể việc thanh toán chi phí đã được thực hiện hay chưa.,10,"Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 1. Chế độ kế toán áp dụng
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: ## III. CHUẨN MỰC VÀ CHẾ ĐỘ KẾ TOÁN ÁP DỤNG
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: 2. Tuyên bố về việc tuân thủ chuẩn mực kế toán và chế độ kế toán Ban Tổng Giám đốc đảm bảo đã tuân thủ yêu cầu của các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam được ban hành theo Thông tư số 200/2014/TT-BTC ngày 22 tháng 12 năm 2014, Thông tư số 53/2016/TT-BTC ngày 21 tháng 03 năm 2016 cũng như các thông tư hướng dẫn thực hiện chuẩn mực kế toán của Bộ Tài chính trong việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Nêu rõ các chuẩn mực kế toán áp dụng cho Công ty có được tuân thủ hay không và tất cả các sai lệch trong yêu cầu được trình bày và giải thích trong Báo cáo tài chính giữa niên độ;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo quy định tại Chuẩn mực Kế toán Việt Nam số 05 ""Bất động sản đầu tư"", giá trị hợp lý của bất động sản đầu tư tại ngày kết thúc năm tài chính cần phải được trình bày. Tuy nhiên, Công ty hiện chưa xác định được giá trị hợp lý của các bất động sản đầu tư do chưa tìm được công ty định giá phù hợp để thực hiện công việc này.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Subheading: Chuẩn mực và chế độ kế toán
+Item: Thông tin báo cáo tài chính | Chuẩn mực và chế độ kế toán
+Value: Theo ý kiến của Ban Tổng Giám Đốc, Báo cáo tài chính riêng đã phản ánh trung thực và hợp lý tính hình tài chính của Công ty tại thời điểm ngày 31 tháng 12 năm 2024, cũng như kết quả hoạt động kinh doanh và tình hình tài chính kết thúc cùng ngày, phù hợp với các Chuẩn mực Kế toán Việt Nam, Chế độ Kế toán doanh nghiệp Việt Nam và các quy định pháp lý có liên quan đến việc lập và trình bày Báo cáo tài chính.
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Chọn lựa các chính sách kế toán thích hợp và áp dụng các chính sách này một cách nhất quán;
+---
+Table: PHẦN ĐẦU BÁO CÁO TÀI CHÍNH
+Item: Trách nhiệm của Ban Tổng Giám đốc
+Value: Ban Tổng Giám đốc đảm bảo các số kế toán thích hợp được lưu giữ đầy đủ để phản ánh tính hình tài chính của Công ty với mức độ chính xác hợp lý tại bất kỳ thời điểm nào và các số sách kế toán tuân thủ chế độ kế toán áp dụng. Ban Tổng Giám đốc cũng chịu trách nhiệm quản lý các tài sản của Công ty và do đó thực hiện các biện pháp thích hợp để ngăn chặn và phát hiện các hành vi gian lận và các vi phạm khác.",1,,25108,8860,0.75,0.7173665807366607,0.0,0.0
+133,Số dư tiền mặt cuối kỳ là bao nhiêu VND?,Số dư tiền mặt cuối kỳ là 24.085.667 VND.,Số dư tiền mặt cuối kỳ là 24.085.667 VND.,5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi ngân hàng không kỳ hạn | Số cuối năm
+Period: cuối
+Value: 17.830.416.837
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi tại công ty chứng khoán | Số cuối năm
+Period: cuối
+Value: 109.902.610
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Tiền mặt
+Value: Số cuối năm: 24.085.667 | Số đầu năm: 118.292.930",1,,7029,6569,1.0,0.7702349789851893,0.699999999965,1.0
+134,Thế nào là một 'bên liên quan' theo chính sách kế toán của công ty?,"Theo chính sách kế toán, các bên được coi là **bên liên quan** nếu một bên có khả năng kiểm soát hoặc có ảnh hưởng đáng kể đối với bên kia trong việc quyết định các chính sách tài chính và hoạt động, hoặc nếu các bên có mối quan hệ ảnh hưởng tương tự dù không có quyền kiểm soát pháp lý.",Một bên được coi là bên liên quan của Công ty trong trường hợp bên đó có thể kiểm soát Công ty hoặc gây ra ảnh hưởng trọng yếu đến các quyết định tài chính cũng như hoạt động của Công ty. Một bên cũng được coi là bên liên quan của Công ty trong trường hợp bên đó chịu cùng một sự kiểm soát hoặc chịu cùng một ảnh hưởng trọng yếu.,10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: Chứng khoán kinh doanh được ghi sổ kế toán theo giá gốc. Giá gốc của chứng khoán kinh doanh được xác định theo giá trị hợp lý của các khoản thanh toán tại thời điểm giao dịch phát sinh cộng các chi phí liên quan đến giao dịch mua chứng khoán kinh doanh.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 18: Bên liên quan
+Value: Các bên được coi là liên quan nếu một bên có khả năng kiểm soát hoặc có ảnh hưởng đáng kể đối với bên kia trong việc ra quyết định các chính sách tài chính và hoạt động. Các bên cũng được xem là bên liên quan nếu cùng chịu sự kiểm soát chung hay chịu ảnh hưởng đáng kể chung.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 18: Bên liên quan
+Value: Trong việc xem xét mối quan hệ của các bên liên quan, bản chất của mối quan hệ được chú trọng nhiều hơn hình thức pháp lý.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: Thời điểm ghi nhận các khoản chứng khoán kinh doanh là thời điểm Công ty có quyền sở hữu, cụ thể như sau: Đối với chứng khoán niêm yết: được ghi nhận tại thời điểm khớp lệnh (T+0). Đối với chứng khoán chưa niêm yết: được ghi nhận tại thời điểm chính thức có quyền sở hữu theo quy định của pháp luật.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 13: Phải trả người bán ngắn hạn | Phải trả các bên liên quan
+Value: Số cuối kỳ: 44.740.534.882 | Số đầu năm: 42.763.541.686
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty liên kết
+Value: Số cuối kỳ Giá gốc: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: 2. Tiền và các khoản tương đương tiền Tiền bao gồm tiền mặt và tiền gửi ngân hàng không kỳ hạn. Các khoản tương đương tiền là các khoản đầu tư ngắn hạn có thời hạn thu hồi không quá 3 tháng kể từ ngày đầu tư, có khả năng chuyển đổi dễ dàng thành một lượng tiền xác định và không có rủi ro trong việc chuyển đổi thành tiền tại thời điểm báo cáo.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Doanh thu cung cấp dịch vụ Doanh thu của giao dịch về cung cấp dịch vụ được ghi nhận khi kết quả của giao dịch đó được xác định một cách đáng tin cậy. Trường hợp giao dịch về cung cấp dịch vụ liên quan nhiều kỳ thì doanh thu được ghi nhận trong kỳ theo kết quả phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán của kỳ đó. Kết quả của giao dịch cung cấp dịch vụ được xác định khi thỏa mãn tất cả bốn (4) điều kiện sau: Doanh thu được xác định tương đối chắc chắn Có khả năng thu được lợi ích kinh tế từ giao dịch cung cấp dịch vụ đó. Xác định được phần công việc đã hoàn thành tại ngày của Bảng cân đối kế toán; và Xác định được chi phí phát sinh cho giao dịch và chi phí để hoàn thành giao dịch cung cấp dịch vụ đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: 3. Các khoản đầu tư tài chính Chứng khoán kinh doanh Khoản đầu tư được phân loại là chứng khoán kinh doanh khi nắm giữ vì mục đích mua bán để kiếm lời.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: IV. CHÍNH SÁCH KẾ TOÁN ÁP DỤNG
+Value: -----------Page 12",1,,18003,8669,1.0,0.7672468057957169,0.49999999995,1.0
+135,So sánh giá trị các khoản tương đương tiền cuối kỳ với đầu năm.,Các khoản tương đương tiền tăng từ 42.000.000.000 vào đầu năm lên 80.000.000.000 vào cuối năm.,"Giá trị các khoản tương đương tiền cuối kỳ là 80.000.000.000 VND, còn đầu năm là 42.000.000.000 VND. Giá trị này đã tăng lên đáng kể.",5,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Các khoản tương đương tiền
+Value: Số cuối năm: 80.000.000.000 | Số đầu năm: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667",1,,17337,8322,1.0,0.6980177884478413,0.9999999999,0.5
+136,Đánh giá tầm quan trọng của nguyên tắc phù hợp và nguyên tắc thận trọng trong việc ghi nhận chi phí.,"Dựa trên số liệu hiện có:
+
+**1. Hiệu quả hoạt động**
+- Nguyên tắc phù hợp: ""Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp."" (Thuyết minh 16: Các khoản chi phí, THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+- Nguyên tắc thận trọng: ""Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và..."" (Thuyết minh 16: Các khoản chi phí, THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+- Giải thích nguyên tắc thận trọng: ""Chi phí là những khoản làm giảm lợi ích kinh tế được ghi nhận tại thời điểm giao dịch phát sinh hoặc khi có khả năng tương đối chắc chắn sẽ phát sinh trong tương lai không phân biệt đã chi tiền hay chưa."" (Thuyết minh 16: Các khoản chi phí, THUYẾT MINH BÁO CÁO TÀI CHÍNH)
+
+*Nhận xét*:
+- Nguyên tắc phù hợp giúp khớp chi phí với doanh thu tương ứng, tránh ghi nhận chi phí quá sớm hoặc trễ, tăng tính trung thực của báo cáo.
+- Nguyên tắc thận trọng bảo vệ tính thận trọng, giảm rủi ro đánh giá lợi nhuận quá cao và đảm bảo dự phòng cho các chi phí chắc chắn sẽ phát sinh.
+- Khi hai nguyên tắc xung đột, ưu tiên nguyên tắc thận trọng sẽ tránh việc lợi nhuận bị phóng đại.
+
+**Kết luận tổng thể**: Cả hai nguyên tắc đều quan trọng; nguyên tắc phù hợp đảm bảo khớp thu chi, nguyên tắc thận trọng bảo vệ tính bảo thủ và độ tin cậy của báo cáo tài chính. Sự kết hợp giúp ghi nhận chi phí đúng thời điểm, nâng cao chất lượng thông tin tài chính.","Nguyên tắc phù hợp và nguyên tắc thận trọng là hai nguyên tắc cơ bản và quan trọng trong việc ghi nhận chi phí. Nguyên tắc phù hợp đảm bảo rằng chi phí được ghi nhận đồng thời với doanh thu mà chúng tạo ra, giúp phản ánh chính xác hiệu quả kinh doanh trong một kỳ kế toán. Nguyên tắc thận trọng yêu cầu công ty phải dự phòng cho các khoản lỗ tiềm ẩn nhưng không được ghi nhận các khoản lãi chưa chắc chắn. Trong trường hợp có xung đột giữa hai nguyên tắc này, công ty ưu tiên nguyên tắc thận trọng, ghi nhận chi phí dựa trên bản chất và quy định của chuẩn mực kế toán để đảm bảo các giao dịch được phản ánh một cách trung thực và hợp lý. Điều này giúp ngăn chặn việc thổi phồng lợi nhuận và cung cấp thông tin tài chính đáng tin cậy hơn cho các bên liên quan.",9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Các khoản chi phí
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Các khoản chi phí
+Value: Chi phí là những khoản làm giảm lợi ích kinh tế được ghi nhận tại thời điểm giao dịch phát sinh hoặc khi có khả năng tương đối chắc chắn sẽ phát sinh trong tương lai không phân biệt đã chi tiền hay chưa.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Chi phí quản lý doanh nghiệp | Chi phí dự phòng
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 1.129.361.000 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 1.562.543.956
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: Chi phí xây dựng cơ bản dở dang phản ánh các chi phí liên quan trực tiếp (bao gồm cả chi phí lãi vay có liên quan phù hợp với chính sách kế toán của Công ty) đến các tài sản đang trong quá trình xây dựng, máy móc thiết bị đang lắp đặt để phục vụ cho mục đích sản xuất, cho thuê và quản lý cũng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Ghi nhận ban đầu
+Value: Các khoản đầu tư vào công ty con được ghi nhận ban đầu theo giá gốc, bao gồm giá mua hoặc khoản góp vốn cộng các chi phí liên quan trực tiếp đến việc đầu tư. Trường hợp đầu tư bằng tài sản phi tiền tệ, giá phí khoản đầu tư được ghi nhận theo giá trị hợp lý của tài sản phi tiền tệ tại thời điểm phát sinh.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 9: Bất động sản đầu tư
+Value: Các chi phí liên quan đến bất động sản đầu tư phát sinh sau ghi nhận ban đầu được ghi nhận vào chi phí, trừ khi chi phí này có khả năng chắc chắn làm cho bất động sản đầu tư tạo ra lợi ích kinh tế trong tương lai nhiều hơn mức hoạt động được đánh giá ban đầu thì được ghi tăng nguyên giá.",1,,62494,13088,0.25,0.5569844341276402,0.9999999999,0.6
+137,Giải thích cách tính tỷ lệ vốn hóa cho chi phí đi vay đối với các khoản vay chung được sử dụng cho tài sản dở dang.,"Dựa trên số liệu hiện có:
+
+- **Chi phí đi vay** được định nghĩa là lãi tiền vay và các chi phí khác phát sinh trực tiếp liên quan đến các khoản vay; chúng được ghi nhận vào chi phí khi phát sinh (theo Thuyết minh Báo cáo tài chính, mục 15).  
+- Khi chi phí đi vay **liên quan trực tiếp** đến các tài sản đang trong quá trình xây dựng (tài sản dở dang), công ty sẽ **vốn hoá** chúng vào giá vốn tài sản dở dang (theo Thuyết minh 10: Chi phí xây dựng cơ bản dở dang, đề cập tới chi phí lãi vay liên quan phù hợp với chính sách kế toán).
+
+**Cách tính tỷ lệ vốn hoá chi phí đi vay cho các khoản vay chung dùng cho tài sản dở dang**:
+1. Xác định **tổng chi phí đi vay** trong kỳ (tất cả lãi và chi phí vay) – đây là cơ sở để phân bổ (ví dụ: “Luỹ kế … Năm nay: 26.984.670.021” cho chi phí lãi vay).
+2. Xác định **số tiền vay chung** được sử dụng để tài trợ cho tài sản dở dang trong cùng kỳ (thông thường dựa trên báo cáo công nợ hoặc bảng cân đối kế toán, không có trong dữ liệu hiện có).
+3. Tính **tỷ lệ vay dùng cho tài sản dở dang** = (số tiền vay dùng cho tài sản dở dang) ÷ (tổng số vay chung).
+4. Áp dụng tỷ lệ này vào **tổng chi phí đi vay** để tính phần chi phí đi vay được vốn hoá:  
+   `Chi phí đi vay vốn hoá = Tổng chi phí đi vay × Tỷ lệ vay dùng cho tài sản dở dang`.
+5. Số tiền thu được được cộng vào **giá vốn tài sản dở dang** trong Bảng Cân Đối Kế Toán (theo Thuyết minh 10).
+
+*Nhận xét*: Phương pháp này tuân thủ chuẩn mực kế toán cho việc vốn hoá chi phí vay; tuy nhiên, vì dữ liệu chi tiết về số tiền vay dùng cho tài sản dở dang không có trong các facts hiện có, nên chỉ có thể mô tả quy trình tính toán mà không cung cấp con số cụ thể.
+
+**Kết luận tổng thể**: Công ty vốn hoá chi phí đi vay cho tài sản dở dang bằng cách phân bổ phần chi phí vay theo tỷ lệ tiền vay thực tế dành cho dự án xây dựng; khi không có số liệu chi tiết về mức vay dành cho tài sản dở dang, chỉ có thể trình bày quy trình tính toán mà không đưa ra kết quả số cụ thể.","Đối với các khoản vay chung được sử dụng một phần cho việc mua, xây dựng hoặc sản xuất tài sản dở dang, tỷ lệ vốn hóa được tính bằng lãi suất bình quân gia quyền của các khoản vay chưa thanh toán trong kỳ. Tỷ lệ này sẽ được áp dụng vào chi phí lũy kế bình quân cho việc xây dựng hoặc sản xuất tài sản đó để xác định phần chi phí đi vay đủ điều kiện vốn hóa, ngoại trừ các khoản vay cụ thể phục vụ mục đích có được một tài sản cụ thể.",9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 7: Hàng tồn kho | Chi phí sản xuất, kinh doanh dở dang
+Value: Số cuối kỳ: 293.925.078.259 | Số đầu năm: 292.456.128.703
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 15. Chi phí đi vay Chi phí đi vay bao gồm lãi tiền vay và các chi phí khác phát sinh liên quan trực tiếp đến các khoản vay. Chi phí đi vay được ghi nhận vào chi phí khi phát sinh. Trường hợp chi phí đi vay liên quan trực tiếp đến việc đầu tư xây dựng hoặc sản xuất tài sản dở dang cần có một thời gian đủ dài (trên 12 tháng) để có thể đưa vào sử dụng theo mục đích định trước hoặc bán thì chi phí đi vay này được tính vào giá trị của tài sản đó. Đối với khoản vay riêng phục vụ việc xây dựng tài sản cố định, bất động sản đầu tư, lãi vay được vốn hóa kể cả khi thời gian xây dựng dưới 12 tháng. Các khoản thu nhập phát sinh từ việc đầu tư tạm thời các khoản vay được ghi giảm nguyên giá tài sản có liên quan. Đối với các khoản vốn vay chung trong đó có sử dụng cho mục đích đầu tư xây dựng hoặc sản xuất tài sản dở dang thì chi phí đi vay vốn hóa được xác định theo tỷ lệ vốn hóa đối với chi phí lũy kế bình quân gia quyền phát sinh cho việc đầu tư xây dựng cơ bản hoặc sản xuất tài sản đó. Tỷ lệ vốn hóa được tính theo tỷ lệ lãi suất bình quân gia quyền của các khoản vay chưa trả trong năm, ngoại trừ các khoản vay riêng biệt phục vụ cho mục đích hình thành một tài sản cụ thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí lãi vay
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.984.670.021 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 38.076.798.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí thu xếp vốn
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 4.547.267.785 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 3.494.034.038
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Chi phí tài chính khác
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 461.720.100 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 7.623.521.969
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản cho vay
+Value: Các khoản cho vay được xác định theo giá gốc trừ đi các khoản dự phòng phải thu khó đòi. Dự phòng phải thu khó đòi của các khoản cho vay được lập căn cứ vào dự kiến mức tổn thất có thể xảy ra.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 10: Chi phí xây dựng cơ bản dở dang
+Value: Chi phí xây dựng cơ bản dở dang phản ánh các chi phí liên quan trực tiếp (bao gồm cả chi phí lãi vay có liên quan phù hợp với chính sách kế toán của Công ty) đến các tài sản đang trong quá trình xây dựng, máy móc thiết bị đang lắp đặt để phục vụ cho mục đích sản xuất, cho thuê và quản lý cũng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 8: Tài sản cố định vô hình
+Value: Tài sản cố định vô hình của Công ty là chương trình phần mềm máy tính. Chi phí liên quan đến các chương trình phần mềm máy tính không phải là một bộ phận gắn kết với phần cứng có liên quan được vốn hóa. Nguyên giá của phần mềm máy tính là toàn bộ các chi phí mà Công ty đã chi ra tính đến thời điểm đưa phần mềm vào sử dụng. Phần mềm máy tính được khấu hao theo phương pháp đường thẳng trong 3 - 5 năm.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 16: Các khoản chi phí
+Value: Các khoản chi phí và khoản doanh thu do nó tạo ra phải được ghi nhận đồng thời theo nguyên tắc phù hợp. Trong trường hợp nguyên tắc phù hợp xung đột với nguyên tắc thận trọng, chi phí được ghi nhận căn cứ vào bản chất và quy định của các chuẩn mực kế toán để đảm bảo phản ánh giao dịch một cách trung thực, hợp lý.",1,,22136,12701,0.4,0.0,0.49999999995,1.0
+138,Phân tích tác động của chênh lệch tạm thời giữa số liệu thuế và kế toán đến thu nhập chịu thuế của doanh nghiệp.,"- **Lợi nhuận kế toán trước thuế (Quý IV 2024)**: 13.133.968.702 (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- **Chi phí thuế TNDN hiện hành (cumulative đến quý IV 2024)**: 1.043.723.934 (BẢNG CÂN ĐỐI KẾ TOÁN)
+- **Thuế suất chuẩn**: 20% (theo Thuyết minh 15: Thuế và các khoản phải nộp Nhà nước)
+- **Tỷ lệ thuế thực tế** (chi phí thuế hiện hành ÷ lợi nhuận trước thuế):
+  - Công thức: **Tỷ lệ thuế = Chi phí thuế hiện hành / Lợi nhuận kế toán trước thuế**
+  - Kết quả: 1.043.723.934 / 13.133.968.702 ≈ **7.95%**
+
+*Nhận xét*:
+- Tỷ lệ thuế thực tế chỉ khoảng 8% so với mức thuế suất 20% cho thấy **các chênh lệch tạm thời** (giá trị hao mòn, dự phòng, lỗ chịu thuế…) và **các khoản chi phí không được trừ** đã giảm đáng kể thu nhập tính thuế.
+- Thuyết minh 17 nhấn mạnh rằng “Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời …” → kết quả trên phản ánh thực tế các điều chỉnh này.
+- Khi thu nhập tính thuế thấp hơn lợi nhuận kế toán, công ty sẽ nộp ít thuế hiện hành hơn và tạo ra **thuế hoãn lại** (đặc khoản tài sản thuế hoãn lại hoặc nợ thuế hoãn lại). Tuy nhiên, thông tin về số tiền thuế hoãn lại hiện không có trong các facts hiện có, nên không thể định lượng ảnh hưởng cụ thể của chúng tới thu nhập chịu thuế.
+- Nếu các chênh lệch tạm thời giảm tiếp trong các kỳ tới (ví dụ: giảm hao mòn, giải phóng dự phòng), **thu nhập tính thuế sẽ tăng**, dẫn đến gánh nặng thuế thực tế cao hơn và ảnh hưởng tiêu cực tới lợi nhuận sau thuế.
+
+*Hạn chế*: thiếu dữ liệu về **chi phí thuế TNDN hoãn lại** (thuế hoãn lại) và **các khoản điều chỉnh tạm thời cụ thể** để tính toán thu nhập tính thuế chi tiết.","Chênh lệch tạm thời giữa số liệu thuế và kế toán phát sinh khi các khoản mục doanh thu và chi phí được ghi nhận ở các thời điểm khác nhau cho mục đích kế toán và mục đích tính thuế. Các chênh lệch này có thể làm cho lợi nhuận kế toán (profit before tax) khác với thu nhập chịu thuế (taxable income). Cụ thể, 'Thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là số thuế được tính dựa trên thu nhập chịu thuế. Thu nhập chịu thuế khác với lợi nhuận kế toán do điều chỉnh các chênh lệch tạm thời giữa số liệu thuế và kế toán, các chi phí không được khấu trừ cũng như các khoản thu nhập không chịu thuế và các khoản lỗ được chuyển sang kỳ sau.' Điều này có nghĩa là thuế TNDN hiện hành không được tính trực tiếp trên lợi nhuận kế toán mà phải thông qua các điều chỉnh này. Các chênh lệch tạm thời có thể làm tăng hoặc giảm thu nhập chịu thuế so với lợi nhuận kế toán, ảnh hưởng đến số thuế phải nộp trong kỳ hiện tại và có thể tạo ra tài sản hoặc nợ thuế thu nhập hoãn lại trong tương lai.",15,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (9.805.992.079)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2024
+Period: cuối
+Value: 13.133.968.702
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Tổng lợi nhuận kế toán trước thuế | Quý IV năm 2023
+Period: đầu
+Value: (34.663.703.515)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 17: Thuế thu nhập doanh nghiệp
+Value: Chi phí thuế thu nhập doanh nghiệp chỉ bao gồm thuế thu nhập hiện hành, là khoản thuế được tính dựa trên thu nhập tính thuế. Thu nhập tính thuế chênh lệch so với lợi nhuận kế toán là do điều chỉnh các khoản chênh lệch tạm thời giữa thuế và kế toán, các chi phí không được trừ cũng như điều chỉnh các khoản thu nhập không phải chịu thuế và các khoản lỗ được chuyển.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 15: Thuế và các khoản phải nộp Nhà nước | Thuế TNDN
+Value: Số cuối kỳ: - | Số đầu năm: 177.561.256
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 6: Các khoản phải thu khác | Thuế TNDN tạm nộp 1% của BĐS
+Value: Số cuối kỳ Giá trị: 2.845.119.703 | Số cuối kỳ Dự phòng: - | Số đầu năm Giá trị: 4.724.702.354 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 15: Thuế và các khoản phải nộp Nhà nước
+Value: Thuế thu nhập doanh nghiệp Công ty phải nộp thuế thu nhập doanh nghiệp cho các khoản thu nhập tính thuế với thuế suất 20%.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 2: Các khoản giảm trừ doanh thu | Doanh thu
+Value: Năm trước: 17.812.053.373
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Chi phí thuế thu nhập doanh nghiệp hiện hành | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 1.043.723.934",1,,103492,21543,0.23809523809523808,0.4942513715439449,0.42916666665593756,0.6
+139,Đánh giá khả năng thanh khoản của công ty dựa trên cơ cấu tiền và các khoản tương đương tiền.,"Dựa trên số liệu hiện có:
+
+2. Thanh khoản và an toàn tài chính
+- Tiền và các khoản tương đương tiền (Cộng) cuối kỳ: **97.964.405.114** VND (tăng ≈ 61.7% so với đầu kỳ **60.575.342.749** VND) (BẢNG CÂN ĐỐI KẾ TOÁN)
+- Cấu trúc thành phần:
+  - Các khoản tương đương tiền: **80.000.000.000** VND (≈ 81.6% của tổng tiền & tương đương)
+  - Tiền mặt: **24.085.667** VND (≈ 0.025% của tổng tiền & tương đương)
+- Tỷ lệ tiền & tương đương tiền trên tài sản ngắn hạn cuối kỳ: **97.964.405.114 / 984.330.724.539 ≈ 9.95%**
+- Tỷ lệ tiền & tương đương tiền trên tổng tài sản cuối kỳ: **97.964.405.114 / 1.662.694.128.863 ≈ 5.9%**
+
+*Nhận xét*:
+- Khối lượng tiền và tương đương tiền đã tăng đáng kể trong năm, cho thấy công ty đã cải thiện khả năng duy trì nguồn tiền lưu động.
+- Phần lớn (hơn 80%) là các khoản tương đương tiền, trong khi tiền mặt thực tế chỉ chiếm một phần cực nhỏ, cho thấy rủi ro về khả năng chuyển đổi nhanh sang tiền mặt nếu cần.
+- Tỷ lệ tiền & tương đương tiền so với tài sản ngắn hạn chỉ khoảng 10%, thấp hơn mức an toàn truyền thống (khoảng 20‑30%); công ty vẫn phụ thuộc vào các tài sản ngắn hạn khác (hàng tồn kho, phải thu…) để đáp ứng các nghĩa vụ lưu động.
+- Tỷ lệ trên tổng tài sản dưới 6% cho thấy phần tài sản không lưu động chiếm đa số, do đó khả năng thanh khoản tổng thể không mạnh, cần chú ý tới chất lượng và khả năng thu hồi của các tài sản ngắn hạn khác.
+
+**Kết luận tổng thể**
+Công ty có xu hướng tăng tiền và các khoản tương đương tiền, nhưng vì phần lớn là các khoản tương đương tiền và tỷ lệ tiền & tương đương tiền so với tài sản ngắn hạn và tổng tài sản còn thấp, khả năng thanh khoản vẫn còn hạn chế. Để nâng cao độ an toàn tài chính, cần cải thiện tỷ lệ tiền mặt và/hoặc giảm phụ thuộc vào các tài sản ngắn hạn không thanh khoản.","Dựa trên cơ cấu tiền và các khoản tương đương tiền, khả năng thanh khoản của công ty đã được cải thiện đáng kể từ đầu năm đến cuối kỳ. Tổng tiền và các khoản tương đương tiền đã tăng từ 60.575.342.749 VND lên 97.964.405.114 VND. Sự gia tăng này chủ yếu đến từ việc tăng các khoản tương đương tiền (từ 42.000.000.000 VND lên 80.000.000.000 VND), trong khi tiền mặt và tiền gửi không kỳ hạn tại ngân hàng có sự biến động nhẹ. Việc tăng cường các khoản tương đương tiền (là các khoản đầu tư ngắn hạn có khả năng chuyển đổi thành tiền mặt dễ dàng) cho thấy công ty có lượng tiền mặt sẵn sàng cao hơn để đáp ứng các nghĩa vụ ngắn hạn, giảm rủi ro thanh khoản.",17,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số cuối năm
+Period: cuối
+Value: 984.330.724.539
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản ngắn hạn
+Item: A - TÀI SẢN NGẮN HẠN | Số đầu năm
+Period: đầu
+Value: 1.045.015.266.013
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số đầu năm
+Period: đầu
+Value: 16.759.724.289
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Tài sản ngắn hạn khác | Số cuối năm
+Period: cuối
+Value: 9.720.712.203
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 14: Người mua trả tiền trước ngắn hạn
+Value: Là khoản trả trước theo tiến độ của các khách hàng dự án Bất động sản, bao gồm:
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Các khoản tương đương tiền
+Value: Số cuối năm: 80.000.000.000 | Số đầu năm: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Tiền mặt
+Value: Số cuối năm: 24.085.667 | Số đầu năm: 118.292.930
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Tiền gửi tại công ty chứng khoán
+Value: Số cuối năm: 109.902.610 | Số đầu năm: 110.425.559
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 1: Tiền và các khoản tương đương tiền | Cộng
+Value: Số cuối năm: 97.964.405.114 | Số đầu năm: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền gửi ngân hàng không kỳ hạn | Số cuối năm
+Period: cuối
+Value: 17.830.416.837",1,,104862,20900,0.25,0.6362371845847928,0.2378663003603537,0.75
+140,Tổng dự phòng giảm giá chứng khoán kinh doanh cuối kỳ là bao nhiêu VND?,Dự phòng giảm giá chứng khoán kinh doanh cuối kỳ là 5.054.591.307 VND.,Tổng dự phòng giảm giá chứng khoán kinh doanh cuối kỳ là 5.054.591.307 VND.,2,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng giảm giá chứng khoán kinh doanh | Số cuối năm
+Period: cuối
+Value: (5.054.591.307)
+Note ref: V.2a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng giảm giá chứng khoán kinh doanh | Số đầu năm
+Period: đầu
+Value: (5.017.251.307)
+Note ref: V.2a",1,,10009,6617,1.0,0.6514361605647778,0.9999999999,1.0
+141,Giá trị nguyên giá của CTCP Đầu tư APEC Túc Duyên cuối kỳ là bao nhiêu VND?,Trong dữ liệu không có thông tin về tổng nguyên giá cuối kỳ của CTCP Đầu tư APEC Túc Duyên; chỉ có các khoản nguyên giá riêng của tài sản cố định vô hình (337.728.000 VND) và tài sản cố định hữu hình (24.034.952.927 VND).,Giá trị nguyên giá của CTCP Đầu tư APEC Túc Duyên cuối kỳ là 18.961.694.016 VND.,5,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định vô hình
+Item: Nguyên giá | Số cuối năm
+Period: cuối
+Value: 337.728.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số cuối năm
+Period: cuối
+Value: 24.034.952.927
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Số cuối kỳ | Tài sản cố định khác
+Value: 3.539.232.509
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Chuyển sang bất động sản đầu tư | Cộng
+Value: (178.321.426.654)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số đầu năm
+Period: đầu
+Value: 202.406.369.251",1,,11465,8534,1.0,0.0,0.0,0.0
+142,So sánh dự phòng giảm giá đầu tư vào công ty con cuối kỳ và đầu năm.,"Dự phòng giảm giá đầu tư vào công ty con cuối kỳ là (40.839.502.596) đồng, đầu năm là (15.567.613.741) đồng; tăng khoảng (25.271.888.855) đồng.","Dự phòng giảm giá đầu tư vào công ty con cuối kỳ là 40.839.502.596 VND, trong khi đầu năm là 15.567.613.741 VND. Dự phòng này đã tăng lên đáng kể.",9,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (40.839.502.596)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (9.500.000.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (26.243.593.986)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Dự phòng
+Period: đầu
+Value: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Cộng | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (50.339.502.596)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (1.500.000.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 26.559.480.945
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.559.480.945 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 14.384.270.936",1,,69766,8448,1.0,0.6330535667110271,0.0,1.0
+143,Loại chứng khoán kinh doanh nào có nguyên giá không thay đổi giữa cuối kỳ và đầu năm?,"Các loại chứng khoán kinh doanh có nguyên giá không thay đổi giữa cuối kỳ và đầu năm bao gồm: Cổ phiếu niêm yết, Cổ phiếu không niêm yết, Ngân hàng TMCP Việt Nam Thịnh Vượng, và Công ty Cổ phần Chứng khoán Châu Á - Thái Bình Dương.","Tất cả các loại chứng khoán kinh doanh (Cổ phiếu niêm yết, CTCP Chứng khoán APEC, VPBank, Cổ phiếu chưa niêm yết, CTCP Len Hà Đông, CTCP Đầu tư và Thương mại Foodinco) đều có nguyên giá không thay đổi giữa cuối kỳ và đầu năm.",10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2a. Chứng khoán kinh doanh
+Item: Cổ phiếu niêm yết | Số cuối năm Giá gốc
+Period: cuối
+Value: 3.924.805.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2a. Chứng khoán kinh doanh
+Item: Cổ phiếu niêm yết | Số đầu năm Giá gốc
+Period: đầu
+Value: 3.924.805.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2a. Chứng khoán kinh doanh
+Item: Công ty Cổ phần Chứng khoán Châu Á - Thái Bình Dương | Số cuối năm Giá gốc
+Period: cuối
+Value: 3.920.700.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2a. Chứng khoán kinh doanh
+Item: Công ty Cổ phần Chứng khoán Châu Á - Thái Bình Dương | Số đầu năm Giá gốc
+Period: đầu
+Value: 3.920.700.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Cổ phiếu không niêm yết | Số cuối năm Giá gốc
+Period: cuối
+Value: 2.839.310.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Cổ phiếu không niêm yết | Số đầu năm Giá gốc
+Period: đầu
+Value: 2.839.310.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Ngân hàng TMCP Việt Nam Thịnh Vượng | Số cuối năm Giá gốc
+Period: cuối
+Value: 4.105.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Ngân hàng TMCP Việt Nam Thịnh Vượng | Số đầu năm Giá gốc
+Period: đầu
+Value: 4.105.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Công ty Cổ phần Len Hà Đông | Số cuối năm Giá gốc
+Period: cuối
+Value: 2.138.120.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Công ty Cổ phần Đầu tư và Xuất nhập khẩu Foodinco | Số cuối năm Giá gốc
+Period: cuối
+Value: 701.190.000",1,,23821,9229,1.0,0.8580590814362269,0.1249999999875,1.0
+144,Đánh giá tác động của việc giải thể công ty con CTCP Đầu tư APEC Túc Duyên đến cơ cấu đầu tư của công ty.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Giá trị đầu tư vào công ty con: 355.050.194.016 VND (đầu năm) → 265.354.194.016 VND (cuối kỳ) – giảm 89,696 tỷ VND (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Vốn chủ sở hữu: 895.094.437.312 VND (đầu năm) → 884.244.721.299 VND (cuối kỳ).
+- Tỷ trọng đầu tư vào công ty con trong vốn chủ sở hữu: 39,7 % → 30,0 % (giảm 9,7 điểm) (tính từ các số trên).
+*Nhận xét*: Việc giải thể công ty con làm giảm đáng kể phần đầu tư trong cấu trúc vốn, giảm khoảng 10 điểm phần trăm, tuy nhiên tổng vốn chủ sở hữu chỉ giảm nhẹ, cho thấy khả năng sinh lời chung chưa bị ảnh hưởng lớn.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Tổng tài sản: 1.906.094.474.649 VND (đầu năm) → 1.662.694.128.863 VND (cuối kỳ).
+- Tỷ trọng đầu tư vào công ty con trong tổng tài sản (giá gốc): 18,62 % → 15,96 % (giảm 2,66 điểm).
+- Tỷ trọng ròng (giá gốc – dự phòng): 17,82 % → 13,5 % (giảm 4,32 điểm).
+*Nhận xét*: Giảm tài sản đầu tư làm giảm tổng tài sản và tỷ trọng đầu tư, đồng thời dự phòng tăng (từ 15,57 tỷ → 40,84 tỷ), tăng rủi ro tài chính và làm suy giảm sức chịu đựng tài chính của công ty.
+
+**3. Hiệu quả hoạt động** (agent_efficiency)
+- Tỷ lệ đầu tư vào công ty con / tổng tài sản: 17,8 % (đầu năm) → 13,5 % (cuối kỳ).
+- Tỷ lệ đầu tư vào công ty APEC Túc Duyên / tổng tài sản: 0,34 % (đầu năm) → 0,26 % (cuối kỳ).
+- Tổng tài sản giảm 243,4 tỷ VND (≈ 12,8 %) trong kỳ, phần lớn do giảm giá trị đầu tư vào công ty con.
+*Nhận xét*: Cấu trúc tài sản đang chuyển dịch sang mức độ phụ thuộc thấp hơn vào các khoản đầu tư công ty con, hướng tới tái cấu trúc danh mục tài sản dài hạn.
+
+**4. Dòng tiền** (agent_cashflow_analysis)
+- Lưu chuyển tiền thuần từ hoạt động kinh doanh (CFO): 36.158.929.436 VND (năm nay).
+- Lưu chuyển tiền thuần từ hoạt động đầu tư (CFI): 40.218.532.929 VND (năm nay).
+- Free cash flow (ước tính): CFO + CFI = 76.377.462.365 VND (dương).
+- Tiền chi đầu tư góp vốn vào đơn vị khác: (300.000.000) VND (rất nhỏ).
+- Giảm giá trị đầu tư vào công ty con: 114.967.888.855 VND.
+*Nhận xét*: Dòng tiền đầu tư vẫn dương, cho thấy công ty tiếp tục thực hiện các khoản đầu tư mới, nhưng giảm mạnh giá trị đầu tư cũ do giải thể làm giảm tài sản dài hạn và tiềm năng sinh lợi.
+
+**Kết luận tổng thể**
+Việc giải thể công ty con CTCP Đầu tư APEC Túc Duyên dẫn đến giảm đáng kể khoản đầu tư vào công ty con (giảm ~34 % giá trị ròng), làm giảm tỷ trọng đầu tư trong tổng tài sản và trong vốn chủ sở hữu, đồng thời tăng dự phòng giảm giá, phản ánh rủi ro tài chính gia tăng. Mặc dù tổng tài sản và vốn chủ sở hữu giảm nhẹ và dòng tiền tự do vẫn dương, cấu trúc tài sản của công ty mẹ đang chuyển sang phụ thuộc ít hơn vào các khoản đầu tư vào công ty con, cho thấy quá trình tái cấu trúc tài chính đang diễn ra.","Việc Công ty giải thể công ty con CTCP Đầu tư APEC Túc Duyên do hoạt động kinh doanh không hiệu quả có tác động đáng kể đến cơ cấu đầu tư. Mặc dù nguyên giá đầu tư vào CTCP Đầu tư APEC Túc Duyên vẫn còn ghi nhận cuối kỳ (18.961.694.016 VND), và có dự phòng giảm giá khá lớn (14.595.908.610 VND), việc giải thể cho thấy công ty đang loại bỏ các khoản đầu tư không sinh lời. Điều này sẽ làm giảm tổng số lượng công ty con trong danh mục đầu tư, có thể cải thiện hiệu quả tổng thể nếu các khoản đầu tư này gây thua lỗ, nhưng cũng đồng thời làm giảm quy mô và tiềm năng tăng trưởng từ mảng này. Việc này cũng sẽ liên quan đến các chi phí và quy trình pháp lý liên quan đến việc giải thể.",53,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư vào công ty con | Số đầu năm
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Đầu tư Apec Túc Duyên
+Value: Tên công ty: Công ty Cổ phần Đầu tư Apec Túc Duyên | Địa chỉ trụ sở chính: Ngõ 3 Bắc Nam, tổ 22, phường Gia Sàng, thành phố Thái Nguyên, tỉnh Thái Nguyên | Hoạt động kinh doanh chính: Đầu tư, kinh doanh bất động sản | Tỷ lệ vốn góp: 100% | Tỷ lệ lợi ích: 100% | Tỷ lệ quyền biểu quyết: 100%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Đầu tư Apec Túc Duyên (i)
+Value: Số cuối kỳ Giá gốc: 18.961.694.016 | Số cuối kỳ Dự phòng: (14.595.908.610) | Số đầu năm Giá gốc: 18.957.694.016 | Số đầu năm Dự phòng: (12.386.604.292)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Đầu tư Apec Túc Duyên
+Value: Số cuối kỳ Số lượng CP: 1.896.169 | Số cuối kỳ Tỷ lệ sở hữu: 100,00% | Số đầu năm Số lượng CP: 1.895.769 | Số đầu năm Tỷ lệ sở hữu: 100,00%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác
+Value: (i) Trong kỳ, Công ty đã đầu tư thêm 4.000.000 VND bằng tiền gửi ngân hàng. Theo Nghị quyết số 04/NQ-HĐQT ngày 30/01/2024, Hội đồng quản trị Công ty quyết định giải thể Công ty Cổ phần Apec Túc Duyên do hoạt động kinh doanh không hiệu quả. Cho đến thời điểm lập báo cáo tài chính này, Công ty Cổ phần Apec Túc Duyên chưa hoàn thành thủ tục giải thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng vốn chủ sở hữu
+Item: D - NGUỒN VỐN CHỦ SỞ HỮU | Số đầu năm
+Period: đầu
+Value: 895.094.437.312
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng vốn chủ sở hữu
+Item: D - NGUỒN VỐN CHỦ SỞ HỮU | Số cuối năm
+Period: cuối
+Value: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số đầu năm | Cộng
+Value: 943.281.549.873
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ trước
+Item: Số dư cuối kỳ | Cộng
+Value: 895.094.437.312
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu — Kỳ này
+Item: Số dư cuối kỳ | Cộng
+Value: 884.244.721.299
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ phải trả
+Item: C - NỢ PHẢI TRẢ | Số đầu năm
+Period: đầu
+Value: 1.011.000.037.337
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ phải trả
+Item: C - NỢ PHẢI TRẢ | Số cuối năm
+Period: cuối
+Value: 778.449.407.564
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Tổng | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 321.517.322.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: Tổng | Số đầu kỳ Khả năng trả nợ
+Period: đầu
+Value: 449.955.557.454
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số cuối năm
+Period: cuối
+Value: 97.964.405.114
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Cộng | Số đầu năm
+Period: đầu
+Value: 60.575.342.749
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số cuối năm
+Period: cuối
+Value: 80.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Các khoản tương đương tiền | Số đầu năm
+Period: đầu
+Value: 42.000.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Tiền và các khoản tương đương tiền
+Item: Tiền mặt | Số cuối năm
+Period: cuối
+Value: 24.085.667
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định vô hình
+Item: Nguyên giá | Số cuối năm
+Period: cuối
+Value: 337.728.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số cuối năm
+Period: cuối
+Value: 24.034.952.927
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Số cuối kỳ | Tài sản cố định khác
+Value: 3.539.232.509
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 9. Tài sản cố định hữu hình — Nguyên giá
+Item: Chuyển sang bất động sản đầu tư | Cộng
+Value: (178.321.426.654)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tài sản cố định hữu hình
+Item: Nguyên giá | Số đầu năm
+Period: đầu
+Value: 202.406.369.251
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2024
+Period: cuối
+Value: 12.090.244.768
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (10.849.716.013)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Quý IV năm 2023
+Period: đầu
+Value: (33.607.254.235)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Lợi nhuận sau thuế thu nhập doanh nghiệp | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (48.187.112.561)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 13. Phân phối lợi nhuận Lợi nhuận sau thuế thu nhập doanh nghiệp được phân phối cho các cổ đông sau khi đã trích lập các quỹ theo Điều lệ của Công ty cũng như các quy định của pháp luật và đã được Đại hội đồng cổ đông phê duyệt. Việc phân phối lợi nhuận cho các cổ đông được cân nhắc đến các khoản mục phi tiền tệ nằm trong lợi nhuận sau thuế chưa phân phối có thể ảnh hưởng đến luồng tiền và khả năng chi trả cổ tức như lãi do đánh giá lại tài sản mang đi góp vốn, lãi do đánh giá lại các khoản mục tiền tệ, các công cụ tài chính và các khoản mục phi tiền tệ khác. Cổ tức được ghi nhận là nợ phải trả khi được Đại hội đồng cổ đông phê duyệt.
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 209.580.465.103
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Cộng | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 200.062.416.867
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 16.668.489.482
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu bán hàng hóa | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 10.481.414.367
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 1. Doanh thu bán hàng và cung cấp dịch vụ
+Item: Doanh thu cung cấp dịch vụ, cho thuê mặt bằng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 5.168.271.585
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm nay
+Value: 36.158.929.436
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động kinh doanh | Năm trước
+Value: (4.379.663.565)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm nay
+Value: 40.218.532.929
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm trước
+Value: 87.211.618.301
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm nay
+Value: (300.000.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm trước
+Value: (6.486.981.982)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Giá gốc
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Dự phòng
+Period: đầu
+Value: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 265.354.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (40.839.502.596)",1,,166563,66668,0.8518518518518519,0.7971344684966587,0.45000932929855714,0.75
+145,Phân tích rủi ro từ các khoản đầu tư vào công ty con khi CTCP Lagoon Lăng Cô đã ngừng hoạt động.,"Dựa trên số liệu hiện có:
+
+**1. Khả năng sinh lời** (agent_profitability)
+- Giá trị đầu tư vào công ty con (nguyên giá): 355 050 194 016 đồng (đầu năm) → 265 354 194 016 đồng (cuối kỳ) (BẢNG CÂN ĐỐI KẾ TOÁN, THUYẾT MINH BÁO CÁO TÀI CHÍNH).
+- Dự phòng giảm giá: (15 567 613 741) đồng (đầu năm) → (40 839 502 596) đồng (cuối kỳ) (THUYẾT MINH BÁO CÁO TÀI CHÍNH).
+- Giá trị còn lại sau dự phòng: 339 482 580 275 đồng (đầu năm) → 224 514 691 420 đồng (cuối kỳ) → giảm **≈ 33,8 %**.
+- Lợi nhuận sau thuế chưa phân phối: (48 187 112 561) đồng (kết quả kỳ) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+- Lợi nhuận thuần từ hoạt động kinh doanh: (12 918 933 440) đồng (lũy kế đến Q4/2024) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH).
+
+*Nhận xét*:
+- Dự phòng giảm giá tăng mạnh (≈ 158 %) cho thấy công ty dự báo khả năng thu hồi đầu tư vào công ty con giảm đáng kể.
+- Giá trị còn lại giảm hơn 115 tỷ đồng, phản ánh một khoản lỗ giá trị lớn.
+- Lợi nhuận kinh doanh âm và lợi nhuận chưa phân phối âm làm tăng áp lực tài chính.
+
+**2. Thanh khoản và an toàn tài chính** (agent_liquidity_solvency)
+- Tổng tài sản cuối kỳ: 1 662 694 128 863 đồng (BẢNG CÂN ĐỐI KẾ TOÁN).
+- Tổng nợ cuối kỳ: 778 449 408 564 đồng (ngắn hạn 566 994 110 452 đồng + dài hạn 211 455 297 112 đồng).
+- Vốn chủ sở hữu cuối kỳ: 884 244 720 299 đồng.
+- Tỷ lệ nợ / tổng tài sản: **≈ 46,9 %**.
+- Tỷ lệ nợ / vốn chủ sở hữu: **≈ 88,1 %**.
+- Đầu tư vào công ty con chiếm **13,5 %** tổng tài sản và **25,4 %** vốn chủ sở hữu.
+
+*Nhận xét*:
+- Tỷ lệ nợ cao (≈ 47 % tài sản) và đòn bẩy nợ trên vốn chủ sở hữu gần 90 % cho thấy mức rủi ro tài chính lớn nếu khoản đầu tư không thu hồi được.
+- Khoản đầu tư là tài sản không lưu động, không hỗ trợ thanh khoản ngắn hạn; do đó, khả năng đáp ứng các nghĩa vụ ngắn hạn phụ thuộc vào các tài sản lưu động khác (không có dữ liệu).
+
+**3. Dòng tiền** (agent_cashflow_analysis)
+- Lưu chuyển tiền thuần từ hoạt động đầu tư: 40 218 532 929 đồng (năm nay) vs 87 211 618 301 đồng (năm trước) (BÁO CÁO LƯU CHUYỂN TIỀN TỆ).
+- Tiền chi đầu tư góp vốn vào đơn vị khác: (300 000 000) đồng (năm nay) vs (6 486 981 982) đồng (năm trước).
+- Tiền thu hồi đầu tư góp vốn vào đơn vị khác: **không có dữ liệu** cho cả năm nay và năm trước.
+
+*Nhận xét*:
+- Dòng tiền thực tế từ hoạt động đầu tư giảm mạnh so với năm trước, nhưng mức giảm chưa phản ánh toàn bộ mức giảm giá trị sổ sách (≈ 115 tỷ đồng), cho thấy phần lớn lỗ là do ghi nhận giảm giá (impairment) chứ không phải do mất tiền mặt.
+- Thiếu thông tin về tiền thu hồi đầu tư làm khó đánh giá mức độ hồi vốn thực tế.
+
+**Kết luận tổng thể**
+- Khoản đầu tư vào công ty con Lagoon Lăng Cô đã bị giảm giá trị mạnh (≈ 34 %) và ghi nhận dự phòng giảm giá lớn, tạo ra rủi ro giá trị sổ sách đáng kể.
+- Tỷ lệ nợ cao và đòn bẩy tài chính mạnh làm tăng khả năng ảnh hưởng tiêu cực nếu khoản đầu tư không thu hồi được, đe dọa sức khỏe tài chính dài hạn.
+- Dòng tiền thực tế giảm nhưng vẫn còn dòng tiền ra nhỏ, trong khi không có dữ liệu về tiền thu hồi, khiến rủi ro thanh khoản và khả năng hoàn vốn còn chưa rõ.
+- Tổng quan, rủi ro chính từ khoản đầu tư này là **giảm giá trị tài sản**, **đòn bẩy tài chính cao** và **thiếu khả năng thu hồi vốn**, yêu cầu công ty cần cân nhắc giảm bớt hoặc bán bớt khoản đầu tư, đồng thời tăng dự phòng và quản lý nợ chặt chẽ.","Việc CTCP Lagoon Lăng Cô đã ngừng hoạt động và đóng mã số thuế từ ngày 04 tháng 3 năm 2024 tiềm ẩn rủi ro rất lớn đối với các khoản đầu tư của công ty mẹ. Cụ thể:\n-   **Mất vốn đầu tư:** Khoản đầu tư nguyên giá vào CTCP Lagoon Lăng Cô đầu năm là 90.000.000.000 VND và không có dự phòng. Việc ngừng hoạt động có thể dẫn đến mất hoàn toàn hoặc một phần đáng kể khoản đầu tư này, gây ra tổn thất lớn cho Công ty APEC Investment.\n-   **Ảnh hưởng đến lợi nhuận:** Khoản lỗ từ việc ngừng hoạt động hoặc thanh lý công ty con này sẽ được ghi nhận, ảnh hưởng tiêu cực đến lợi nhuận của công ty mẹ.\n-   **Dòng tiền:** Công ty mẹ sẽ không thu được bất kỳ lợi ích kinh tế nào từ khoản đầu tư này trong tương lai, ảnh hưởng đến dòng tiền đầu tư.\nĐiều này nhấn mạnh rủi ro khi đầu tư vào các công ty con hoạt động không hiệu quả và cần có chính sách quản lý rủi ro và thoái vốn kịp thời.",41,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư vào công ty con | Số đầu năm
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Lagoon Lăng Cô (ii)
+Value: Số cuối kỳ Giá gốc: - | Số cuối kỳ Dự phòng: - | Số đầu năm Giá gốc: 90.000.000.000 | Số đầu năm Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Lagoon Lăng Cô
+Value: Số cuối kỳ Số lượng CP: - | Số cuối kỳ Tỷ lệ sở hữu: - | Số đầu năm Số lượng CP: 9.000.000 | Số đầu năm Tỷ lệ sở hữu: 100,00%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Lagoon Lăng Cô
+Value: Khoản mục: Công ty Cổ phần Lagoon Lăng Cô | Trong kỳ Tăng: - | Trong kỳ Giảm: 89.449.835.100 | Số đầu kỳ Giá trị: 89.449.835.100 | Số đầu kỳ Khả năng trả nợ: 89.449.835.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác
+Value: (ii) Công ty Cổ phần Lagoon Lăng Cô đã làm thủ tục giải thể theo Nghị quyết số 02/2024/ĐHCD-NQ ngày 04 tháng 3 năm 2024. Đến ngày 12 tháng 7 năm 2024, Công ty đã hoàn thành thủ tục đóng mã số thuế.
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số cuối năm
+Period: cuối
+Value: 211.455.297.112
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ dài hạn
+Item: II. Nợ dài hạn | Số đầu năm
+Period: đầu
+Value: 115.369.440.931
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Kết chuyển từ vay và nợ dài hạn
+Value: Khoản mục: Kết chuyển từ vay và nợ dài hạn | Số cuối kỳ Giá trị: 19.424.900.000 | Số cuối kỳ Khả năng trả nợ: 19.424.900.000 | Trong kỳ Tăng: 19.424.900.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | b) Vay dài hạn
+Value: Khoản mục: b) Vay dài hạn | Số cuối kỳ Giá trị: 165.014.900.000 | Số cuối kỳ Khả năng trả nợ: 165.014.900.000 | Trong kỳ Tăng: 114.959.800.000 | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Vay dài hạn các cá nhân
+Value: Khoản mục: Vay dài hạn các cá nhân | Số cuối kỳ Giá trị: 184.439.800.000 | Số cuối kỳ Khả năng trả nợ: 184.439.800.000 | Trong kỳ Tăng: 114.959.800.000 | Số đầu kỳ Giá trị: 69.480.000.000 | Số đầu kỳ Khả năng trả nợ: 69.480.000.000
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ ngắn hạn
+Item: I. Nợ ngắn hạn | Số cuối năm
+Period: cuối
+Value: 566.994.110.452
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng nợ ngắn hạn
+Item: I. Nợ ngắn hạn | Số đầu năm
+Period: đầu
+Value: 895.630.596.406
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Chuyển sang nợ vay ngắn hạn
+Value: Khoản mục: Chuyển sang nợ vay ngắn hạn | Số cuối kỳ Giá trị: (19.424.900.000) | Số cuối kỳ Khả năng trả nợ: (19.424.900.000) | Trong kỳ Giảm: 19.424.900.000 | Số đầu kỳ Giá trị: - | Số đầu kỳ Khả năng trả nợ: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Số cuối kỳ Khả năng trả nợ
+Period: cuối
+Value: 156.502.422.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 18a. Vay ngắn hạn
+Item: a) Vay ngắn hạn | Số đầu kỳ Khả năng trả nợ
+Period: đầu
+Value: 380.475.557.454
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số cuối năm
+Period: cuối
+Value: 1.662.694.128.863
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Subheading: Tổng tài sản
+Item: TỔNG CỘNG TÀI SẢN | Số đầu năm
+Period: đầu
+Value: 1.906.094.474.649
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2024
+Period: cuối
+Value: 34.352.002.130
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: 75.877.336.939
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Quý IV năm 2023
+Period: đầu
+Value: 2.249.284.279
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận gộp về bán hàng và cung cấp dịch vụ | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: 52.040.652.356
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Lợi nhuận trong kỳ
+Value: Vốn đầu tư của chủ sở hữu: - | Lợi nhuận sau thuế chưa phân phối: (48.187.112.561) | Cộng: (48.187.112.561)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Giá gốc
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Dự phòng
+Period: đầu
+Value: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 265.354.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (40.839.502.596)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm nay
+Value: 40.218.532.929
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Lưu chuyển tiền thuần từ hoạt động đầu tư | Năm trước
+Value: 87.211.618.301
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm nay
+Value: (300.000.000)
+---
+Table: BÁO CÁO LƯU CHUYỂN TIỀN TỆ
+Item: Tiền chi đầu tư góp vốn vào đơn vị khác | Năm trước
+Value: (6.486.981.982)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Giá gốc
+Period: đầu
+Value: 91.172.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 9.500.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Cộng | Số đầu năm Giá gốc
+Period: đầu
+Value: 446.222.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Dự phòng
+Period: đầu
+Value: (8.249.747.910)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Lagoon Lăng Cô
+Value: Tên công ty: Công ty Cổ phần Lagoon Lăng Cô | Địa chỉ trụ sở chính: Tầng 9, tòa nhà HCC, 28 Lý Thường Kiệt, phường Vĩnh Ninh, thành phố Huế, tỉnh Thừa Thiên Huế | Hoạt động kinh doanh chính: Dịch vụ lưu trú ngắn ngày | Tỷ lệ vốn góp: 90,16% | Tỷ lệ lợi ích: 90,16% | Tỷ lệ quyền biểu quyết: 90,16%",1,,115926,47803,0.98,0.7924386946852552,0.6408207550076279,1.0
+146,Giải thích sự thay đổi trong tổng dự phòng đầu tư tài chính dài hạn từ đầu năm đến cuối kỳ.,"Dựa trên số liệu hiện có:
+- Dự phòng đầu tư tài chính dài hạn – Số đầu năm: **23.817.361.651** (BẢNG CÂN ĐỐI KẾ TOÁN)
+- Dự phòng đầu tư tài chính dài hạn – Số cuối năm: **50.339.502.596** (BẢNG CÂN ĐỐI KẾ TOÁN)
+
+*Nhận xét*:
+- Giá trị dự phòng đã **tăng** đáng kể trong năm, từ 23,817 tỷ đồng đến 50,340 tỷ đồng, cho thấy sự gia tăng thặng dư dự phòng đầu tư tài chính dài hạn.
+
+**Kết luận tổng thể**: Tổng dự phòng đầu tư tài chính dài hạn đã tăng mạnh trong năm, phản ánh việc công ty tăng cường dự phòng cho các khoản đầu tư tài chính dài hạn, tuy không có chi tiết về nguyên nhân cụ thể trong dữ liệu hiện có.","Tổng dự phòng đầu tư tài chính dài hạn (bao gồm dự phòng đầu tư vào công ty con và đầu tư vào các đơn vị khác) đã tăng đáng kể từ 23.817.361.651 VND đầu năm lên 50.339.502.596 VND cuối kỳ. Sự thay đổi này chủ yếu đến từ việc tăng dự phòng giảm giá đầu tư vào công ty con, đặc biệt là CTCP APEC Land Huế (tăng từ 3.181.009.449 VND lên 26.243.593.986 VND) và CTCP Đầu tư APEC Túc Duyên (tăng từ 12.386.604.292 VND lên 14.595.908.610 VND). Việc tăng dự phòng phản ánh sự nhận diện các khoản lỗ tiềm ẩn hoặc sự suy giảm giá trị của các khoản đầu tư này, cho thấy tình hình tài chính của một số công ty con và đơn vị được đầu tư đã xấu đi, hoặc công ty đã áp dụng chính sách thận trọng hơn trong việc đánh giá giá trị đầu tư.",8,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng đầu tư tài chính dài hạn | Số đầu năm
+Period: đầu
+Value: (23.817.361.651)
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng đầu tư tài chính dài hạn | Số cuối năm
+Period: cuối
+Value: (50.339.502.596)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 26.559.480.945
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước
+Value: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 7. Chi phí quản lý doanh nghiệp
+Item: Chi phí dự phòng | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 1.129.361.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.559.480.945 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Công ty Cổ phần Đầu tư và Xuất nhập khẩu Foodinco | Số đầu năm Dự phòng
+Period: đầu
+Value: (207.155.507)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư góp vốn vào đơn vị khác | Số đầu năm Dự phòng
+Period: đầu
+Value: (8.249.747.910)",1,,78306,10999,1.0,0.7698133962163555,0.16666666665,0.3333333333333333
+147,Dự báo tác động của việc tăng dự phòng giảm giá đầu tư vào công ty con đến lợi nhuận của công ty.,"Dựa trên số liệu hiện có:
+
+- **Tăng dự phòng giảm giá chứng khoán kinh doanh**:
+  - Cuối kỳ: (5.054.591.307)
+  - Đầu kỳ: (5.017.251.307)
+  - **Mức tăng** = 5.054.591.307 – 5.017.251.307 = **37.340.000** (nghìn đồng)
+- **Tăng dự phòng giảm giá đầu tư vào công ty con**:
+  - Cuối kỳ: (40.839.502.596)
+  - Đầu kỳ: (15.567.613.741)
+  - **Mức tăng** = 40.839.502.596 – 15.567.613.741 = **25.271.888.855** (nghìn đồng)
+- **Tổng mức tăng dự phòng** = 25.271.888.855 + 37.340.000 = **25.309.228.855** (nghìn đồng)
+- **Lợi nhuận thuần từ hoạt động kinh doanh (cuối năm 2024)**: (12.918.933.440) (BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)
+- **Ước tính tác động**:
+  - Công thức: `Lợi nhuận dự báo = Lợi nhuận báo cáo + Tổng mức tăng dự phòng`
+  - Áp dụng: (‑12.918.933.440) + 25.309.228.855 = **12.390.295.415** (nghìn đồng)
+  - Nghĩa vụ: nếu không tăng dự phòng, lợi nhuận (hoặc lỗ) của công ty sẽ cải thiện khoảng **25,3 tỷ đồng**, biến lỗ 12,9 tỷ đồng thành lợi nhuận 12,4 tỷ đồng.
+
+*Nhận xét*:
+- Sự gia tăng đáng kể của dự phòng cho đầu tư vào công ty con (≈ 25,3 tỷ) là yếu tố chính làm tăng chi phí tài chính và làm giảm lợi nhuận trong kỳ.
+- Khi dự phòng này được tính tăng, lợi nhuận kế toán chuyển từ lỗ thành lợi nhuận tích cực, cho thấy tính nhạy cảm cao của lợi nhuận đối với các dự phòng đầu tư.
+- Nếu công ty muốn duy trì lợi nhuận ổn định, cần xem xét lại mức dự phòng hoặc cải thiện hiệu quả đầu tư vào công ty con để giảm nhu cầu tăng dự phòng trong tương lai.","Theo chính sách kế toán, tăng/giảm dự phòng giảm giá đầu tư vào công ty con được ghi nhận vào chi phí tài chính. Do đó, việc dự phòng giảm giá đầu tư vào công ty con tăng từ 15.567.613.741 VND lên 40.839.502.596 VND (tăng 25.271.888.855 VND) sẽ làm tăng chi phí tài chính của công ty. Điều này sẽ trực tiếp làm giảm lợi nhuận trước thuế và lợi nhuận sau thuế của công ty. Mặc dù đây là một bút toán không dùng tiền mặt, nó phản ánh sự mất mát giá trị tài sản và có tác động tiêu cực đáng kể đến kết quả hoạt động kinh doanh, làm giảm khả năng sinh lời báo cáo của công ty.",15,"Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng giảm giá chứng khoán kinh doanh | Số cuối năm
+Period: cuối
+Value: (5.054.591.307)
+Note ref: V.2a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Dự phòng giảm giá chứng khoán kinh doanh | Số đầu năm
+Period: đầu
+Value: (5.017.251.307)
+Note ref: V.2a
+---
+Table: BẢNG CÂN ĐỐI KẾ TOÁN
+Item: Đầu tư vào công ty con | Số đầu năm
+Period: đầu
+Value: 355.050.194.016
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số đầu năm Dự phòng
+Period: đầu
+Value: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Đầu tư vào Công ty con | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (40.839.502.596)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Chi phí tài chính | Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh
+Value: Luỹ kế từ đầu năm đến cuối kỳ này Năm nay: 26.559.480.945 | Luỹ kế từ đầu năm đến cuối kỳ này Năm trước: 14.384.270.936
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 5. Chi phí tài chính
+Item: Dự phòng tổn thất đầu tư, Dự phòng giảm giá chứng khoán kinh doanh | Luỹ kế từ đầu năm đến cuối kỳ này Năm nay
+Value: 26.559.480.945
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2024
+Period: cuối
+Value: 12.205.164.159
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2024
+Period: cuối
+Value: (12.918.933.440)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Quý IV năm 2023
+Period: đầu
+Value: (29.778.741.081)
+---
+Table: BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+Item: Lợi nhuận thuần từ hoạt động kinh doanh | Lũy kế đến quý IV năm 2023
+Period: đầu
+Value: (43.531.303.789)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Công ty Cổ phần Quản lý vận hành Bất động sản Mandala | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (8.000.000.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Công ty Cổ phần Quản lý vận hành Bất động sản Mandala | Số đầu năm Dự phòng
+Period: đầu
+Value: (6.749.747.910)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Dự phòng
+Period: cuối
+Value: (26.243.593.986)",1,,82470,20203,0.5833333333333334,0.5859848242340969,0.5173687423629938,0.25
+148,Tỷ lệ sở hữu của Công ty APEC Investment tại CTCP Thương mại và Du lịch Kim Bôi vào cuối kỳ là bao nhiêu?,Tỷ lệ sở hữu của Công ty APEC Investment tại CTCP Thương mại và Du lịch Kim Bôi vào cuối kỳ là 5.200.000 cổ phần.,"Tỷ lệ sở hữu của Công ty APEC Investment tại CTCP Thương mại và Du lịch Kim Bôi vào cuối kỳ là 22,26%.",10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Thương mại và Du lịch Kim Bôi | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 5.200.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 16.898.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Đầu tư Apec Túc Duyên | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 1.896.169
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 800.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Giáo dục E-ACADEMY | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 1.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Đầu tư Quốc tế Dubai | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 7.711.250
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Tỷ lệ sở hữu của Công ty tại các đơn vị như sau:
+Item: Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala | Số cuối kỳ Số lượng CP
+Period: cuối
+Value: 150.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: Là các khoản cho vay Bên liên quan, bao gồm:
+Item: Công ty Cổ phần Thương mại và Du lịch Kim Bôi (lãi suất 13%/năm) | Số cuối kỳ
+Period: cuối
+Value: 9.888.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Số dư cuối kỳ
+Value: Vốn đầu tư của chủ sở hữu: 840.839.760.000 | Lợi nhuận sau thuế chưa phân phối: 43.404.961.299 | Cộng: 884.244.721.299
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 19a. Bảng đối chiếu biến động của vốn chủ sở hữu | Số dư cuối kỳ
+Value: Vốn đầu tư của chủ sở hữu: 840.839.760.000 | Lợi nhuận sau thuế chưa phân phối: 54.254.677.312 | Cộng: 895.094.437.312",1,,10865,8975,0.0,0.9447903623371715,0.0,0.0
+149,Công ty con nào đang chờ giải thể?,Công ty Cổ phần Apec Túc Duyên đang chờ giải thể.,CTCP Đầu tư APEC Túc Duyên đang chờ giải thể.,10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty con
+Value: Số cuối kỳ Giá gốc: 265.354.194.016 | Số cuối kỳ Dự phòng: (40.839.502.596) | Số đầu năm Giá gốc: 355.050.194.016 | Số đầu năm Dự phòng: (15.567.613.741)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Công ty Cổ phần Apec Túc Duyên đang chờ giải thể.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Các khoản đầu tư vào công ty con
+Value: ### Công ty con Công ty con là doanh nghiệp chịu sự kiểm soát của Công ty. Việc kiểm soát đạt được khi Công ty có khả năng kiểm soát các chính sách tài chính và hoạt động của doanh nghiệp nhận đầu tư nhằm thu được lợi ích kinh tế từ các hoạt động của doanh nghiệp đó.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Apec Land Huế
+Value: Khoản mục: Công ty Cổ phần Apec Land Huế | Số cuối kỳ Giá trị: 119.857.622.354 | Số cuối kỳ Khả năng trả nợ: 119.857.622.354 | Trong kỳ Tăng: - | Trong kỳ Giảm: 11.500.000.000 | Số đầu kỳ Giá trị: 131.357.622.354 | Số đầu kỳ Khả năng trả nợ: 131.357.622.354
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 18a. Vay ngắn hạn | Công ty Cổ phần Lagoon Lăng Cô
+Value: Khoản mục: Công ty Cổ phần Lagoon Lăng Cô | Trong kỳ Tăng: - | Trong kỳ Giảm: 89.449.835.100 | Số đầu kỳ Giá trị: 89.449.835.100 | Số đầu kỳ Khả năng trả nợ: 89.449.835.100
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Apec Land Huế
+Value: Tên công ty: Công ty Cổ phần Apec Land Huế | Địa chỉ trụ sở chính: 30 Lê Lợi, phường Phú Nhuận, thành phố Huế, tỉnh Thừa Thiên Huế | Hoạt động kinh doanh chính: Đầu tư, kinh doanh bất động sản | Tỷ lệ vốn góp: 99,99% | Tỷ lệ lợi ích: 99,99% | Tỷ lệ quyền biểu quyết: 99,99%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Cấu trúc Công ty | Công ty Cổ phần Lagoon Lăng Cô
+Value: Tên công ty: Công ty Cổ phần Lagoon Lăng Cô | Địa chỉ trụ sở chính: Tầng 9, tòa nhà HCC, 28 Lý Thường Kiệt, phường Vĩnh Ninh, thành phố Huế, tỉnh Thừa Thiên Huế | Hoạt động kinh doanh chính: Dịch vụ lưu trú ngắn ngày | Tỷ lệ vốn góp: 90,16% | Tỷ lệ lợi ích: 90,16% | Tỷ lệ quyền biểu quyết: 90,16%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Len Hà Đông
+Value: Số cuối năm Giá gốc: 2.138.120.000 | Số cuối năm Giá trị hợp lý: - | Số cuối năm Dự phòng: (2.138.120.000) | Số đầu năm Giá gốc: 2.138.120.000 | Số đầu năm Giá trị hợp lý: - | Số đầu năm Dự phòng: (2.138.120.000)
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Đầu tư vào Công ty liên kết
+Value: Số cuối kỳ Giá gốc: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Apec Land Huế
+Value: Số cuối kỳ Số lượng CP: 16.898.000 | Số cuối kỳ Tỷ lệ sở hữu: 99,99% | Số đầu năm Số lượng CP: 16.898.000 | Số đầu năm Tỷ lệ sở hữu: 99,99%",1,,19465,8905,1.0,0.4783656655766238,0.49999999995,1.0
+150,Khoản đầu tư vào CTCP Thương mại và Du lịch Kim Bôi đã thay đổi từ loại đầu tư nào sang loại nào trong kỳ này?,"Theo thuyết minh báo cáo tài chính, khoản đầu tư vào CTCP Thương mại và Du lịch Kim Bôi đã chuyển từ 'đầu tư góp vốn vào đơn vị khác' (giá gốc 81.672.000.000 VND vào đầu năm) sang không còn được ghi nhận ở mục này vào cuối kỳ, tức là đã thay đổi loại đầu tư.",Khoản đầu tư vào Công ty Cổ phần Thương mại và Du lịch Kim Bôi đã thay đổi từ các khoản đầu tư khác sang đầu tư vào công ty liên kết trong kỳ này.,10,"Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Công ty Cổ phần Thương mại và Du lịch Kim Bôi
+Value: Số cuối kỳ Số lượng CP: 5.200.000 | Số cuối kỳ Tỷ lệ sở hữu: 22,26% | Số đầu năm Số lượng CP: 5.200.000 | Số đầu năm Tỷ lệ sở hữu: 19,05%
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Thương mại và Du lịch Kim Bôi
+Value: Số cuối kỳ Giá gốc: - | Số cuối kỳ Dự phòng: - | Số đầu năm Giá gốc: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: với 23.356.000 cổ phần. Công ty sở hữu 5.200.000 cổ phần với tỷ lệ sở hữu là 22,26% (số đầu năm 5.200.000 cổ phần với tỷ lệ sở hữu 19,05%). Công ty Cổ phần Thương mại và Du lịch Kim Bôi từ khoản đầu tư khác trở thành công ty liên kết trong kỳ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác | Công ty Cổ phần Thương mại và Du lịch Kim Bôi (iii)
+Value: Số cuối kỳ Giá gốc: 81.672.000.000 | Số cuối kỳ Dự phòng: -
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: Công ty Cổ phần Quản lý Khách sạn và Dịch vụ Mandala, Công ty Cổ phần Quản lý Vận hành Bất động sản Mandala và Công ty Cổ phần Thương mại và Du lịch Kim Bôi: Hoạt động sản xuất kinh doanh bị lỗ trong kỳ.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: 2c. Đầu tư góp vốn vào đơn vị khác
+Value: (iii) Theo Giấy chứng nhận đăng ký doanh nghiệp thay đổi lần thứ 09 ngày 23 tháng 5 năm 2024, vốn điều lệ của Công ty Cổ phần Thương mại và Du lịch Kim Bôi là 233.560.000.000 VND tương ứng
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh 5: Phải thu về cho vay ngắn hạn | Công ty Cổ phần Thương mại và Du lịch Kim Bôi (lãi suất 13%/năm)
+Value: Số cuối kỳ: 9.888.000.000 | Số đầu năm: 9.888.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Subheading: 2c. Đầu tư góp vốn vào đơn vị khác
+Item: Công ty Cổ phần Thương mại và Du lịch Kim Bôi (iii) | Số cuối kỳ Giá gốc
+Period: cuối
+Value: 81.672.000.000
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính
+Value: 11. Các khoản nợ phải trả và chi phí phải trả Các khoản nợ phải trả và chi phí phải trả được ghi nhận cho số tiền phải trả trong tương lai liên quan đến hàng hóa và dịch vụ đã nhận được. Chi phí phải trả được ghi nhận dựa trên các ước tính hợp lý về số tiền phải trả. Việc phân loại các khoản phải trả là phải trả người bán, chi phí phải trả, và phải trả khác được thực hiện theo nguyên tắc sau: Phải trả người bán phản ánh các khoản phải trả mang tính chất thương mại phát sinh từ giao dịch mua hàng hóa, dịch vụ, tài sản và người bán là đơn vị độc lập với Công ty. Chi phí phải trả phản ánh các khoản phải trả cho hàng hóa, dịch vụ đã nhận được từ người bán hoặc đã cung cấp cho người mua nhưng chưa chi trả do chưa có hóa đơn hoặc chưa đủ hồ sơ, tài liệu kế toán và các khoản phải trả cho người lao động về tiền lương nghỉ phép, các khoản chi phí sản xuất, kinh doanh phải trích trước. Phải trả khác phản ánh các khoản phải trả không có tính thương mại, không liên quan đến giao dịch mua, bán, cung cấp hàng hóa dịch vụ. Các khoản nợ phải trả và chi phí phải trả được phân loại ngắn hạn và dài hạn trên Bảng cân đối kế toán căn cứ theo kỳ hạn còn lại tại ngày kết thúc năm tài chính.
+---
+Table: THUYẾT MINH BÁO CÁO TÀI CHÍNH
+Item: Thuyết minh báo cáo tài chính | Khấu hao trong kỳ
+Value: Giá trị hao mòn: (34.165.355) | Giá trị còn lại: (34.165.355)",1,,22156,9587,0.6666666666666666,0.8028849010675954,0.3333333333,1.0

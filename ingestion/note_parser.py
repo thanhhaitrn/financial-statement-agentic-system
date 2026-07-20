@@ -18,7 +18,7 @@ _NOTE_TOC_RE = re.compile(
     flags=re.IGNORECASE | re.DOTALL,
 )
 _NOTE_HEADING_RE = re.compile(
-    r"(?im)^\s*#{0,6}\s*thuy[ếe]t\s+minh\s+b[áa]o\s+c[áa]o\s+t[àa]i\s+ch[íi]nh\s*$"
+    r"(?im)^\s*#{0,6}\s*(?:b[ảa]n\s+)?thuy[ếe]t\s+minh\s+b[áa]o\s+c[áa]o\s+t[àa]i\s+ch[íi]nh\s*$"
 )
 _NUMBERED_SECTION_RE = re.compile(
     r"^\s*(?:#{1,6}\s*)?\d+(?:\.\d+)*\s+.{2,}$",
@@ -33,12 +33,35 @@ _SUBSECTION_HEADING_RE = re.compile(
     r"^\s*(?P<label>[a-zđ])\)\s+(?P<title>.+?)\s*$",
     flags=re.IGNORECASE,
 )
+# A note-schedule heading like "### 5. Phải thu về cho vay ngắn hạn", "2c. Đầu tư
+# góp vốn vào đơn vị khác" or "17a. Phải trả ngắn hạn khác". The number carries an
+# optional single-letter suffix (2c, 3a, 17a, 18b) that _NOTE_SECTION_RE misses.
+# Used to backfill the 'V.<n>' note reference onto note rows so they link to the
+# primary-statement line that references them (e.g. BS "Phải thu về cho vay" V.5).
+_NOTE_SCHEDULE_RE = re.compile(
+    r"^\s*(?:thuy[ếe]t\s+minh\s*)?(?P<num>\d{1,2}[a-zđ]?)\s*[.).:-]\s+\S",
+    flags=re.IGNORECASE,
+)
 _FISCAL_YEAR_RE = re.compile(
     r"năm\s+tài\s+chính\s+kết\s+thúc\s+ngày.*?(?P<year>(?:19|20)\d{2})",
     flags=re.IGNORECASE | re.DOTALL,
 )
 _DATE_YEAR_RE = re.compile(r"\b(?:31|30)/12/(?P<year>(?:19|20)\d{2})\b")
 _COMPANY_LINE_RE = re.compile(r"^\s*#{0,6}\s*(công\s+ty\b.+?)\s*$", flags=re.IGNORECASE)
+# A company-name line in the cover/front matter is often the start of a prose
+# sentence ("Công ty ... là Công ty cổ phần hoạt động theo Giấy chứng nhận...").
+# Cut at the first clause boundary so only the name survives — otherwise the
+# whole sentence becomes the "company" and gets prepended to every embedded
+# document, drowning the discriminative text and polluting interpretation hints.
+_COMPANY_CLAUSE_RE = re.compile(
+    r"\s+(?:là|được|hoạt\s+động|thành\s+lập|gọi\s+tắt|có\s+trụ\s+sở|trình\s+bày)\b"
+    r"|[.,;:(]",
+    flags=re.IGNORECASE,
+)
+
+
+def _trim_company_name(name: str) -> str:
+    return _COMPANY_CLAUSE_RE.split(str(name or ""), maxsplit=1)[0].strip()
 _NUMERIC_AMOUNT_RE = re.compile(r"^\(?-?[\d.,\s]+%?\)?$")
 _REPORT_HEADER_PREFIXES = (
     "địa chỉ:",
@@ -68,7 +91,7 @@ def infer_company(md_text: str) -> str:
         if not match:
             continue
 
-        company = _readable_note_title(str(match.group(1) or "").strip())
+        company = _trim_company_name(_readable_note_title(str(match.group(1) or "").strip()))
         if len(company) <= 8:
             continue
         if not str(line or "").lstrip().startswith("#"):
@@ -141,7 +164,11 @@ def extract_note_section_pages(md_text: str) -> list[dict]:
             for page in pages
             if start_page <= int(page["printed_page"]) <= end_page
         ]
-        if selected:
+        # Only trust the TOC page range when the notes heading actually falls
+        # inside the selected pages. Otherwise the TOC parse latched onto the
+        # wrong number (e.g. a running footer) and we would slice a main
+        # statement (the Balance Sheet) into the notes section.
+        if selected and any(_NOTE_HEADING_RE.search(page["content"]) for page in selected):
             selected[0] = {
                 **selected[0],
                 "content": _slice_from_note_heading(selected[0]["content"]),
@@ -238,6 +265,38 @@ def _parse_note_section(section: str) -> tuple[str, str]:
     )
 
 
+def note_schedule_ref(heading: str) -> str:
+    """Return the 'V.<n>' note reference for a note-schedule heading, else "".
+
+    "### 5. Phải thu về cho vay ngắn hạn" -> "V.5"; "2c. Đầu tư góp vốn vào đơn
+    vị khác" -> "V.2c". This is the back-link that lets a note schedule be joined
+    to the primary-statement row whose note_ref column points at it.
+    """
+    cleaned = _clean_line(heading).strip("#").strip()
+    if not cleaned or _NOTE_HEADING_RE.match(cleaned):
+        return ""
+    match = _NOTE_SCHEDULE_RE.match(cleaned)
+    if not match:
+        return ""
+    return "V." + str(match.group("num") or "").lower()
+
+
+def note_schedule_title(heading: str) -> str:
+    """The numbered schedule heading itself ("10. Tài sản cố định vô hình"), or "".
+
+    Kept alongside note_schedule_ref so descriptive sub-headings that follow
+    ("Là chương trình phần mềm, chi tiết như sau:") can be re-anchored to the
+    schedule they belong to — otherwise those rows lose the line-item tokens
+    the retrieval needs ("tài sản cố định vô hình").
+    """
+    cleaned = _clean_line(heading).strip("#").strip()
+    if not cleaned or _NOTE_HEADING_RE.match(cleaned):
+        return ""
+    if not _NOTE_SCHEDULE_RE.match(cleaned):
+        return ""
+    return cleaned
+
+
 def _note_item_name(section: str) -> str:
     note_number, note_title = _parse_note_section(section)
     if note_number and note_title:
@@ -265,16 +324,20 @@ def _row_tuple(
     item_name: str,
     value: str,
     source: str,
+    note_ref: str = "",
 ):
     text = _strip_inline_formatting(value)
     if not text:
         return None
 
+    # 11-tuple in canonical order (…, item_code, note_ref, subheading, …) so the
+    # sqlite normalizer links the note back to its primary-statement line.
     return (
         company,
         fiscal_year,
         TABLE_NOTE,
         item_code,
+        note_ref,
         subheading,
         item_name,
         text,
@@ -319,7 +382,9 @@ def _iter_table_rows(df: pd.DataFrame) -> Iterable[tuple[str, str]]:
     columns = [_strip_inline_formatting(column) for column in df.columns]
 
     for _, row in df.iterrows():
-        cells = [str(row.get(column, "") or "").strip() for column in df.columns]
+        # Access by position, not column name: note tables often repeat header
+        # labels (e.g. "Số cuối năm"), which makes row.get(name) return a Series.
+        cells = [str(value or "").strip() for value in row.values]
         if not any(cells):
             continue
         if all(_clean_line(cell).lower() in _UNIT_ONLY_CELLS for cell in cells if cell):
