@@ -191,7 +191,17 @@ def _compose_subheading(*parts) -> str:
     return " — ".join(part for part in parts if str(part or "").strip())
 
 
-def df_to_facts(df, heading, company, source, fiscal_year=None, section="", section_note_ref="", section_note_title=""):
+def df_to_facts(
+    df,
+    heading,
+    company,
+    source,
+    fiscal_year=None,
+    section="",
+    section_note_ref="",
+    section_note_title="",
+    default_unit="",
+):
     facts = []
     fact_heading, base_subheading = _resolve_heading(heading, section)
 
@@ -334,7 +344,11 @@ def df_to_facts(df, heading, company, source, fiscal_year=None, section="", sect
                         or canonical_value_type(row_label)
                         or canonical_value_type(_display_column_name(col_name))
                     ),
-                    "unit": col_unit.get(col_name, ""),
+                    "unit": (
+                        "cổ phiếu"
+                        if "số lượng cổ phiếu" in _norm_label(row_label)
+                        else col_unit.get(col_name, "") or str(default_unit or "").strip()
+                    ),
                     "value": normalized_value,
                     "raw_value": raw_value,
                     "normalized_value": normalized_value,
@@ -361,6 +375,7 @@ def build_fact_rows(tables_with_context, company, source, fiscal_year=None):
             section=block.get("section", ""),
             section_note_ref=block.get("note_ref", ""),
             section_note_title=block.get("note_title", ""),
+            default_unit=block.get("unit", ""),
         )
 
         for f in facts:

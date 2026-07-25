@@ -1,0 +1,140 @@
+{
+  "schema_version": 1,
+  "dataset_id": "apec",
+  "seed_file": "dau_tu_APEC_ragas_seed.json",
+  "seed_range": "q211-250",
+  "records": [
+    {
+      "id": 211,
+      "question": "Tổng phải trả dài hạn khác cuối kỳ là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Phải trả dài hạn khác", "period": "cuối kỳ", "value": "46.440.397.112", "unit": "VND", "reference": "V.17b"}
+      ]
+    },
+    {
+      "id": 212,
+      "question": "Tổng vay ngắn hạn cuối kỳ là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Vay ngắn hạn", "period": "cuối kỳ", "value": "156.502.422.354", "unit": "VND", "reference": "V.18a"}
+      ]
+    },
+    {
+      "id": 213,
+      "question": "So sánh vay ngắn hạn từ các cá nhân cuối kỳ với đầu năm.",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Vay ngắn hạn các cá nhân", "period": "cuối kỳ", "value": "17.219.900.000", "unit": "VND", "reference": "V.18a"},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Vay ngắn hạn các cá nhân", "period": "đầu kỳ", "value": "159.668.100.000", "unit": "VND", "reference": "V.18a"}
+      ]
+    },
+    {
+      "id": 214,
+      "question": "Số dư lợi nhuận giữ lại cuối năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Lợi nhuận sau thuế chưa phân phối", "period": "cuối kỳ", "value": "43.404.961.299", "unit": "VND", "reference": "V.19a"}
+      ]
+    },
+    {
+      "id": 219,
+      "question": "Số lượng cổ phiếu phổ thông đang lưu hành cuối kỳ là bao nhiêu?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Số lượng cổ phiếu phổ thông đang lưu hành", "period": "cuối kỳ", "value": "84.083.976", "unit": "cổ phiếu", "reference": "V.19b"}
+      ]
+    },
+    {
+      "id": 220,
+      "question": "Doanh thu gộp từ bất động sản giữ để bán trong năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Doanh thu bán bất động sản", "period": "năm hiện tại", "value": "187.743.704.036", "unit": "VND", "reference": "V.1"}
+      ]
+    },
+    {
+      "id": 221,
+      "question": "Mệnh giá mỗi cổ phiếu đang lưu hành của công ty là bao nhiêu?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Mệnh giá cổ phiếu đang lưu hành", "period": "2024", "value": "10.000", "unit": "VND", "reference": "V.19b"}
+      ]
+    },
+    {
+      "id": 222,
+      "question": "So sánh doanh thu từ bán hàng hóa năm hiện tại và năm trước.",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Doanh thu bán hàng hóa", "period": "năm hiện tại", "value": "16.668.489.482", "unit": "VND", "reference": "V.1"},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Doanh thu bán hàng hóa", "period": "năm trước", "value": "10.481.414.367", "unit": "VND", "reference": "V.1"}
+      ]
+    },
+    {
+      "id": 227,
+      "question": "Tổng giá vốn hàng bán năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Giá vốn hàng bán", "period": "năm hiện tại", "value": "133.703.128.164", "unit": "VND", "reference": "V.3"}
+      ]
+    },
+    {
+      "id": 228,
+      "question": "Doanh thu hoạt động tài chính năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Doanh thu hoạt động tài chính", "period": "năm hiện tại", "value": "17.648.145.868", "unit": "VND", "reference": "V.4"}
+      ]
+    },
+    {
+      "id": 230,
+      "question": "So sánh lãi cho vay năm hiện tại và năm trước. Sự thay đổi là bao nhiêu?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Lãi cho vay", "period": "năm hiện tại", "value": "14.592.618.979", "unit": "VND", "reference": "V.4"},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Lãi cho vay", "period": "năm trước", "value": "26.030.112.902", "unit": "VND", "reference": "V.4"}
+      ]
+    },
+    {
+      "id": 235,
+      "question": "Tổng chi phí tài chính năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí tài chính", "period": "năm hiện tại", "value": "58.553.138.851", "unit": "VND", "reference": "V.5"}
+      ]
+    },
+    {
+      "id": 236,
+      "question": "Chi phí bán hàng năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí bán hàng", "period": "năm hiện tại", "value": "24.634.908.426", "unit": "VND", "reference": "V.6"}
+      ]
+    },
+    {
+      "id": 237,
+      "question": "So sánh chi phí lãi vay năm hiện tại với năm trước.",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí lãi vay", "period": "năm hiện tại", "value": "26.984.670.021", "unit": "VND", "reference": "V.5"},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí lãi vay", "period": "năm trước", "value": "38.076.798.251", "unit": "VND", "reference": "V.5"}
+      ]
+    },
+    {
+      "id": 238,
+      "question": "Tỷ lệ dự phòng giảm giá chứng khoán kinh doanh trên tổng chi phí tài chính năm hiện tại là bao nhiêu phần trăm?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Dự phòng giảm giá chứng khoán kinh doanh", "period": "năm hiện tại", "value": "26.559.480.945", "unit": "VND", "reference": "V.5"},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí tài chính", "period": "năm hiện tại", "value": "58.553.138.851", "unit": "VND", "reference": "V.5"}
+      ]
+    },
+    {
+      "id": 243,
+      "question": "Tổng thu nhập khác năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm hiện tại", "value": "5.930.566.560", "unit": "VND", "reference": "V.8"}
+      ]
+    },
+    {
+      "id": 244,
+      "question": "Tổng chi phí khác năm hiện tại là bao nhiêu VND?",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí khác", "period": "năm hiện tại", "value": "2.817.625.199", "unit": "VND", "reference": "V.9"}
+      ]
+    },
+    {
+      "id": 245,
+      "question": "So sánh thu nhập khác năm hiện tại và năm trước.",
+      "expected_facts": [
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm hiện tại", "value": "5.930.566.560", "unit": "VND", "reference": "V.8"},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm trước", "value": "4.296.727.076", "unit": "VND", "reference": "V.8"}
+      ]
+    }
+  ]
+}

@@ -15,6 +15,15 @@ from typing import Any, Type
 from langchain.tools import tool as _tool
 from pydantic import BaseModel, Field
 
+from agents.agent_registry import AGENT_SPECS
+from tools.tools import (
+    get_balance_sheet_info,
+    get_cashflow_info,
+    get_income_statement_info,
+    get_note_info,
+    get_report_section_info,
+)
+
 
 class ScopedInfoInput(BaseModel):
     """Arguments visible to analysis agents for scoped financial-statement retrieval."""
@@ -62,26 +71,22 @@ _SCOPED_ANALYSIS_TOOL_DESCRIPTIONS = {
     "get_income_statement_info": "Retrieve income statement evidence only.",
     "get_cashflow_info": "Retrieve cash flow statement evidence only.",
     "get_note_info": "Retrieve notes-to-financial-statements evidence only.",
-    "get_report_section_info": "Retrieve report-level narrative such as company profile, address/head office, accounting standards/regime applied, audit firm, management board, management report, audit/review report, signers, dates, and emphasis matters only.",
 }
-_ANALYSIS_AGENT_NAMES = (
-    "agent_profitability",
-    "agent_liquidity_solvency",
-    "agent_cashflow_analysis",
-    "agent_efficiency",
-)
-
-
 AGENT_TOOL_DECLARATIONS: dict[str, list[AgentToolDeclaration]] = {}
-for _agent_name in _ANALYSIS_AGENT_NAMES:
+for _agent_name, _agent_spec in AGENT_SPECS.items():
+    if _agent_spec.kind != "analysis":
+        continue
     AGENT_TOOL_DECLARATIONS[_agent_name] = [
         AgentToolDeclaration(
             name=tool_name,
-            description=description,
+            description=_SCOPED_ANALYSIS_TOOL_DESCRIPTIONS[tool_name],
             args_schema=ScopedInfoInput,
-            langchain_tool=_make_scoped_info_tool(tool_name, description),
+            langchain_tool=_make_scoped_info_tool(
+                tool_name,
+                _SCOPED_ANALYSIS_TOOL_DESCRIPTIONS[tool_name],
+            ),
         )
-        for tool_name, description in _SCOPED_ANALYSIS_TOOL_DESCRIPTIONS.items()
+        for tool_name in _agent_spec.tool_names
     ]
 
 
@@ -130,3 +135,27 @@ def get_tool_names_for_agent(agent_name: str) -> set[str]:
         declaration.name
         for declaration in AGENT_TOOL_DECLARATIONS.get(str(agent_name or "").strip(), [])
     }
+
+
+def get_tools_list(agent_name: str) -> str:
+    specs = get_tool_prompt_specs_for_agent(agent_name)
+    if not specs:
+        return ""
+    lines = ["Available tools:\n"]
+    for index, spec in enumerate(specs, start=1):
+        lines.append(
+            f"{index}. {spec['name']}\n"
+            f"Description: {spec['description']}\n"
+            f"Arguments: {spec['args']}\n"
+        )
+    return "\n".join(lines)
+
+
+TOOLS_MAPPING_2_FUNCTIONS = {
+    "get_balance_sheet_info": get_balance_sheet_info,
+    "get_income_statement_info": get_income_statement_info,
+    "get_cashflow_info": get_cashflow_info,
+    "get_note_info": get_note_info,
+    # Evidence-stage callable; intentionally absent from analysis declarations.
+    "get_report_section_info": get_report_section_info,
+}

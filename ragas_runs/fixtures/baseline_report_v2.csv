@@ -1,0 +1,4 @@
+schema_version,record_type,run_status,dataset_id,metric,value,threshold,blocking,notes
+2,contract,fixture_not_measurement,apec,deterministic_factual_recall,,0.95,true,LLM-independent hard quality gate
+2,contract,fixture_not_measurement,apec,ragas_mean,,,false,Diagnostic only; never a merge gate
+2,contract,fixture_not_measurement,apec,prediction_latency,,,false,Valid only for a complete clean-attested run without provider-limit or quota backoff

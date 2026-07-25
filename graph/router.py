@@ -8,6 +8,26 @@ from collections import defaultdict
 from langgraph.types import Send
 
 from agents.agent_registry import is_analysis_agent
+from common import dedupe_keep_order as _dedupe_keep_order
+
+ROUTE_METADATA_FIELDS = (
+    "time_hint",
+    "period",
+    "unit",
+    "value_type",
+    "evidence_query",
+    "source",
+)
+
+
+def _route_metadata(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        key: payload.get(key)
+        for key in ROUTE_METADATA_FIELDS
+        if payload.get(key) not in ("", None, [], {})
+    }
 
 
 def build_worker_query(
@@ -28,19 +48,9 @@ def build_worker_query(
     )
     if company:
         parts.append(company)
+    if time_hint and str(time_hint).strip() not in parts:
+        parts.append(str(time_hint).strip())
     return " | ".join(parts)
-
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
 
 
 def _analysis_targets(worker_plan: dict) -> list[dict]:
@@ -57,12 +67,14 @@ def _analysis_targets(worker_plan: dict) -> list[dict]:
                     "agent": agent,
                     "objective": str(item.get("objective", "") or "").strip(),
                     "evidence_queries": list(item.get("evidence_queries", []) or []),
+                    **_route_metadata(item),
                 }
             )
         return targets
 
     targets = worker_plan.get("targets", []) or []
     grouped = defaultdict(list)
+    grouped_evidence_queries = defaultdict(list)
     grouped_payloads = {}
 
     for target in targets:
@@ -79,12 +91,41 @@ def _analysis_targets(worker_plan: dict) -> list[dict]:
                 if str(item).strip()
             ]
         )
-        grouped_payloads[agent] = dict(target)
+        grouped_evidence_queries[agent].extend(
+            item
+            for item in (target.get("evidence_queries", []) or [])
+            if isinstance(item, dict)
+        )
+        grouped_payloads.setdefault(agent, {})
+        grouped_payloads[agent].update(
+            {
+                key: value
+                for key, value in dict(target).items()
+                if key not in {"requirements", "evidence_queries"}
+                and value not in ("", None, [], {})
+            }
+        )
 
     normalized_targets = []
     for agent, requirements in grouped.items():
         target = dict(grouped_payloads.get(agent, {}) or {})
         target["requirements"] = _dedupe_keep_order(requirements)
+        if grouped_evidence_queries.get(agent):
+            seen_queries = set()
+            target["evidence_queries"] = []
+            for query in grouped_evidence_queries[agent]:
+                key = (
+                    str(query.get("table", "") or "").strip(),
+                    str(query.get("query", "") or "").strip(),
+                    tuple(
+                        (field, str(query.get(field, "") or ""))
+                        for field in ROUTE_METADATA_FIELDS
+                    ),
+                )
+                if key in seen_queries:
+                    continue
+                seen_queries.add(key)
+                target["evidence_queries"].append(dict(query))
         normalized_targets.append(target)
 
     return normalized_targets
@@ -117,6 +158,11 @@ def dispatch_analysis_workers(state: dict):
         if not agent:
             continue
 
+        dispatch_target = dict(target)
+        for key, value in _route_metadata(planner_plan).items():
+            dispatch_target.setdefault(key, value)
+        target_time_hint = str(dispatch_target.get("time_hint", "") or time_hint).strip()
+
         jobs.append(
             Send(
                 agent,
@@ -132,11 +178,11 @@ def dispatch_analysis_workers(state: dict):
                         "",
                         worker_query_items,
                         company,
-                        time_hint,
+                        target_time_hint,
                     ),
-                    "dispatch_target": target,
-                    "analysis_input_results": target.get("analysis_input_results", {}) or {},
-                    "evidence_queries": list(target.get("evidence_queries", []) or []),
+                    "dispatch_target": dispatch_target,
+                    "analysis_input_results": dispatch_target.get("analysis_input_results", {}) or {},
+                    "evidence_queries": list(dispatch_target.get("evidence_queries", []) or []),
                     "followup_rounds": state.get("followup_rounds", 0),
                 },
             )

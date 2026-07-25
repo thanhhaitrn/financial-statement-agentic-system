@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.agent_tools_list import get_tools_list
+from tools.langchain_tools import get_tools_list
 from agents.agent_registry import is_analysis_agent
 from agents.line_item_matcher import (
     DIRECT_LINE_ITEM_CALCULATION_PATTERNS,
@@ -25,12 +25,14 @@ from config.allowed_keywords import (
     TABLE_REPORT_SECTION,
     build_allowed_keywords_payload,
     iter_keyword_table_pairs,
+    normalize_keyword_synonyms,
 )
 from graph.logger import make_debug_log, make_log
 from llm.invoke import extract_usage_metadata, invoke_prompt
 from schemas.agent_outputs import AnalysisPlanItem, EvidenceDispatchPlan, EvidencePlanItem, Target
 from schemas.table_names import normalize_table_heading
 from agents.prompts import PROMPT_TEMPLATE
+from common import dedupe_keep_order as _dedupe_keep_order
 
 MAX_TARGET_REQUIREMENTS = 8
 OPTIONAL_ROUTER_REQUIREMENTS = {
@@ -231,6 +233,12 @@ NOTE_FOLLOWUP_MARKERS = (
     "chi tiet khoan muc",
     "tài sản thuê ngoài",
     "tai san thue ngoai",
+    # These rows are note-schedule revenue details, not the cash-flow/interest
+    # expense lines that share the token "lãi".
+    "lãi cho vay",
+    "lai cho vay",
+    "lãi tiền gửi ngân hàng",
+    "lai tien gui ngan hang",
 )
 REPORT_SECTION_MARKERS = (
     "kiểm soát nội bộ",
@@ -357,15 +365,10 @@ def _direct_line_item_evidence_from_query(user_query: str) -> list[dict]:
 
 
 def _entity_evidence_from_query(user_query: str) -> list[dict]:
-    """Recall-first: fetch the specific line-item the question names, even for
-    hard/analysis questions.
+    """Fetch named entities only from deterministically supported tables.
 
-    The analysis agents gather generic axis figures (profitability, liquidity),
-    so a narrow analytical question ("rủi ro khi dự phòng phải thu khó đòi tăng",
-    "tác động giảm đầu tư công ty con", "XDCB dở dang không đổi") never retrieves
-    its own line item -> context_recall 0. We add direct evidence for the named
-    entity across the main report, notes and report sections so the entity's own
-    rows enter the candidate pool alongside the analysis evidence.
+    The former fallback queried BS, IS, CF, and NOTE for every hard question,
+    which inflated latency and let unrelated rows outrank the target.
     """
     raw_query = str(user_query or "").strip()
     if not raw_query:
@@ -380,19 +383,16 @@ def _entity_evidence_from_query(user_query: str) -> list[dict]:
             seen_tables.add(table)
             items.append({"table": table, "query": raw_query, "needby": []})
 
-    # Report-section concepts (governance, audit opinion, ...) are handled by G2
-    # routing; here we only cover line-item entities.
     if _requires_report_section_followup(raw_query):
         _add(TABLE_REPORT_SECTION)
+        return items
 
-    # Recall-first: the named entity may be a balance-sheet/IS/CF sub-line that is
-    # NOT in the allowed-keyword list (e.g. "dự phòng phải thu khó đòi", "chi phí
-    # xây dựng cơ bản dở dang"), so keyword routing alone misses it. Query all
-    # main statements + notes with the entity query; the reranker surfaces the
-    # entity from whichever table holds it (cross-table fold adds more recall).
+    matches = _matching_main_report_keywords(raw_query)
     for table in MAIN_REPORT_TABLE_ORDER:
-        _add(table)
-    _add(TABLE_NOTE)
+        if matches.get(table):
+            _add(table)
+    if _requires_note_followup(raw_query):
+        _add(TABLE_NOTE)
 
     return items
 
@@ -497,10 +497,20 @@ def _restore_user_keywords_in_evidence_plan(evidence_plan: list[dict], user_quer
 
 
 def _matching_main_report_keywords(requirement: str) -> dict[str, list[str]]:
+    requirement = normalize_keyword_synonyms(requirement)
     matches: dict[str, list[str]] = {}
     for table in MAIN_REPORT_TABLE_ORDER:
         allowed = ALLOWED_KEYWORDS.get(table, set()) or set()
-        for keyword in allowed:
+        for keyword in sorted(
+            allowed,
+            key=lambda item: (
+                requirement.find(str(item).lower())
+                if str(item).lower() in requirement
+                else len(requirement) + 1,
+                -len(str(item)),
+                str(item),
+            ),
+        ):
             if _keyword_match_score(requirement, keyword) >= 60.0:
                 matches.setdefault(table, []).append(keyword)
 
@@ -652,7 +662,7 @@ def _followup_route_hints_from_worker_plan(worker_plan: dict) -> dict[str, str]:
 
 
 def _heuristic_followup_route(requirement: str) -> str:
-    text = str(requirement or "").strip().lower()
+    text = normalize_keyword_synonyms(requirement)
 
     if _requires_report_section_followup(text):
         return TABLE_REPORT_SECTION
@@ -689,7 +699,8 @@ def _heuristic_followup_route(requirement: str) -> str:
     ):
         return TABLE_BS
 
-    return TABLE_IS
+    # Unknown follow-ups remain unscoped instead of silently querying IS.
+    return ""
 
 
 def _route_followup_requirement(requirement: str, hint: Optional[str] = None) -> str:
@@ -703,6 +714,12 @@ def _route_followup_requirement(requirement: str, hint: Optional[str] = None) ->
 
     if _requires_note_followup(normalized_requirement):
         return TABLE_NOTE
+
+    # A stale NOTE hint must not override an explicit main-statement concept
+    # such as "tổng tài sản" or the alias "tài sản lưu động".
+    heuristic_route = _heuristic_followup_route(normalized_requirement)
+    if heuristic_route in MAIN_REPORT_TABLES:
+        return heuristic_route
 
     if hint:
         hinted_table = _normalize_evidence_table(hint)
@@ -733,7 +750,7 @@ def _route_followup_requirement(requirement: str, hint: Optional[str] = None) ->
     if best_candidate and best_score >= 1.0:
         return str(best_candidate.get("table", "") or "").strip()
 
-    return _heuristic_followup_route(requirement)
+    return heuristic_route
 
 
 def _normalize_followup_router_targets(
@@ -783,19 +800,6 @@ def _normalize_followup_router_targets(
         "analysis_plan": [],
         "targets": [],
     }
-
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
-
 
 def _split_target_requirement_item(value: str) -> list[str]:
     text = str(value or "").strip()
@@ -1475,12 +1479,11 @@ def _analysis_plan_from_targets(
                 continue
             table = str(item.get("table", "") or "").strip()
             for query in _evidence_item_queries(item):
-                evidence_queries.append(
-                    {
-                        "table": table,
-                        "query": query,
-                    }
-                )
+                evidence_queries.append({
+                    "table": table,
+                    "query": query,
+                    **_query_metadata_for_item(item, query),
+                })
 
         plan.append(
             {
@@ -1547,10 +1550,36 @@ def _with_inferred_needed_by(evidence_plan: list[dict], analysis_targets: list[d
                     "table": table,
                     "query": query,
                     "needby": _dedupe_keep_order(needby),
+                    **_query_metadata_for_item(item, query),
                 }
             )
 
     return output
+
+
+_EVIDENCE_METADATA_FIELDS = (
+    "time_hint",
+    "period",
+    "unit",
+    "value_type",
+    "evidence_query",
+    "source",
+    "note_ref",
+    "source_table",
+    "source_item",
+)
+
+
+def _query_metadata_for_item(item: dict, query: str) -> dict:
+    metadata = {}
+    per_query = item.get("query_metadata", {}) if isinstance(item, dict) else {}
+    if isinstance(per_query, dict) and isinstance(per_query.get(query), dict):
+        metadata.update(per_query[query])
+    for field in _EVIDENCE_METADATA_FIELDS:
+        value = item.get(field) if isinstance(item, dict) else None
+        if value not in ("", None, [], {}) and field not in metadata:
+            metadata[field] = value
+    return metadata
 
 
 def _merge_evidence_plans(*plans: list[dict]) -> list[dict]:
@@ -1589,6 +1618,10 @@ def _merge_evidence_plans(*plans: list[dict]) -> list[dict]:
                         merged[key]["canonical_query"] = canonical_query
                     order.append(key)
 
+                for field, value in _query_metadata_for_item(item, raw_query).items():
+                    if value not in ("", None, [], {}) and merged[key].get(field) in ("", None, [], {}):
+                        merged[key][field] = value
+
                 search_query = (
                     _first_query_map_value(item, "search_queries", "search_query", raw_query)
                     or str(item.get("original_query") or item.get("raw_query") or "").strip()
@@ -1621,6 +1654,7 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
                 "_queries": [],
                 "_canonical_queries": {},
                 "_search_queries": {},
+                "_query_metadata": {},
             }
             order.append(key)
 
@@ -1645,12 +1679,18 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
             if search_query and search_query != query:
                 group["_search_queries"][query] = search_query
 
+            metadata = _query_metadata_for_item(item, query)
+            if metadata:
+                current = dict(group["_query_metadata"].get(query, {}) or {})
+                group["_query_metadata"][query] = {**current, **metadata}
+
     output = []
     for key in order:
         group = grouped[key]
         queries = list(group.pop("_queries", []) or [])
         canonical_queries = dict(group.pop("_canonical_queries", {}) or {})
         search_queries = dict(group.pop("_search_queries", {}) or {})
+        query_metadata = dict(group.pop("_query_metadata", {}) or {})
         if not queries:
             continue
 
@@ -1665,12 +1705,15 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
                 payload["canonical_query"] = canonical_queries[query]
             if search_queries.get(query):
                 payload["search_query"] = search_queries[query]
+            payload.update(query_metadata.get(query, {}) or {})
         else:
             payload["queries"] = queries
             if canonical_queries:
                 payload["canonical_queries"] = canonical_queries
             if search_queries:
                 payload["search_queries"] = search_queries
+            if query_metadata:
+                payload["query_metadata"] = query_metadata
 
         output.append(
             {

@@ -6,7 +6,8 @@ from __future__ import annotations
 import re
 from typing import Any, Iterable
 
-from config.allowed_keywords import ALLOWED_KEYWORDS
+from config.allowed_keywords import ALLOWED_KEYWORDS, normalize_keyword_synonyms
+from common import dedupe_keep_order as _dedupe_keep_order
 
 
 FACT_STATUS_FOUND = "found"
@@ -21,10 +22,15 @@ USABLE_FACT_STATUSES = {"", FACT_STATUS_FOUND}
 
 
 def normalize_fact_status(value: Any) -> str:
-    text = str(value or FACT_STATUS_FOUND).strip().lower()
+    # Missing status is the legacy representation of a successfully retrieved
+    # fact. An explicit but unsupported status is not evidence of success: keep
+    # it out of factual answers by degrading it to ``ambiguous``.
+    if value is None or not str(value).strip():
+        return FACT_STATUS_FOUND
+    text = str(value).strip().lower()
     if text in VALID_FACT_STATUSES:
         return text
-    return FACT_STATUS_FOUND
+    return FACT_STATUS_AMBIGUOUS
 
 
 def is_usable_fact_status(value: Any) -> bool:
@@ -82,7 +88,7 @@ def _keyword_candidates(table: str = "") -> list[str]:
 
 
 def normalize_requirement_text(value: Any, table: str = "") -> str:
-    text = _strip_requirement_noise(str(value or ""))
+    text = normalize_keyword_synonyms(_strip_requirement_noise(str(value or "")))
     if not text:
         return ""
 
@@ -97,19 +103,6 @@ def normalize_requirement_text(value: Any, table: str = "") -> str:
     if len(candidates) == 1:
         return candidates[0]
     return text
-
-
-def _dedupe_keep_order(items: Iterable[Any]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
 
 def normalize_requirements_keep_order(
     items: Any,

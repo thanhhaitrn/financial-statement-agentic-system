@@ -1,11 +1,39 @@
 __pycache__/
 *.pyc
-chroma_db/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
 *.db
 *.sqlite3
 .env
 .DS_Store
-data/
+# Source reports remain ignored by default, except for the reviewed APEC
+# benchmark document required to rebuild the versioned factual-recall fixture.
+data/*
+!data/dau_tu_APEC.md
 dataset_store/
-tests/
+
+# Generated evaluation artifacts stay local.  Only the reproducibility
+# manifest and intentionally small, reviewed fixtures are versioned.
+ragas_runs/*
+
+# JSON is ignored by default because reports can be large, but evaluation seed
+# contracts and tests must be trackable on a clean clone.
 *.json
+!dau_tu_APEC_ragas_seed.json
+!dau_tu_APEC.json
+!queries_test.json
+!ragas_runs/manifest.json
+!ragas_runs/fixtures/
+!ragas_runs/fixtures/**
+!tests/
+!tests/**
+
+# The tests themselves are versioned; generated interpreter caches are not.
+tests/**/__pycache__/
+tests/**/*.py[cod]

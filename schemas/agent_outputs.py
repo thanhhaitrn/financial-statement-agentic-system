@@ -7,6 +7,7 @@ from typing import List, Literal, Any, Optional
 import re, json
 from schemas.requirements import normalize_fact_status
 from schemas.table_names import normalize_table_heading
+from common import dedupe_keep_order as _dedupe_keep_order
 
 TABLE_NAME = Literal[
     "BẢNG CÂN ĐỐI KẾ TOÁN",
@@ -339,18 +340,6 @@ def _coerce_followups_payload(value: Any) -> Any:
         return value
 
     return normalized
-
-
-def _dedupe_keep_order(items: List[str]) -> List[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
 
 AGENT_NAME = Literal[
     "agent_profitability",

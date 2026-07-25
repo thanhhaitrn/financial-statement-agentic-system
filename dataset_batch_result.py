@@ -5,14 +5,37 @@ from __future__ import annotations
 import argparse
 import csv
 import importlib.util
+import io
 import json
 import math
 import os
 import sys
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any
+from urllib.parse import urlsplit
+
+from evaluation.contracts import (
+    REPORT_SCHEMA_VERSION,
+    atomic_write_text,
+    git_revision,
+    provider_limit_reason,
+    sha256_file,
+    stable_json_fingerprint,
+)
+from common import dedupe_keep_order as _dedupe_keep_order, prediction_key, _record_id
+from evaluation.run_identity import (
+    RUN_IDENTITY_VERSION,
+    build_run_identity,
+    build_runtime_fingerprints,
+    build_selection_contract,
+    dataset_identity_payload,
+    _embedding_identity_payload,
+    _model_identity_payload,
+    _safe_endpoint_identity,
+    _source_files_identity,
+)
 
 
 DEFAULT_DATASET_ID = "apec"
@@ -33,6 +56,16 @@ SESSION_LIMIT_MARKERS = (
     "responseerror",
 )
 
+MODEL_STAGE_EVENTS = {
+    "planner:done",
+    "planner:error",
+    "router:done",
+    "router:error",
+    "analysis:done",
+    "analysis:error",
+    "synth:done",
+    "synth:error",
+}
 
 class SeedValidationError(ValueError):
     """Raised when a seed or report file is not usable."""
@@ -59,11 +92,7 @@ def is_session_limit_error(value: Any) -> bool:
     text = str(value or "").lower()
     if not text:
         return False
-    if "429" in text and ("usage limit" in text or "rate limit" in text):
-        return True
-    return any(marker in text for marker in SESSION_LIMIT_MARKERS if marker != "responseerror") and (
-        "429" in text or "usage limit" in text
-    )
+    return bool(provider_limit_reason(text))
 
 
 def _utc_now() -> str:
@@ -74,18 +103,6 @@ def _clean_text(value: Any) -> str:
     return " ".join(str(value or "").split()).strip()
 
 
-def _dedupe_keep_order(items: list[Any]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
-
 def _normalize_contexts(value: Any) -> list[str]:
     if not isinstance(value, list):
         return []
@@ -94,21 +111,6 @@ def _normalize_contexts(value: Any) -> list[str]:
         for item in value
         if str(item or "").strip()
     ]
-
-
-def _record_id(item: dict, index: int) -> Any:
-    value = item.get("id")
-    return value if value not in ("", None) else index
-
-
-def prediction_key(item: dict) -> str:
-    if not isinstance(item, dict):
-        return ""
-    record_id = str(item.get("id", "") or "").strip()
-    if record_id:
-        return f"id:{record_id}"
-    question = str(item.get("question", "") or "").strip()
-    return f"question:{question}" if question else ""
 
 
 def load_seed_records(path: str | Path) -> list[dict]:
@@ -188,7 +190,7 @@ def prediction_complete(item: dict) -> bool:
         return False
     answer = str(item.get("answer", "") or "")
     errors = item.get("errors", []) or []
-    return not (
+    return bool(answer.strip()) and not errors and not (
         is_session_limit_error(answer)
         or any(is_session_limit_error(error) for error in errors)
     )
@@ -228,18 +230,24 @@ def _fact_context_text(fact: dict) -> str:
         return ""
 
     # Keep only fields that help judge relevance / ground the answer. Dropped:
-    # content_type ("table_fact"), source (constant file path) and status
-    # ("found") are constant noise; evidence_text duplicates Item + Value. They
-    # only dilute RAGAs context_precision without adding information.
+    # content_type/status are constant noise; evidence_text duplicates Item +
+    # Value. Entity/unit/value type/reference/source remain because the
+    # deterministic factual contract uses them to disambiguate otherwise
+    # identical figures.
     labels = (
+        ("company", "Entity"),
         ("table", "Table"),
         ("subheading", "Subheading"),
         ("item_name", "Item"),
         ("time_hint", "Period"),
         ("value", "Value"),
+        ("unit", "Unit"),
+        ("value_type", "Value type"),
         ("note_ref", "Note ref"),
         ("note_number", "Note number"),
         ("note_title", "Note title"),
+        ("reference", "Reference"),
+        ("source", "Source"),
     )
     parts = []
     for key, label in labels:
@@ -341,21 +349,94 @@ def _extract_run_summary(final_state: dict) -> dict:
     return extract_run_summary(final_state)
 
 
-def run_predictions(
+def _merged_interval_duration_ms(intervals: list[tuple[datetime, datetime]]) -> int:
+    if not intervals:
+        return 0
+    ordered = sorted(intervals, key=lambda item: item[0])
+    merged: list[tuple[datetime, datetime]] = []
+    for start, end in ordered:
+        if not merged or start > merged[-1][1]:
+            merged.append((start, end))
+            continue
+        previous_start, previous_end = merged[-1]
+        merged[-1] = (previous_start, max(previous_end, end))
+    return int(round(sum((end - start).total_seconds() * 1000 for start, end in merged)))
+
+
+def build_prediction_latency_breakdown(
+    final_state: dict,
     *,
-    dataset_id: str,
-    records: list[dict],
-    debug_trace: bool = False,
-    on_checkpoint=None,
-) -> tuple[dict, list[dict]]:
-    from datasets.registry import describe_dataset, get_dataset
-    from test import ensure_built, execute_query
+    prediction_e2e_ms: int | None,
+) -> dict[str, Any]:
+    """Split prediction wall time into model-stage and retrieval/local time.
+
+    Model stages may execute concurrently, so their timestamped wall intervals
+    are unioned rather than summed.  The remainder of end-to-end time is the
+    retrieval/local-processing bucket.  This is an application-stage breakdown,
+    not provider-reported token-generation time.
+    """
+
+    total_ms = int(prediction_e2e_ms) if prediction_e2e_ms is not None else None
+    intervals: list[tuple[datetime, datetime]] = []
+    untimestamped_ms = 0
+    for entry in (final_state or {}).get("trace", []) or []:
+        if not isinstance(entry, dict) or entry.get("event") not in MODEL_STAGE_EVENTS:
+            continue
+        duration = entry.get("duration_ms")
+        if not isinstance(duration, (int, float)) or isinstance(duration, bool) or duration < 0:
+            continue
+        try:
+            ended_at = datetime.fromisoformat(str(entry.get("timestamp", "") or ""))
+        except ValueError:
+            untimestamped_ms += int(round(duration))
+            continue
+        intervals.append((ended_at - timedelta(milliseconds=float(duration)), ended_at))
+
+    model_ms = _merged_interval_duration_ms(intervals) + untimestamped_ms
+    if total_ms is not None:
+        model_ms = min(max(0, model_ms), max(0, total_ms))
+        retrieval_local_ms = max(0, total_ms - model_ms)
+    else:
+        retrieval_local_ms = None
+
+    return {
+        "retrieval_local_ms": retrieval_local_ms,
+        "model_generation_ms": model_ms if intervals or untimestamped_ms else None,
+        "prediction_e2e_ms": total_ms,
+        "measurement": "trace_model_stage_wall_union",
+        "provider_generation_only": False,
+    }
+
+
+def prepare_dataset_runtime(dataset_id: str):
+    """Build/validate a dataset once and expose its reproducible generations."""
+
+    from dataset_catalog.registry import describe_dataset, get_dataset
+    from kb.sqlite_repo import read_kb_manifest
+    from test import ensure_built
 
     dataset = get_dataset(dataset_id)
     if dataset is None:
         raise SystemExit(f"Dataset not found: {dataset_id}")
 
-    dataset, _conn, collection = ensure_built(dataset)
+    dataset, conn, collection = ensure_built(dataset)
+    kb_manifest = read_kb_manifest(conn)
+    index_generation = str(
+        getattr(collection, "generation", "")
+        or getattr(collection, "build_fingerprint", "")
+        or ""
+    ).strip()
+    kb_generation = stable_json_fingerprint(kb_manifest) if kb_manifest else ""
+    dataset_generation = stable_json_fingerprint(
+        {
+            "dataset_id": dataset.dataset_id,
+            "ingestion_version": dataset.ingestion_version,
+            "source_sha256": kb_manifest.get("source_sha256", ""),
+            "parser_version": kb_manifest.get("parser_version", ""),
+            "schema_version": kb_manifest.get("schema_version", ""),
+            "facts_sha256": kb_manifest.get("facts_sha256", ""),
+        }
+    )
     dataset_meta = {
         "dataset_id": dataset.dataset_id,
         "description": describe_dataset(dataset),
@@ -366,10 +447,37 @@ def run_predictions(
         "scope": dataset.scope,
         "audit_status": dataset.audit_status,
         "file_path": dataset.file_path,
+        "ingestion_version": dataset.ingestion_version,
+        "vector_collection_name": dataset.vector_collection_name,
         "status": dataset.status,
         "facts_count": dataset.facts_count,
         "vector_docs_count": dataset.vector_docs_count,
+        "source_sha256": kb_manifest.get("source_sha256", ""),
+        "facts_sha256": kb_manifest.get("facts_sha256", ""),
+        "parser_version": kb_manifest.get("parser_version", ""),
+        "kb_schema_version": kb_manifest.get("schema_version", ""),
+        "dataset_generation": dataset_generation,
+        "kb_generation": kb_generation,
+        "index_generation": index_generation,
+        "collection_generation": index_generation,
     }
+    return dataset, conn, collection, dataset_meta
+
+
+def run_predictions(
+    *,
+    dataset_id: str,
+    records: list[dict],
+    debug_trace: bool = False,
+    on_checkpoint=None,
+    prepared_runtime=None,
+) -> tuple[dict, list[dict]]:
+    from test import execute_query
+
+    runtime = prepared_runtime or prepare_dataset_runtime(dataset_id)
+    dataset, _conn, collection, dataset_meta = runtime
+    if str(dataset.dataset_id) != str(dataset_id):
+        raise ValueError("Prepared runtime dataset does not match dataset_id")
 
     predictions = []
     for index, record in enumerate(records, start=1):
@@ -397,6 +505,7 @@ def run_predictions(
                 errors = _dedupe_keep_order([*errors, "no_retrieved_contexts"])
 
             synth_decision = final_state.get("synth_decision", {}) or {}
+            prediction_runtime = _runtime_from_summary(run_summary)
             prediction = {
                 "id": record.get("id"),
                 "source_chunk_id": record.get("source_chunk_id"),
@@ -407,7 +516,11 @@ def run_predictions(
                 "retrieved_contexts": contexts,
                 "seed_contexts": record.get("seed_contexts", []),
                 "errors": errors,
-                "runtime": _runtime_from_summary(run_summary),
+                "runtime": prediction_runtime,
+                "latency_breakdown": build_prediction_latency_breakdown(
+                    final_state,
+                    prediction_e2e_ms=prediction_runtime,
+                ),
                 "tokens": _total_tokens_from_summary(run_summary),
                 "synth_status": str(synth_decision.get("status", "") or "").strip(),
             }
@@ -495,12 +608,37 @@ def build_summary(predictions: list[dict], scores: list[dict]) -> dict:
         for item in predictions or []
         if not item.get("errors")
     ]
+    breakdown_fields = (
+        "retrieval_local_ms",
+        "model_generation_ms",
+        "prediction_e2e_ms",
+    )
+    breakdown_values = {
+        field: [
+            float(item.get("latency_breakdown", {}).get(field))
+            for item in predictions or []
+            if isinstance(item.get("latency_breakdown"), dict)
+            and isinstance(item["latency_breakdown"].get(field), (int, float))
+            and not isinstance(item["latency_breakdown"].get(field), bool)
+        ]
+        for field in breakdown_fields
+    }
     return {
         "records_n": len(predictions or []),
         "successful_predictions_n": len(successful_predictions),
         "errored_predictions_n": len(predictions or []) - len(successful_predictions),
         "evaluated_scores_n": len(scores or []),
         "metric_means": metric_means,
+        "prediction_latency_breakdown": {
+            "measurement": "trace_model_stage_wall_union",
+            "samples_n": min((len(values) for values in breakdown_values.values()), default=0),
+            **{
+                f"mean_{field}": (
+                    round(sum(values) / len(values), 3) if values else None
+                )
+                for field, values in breakdown_values.items()
+            },
+        },
     }
 
 
@@ -528,6 +666,83 @@ def dataset_meta_from_report(report: dict) -> dict:
     return dict(dataset) if isinstance(dataset, dict) else {}
 
 
+def validate_resume_report(
+    report: dict,
+    *,
+    seed_file: str | Path,
+    dataset_id: str,
+    selected_records: list[dict] | None = None,
+    full: bool | None = None,
+    limit: int | None = None,
+    offset: int | None = None,
+    current_dataset_meta: dict | None = None,
+    debug_trace: bool = False,
+    skip_eval: bool = True,
+) -> None:
+    if not report:
+        return
+    metadata = report.get("metadata", {}) or {}
+    if not isinstance(metadata, dict):
+        raise SeedValidationError("Resume report metadata must be an object.")
+
+    stored_identity = metadata.get("run_identity")
+    if not isinstance(stored_identity, dict) or not stored_identity.get(
+        "run_fingerprint"
+    ):
+        raise SeedValidationError(
+            "Resume report has no complete run_identity; start a new output instead."
+        )
+
+    unsigned_stored_identity = dict(stored_identity)
+    stored_fingerprint = str(
+        unsigned_stored_identity.pop("run_fingerprint", "") or ""
+    ).strip()
+    if stable_json_fingerprint(unsigned_stored_identity) != stored_fingerprint:
+        raise SeedValidationError("Resume report run_identity failed integrity validation.")
+    if str(metadata.get("run_fingerprint", "") or "").strip() != stored_fingerprint:
+        raise SeedValidationError("Resume report run fingerprint fields disagree.")
+
+    stored_selection = stored_identity.get("selection", {}) or {}
+    if selected_records is None:
+        selected_records = predictions_from_report(report)
+    if full is None:
+        full = bool(stored_selection.get("full", metadata.get("selection") == "full"))
+    if limit is None and not full:
+        limit = stored_selection.get("limit", metadata.get("limit"))
+    if offset is None:
+        offset = int(stored_selection.get("offset", metadata.get("offset", 0)) or 0)
+
+    dataset_meta = dict(current_dataset_meta or dataset_meta_from_report(report))
+    dataset_meta.setdefault("dataset_id", dataset_id)
+    expected_identity = build_run_identity(
+        seed_file=seed_file,
+        dataset_meta=dataset_meta,
+        selected_records=selected_records,
+        full=bool(full),
+        limit=limit,
+        offset=offset,
+        debug_trace=debug_trace,
+        skip_eval=skip_eval,
+    )
+    if stored_fingerprint == expected_identity["run_fingerprint"]:
+        return
+
+    mismatches = []
+    if stored_identity.get("seed_sha256") != expected_identity.get("seed_sha256"):
+        mismatches.append("seed")
+    if stored_identity.get("selection") != expected_identity.get("selection"):
+        mismatches.append("selection")
+    if stored_identity.get("dataset") != expected_identity.get("dataset"):
+        mismatches.append("dataset/index generation")
+    stored_fingerprints = stored_identity.get("fingerprints", {}) or {}
+    expected_fingerprints = expected_identity.get("fingerprints", {}) or {}
+    for name in ("query", "embedding", "prompt", "model", "config"):
+        if stored_fingerprints.get(name) != expected_fingerprints.get(name):
+            mismatches.append(name)
+    details = ", ".join(mismatches or ["run identity"])
+    raise SeedValidationError(f"Resume report mismatch: {details}.")
+
+
 def _retrieval_embedding_model() -> str:
     """The embedding model retrieval actually uses (single source of truth).
 
@@ -553,21 +768,112 @@ def build_report(
     skip_eval: bool,
     run_complete: bool = True,
     eval_error: str = "",
+    offset: int = 0,
+    selected_records: list[dict] | None = None,
+    debug_trace: bool = False,
+    source_report: dict | None = None,
+    resume_repaired: bool = False,
 ) -> dict:
+    seed_path = Path(seed_file)
+    seed_checksum = sha256_file(seed_path) if seed_path.is_file() else ""
+    provider_limit_errors = [
+        str(error)
+        for prediction in predictions or []
+        if isinstance(prediction, dict)
+        for error in list(prediction.get("errors", []) or []) + [prediction.get("answer", "")]
+        if provider_limit_reason(error)
+    ]
+    source_metadata = (
+        source_report.get("metadata", {})
+        if isinstance(source_report, dict)
+        else {}
+    )
+    if not isinstance(source_metadata, dict):
+        source_metadata = {}
+    source_latency_valid = source_metadata.get("latency_valid")
+    source_latency_reasons = _dedupe_keep_order(
+        source_metadata.get("latency_invalid_reasons", []) or []
+    )
+    if source_latency_valid is False and not source_latency_reasons:
+        source_latency_reasons = ["source_report_latency_invalid"]
+    # Resumed timings include samples from the source report, so any prior
+    # provider/quota contamination remains attached to the whole latency run.
+    latency_invalid_reasons = _dedupe_keep_order(
+        [*source_latency_reasons, *provider_limit_errors]
+    )
+    model = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")
+    embedding_model = _retrieval_embedding_model()
+    identity_records = selected_records if selected_records is not None else predictions
+    run_identity = build_run_identity(
+        seed_file=seed_file,
+        dataset_meta=dataset_meta,
+        selected_records=identity_records,
+        full=full,
+        limit=limit,
+        offset=offset,
+        debug_trace=debug_trace,
+        skip_eval=skip_eval,
+    )
+    selection_contract = run_identity["selection"]
+    selection_complete = True
+    if selected_records is not None:
+        completed = predictions_by_key(predictions, completed_only=True)
+        selection_complete = bool(selected_records) and all(
+            prediction_key(record) in completed for record in selected_records
+        )
+
+    source_run_complete = source_metadata.get("run_complete")
+    preserve_source_incomplete = (
+        bool(source_report)
+        and source_run_complete is False
+        and not resume_repaired
+    )
+    effective_eval_error = str(eval_error or "").strip()
+    if not effective_eval_error and preserve_source_incomplete:
+        effective_eval_error = str(source_metadata.get("eval_error", "") or "").strip()
+    latency_valid = not latency_invalid_reasons
+    effective_run_complete = (
+        bool(run_complete)
+        and selection_complete
+        and not preserve_source_incomplete
+        and latency_valid
+    )
     return {
+        "schema_version": REPORT_SCHEMA_VERSION,
         "metadata": {
             "generated_at": _utc_now(),
             "dataset": dataset_meta,
             "seed_file": str(seed_file),
+            "seed_sha256": seed_checksum,
+            "git_revision": git_revision(),
+            "dataset_fingerprint": stable_json_fingerprint(dataset_meta),
+            "run_fingerprint": run_identity["run_fingerprint"],
+            "run_identity": run_identity,
+            "fingerprints": dict(run_identity["fingerprints"]),
             "context_source": "retrieval",
             "selection": "full" if full else "smoke",
             "limit": None if full else limit,
+            "offset": int(offset),
+            "selection_contract": selection_contract,
+            "selected_query_ids": selection_contract["selected_query_ids"],
             "skip_eval": bool(skip_eval),
-            "run_complete": bool(run_complete),
-            "eval_error": str(eval_error or "").strip(),
+            "run_complete": effective_run_complete,
+            "run_status": "complete" if effective_run_complete else "incomplete",
+            "eval_error": effective_eval_error,
+            "latency_valid": latency_valid,
+            "latency_invalid_reasons": latency_invalid_reasons,
+            "latency_scope": "prediction_only_excludes_ragas_judge",
             "ragas_installed": importlib.util.find_spec("ragas") is not None,
-            "llm_model": os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud"),
-            "embedding_model": _retrieval_embedding_model(),
+            "llm_model": model,
+            "embedding_model": embedding_model,
+            "resume_source_status": {
+                "present": bool(source_report),
+                "run_complete": source_run_complete,
+                "latency_valid": source_latency_valid,
+                "latency_invalid_reasons": source_latency_reasons,
+                "eval_error": str(source_metadata.get("eval_error", "") or "").strip(),
+                "repaired": bool(resume_repaired),
+            },
         },
         "predictions": _jsonify(predictions),
         "scores": _jsonify(scores),
@@ -578,11 +884,10 @@ def build_report(
 def write_json_report(report: dict, output_path: str | Path) -> Path:
     path = Path(output_path)
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(
+    return atomic_write_text(
+        path,
         json.dumps(_jsonify(report), ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
-    return path
 
 
 def _scores_by_id(scores: list[dict]) -> dict[str, dict]:
@@ -596,8 +901,6 @@ def _scores_by_id(scores: list[dict]) -> dict[str, dict]:
 def write_csv_report(report: dict, output_path: str | Path) -> Path:
     json_path = Path(output_path)
     csv_path = json_path.with_suffix(".csv")
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
-
     scores_by_id = _scores_by_id(report.get("scores", []) or [])
     fieldnames = [
         "id",
@@ -609,32 +912,39 @@ def write_csv_report(report: dict, output_path: str | Path) -> Path:
         "seed_contexts_n",
         "errors",
         "runtime",
+        "retrieval_local_ms",
+        "model_generation_ms",
         "tokens",
         *METRIC_NAMES,
     ]
 
-    with csv_path.open("w", encoding="utf-8", newline="") as handle:
-        writer = csv.DictWriter(handle, fieldnames=fieldnames)
-        writer.writeheader()
-        for item in report.get("predictions", []) or []:
-            score = scores_by_id.get(str(item.get("id", "") or ""), {})
-            writer.writerow(
-                {
-                    "id": item.get("id", ""),
-                    "question": item.get("question", ""),
-                    "answer": item.get("answer", ""),
-                    "ground_truth": item.get("ground_truth", ""),
-                    "retrieved_contexts_n": len(item.get("retrieved_contexts", []) or []),
-                    "retrieved_contexts": CONTEXT_SEPARATOR.join(item.get("retrieved_contexts", []) or []),
-                    "seed_contexts_n": len(item.get("seed_contexts", []) or []),
-                    "errors": "; ".join(item.get("errors", []) or []),
-                    "runtime": item.get("runtime"),
-                    "tokens": item.get("tokens", 0),
-                    **{name: score.get(name) for name in METRIC_NAMES},
-                }
-            )
-
-    return csv_path
+    handle = io.StringIO(newline="")
+    writer = csv.DictWriter(handle, fieldnames=fieldnames)
+    writer.writeheader()
+    for item in report.get("predictions", []) or []:
+        score = scores_by_id.get(str(item.get("id", "") or ""), {})
+        writer.writerow(
+            {
+                "id": item.get("id", ""),
+                "question": item.get("question", ""),
+                "answer": item.get("answer", ""),
+                "ground_truth": item.get("ground_truth", ""),
+                "retrieved_contexts_n": len(item.get("retrieved_contexts", []) or []),
+                "retrieved_contexts": CONTEXT_SEPARATOR.join(item.get("retrieved_contexts", []) or []),
+                "seed_contexts_n": len(item.get("seed_contexts", []) or []),
+                "errors": "; ".join(item.get("errors", []) or []),
+                "runtime": item.get("runtime"),
+                "retrieval_local_ms": (item.get("latency_breakdown", {}) or {}).get(
+                    "retrieval_local_ms"
+                ),
+                "model_generation_ms": (item.get("latency_breakdown", {}) or {}).get(
+                    "model_generation_ms"
+                ),
+                "tokens": item.get("tokens", 0),
+                **{name: score.get(name) for name in METRIC_NAMES},
+            }
+        )
+    return atomic_write_text(csv_path, handle.getvalue())
 
 
 def parse_args(argv: list[str] | None = None):
@@ -671,6 +981,24 @@ def main(argv: list[str] | None = None) -> int:
         raise SystemExit(str(exc)) from exc
 
     existing_report = load_report(args.output) if args.resume and Path(args.output).exists() else {}
+    prepared_runtime = None
+    if existing_report:
+        try:
+            prepared_runtime = prepare_dataset_runtime(args.dataset_id)
+            validate_resume_report(
+                existing_report,
+                seed_file=args.seed_file,
+                dataset_id=args.dataset_id,
+                selected_records=selected_records,
+                full=args.full,
+                limit=args.limit,
+                offset=args.offset,
+                current_dataset_meta=prepared_runtime[3],
+                debug_trace=args.debug_trace,
+                skip_eval=True,
+            )
+        except SeedValidationError as exc:
+            raise SystemExit(str(exc)) from exc
     existing_predictions = predictions_from_report(existing_report)
     completed_keys = set(predictions_by_key(existing_predictions, completed_only=True))
     pending_records = [
@@ -694,6 +1022,10 @@ def main(argv: list[str] | None = None) -> int:
             limit=args.limit,
             skip_eval=True,
             run_complete=False,
+            offset=args.offset,
+            selected_records=selected_records,
+            debug_trace=args.debug_trace,
+            source_report=existing_report,
         )
         write_json_report(report, args.output)
         write_csv_report(report, args.output)
@@ -707,6 +1039,7 @@ def main(argv: list[str] | None = None) -> int:
                 records=pending_records,
                 debug_trace=args.debug_trace,
                 on_checkpoint=write_checkpoint,
+                prepared_runtime=prepared_runtime,
             )
         except SessionLimitError as exc:
             stop_error = f"session_limit ({type(exc).__name__}): {exc}"
@@ -715,7 +1048,11 @@ def main(argv: list[str] | None = None) -> int:
             new_predictions = exc.predictions
             exit_code = 1
     else:
-        dataset_meta = dataset_meta_from_report(existing_report)
+        dataset_meta = (
+            prepared_runtime[3]
+            if prepared_runtime is not None
+            else dataset_meta_from_report(existing_report)
+        )
         new_predictions = []
         print("No pending records. Reusing existing predictions from output.")
 
@@ -724,6 +1061,9 @@ def main(argv: list[str] | None = None) -> int:
         existing_predictions=existing_predictions,
         new_predictions=new_predictions,
     )
+    selected_keys = {prediction_key(record) for record in selected_records}
+    completed_keys = set(predictions_by_key(predictions, completed_only=True))
+    resume_repaired = bool(pending_records) and selected_keys.issubset(completed_keys)
     report = build_report(
         seed_file=args.seed_file,
         dataset_meta=dataset_meta,
@@ -734,6 +1074,11 @@ def main(argv: list[str] | None = None) -> int:
         skip_eval=True,
         run_complete=not bool(stop_error),
         eval_error=stop_error,
+        offset=args.offset,
+        selected_records=selected_records,
+        debug_trace=args.debug_trace,
+        source_report=existing_report,
+        resume_repaired=resume_repaired and not bool(stop_error),
     )
     json_path = write_json_report(report, args.output)
     csv_path = write_csv_report(report, json_path)

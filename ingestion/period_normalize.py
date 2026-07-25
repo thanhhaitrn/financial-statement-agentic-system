@@ -232,4 +232,8 @@ def parse_unit(text) -> str:
         return "nghìn đồng"
     if "vnd" in t or "đồng" in t or "dong" in t:
         return "VND"
+    if "cổ phiếu" in t or "co phieu" in t:
+        return "cổ phiếu"
+    if "%" in t or "phần trăm" in t or "phan tram" in t:
+        return "percent"
     return ""

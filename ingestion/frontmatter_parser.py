@@ -163,7 +163,10 @@ def _front_slice_pages(md_text: str) -> list[dict]:
                 break
             content_lines.append(line)
 
-        if content_lines and not reached_main_statement:
+        # A page marker is optional, and front matter commonly shares a page
+        # with the first statement heading. Preserve the prefix collected before
+        # that heading instead of discarding the entire page.
+        if content_lines:
             pages.append({**page, "content": "\n".join(content_lines)})
         if reached_main_statement:
             break

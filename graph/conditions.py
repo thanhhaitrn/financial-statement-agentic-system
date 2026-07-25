@@ -1,3 +1,4 @@
+from common import dedupe_keep_order as _dedupe_keep_order
 """LangGraph branch predicates that decide the next workflow node."""
 # Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
 
@@ -6,19 +7,6 @@ DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
 
 def _current_round(state: dict) -> int:
     return int((state or {}).get("followup_rounds", 0) or 0)
-
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
 
 def _latest_parsed_output_for(state: dict, agent_name: str) -> dict:
     items = state.get("worker_messages", []) or []

@@ -2,9 +2,11 @@
 # Code note: Tool modules bridge agent requests to retrieval helpers; comments here mark guardrails around external calls.
 
 import json
+import logging
 import os
 import re
 
+from config.allowed_keywords import normalize_keyword_synonyms
 from schemas.table_names import (
     TABLE_BS,
     TABLE_CF,
@@ -15,7 +17,6 @@ from schemas.table_names import (
 )
 from vectorstore.qdrant_store import embed_query_text
 from vectorstore.lexical_index import get_lexical_index
-from vectorstore.neural_reranker import neural_rerank_enabled, neural_similarity
 from ingestion.period_normalize import (
     canonical_period,
     canonical_value_type,
@@ -26,15 +27,15 @@ from ingestion.period_normalize import (
 from vectorstore.llm_reranker import llm_rerank_enabled, llm_rerank_order
 
 
+logger = logging.getLogger(__name__)
+
+
 _SPACE_RE = re.compile(r"\s+")
 _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
 # Distinctive figures: long VND amounts / registration & tax IDs (>=7 digits).
 _FIGURE_RE = re.compile(r"\d[\d.,]*\d")
 # How many cross-table lexical hits to fold in as a routing safety net.
 _CROSS_TABLE_TOP_N = 25
-# Blend weight for the optional neural reranker (cosine sim 0..1) into the
-# heuristic score (range ~0..200). Kept modest so it only breaks near-ties.
-_NEURAL_RERANK_WEIGHT = float(os.getenv("NEURAL_RERANK_WEIGHT", "40"))
 # Scale on the -30 opposite-period penalty for comparison-phrased queries
 # (0 = no penalty, 1 = legacy full penalty).
 _PERIOD_PENALTY_COMPARISON = float(os.getenv("PERIOD_PENALTY_COMPARISON", "0.5"))
@@ -114,6 +115,15 @@ _POLICY_QUERY_TOKENS = {
     "phong",
     "phòng",
 }
+
+
+def neural_rerank_enabled() -> bool:
+    """Compatibility hook for the removed heavyweight experimental reranker."""
+    return False
+
+
+def neural_similarity(_query: str, _docs: list[str]) -> list[float]:
+    return []
 
 
 def _normalize_text(value):
@@ -215,6 +225,15 @@ def _item_match_score(query, meta, doc, intent=None):
     doc_tokens = _text_tokens(doc)
 
     score = 0.0
+
+    # Directional lending-income phrases are easily confused with borrowing
+    # interest expense because both contain "lãi" and "vay".  Preserve the
+    # semantic direction explicitly for deterministic factual retrieval.
+    if "lãi cho vay" in slot_norm or "lai cho vay" in slot_norm:
+        if "lãi cho vay" in item_norm or "lai cho vay" in item_norm:
+            score += 120.0
+        if "chi phí lãi vay" in item_norm or "chi phi lai vay" in item_norm:
+            score -= 100.0
 
     # Favor exact item-name matches first; token overlap then rescues common
     # financial abbreviations and slightly different Vietnamese wording.
@@ -435,25 +454,26 @@ def _note_schedule_docs(collection, note_ref):
             include=["documents", "metadatas"],
         )
         return _extract_flat_docs_and_metas(res)
-    except Exception:
+    except Exception as exc:
+        logger.warning("note schedule retrieval failed for note_ref=%s: %s", ref, exc)
         return [], []
 
 
 def _rerank_matches(query, docs, metas, limit=5, intent=None):
     docs = list(docs or [])
     metas = list(metas or [])
+    if len(docs) != len(metas):
+        raise ValueError(
+            f"retrieval documents/metadatas length mismatch: {len(docs)} != {len(metas)}"
+        )
     n = len(docs)
 
-    # Heuristic (+ optional PhoBERT neural blend, flag-gated/off by default). Neural
-    # sims are weak/clustered on VN line-items, so they only nudge near-ties; the
-    # heuristic still dominates exact item/figure matches. Kept separate from the
-    # blended score so the union recall guard below can reference it.
-    neural = neural_similarity(query, docs) if neural_rerank_enabled() else []
+    # Deterministic heuristic scoring is the production baseline.  The former
+    # PhoBERT blend was disabled by default, weak on financial line items, and
+    # pulled a large dependency tree into every deployment.
     heuristic = []
-    for idx, (doc, meta) in enumerate(zip(docs, metas)):
+    for doc, meta in zip(docs, metas):
         score = _item_match_score(query, meta, doc, intent=intent)
-        if neural and idx < len(neural):
-            score += _NEURAL_RERANK_WEIGHT * float(neural[idx])
         heuristic.append(score)
 
     scores = list(heuristic)
@@ -496,31 +516,28 @@ def _rerank_matches(query, docs, metas, limit=5, intent=None):
 
 
 def get_related_info(query: str, table: str, collection, strict_table: bool = False, limit: int = 5, cross_table: bool = True, intent: str = ""):
+    raw_query = str(query or "").strip()
+    canonical_query = normalize_keyword_synonyms(raw_query) or raw_query
+    raw_intent = str(intent or raw_query).strip()
+    canonical_intent = normalize_keyword_synonyms(raw_intent) or raw_intent
     requested_table = normalize_table_heading(table)
     # Value-lookup questions have many near-duplicate rows (same line item across
     # periods/value-types); widen the final cut so the right slot is not dropped.
     # Detect on the original question (`intent`) since the keyworder strips
     # "bao nhiêu/giá trị" from the keyword `query`.
-    if _is_value_lookup_query(intent or query) and limit < _VALUE_LOOKUP_LIMIT:
+    if _is_value_lookup_query(canonical_intent) and limit < _VALUE_LOOKUP_LIMIT:
         limit = _VALUE_LOOKUP_LIMIT
     primary_n_results = 100 if strict_table else 50
     results = collection.query(
-        query_embeddings=[embed_query_text(query)],
+        query_embeddings=[embed_query_text(canonical_query)],
         n_results=primary_n_results,
         where={"heading": requested_table},
     )
 
     docs, metas = _extract_docs_and_metas(results)
-    if strict_table:
-        try:
-            all_results = collection.get(
-                where={"heading": requested_table},
-                include=["documents", "metadatas"],
-            )
-            all_docs, all_metas = _extract_flat_docs_and_metas(all_results)
-            docs, metas = _merge_docs_and_metas(docs, metas, all_docs, all_metas)
-        except Exception:
-            pass
+    # Strict scope means no cross-table fallback, not "load the whole table".
+    # Dense + lexical candidates remain bounded; exact note_ref schedules are
+    # expanded separately below when the query explicitly requires a list.
 
     # Hybrid recall booster: fold in lexical (BM25) hits so facts the dense query
     # missed still reach the reranker. The cross-table pull is a routing safety
@@ -530,26 +547,31 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
     # No extra collection .query calls; a no-op when the lexical index is empty.
     try:
         lexical = get_lexical_index(getattr(collection, "name", ""), collection)
-        pairs = lexical.query(query, table=requested_table, top_n=primary_n_results)
+        pairs = lexical.query(canonical_query, table=requested_table, top_n=primary_n_results)
         # Strict tables already merge their whole table into the candidate pool,
         # so the cross-table fallback only adds noise that can outrank the true
         # in-table fact (e.g. a generic-labelled report-section answer).
         if cross_table and not strict_table:
-            pairs = pairs + lexical.query(query, table="", top_n=_CROSS_TABLE_TOP_N)
+            pairs = pairs + lexical.query(canonical_query, table="", top_n=_CROSS_TABLE_TOP_N)
         # Intent fold: the keyworder often strips the discriminating tokens from
         # its query ("phải thu ngắn hạn KHÁC" -> "các khoản phải thu ngắn hạn",
         # "nguyên giá NHÀ CỬA VÀ VẬT KIẾN TRÚC" -> "tài sản cố định hữu hình"),
         # so when the full user intent carries extra signal, fold a BM25 query on
         # it across all tables. Subsumes the earlier dự-phòng/giá-gốc-gated note
         # fold; the slot-match reranker keeps the pool ranked.
-        intent_text = str(intent or "").strip()
-        if intent_text and _normalize_text(intent_text) != _normalize_text(query):
+        intent_text = canonical_intent
+        if intent_text and _normalize_text(intent_text) != _normalize_text(canonical_query):
             pairs = pairs + lexical.query(intent_text, table="", top_n=_CROSS_TABLE_TOP_N)
         lex_docs = [doc for doc, _meta in pairs]
         lex_metas = [meta for _doc, meta in pairs]
         docs, metas = _merge_docs_and_metas(docs, metas, lex_docs, lex_metas)
-    except Exception:
-        pass
+    except Exception as exc:
+        logger.warning(
+            "lexical retrieval failed table=%s query=%r: %s",
+            requested_table,
+            canonical_query,
+            exc,
+        )
 
     # note_ref linkage: on list / superlative / per-entity / note-detail questions,
     # pull the FULL note schedule referenced by any candidate (a primary line's
@@ -558,14 +580,18 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
     # the per-borrower loan schedule) and (A) ranking questions that must compare
     # every row of a schedule. Gated so plain value lookups keep their tight pool.
     effective_limit = limit
-    if _needs_schedule(intent or query):
+    if _needs_schedule(canonical_intent):
         try:
             # Rank first, then read the winning schedule off the top rows: the
             # heuristic item/value_type match disambiguates look-alikes that raw
             # dense/lexical frequency confuses (e.g. "cho vay" [lending, V.5] vs
             # "vay" [borrowing, V.18a]). Then pull that schedule in full.
             probe_docs, probe_metas = _rerank_matches(
-                query, docs, metas, limit=_NOTE_REF_PROBE_TOP, intent=intent
+                canonical_query,
+                docs,
+                metas,
+                limit=_NOTE_REF_PROBE_TOP,
+                intent=canonical_intent,
             )
             counts = {}
             for m in probe_metas:
@@ -580,10 +606,16 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
                     # A ranking/list answer must see every per-entity row of the
                     # schedule, so widen the rerank cut past the caller's default.
                     effective_limit = max(effective_limit, _SCHEDULE_LIMIT)
-        except Exception:
-            pass
+        except Exception as exc:
+            logger.warning("note_ref expansion failed query=%r: %s", canonical_query, exc)
 
-    docs, metas = _rerank_matches(query, docs, metas, limit=effective_limit, intent=intent)
+    docs, metas = _rerank_matches(
+        canonical_query,
+        docs,
+        metas,
+        limit=effective_limit,
+        intent=canonical_intent,
+    )
 
     context = "\n".join(docs)
     return {
@@ -591,6 +623,7 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
         "source": _join_sources(metas),
         "documents": docs,
         "metadatas": metas,
+        "canonical_query": canonical_query,
     }
 
 
@@ -634,7 +667,3 @@ def get_report_section_info(query: str, collection, table: str = "", intent: str
         cross_table=False,
         intent=intent,
     )
-
-
-def web_search(query: str):
-    return {"context": "Sample return from web.", "source": "Web"}

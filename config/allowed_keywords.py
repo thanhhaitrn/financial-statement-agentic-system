@@ -3,7 +3,8 @@
 
 from __future__ import annotations
 import json
-from typing import Dict, Iterable, Set
+import re
+from typing import Any, Dict, Iterable, Set
 
 # Canonical table names (must match your system exactly)
 TABLE_BS = "BẢNG CÂN ĐỐI KẾ TOÁN"
@@ -158,6 +159,8 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "thuế và các khoản phải nộp nhà nước",
         "vốn chủ sở hữu",
         "doanh thu bán hàng và cung cấp dịch vụ",
+        "lãi cho vay",
+        "lãi tiền gửi ngân hàng",
         "giá vốn hàng bán",
         "chi phí tài chính",
         "chi phí bán hàng",
@@ -233,6 +236,40 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
 # keyworder fall back to a near-sounding WRONG line ("phải trả người bán" for
 # "trả trước cho người bán").
 _DYNAMIC_KEYWORDS: Dict[str, Set[str]] = {}
+
+# Canonical vocabulary aliases shared by routing and evidence matching.  Keep
+# semantic aliases here instead of scattering one-off replacements through the
+# planner, router, tools, and synthesizer.
+KEYWORD_SYNONYMS: Dict[str, str] = {
+    "tổng tài sản": "tổng cộng tài sản",
+    "tài sản lưu động": "tài sản ngắn hạn",
+    "doanh thu thuần": "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+    "lợi nhuận sau thuế": "lợi nhuận sau thuế thu nhập doanh nghiệp",
+    "lợi nhuận giữ lại": "lợi nhuận sau thuế chưa phân phối",
+}
+
+# Match canonical targets as well as aliases.  The targets act as protected,
+# longest alternatives, so a canonical phrase containing a shorter alias is
+# not expanded again when a query passes through several routing stages.
+_KEYWORD_SYNONYM_PATTERN = re.compile(
+    "|".join(
+        re.escape(phrase)
+        for phrase in sorted(
+            set(KEYWORD_SYNONYMS) | set(KEYWORD_SYNONYMS.values()),
+            key=len,
+            reverse=True,
+        )
+    )
+)
+
+
+def normalize_keyword_synonyms(value: Any) -> str:
+    text = " ".join(str(value or "").strip().lower().split())
+    text = _KEYWORD_SYNONYM_PATTERN.sub(
+        lambda match: KEYWORD_SYNONYMS.get(match.group(0), match.group(0)),
+        text,
+    )
+    return " ".join(text.split())
 
 
 def set_dynamic_keywords(mapping: Dict[str, Iterable[str]] | None) -> None:

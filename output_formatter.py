@@ -3,6 +3,8 @@
 
 import re
 
+from common import dedupe_keep_order as _dedupe_keep_order
+
 ANALYSIS_AGENT_HEADERS = {
     "agent_profitability": "Agent Profitability",
     "agent_liquidity_solvency": "Agent Liquidity Solvency",
@@ -21,18 +23,6 @@ ANALYSIS_ASPECT_CONCLUSION_RE = re.compile(
     r"(?ims)^\s*(?:#{1,6}\s*)?\*{0,2}\s*Kết luận khía cạnh\s*\*{0,2}\s*:?.*?"
     r"(?=^\s*(?:#{1,6}\s+|\*\*[^*\n]+\*\*)|\Z)"
 )
-
-
-def _dedupe_keep_order(items):
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
 
 
 def _strip_answer_prefix(answer: str) -> str:
@@ -169,7 +159,13 @@ def _not_found_messages(state: dict) -> list[str]:
                 continue
             if str(fact.get("status", "") or "").strip() != "not_found_after_search":
                 continue
-            message = str(fact.get("message", "") or "").strip()
+            # ``message`` is canonical.  ``interpretation_hint`` remains a
+            # read-only compatibility field for v1 reports.
+            message = str(
+                fact.get("message", "")
+                or fact.get("interpretation_hint", "")
+                or ""
+            ).strip()
             if message:
                 messages.append(message)
     return _dedupe_keep_order(messages)
@@ -190,11 +186,9 @@ def format_final_answer(state: dict) -> str:
     if not_found_messages:
         answer = "\n".join([answer, *not_found_messages])
 
-    analysis_sections = _format_analysis_sections(state)
-    if analysis_sections:
-        lines = [*analysis_sections, f"=== FINAL ANSWER ====\n{_format_answer_prefix(answer)}"]
-    else:
-        lines = [f"=== FINAL ANSWER ====\n{_format_answer_prefix(answer)}"]
+    # The synthesizer already incorporates successful analysis outputs.  Printing
+    # the worker sections again duplicates the answer and can expose stale rounds.
+    lines = [f"=== FINAL ANSWER ===\n{_format_answer_prefix(answer)}"]
 
     if status == "need_more":
         missing = list(d.get("missing", []) or [])

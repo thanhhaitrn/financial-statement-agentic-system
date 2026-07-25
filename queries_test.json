@@ -1,0 +1,282 @@
+[
+  {
+    "query": "Công ty trong báo cáo là công ty nào?",
+    "reference": "Công ty Cổ phần Sông Đà 7.02."
+  },
+  {
+    "query": "Báo cáo tài chính lập cho năm tài chính kết thúc ngày nào?",
+    "reference": "Ngày 31/12/2024."
+  },
+  {
+    "query": "Báo cáo tài chính đã được kiểm toán bởi đơn vị nào?",
+    "reference": "Công ty TNHH Hãng Kiểm toán AASC."
+  },
+  {
+    "query": "Ý kiến kiểm toán là gì?",
+    "reference": "Kiểm toán viên đưa ra ý kiến chấp nhận toàn phần, nhưng có đoạn “Vấn đề cần nhấn mạnh” về khả năng hoạt động liên tục."
+  },
+  {
+    "query": "Tổng tài sản tại ngày 31/12/2024 là bao nhiêu?",
+    "reference": "217.982.017.644 VND."
+  },
+  {
+    "query": "Tổng tài sản tại ngày 01/01/2024 là bao nhiêu?",
+    "reference": "228.457.763.475 VND."
+  },
+  {
+    "query": "Tài sản ngắn hạn tại 31/12/2024 là bao nhiêu?",
+    "reference": "11.385.653.577 VND."
+  },
+  {
+    "query": "Tài sản dài hạn tại 31/12/2024 là bao nhiêu?",
+    "reference": "206.596.364.067 VND."
+  },
+  {
+    "query": "Tiền và các khoản tương đương tiền cuối năm 2024 là bao nhiêu?",
+    "reference": "2.736.395.841 VND."
+  },
+  {
+    "query": "Các khoản phải thu ngắn hạn tại 31/12/2024 là bao nhiêu?",
+    "reference": "8.322.633.257 VND."
+  },
+  {
+    "query": "Hàng tồn kho cuối năm 2024 là bao nhiêu?",
+    "reference": "326.624.479 VND."
+  },
+  {
+    "query": "Tài sản cố định hữu hình cuối năm 2024 là bao nhiêu?",
+    "reference": "199.669.045.782 VND."
+  },
+  {
+    "query": "Tổng nợ phải trả tại 31/12/2024 là bao nhiêu?",
+    "reference": "98.291.163.925 VND."
+  },
+  {
+    "query": "Nợ ngắn hạn tại 31/12/2024 là bao nhiêu?",
+    "reference": "39.264.031.677 VND."
+  },
+  {
+    "query": "Nợ dài hạn tại 31/12/2024 là bao nhiêu?",
+    "reference": "59.027.132.248 VND."
+  },
+  {
+    "query": "Vốn chủ sở hữu tại 31/12/2024 là bao nhiêu?",
+    "reference": "119.690.853.719 VND."
+  },
+  {
+    "query": "Vốn góp của chủ sở hữu là bao nhiêu?",
+    "reference": "120.000.000.000 VND."
+  },
+  {
+    "query": "Lợi nhuận sau thuế chưa phân phối cuối năm 2024 là bao nhiêu?",
+    "reference": "Âm 1.828.231.720 VND."
+  },
+  {
+    "query": "Doanh thu thuần năm 2024 là bao nhiêu?",
+    "reference": "36.099.274.547 VND."
+  },
+  {
+    "query": "Doanh thu thuần năm 2023 là bao nhiêu?",
+    "reference": "31.242.151.755 VND."
+  },
+  {
+    "query": "Giá vốn hàng bán năm 2024 là bao nhiêu?",
+    "reference": "21.749.290.793 VND."
+  },
+  {
+    "query": "Lợi nhuận gộp năm 2024 là bao nhiêu?",
+    "reference": "14.349.983.754 VND."
+  },
+  {
+    "query": "Chi phí tài chính năm 2024 là bao nhiêu?",
+    "reference": "6.677.078.068 VND."
+  },
+  {
+    "query": "Chi phí quản lý doanh nghiệp năm 2024 là bao nhiêu?",
+    "reference": "1.790.705.629 VND."
+  },
+  {
+    "query": "Lợi nhuận sau thuế năm 2024 là bao nhiêu?",
+    "reference": "5.880.352.657 VND."
+  },
+  {
+    "query": "Lãi cơ bản trên cổ phiếu năm 2024 là bao nhiêu?",
+    "reference": "490 VND/cổ phiếu."
+  },
+  {
+    "query": "Lưu chuyển tiền thuần từ hoạt động kinh doanh năm 2024 là bao nhiêu?",
+    "reference": "17.587.048.791 VND."
+  },
+  {
+    "query": "Lưu chuyển tiền thuần từ hoạt động đầu tư năm 2024 là bao nhiêu?",
+    "reference": "4.720.963 VND."
+  },
+  {
+    "query": "Lưu chuyển tiền thuần từ hoạt động tài chính năm 2024 là bao nhiêu?",
+    "reference": "Âm 17.400.000.000 VND."
+  },
+  {
+    "query": "Tiền và tương đương tiền cuối năm 2024 trên báo cáo lưu chuyển tiền tệ là bao nhiêu?",
+    "reference": "2.736.395.841 VND."
+  },
+  {
+    "query": "Doanh thu năm 2024 tăng bao nhiêu so với năm 2023?",
+    "reference": "Tăng 4.857.122.792 VND, tương đương khoảng 15,55%."
+  },
+  {
+    "query": "Giá vốn hàng bán năm 2024 tăng bao nhiêu so với năm 2023?",
+    "reference": "Tăng 2.011.742.115 VND, tương đương khoảng 10,19%."
+  },
+  {
+    "query": "Lợi nhuận gộp năm 2024 tăng bao nhiêu so với năm 2023?",
+    "reference": "Tăng 2.845.380.677 VND, tương đương khoảng 24,73%."
+  },
+  {
+    "query": "Biên lợi nhuận gộp năm 2024 là bao nhiêu?",
+    "reference": "Lợi nhuận gộp / doanh thu thuần = 14.349.983.754 / 36.099.274.547 ≈ 39,75%."
+  },
+  {
+    "query": "Tỷ lệ giá vốn trên doanh thu năm 2024 là bao nhiêu?",
+    "reference": "Giá vốn / doanh thu thuần = 21.749.290.793 / 36.099.274.547 ≈ 60,25%."
+  },
+  {
+    "query": "Biên lợi nhuận ròng năm 2024 là bao nhiêu?",
+    "reference": "Lợi nhuận sau thuế / doanh thu thuần = 5.880.352.657 / 36.099.274.547 ≈ 16,29%."
+  },
+  {
+    "query": "Lợi nhuận sau thuế năm 2024 tăng bao nhiêu lần so với năm 2023?",
+    "reference": "Khoảng 26,03 lần, vì lợi nhuận sau thuế tăng từ 225.877.084 VND lên 5.880.352.657 VND."
+  },
+  {
+    "query": "Tài sản của công ty giảm bao nhiêu trong năm 2024?",
+    "reference": "Giảm 10.475.745.831 VND, từ 228.457.763.475 VND xuống 217.982.017.644 VND."
+  },
+  {
+    "query": "Vốn chủ sở hữu tăng bao nhiêu trong năm 2024?",
+    "reference": "Tăng 5.880.352.657 VND, đúng bằng lợi nhuận sau thuế năm 2024."
+  },
+  {
+    "query": "Nợ phải trả giảm bao nhiêu trong năm 2024?",
+    "reference": "Giảm 16.356.098.488 VND, từ 114.647.262.413 VND xuống 98.291.163.925 VND."
+  },
+  {
+    "query": "Hệ số thanh toán hiện hành cuối năm 2024 là bao nhiêu?",
+    "reference": "Tài sản ngắn hạn / nợ ngắn hạn = 11.385.653.577 / 39.264.031.677 ≈ 0,29 lần."
+  },
+  {
+    "query": "Vốn lưu động thuần cuối năm 2024 là bao nhiêu?",
+    "reference": "Tài sản ngắn hạn - nợ ngắn hạn = 11.385.653.577 - 39.264.031.677 = âm 27.878.378.100 VND."
+  },
+  {
+    "query": "Hệ số thanh toán nhanh cuối năm 2024 là bao nhiêu?",
+    "reference": "(Tài sản ngắn hạn - hàng tồn kho) / nợ ngắn hạn = khoảng 0,28 lần."
+  },
+  {
+    "query": "Hệ số tiền mặt cuối năm 2024 là bao nhiêu?",
+    "reference": "Tiền và tương đương tiền / nợ ngắn hạn = 2.736.395.841 / 39.264.031.677 ≈ 0,07 lần."
+  },
+  {
+    "query": "Tỷ lệ nợ phải trả trên tổng tài sản cuối năm 2024 là bao nhiêu?",
+    "reference": "Nợ phải trả / tổng tài sản = 98.291.163.925 / 217.982.017.644 ≈ 45,09%."
+  },
+  {
+    "query": "Tỷ lệ nợ phải trả trên vốn chủ sở hữu cuối năm 2024 là bao nhiêu?",
+    "reference": "Nợ phải trả / vốn chủ sở hữu = 98.291.163.925 / 119.690.853.719 ≈ 0,82 lần."
+  },
+  {
+    "query": "ROA năm 2024 xấp xỉ bao nhiêu nếu dùng tài sản bình quân?",
+    "reference": "ROA = LNST / tài sản bình quân = 5.880.352.657 / [(217.982.017.644 + 228.457.763.475) / 2] ≈ 2,63%."
+  },
+  {
+    "query": "ROE năm 2024 xấp xỉ bao nhiêu nếu dùng vốn chủ sở hữu bình quân?",
+    "reference": "ROE = LNST / VCSH bình quân = 5.880.352.657 / [(119.690.853.719 + 113.810.501.062) / 2] ≈ 5,04%."
+  },
+  {
+    "query": "Hệ số khả năng trả lãi vay năm 2024 là bao nhiêu?",
+    "reference": "Nếu dùng EBIT xấp xỉ = lợi nhuận trước thuế + chi phí lãi vay, thì khả năng trả lãi = (5.880.352.657 + 6.677.078.068) / 6.677.078.068 ≈ 1,88 lần."
+  },
+  {
+    "query": "Dòng tiền từ hoạt động kinh doanh năm 2024 gấp bao nhiêu lần lợi nhuận sau thuế?",
+    "reference": "17.587.048.791 / 5.880.352.657 ≈ 2,99 lần."
+  },
+  {
+    "query": "Công ty có cải thiện về hiệu quả kinh doanh trong năm 2024 không?",
+    "reference": "Có. Doanh thu tăng 15,55%, lợi nhuận gộp tăng 24,73%, lợi nhuận sau thuế tăng mạnh lên 5,88 tỷ VND. Biên lợi nhuận gộp cũng tăng lên khoảng 39,75%, cho thấy doanh thu tăng nhanh hơn giá vốn."
+  },
+  {
+    "query": "Nguyên nhân chính khiến kết quả kinh doanh năm 2024 tốt hơn là gì?",
+    "reference": "Theo thuyết minh, năm 2024 thời tiết mưa nhiều do ảnh hưởng La Nina, giúp lượng nước ổn định, sản lượng điện tăng. Trong khi đó, giá vốn chủ yếu là khấu hao nhà máy thủy điện nên không biến động mạnh, làm tỷ lệ lãi gộp cải thiện."
+  },
+  {
+    "query": "Công ty có rủi ro thanh khoản không?",
+    "reference": "Có. Hệ số thanh toán hiện hành chỉ khoảng 0,29 lần và vốn lưu động thuần âm 27,88 tỷ VND. Điều này cho thấy tài sản ngắn hạn không đủ bù đắp nợ ngắn hạn. Đây là điểm rất yếu dù công ty có lãi."
+  },
+  {
+    "query": "Vì sao kiểm toán viên nhấn mạnh vấn đề hoạt động liên tục?",
+    "reference": "Vì tại 31/12/2024, nợ ngắn hạn lớn hơn tài sản ngắn hạn 27,88 tỷ VND, công ty còn lỗ lũy kế 1,82 tỷ VND và có nợ quá hạn chưa thanh toán 6,82 tỷ VND. Các yếu tố này tạo nghi ngờ đáng kể về khả năng hoạt động liên tục."
+  },
+  {
+    "query": "Công ty có đang phụ thuộc vào tài sản dài hạn không?",
+    "reference": "Có. Tài sản dài hạn là 206,60 tỷ VND trên tổng tài sản 217,98 tỷ VND, chiếm khoảng 94,78%. Tài sản chủ yếu nằm ở tài sản cố định hữu hình, phản ánh mô hình kinh doanh thủy điện có tính thâm dụng vốn cao."
+  },
+  {
+    "query": "Cấu trúc tài sản của công ty có vấn đề gì?",
+    "reference": "Công ty có tài sản cố định lớn nhưng tài sản ngắn hạn rất thấp. Điều này phù hợp với doanh nghiệp thủy điện, nhưng gây áp lực thanh khoản vì tiền, hàng tồn kho và phải thu ngắn hạn không đủ để xử lý nợ ngắn hạn."
+  },
+  {
+    "query": "Chất lượng lợi nhuận năm 2024 có tốt không?",
+    "reference": "Tương đối tốt ở góc độ dòng tiền, vì dòng tiền thuần từ hoạt động kinh doanh là 17,59 tỷ VND, cao hơn nhiều so với lợi nhuận sau thuế 5,88 tỷ VND. Điều này cho thấy lợi nhuận không chỉ nằm trên giấy."
+  },
+  {
+    "query": "Dòng tiền năm 2024 cho thấy điều gì về chiến lược tài chính?",
+    "reference": "Công ty tạo dòng tiền kinh doanh dương 17,59 tỷ VND và dùng dòng tiền để trả nợ vay, thể hiện qua dòng tiền tài chính âm 17,4 tỷ VND. Đây là dấu hiệu giảm đòn bẩy, nhưng cũng khiến tiền cuối năm chỉ tăng nhẹ 191,77 triệu VND."
+  },
+  {
+    "query": "Chi phí lãi vay có còn là gánh nặng không?",
+    "reference": "Có, dù đã giảm. Chi phí tài chính năm 2024 là 6,68 tỷ VND, thấp hơn 2023 khoảng 32,25%, nhưng vẫn lớn hơn chi phí quản lý doanh nghiệp và chiếm phần đáng kể trong lợi nhuận gộp."
+  },
+  {
+    "query": "Khả năng trả lãi vay của công ty có an toàn không?",
+    "reference": "Chưa thật sự an toàn. Hệ số khả năng trả lãi vay xấp xỉ 1,88 lần, nghĩa là lợi nhuận trước lãi vay và thuế chỉ cao hơn chi phí lãi vay chưa đến 2 lần. Nếu doanh thu điện giảm, biên an toàn có thể bị thu hẹp nhanh."
+  },
+  {
+    "query": "Việc nợ vay giảm trong năm 2024 có tích cực không?",
+    "reference": "Có. Tổng vay và nợ thuê tài chính giảm khoảng 17,4 tỷ VND, từ 93,53 tỷ VND xuống 76,13 tỷ VND. Điều này làm giảm áp lực lãi vay và rủi ro tài chính, nhưng chưa giải quyết hoàn toàn vấn đề thanh khoản ngắn hạn."
+  },
+  {
+    "query": "Công ty có đang cải thiện vốn chủ sở hữu không?",
+    "reference": "Có. Vốn chủ sở hữu tăng từ 113,81 tỷ VND lên 119,69 tỷ VND nhờ lợi nhuận năm 2024. Tuy nhiên, lợi nhuận sau thuế chưa phân phối vẫn âm 1,83 tỷ VND, nên công ty chưa xóa hết lỗ lũy kế."
+  },
+  {
+    "query": "Lỗ lũy kế cuối năm 2024 có nghiêm trọng không?",
+    "reference": "Mức lỗ lũy kế 1,83 tỷ VND tương đương khoảng 1,52% vốn góp chủ sở hữu 120 tỷ VND. Về tỷ trọng vốn, con số này không quá lớn, nhưng kết hợp với nợ quá hạn và thiếu hụt vốn lưu động thì vẫn là tín hiệu rủi ro."
+  },
+  {
+    "query": "Công ty có khả năng tự tài trợ hoạt động không?",
+    "reference": "Một phần có, vì dòng tiền kinh doanh dương mạnh. Tuy nhiên, công ty vẫn cần hỗ trợ vốn lưu động từ cổ đông lớn và còn có nợ ngắn hạn cao hơn tài sản ngắn hạn, nên chưa thể nói là hoàn toàn tự chủ tài chính."
+  },
+  {
+    "query": "Rủi ro lớn nhất của công ty là gì?",
+    "reference": "Rủi ro lớn nhất là thanh khoản và khả năng hoạt động liên tục, không phải lợi nhuận. Công ty có lãi và dòng tiền kinh doanh dương, nhưng nợ ngắn hạn vượt tài sản ngắn hạn 27,88 tỷ VND và có nợ quá hạn chưa thanh toán."
+  },
+  {
+    "query": "Điểm mạnh lớn nhất của công ty trong năm 2024 là gì?",
+    "reference": "Điểm mạnh là hoạt động kinh doanh chính cải thiện: doanh thu bán điện tăng, lợi nhuận gộp tăng, dòng tiền kinh doanh dương lớn và công ty trả được một phần nợ vay."
+  },
+  {
+    "query": "Điểm yếu lớn nhất trong báo cáo tài chính là gì?",
+    "reference": "Điểm yếu là thanh khoản rất thấp. Hệ số thanh toán hiện hành 0,29 lần và hệ số tiền mặt 0,07 lần cho thấy công ty có rất ít tài sản lỏng so với nợ ngắn hạn."
+  },
+  {
+    "query": "Công ty có đang tạo ra tiền tốt hơn lợi nhuận kế toán không?",
+    "reference": "Có. Dòng tiền hoạt động kinh doanh 17,59 tỷ VND cao gần 3 lần lợi nhuận sau thuế. Nguyên nhân một phần là chi phí khấu hao lớn 12,44 tỷ VND được cộng lại trong lưu chuyển tiền tệ gián tiếp."
+  },
+  {
+    "query": "Tại sao doanh nghiệp có lãi nhưng vẫn bị nghi ngờ khả năng hoạt động liên tục?",
+    "reference": "Vì lợi nhuận không đồng nghĩa với khả năng trả nợ ngắn hạn. Công ty có lãi 5,88 tỷ VND, nhưng tài sản ngắn hạn chỉ 11,39 tỷ VND trong khi nợ ngắn hạn 39,26 tỷ VND; ngoài ra còn có nợ quá hạn."
+  },
+  {
+    "query": "Dự án thủy điện Nậm Thi 1 có ảnh hưởng gì đến triển vọng công ty?",
+    "reference": "Dự án Nậm Thi 1 có thể là động lực tăng trưởng dài hạn nếu được tiếp tục triển khai, nhưng hiện còn liên quan đến thủ tục chuyển mục đích sử dụng rừng và điều chỉnh hồ sơ. Vì vậy, đây vừa là cơ hội vừa là yếu tố chưa chắc chắn."
+  }
+]

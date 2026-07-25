@@ -8,18 +8,19 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.agent_tools_list import get_tools_list
+from tools.langchain_tools import get_tools_list
 from agents.line_item_matcher import (
     DIRECT_LINE_ITEM_EVALUATIVE_PATTERNS,
     contains_intent,
     direct_line_item_match,
 )
 from agents.profiles import AGENT_PROFILES
-from datasets.registry import get_dataset
+from dataset_catalog.registry import get_dataset
 from schemas.agent_outputs import PlannerEvidencePlan
 from llm.invoke import extract_usage_metadata, invoke_prompt
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
+from common import dedupe_keep_order as _dedupe_keep_order
 
 DEFAULT_PLANNER_PLAN = {
     "difficulty_level": "easy",
@@ -147,6 +148,27 @@ def _extract_company_from_query(user_query: str) -> str:
     return ""
 
 
+def _extract_time_hint_from_query(user_query: str) -> str:
+    """Recover an explicit period when the planner omits or fails to parse it."""
+    text = " ".join(str(user_query or "").strip().split())
+    if not text:
+        return ""
+
+    patterns = (
+        r"\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b",
+        r"\b(?:quý|quy)\s*[1-4](?:\s*[/-]\s*\d{4}|\s+năm\s+\d{4})?\b",
+        r"\bq[1-4](?:\s*[/-]?\s*\d{4})?\b",
+        r"\b(?:năm|nam)\s+\d{4}\b",
+        r"\b(?:cuối kỳ|cuoi ky|đầu kỳ|dau ky|cuối năm|cuoi nam|"
+        r"đầu năm|dau nam|trong kỳ|trong ky|lũy kế|luy ke)\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(0).strip()
+    return ""
+
+
 def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str], Optional[str]]:
     if isinstance(result, PlannerEvidencePlan):
         return result, None, None
@@ -188,19 +210,6 @@ def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str
 def _normalize_company(value: str) -> str:
     return " ".join(str(value or "").strip().lower().split())
 
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
-
 def _planner_trace_summary(planner_plan: dict) -> dict:
     analysis_axes = planner_plan.get("analysis_axes", []) or []
     analysis_axes_trace = []
@@ -234,7 +243,8 @@ def _enrich_plan_fields(state: dict, planner_plan: dict) -> dict:
         elif dataset is not None:
             enriched["company"] = dataset.company
 
-    enriched["time_hint"] = ""
+    planner_time_hint = str(enriched.get("time_hint", "") or "").strip()
+    enriched["time_hint"] = planner_time_hint or _extract_time_hint_from_query(user_query)
 
     return enriched
 

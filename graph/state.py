@@ -1,6 +1,7 @@
-"""Typed state contract shared by all LangGraph nodes."""
+"""Typed state and dependency contracts shared by LangGraph nodes."""
 # Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
 
+from dataclasses import dataclass
 from typing import TypedDict, Any, Annotated
 import operator
 
@@ -10,11 +11,32 @@ def merge_dicts(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
     out.update(right or {})
     return out
 
+
+@dataclass(frozen=True)
+class RunContext:
+    run_id: str = ""
+    dataset_id: str = ""
+    index_fingerprint: str = ""
+    model_fingerprint: str = ""
+
+
+@dataclass(frozen=True)
+class WorkflowServices:
+    """Runtime-only dependencies; these objects never enter graph state."""
+
+    collection: Any = None
+    index_fingerprint: str = ""
+    model_fingerprint: str = ""
+
 class GraphState(TypedDict, total=False):
     # input
     user_query: str
     debug_trace: bool
     dataset_id: str
+    run_id: str
+    index_fingerprint: str
+    collection_generation: str
+    model_fingerprint: str
 
     # branch-specific input injected by Send(...)
     worker_query: str
