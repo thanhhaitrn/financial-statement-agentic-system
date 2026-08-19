@@ -1,0 +1,486 @@
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support.ui import WebDriverWait
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.chrome.options import Options
+import time
+from datetime import datetime
+import os
+import hashlib
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
+class VietstockCrawler:
+    def __init__(self):
+        self.options = Options()
+        self.options.add_argument('--headless')
+        self.options.add_argument('--no-sandbox')
+        self.options.add_argument('--disable-dev-shm-usage')
+        self.options.add_argument('--window-size=1920,1080')
+        self.options.add_argument('--disable-images')
+        self.options.add_argument('--disable-javascript')
+        self.options.add_argument('user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36')
+    
+    def _get_driver(self, debug=False):
+        if debug:
+            return webdriver.Chrome()
+        return webdriver.Chrome(options=self.options)
+    
+    def _get_master_file_path(self, stock_code):
+        folder = f"downloads/{stock_code}_articles"
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        return f"{folder}/{stock_code}_MASTER_ARTICLES.txt"
+    
+    def _load_existing_links(self, stock_code):
+        master_file = self._get_master_file_path(stock_code)
+        existing_links = set()
+        
+        if os.path.exists(master_file):
+            try:
+                with open(master_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    lines = content.split('\n')
+                    for line in lines:
+                        if line.strip().startswith('Link:'):
+                            link = line.replace('Link:', '').strip()
+                            existing_links.add(link)
+            except Exception as e:
+                print(f"Warning: Cannot read file - {e}")
+        
+        return existing_links
+    
+    def _get_total_articles_count(self, stock_code):
+        master_file = self._get_master_file_path(stock_code)
+        if not os.path.exists(master_file):
+            return 0
+        try:
+            with open(master_file, 'r', encoding='utf-8') as f:
+                return f.read().count('Link:')
+        except:
+            return 0
+    
+    def _append_to_master_file(self, stock_code, new_articles):
+        if not new_articles:
+            return
+        
+        master_file = self._get_master_file_path(stock_code)
+        
+        old_content = ""
+        old_articles_links = set()
+        
+        if os.path.exists(master_file):
+            with open(master_file, 'r', encoding='utf-8') as f:
+                old_content = f.read()
+                lines = old_content.split('\n')
+                for line in lines:
+                    if line.strip().startswith('Link:'):
+                        link = line.replace('Link:', '').strip()
+                        old_articles_links.add(link)
+        
+        truly_new_articles = [a for a in new_articles if a['link'] not in old_articles_links]
+        
+        if not truly_new_articles:
+            print("No new articles to add")
+            return
+        
+        new_content = ""
+        for article in truly_new_articles:
+            new_content += "="*70 + "\n"
+            new_content += f"[{article['index']}] {article.get('article_title', article['title'])}\n"
+            new_content += "="*70 + "\n"
+            new_content += f"Link: {article['link']}\n"
+            if article.get('publish_date'):
+                new_content += f"Publish Date: {article['publish_date']}\n"
+            new_content += f"Content Length: {article.get('content_length', 0)} characters\n"
+            new_content += "\nCONTENT:\n"
+            new_content += "-"*50 + "\n"
+            new_content += f"{article.get('content', 'No content')}\n"
+            new_content += "-"*50 + "\n\n"
+        
+        with open(master_file, 'w', encoding='utf-8') as f:
+            f.write(f"ARTICLE LIST - STOCK CODE {stock_code}\n")
+            f.write(f"Last update: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}\n")
+            f.write(f"Total articles: {len(old_articles_links) + len(truly_new_articles)}\n")
+            f.write("="*70 + "\n\n")
+            f.write("NEWEST ARTICLES:\n")
+            f.write("="*70 + "\n\n")
+            f.write(new_content)
+            
+            if old_content:
+                if "NEWEST ARTICLES:" in old_content:
+                    parts = old_content.split("NEWEST ARTICLES:")
+                    if len(parts) > 1:
+                        old_part = parts[1]
+                        lines = old_part.split('\n')
+                        for i, line in enumerate(lines):
+                            if line.strip().startswith('='*70):
+                                old_part = '\n'.join(lines[i+1:])
+                                break
+                        
+                        f.write("\n" + "="*70 + "\n")
+                        f.write("PREVIOUS ARTICLES:\n")
+                        f.write("="*70 + "\n\n")
+                        f.write(old_part.strip())
+        
+        print(f"Master file updated: +{len(truly_new_articles)} new articles")
+    
+    def _extract_date_from_url(self, url):
+        try:
+            parts = url.split('/')
+            for i, part in enumerate(parts):
+                if part.isdigit() and len(part) == 4:
+                    if i+1 < len(parts) and parts[i+1].isdigit():
+                        year, month = part, parts[i+1]
+                        if i+2 < len(parts) and parts[i+2].isdigit() and len(parts[i+2]) == 2:
+                            return f"{year}-{month}-{parts[i+2]}"
+                        return f"{year}-{month}"
+            return "9999-99-99"
+        except:
+            return "9999-99-99"
+    
+    def _click_until(self, driver, target_count=None):
+        news_selectors = [
+            "a.stock-news__title[target='_blank']",
+            "a.stock-news__title",
+            "tbody.stock-news__table-body a"
+        ]
+        
+        see_more_selectors = [
+            "span.stock-news__button-see-more",
+            "button.load-more",
+            "[class*='see-more']"
+        ]
+        
+        clicks = 0
+        selector = news_selectors[0]
+        
+        for test_selector in news_selectors:
+            if driver.find_elements(By.CSS_SELECTOR, test_selector):
+                selector = test_selector
+                break
+        
+        while True:
+            current = len(driver.find_elements(By.CSS_SELECTOR, selector))
+            print(f"Current articles: {current}{f'/{target_count}' if target_count else ''}")
+            
+            if target_count and current >= target_count:
+                break
+            
+            btn = None
+            for btn_selector in see_more_selectors:
+                try:
+                    btn = WebDriverWait(driver, 1).until(
+                        EC.element_to_be_clickable((By.CSS_SELECTOR, btn_selector))
+                    )
+                    break
+                except:
+                    continue
+            
+            if btn:
+                driver.execute_script("arguments[0].scrollIntoView();arguments[0].click();", btn)
+                clicks += 1
+                print(f"Click {clicks}")
+                time.sleep(1)
+                
+                try:
+                    WebDriverWait(driver, 2).until(
+                        lambda d: len(d.find_elements(By.CSS_SELECTOR, selector)) > current
+                    )
+                except:
+                    pass
+            else:
+                print("No more articles")
+                break
+        
+        return clicks, len(driver.find_elements(By.CSS_SELECTOR, selector))
+    
+    def _extract_news(self, driver, limit=None):
+        news_selectors = [
+            "a.stock-news__title[target='_blank']",
+            "a.stock-news__title",
+            "tbody.stock-news__table-body a"
+        ]
+        
+        links = []
+        for selector in news_selectors:
+            links = driver.find_elements(By.CSS_SELECTOR, selector)
+            if links:
+                break
+        
+        news = []
+        for i, link in enumerate(links):
+            if limit and i >= limit:
+                break
+            title = link.text.strip()
+            href = link.get_attribute('href')
+            if title and href:
+                news.append({'title': title, 'link': href, 'index': i+1})
+        return news
+    
+    def crawl_article_content(self, url, max_retries=3):
+        """Optimized content crawling with retry mechanism"""
+        for attempt in range(max_retries):
+            driver = None
+            try:
+                driver = self._get_driver()
+                driver.set_page_load_timeout(15)
+                driver.get(url)
+                time.sleep(1)
+                
+                # Lấy tiêu đề
+                title_selectors = ["h1", ".article-title", ".news-title", ".title"]
+                title = ""
+                for selector in title_selectors:
+                    try:
+                        title = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                        if title:
+                            break
+                    except:
+                        continue
+                
+                # Lấy nội dung
+                content_selectors = [
+                    ".news-content", ".article-content", ".detail-content",
+                    ".content", "[class*='content']"
+                ]
+                content = ""
+                for selector in content_selectors:
+                    try:
+                        content = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                        if content and len(content) > 100:
+                            break
+                    except:
+                        continue
+                
+                if not content:
+                    try:
+                        content = driver.find_element(By.CSS_SELECTOR, "body").text.strip()
+                    except:
+                        pass
+                
+                # Lấy ngày đăng
+                date_selectors = [".date", ".time", ".publish-date", ".news-date"]
+                publish_date = ""
+                for selector in date_selectors:
+                    try:
+                        publish_date = driver.find_element(By.CSS_SELECTOR, selector).text.strip()
+                        if publish_date:
+                            break
+                    except:
+                        continue
+                
+                driver.quit()
+                
+                return {
+                    'title': title,
+                    'publish_date': publish_date,
+                    'content': content[:50000] if content else "No content",
+                    'content_length': len(content)
+                }
+                
+            except Exception as e:
+                if driver:
+                    driver.quit()
+                if attempt == max_retries - 1:
+                    return {
+                        'title': '',
+                        'publish_date': '',
+                        'content': f"Error: {str(e)}",
+                        'content_length': 0
+                    }
+                time.sleep(0.5)
+        
+        return {'title': '', 'publish_date': '', 'content': 'Failed after retries', 'content_length': 0}
+    
+    def crawl(self, stock_code, target_count=None, debug=False, max_workers=3):
+        """Main crawl function with parallel processing"""
+        url = f"https://finance.vietstock.vn/{stock_code}/tin-tuc-su-kien.htm"
+        driver = self._get_driver(debug)
+        
+        try:
+            print(f"\nAccessing: {url}")
+            driver.get(url)
+            time.sleep(2)
+            
+            initial = len(driver.find_elements(By.CSS_SELECTOR, "a.stock-news__title"))
+            print(f"Initial articles: {initial}")
+            
+            if target_count and initial >= target_count:
+                clicks = 0
+            else:
+                clicks, _ = self._click_until(driver, target_count)
+            
+            news_list = self._extract_news(driver, target_count)
+            print(f"Collected {len(news_list)} article links")
+            
+            # Sắp xếp theo thời gian
+            news_list.sort(key=lambda x: self._extract_date_from_url(x['link']), reverse=True)
+            
+            # Lọc bài chưa crawl
+            existing_links = self._load_existing_links(stock_code)
+            new_news = [n for n in news_list if n['link'] not in existing_links]
+            
+            if not new_news:
+                print("No new articles")
+                return [], clicks, initial
+            
+            print(f"Found {len(new_news)} new articles, starting parallel crawl...")
+            
+            # Parallel crawling
+            articles = []
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                future_to_news = {executor.submit(self.crawl_article_content, news['link']): news for news in new_news}
+                
+                for idx, future in enumerate(as_completed(future_to_news), 1):
+                    news = future_to_news[future]
+                    try:
+                        print(f"\n   {idx}/{len(new_news)}: {news['title'][:50]}...")
+                        content = future.result(timeout=30)
+                        print(f"       Completed ({content['content_length']} characters)")
+                        
+                        articles.append({
+                            **news,
+                            'article_title': content['title'],
+                            'publish_date': content['publish_date'],
+                            'content': content['content'],
+                            'content_length': content['content_length']
+                        })
+                    except Exception as e:
+                        print(f"       Failed: {str(e)}")
+                        articles.append({
+                            **news,
+                            'article_title': '',
+                            'publish_date': '',
+                            'content': f"Crawl error: {str(e)}",
+                            'content_length': 0
+                        })
+            
+            # Sắp xếp lại theo thứ tự index
+            articles.sort(key=lambda x: x['index'])
+            
+            # Cập nhật file MASTER
+            if articles:
+                self._append_to_master_file(stock_code, articles)
+            
+            if debug:
+                input("\nPress Enter to close browser...")
+            
+            return articles, clicks, initial
+            
+        except Exception as e:
+            print(f"Error: {e}")
+            return [], 0, 0
+        finally:
+            if driver and not debug:
+                driver.quit()
+    
+    def save_individual(self, stock_code, articles):
+        if not articles:
+            return
+        
+        folder = f"downloads/{stock_code}_articles/individual"
+        os.makedirs(folder, exist_ok=True)
+        
+        saved = 0
+        for article in articles:
+            safe_title = "".join(c for c in article.get('article_title', article['title'])[:40] 
+                                  if c.isalnum() or c in (' ', '-', '_')).strip().replace(' ', '_')
+            link_hash = hashlib.md5(article['link'].encode()).hexdigest()[:8]
+            filename = f"{folder}/{stock_code}_{article['index']}_{link_hash}_{safe_title}.txt"
+            
+            if os.path.exists(filename):
+                continue
+            
+            with open(filename, 'w', encoding='utf-8') as f:
+                f.write(f"TITLE: {article.get('article_title', article['title'])}\n")
+                f.write("="*70 + "\n")
+                f.write(f"Link: {article['link']}\n")
+                if article.get('publish_date'):
+                    f.write(f"Publish Date: {article['publish_date']}\n")
+                f.write(f"Characters: {article.get('content_length', 0)}\n")
+                f.write("="*70 + "\n\n")
+                f.write(article.get('content', 'No content'))
+            saved += 1
+        
+        print(f"Saved {saved} individual articles to: {folder}")
+
+def main():
+    print("="*70)
+    print("     VIETSTOCK NEWS CRAWLER (AUTO UPDATE)")
+    print("="*70)
+    
+    crawler = VietstockCrawler()
+    
+    while True:
+        print("\nSELECT MODE:")
+        print("   1. Crawl by quantity")
+        print("   2. Crawl ALL articles")
+        print("   3. Debug mode")
+        print("   4. Exit")
+        
+        mode = input("\nChoice (1/2/3/4): ").strip()
+        if mode == '4':
+            print("\nGoodbye!")
+            break
+        
+        if mode not in ['1', '2', '3']:
+            print("Invalid choice")
+            continue
+        
+        stock_code = input("\nStock code: ").strip().upper()
+        if not stock_code:
+            print("Please enter stock code")
+            continue
+        
+        start_time = time.time()
+        
+        if mode == '1':
+            try:
+                target = int(input("Number of articles: ").strip())
+                if target <= 0:
+                    print("Number must be > 0")
+                    continue
+            except ValueError:
+                print("Invalid number")
+                continue
+            articles, clicks, initial = crawler.crawl(stock_code, target_count=target)
+        elif mode == '2':
+            confirm = input("\nCrawl ALL articles? (y/n): ").strip().lower()
+            if confirm != 'y':
+                continue
+            articles, clicks, initial = crawler.crawl(stock_code)
+        else:
+            articles, clicks, initial = crawler.crawl(stock_code, debug=True)
+        
+        elapsed = time.time() - start_time
+        
+        if articles:
+            print(f"\n{'='*70}")
+            print(f"RESULTS FOR {stock_code}")
+            print(f"{'='*70}\n")
+            
+            for item in articles[:10]:
+                title = item.get('article_title', item['title'])
+                print(f"{item['index']}. {title[:80]}")
+                print(f"   {item['link']}")
+                print(f"   {item.get('content_length', 0)} characters")
+                print()
+            
+            if len(articles) > 10:
+                print(f"... and {len(articles) - 10} more articles\n")
+            
+            print(f"NEW ARTICLES: {len(articles)}")
+            print(f"Time: {elapsed:.2f} seconds")
+            
+            if input("\nSave individual files? (y/n): ").strip().lower() == 'y':
+                crawler.save_individual(stock_code, articles)
+            
+            master_file = crawler._get_master_file_path(stock_code)
+            total = crawler._get_total_articles_count(stock_code)
+            print(f"\nMASTER FILE: {master_file}")
+            print(f"Total articles: {total}")
+        else:
+            print("\nNo new articles found")
+
+if __name__ == "__main__":
+    main() 
