@@ -14,6 +14,8 @@ from schemas.table_names import (
     TABLE_REPORT_SECTION,
     normalize_table_heading,
 )
+from tools.evidence import dedupe_facts
+from common import dedupe_keep_order as _dedupe_keep_order
 
 
 ANALYSIS_TABLE_ALLOWLIST = {
@@ -22,20 +24,24 @@ ANALYSIS_TABLE_ALLOWLIST = {
     "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
     "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
 }
-NOTE_LLM_FACTS_LIMIT = 5
+ROUTE_METADATA_FIELDS = (
+    "time_hint",
+    "period",
+    "unit",
+    "value_type",
+    "evidence_query",
+    "source",
+)
 
 
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
-
+def _route_metadata(payload: dict) -> dict:
+    if not isinstance(payload, dict):
+        return {}
+    return {
+        key: payload.get(key)
+        for key in ROUTE_METADATA_FIELDS
+        if payload.get(key) not in ("", None, [], {})
+    }
 
 def _evidence_item_queries(item: dict) -> list[str]:
     if not isinstance(item, dict):
@@ -69,9 +75,11 @@ def _evidence_queries_for_analysis(worker_plan: dict, analysis_agent: str) -> li
 
         table = normalize_table_heading(str(item.get("table", "") or "").strip())
         for query in _evidence_item_queries(item):
+            metadata = _route_metadata(item)
             key = (
                 table,
                 query,
+                tuple((field, str(metadata.get(field, "") or "")) for field in ROUTE_METADATA_FIELDS),
             )
             if key in seen:
                 continue
@@ -80,6 +88,7 @@ def _evidence_queries_for_analysis(worker_plan: dict, analysis_agent: str) -> li
                 {
                     "table": table,
                     "query": query,
+                    **metadata,
                 }
             )
 
@@ -101,6 +110,7 @@ def _normalized_targets(worker_plan: dict) -> list[dict]:
             "source": str(item.get("source", "") or "").strip(),
             "objective": str(item.get("objective", "") or "").strip(),
             "evidence_queries": evidence_queries,
+            **_route_metadata(item),
         }
         targets.append(payload)
 
@@ -131,6 +141,7 @@ def _normalized_targets(worker_plan: dict) -> list[dict]:
                 if is_analysis_agent(agent)
                 else []
             ),
+            **_route_metadata(item),
         }
         requirements = [
             str(req).strip()
@@ -220,6 +231,7 @@ def _dedupe_targets(targets: list[dict]) -> list[dict]:
             "source": str(target.get("source", "") or "").strip(),
             "objective": str(target.get("objective", "") or "").strip(),
             "evidence_queries": list(target.get("evidence_queries", []) or []),
+            **_route_metadata(target),
         }
         if not is_analysis_agent(payload["agent"]):
             continue
@@ -247,6 +259,10 @@ def _dedupe_targets(targets: list[dict]) -> list[dict]:
                 for item in payload.get("evidence_queries", []) or []
                 if isinstance(item, dict)
             ),
+            tuple(
+                (field, str(payload.get(field, "") or ""))
+                for field in ROUTE_METADATA_FIELDS
+            ),
         )
         if key in seen:
             continue
@@ -267,14 +283,76 @@ def _result_table_from_key_payload(result_key: str, payload: dict) -> str:
     return normalize_table_heading(key_text)
 
 
-def _limit_facts_for_analysis_prompt(table: str, facts: list[dict]) -> list[dict]:
-    if table == TABLE_NOTE:
-        return [
-            fact
-            for fact in facts or []
-            if isinstance(fact, dict)
-        ][:NOTE_LLM_FACTS_LIMIT]
-    return facts
+def _limit_facts_for_analysis_prompt(
+    table: str,
+    facts: list[dict],
+    *,
+    state: dict | None = None,
+) -> list[dict]:
+    # Import lazily because graph.evidence imports this module to prepare the
+    # analysis dispatch after retrieval. The evidence module is the canonical
+    # owner of NOTE=12, schedule NOTE=24, main=10/16 and report-section=10.
+    from graph.evidence import _llm_facts_limit_for_table
+
+    runtime_state = state or {}
+    limit = _llm_facts_limit_for_table(
+        runtime_state,
+        runtime_state.get("worker_plan", {}) or {},
+        table,
+    )
+    return [
+        fact
+        for fact in facts or []
+        if isinstance(fact, dict)
+    ][:limit]
+
+
+def _merge_analysis_input_payload(
+    existing: dict,
+    incoming: dict,
+    *,
+    state: dict,
+    table: str,
+) -> dict:
+    current = existing if isinstance(existing, dict) else {}
+    payload = incoming if isinstance(incoming, dict) else {}
+    merged = dict(current)
+    for key in ROUTE_METADATA_FIELDS:
+        if merged.get(key) in ("", None, [], {}) and payload.get(key) not in ("", None, [], {}):
+            merged[key] = payload.get(key)
+    merged["table"] = table
+    merged["facts"] = _limit_facts_for_analysis_prompt(
+        table,
+        dedupe_facts(
+            list(current.get("facts", []) or [])
+            + list(payload.get("facts", []) or [])
+        ),
+        state=state,
+    )
+    return merged
+
+
+def _store_analysis_input_facts(
+    prepared: dict[str, dict],
+    *,
+    result_key: str,
+    source_payload: dict,
+    table: str,
+    facts: list[dict],
+    state: dict,
+) -> None:
+    key = table or str(result_key or "").strip()
+    incoming = {
+        "table": table,
+        "facts": facts,
+        **_route_metadata(source_payload),
+    }
+    prepared[key] = _merge_analysis_input_payload(
+        prepared.get(key, {}),
+        incoming,
+        state=state,
+        table=table,
+    )
 
 
 def _retrieval_requirements_by_table(worker_plan: dict) -> dict[str, list[str]]:
@@ -373,24 +451,40 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
             target_requirement_tokens.update(_text_tokens(item))
 
         if matched_facts:
-            prepared[table or str(result_key or "").strip()] = {
-                "table": table,
-                "facts": _limit_facts_for_analysis_prompt(table, matched_facts),
-            }
+            _store_analysis_input_facts(
+                prepared,
+                result_key=str(result_key or ""),
+                source_payload=payload,
+                table=table,
+                facts=matched_facts,
+                state=state,
+            )
             continue
 
         if evidence_query_tokens_by_table.get(table):
-            prepared[table or str(result_key or "").strip()] = {
-                "table": table,
-                "facts": _limit_facts_for_analysis_prompt(table, eligible_facts),
-            }
+            _store_analysis_input_facts(
+                prepared,
+                result_key=str(result_key or ""),
+                source_payload=payload,
+                table=table,
+                facts=eligible_facts,
+                state=state,
+            )
             continue
 
-        if requirement_tokens and target_requirement_tokens and requirement_tokens.intersection(target_requirement_tokens):
-            prepared[table or str(result_key or "").strip()] = {
-                "table": table,
-                "facts": _limit_facts_for_analysis_prompt(table, eligible_facts),
-            }
+        if (
+            requirement_tokens
+            and target_requirement_tokens
+            and requirement_tokens.intersection(target_requirement_tokens)
+        ):
+            _store_analysis_input_facts(
+                prepared,
+                result_key=str(result_key or ""),
+                source_payload=payload,
+                table=table,
+                facts=eligible_facts,
+                state=state,
+            )
 
     if prepared:
         return prepared
@@ -413,10 +507,14 @@ def _analysis_input_results_for_target(state: dict, target: dict) -> dict:
         ]
         if not eligible_facts:
             continue
-        prepared[table or str(result_key or "").strip()] = {
-            "table": table,
-            "facts": _limit_facts_for_analysis_prompt(table, eligible_facts),
-        }
+        _store_analysis_input_facts(
+            prepared,
+            result_key=str(result_key or ""),
+            source_payload=payload,
+            table=table,
+            facts=eligible_facts,
+            state=state,
+        )
 
     return prepared
 
@@ -448,6 +546,7 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         followup_payload = {
             "requirements": requirements,
             "reason": str(r.get("reason", "") or "").strip(),
+            **_route_metadata(r),
         }
         if is_analysis_agent(agent):
             followup_payload["agent"] = agent
@@ -462,6 +561,12 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         if target.get("agent") and is_analysis_agent(target["agent"])
     ])
     planner_plan = state.get("planner_plan", {}) or {}
+    followup_route_metadata = _route_metadata(planner_plan)
+    explicit_followup_metadata = {}
+    for request in normalized_followup_requests:
+        for key, value in _route_metadata(request).items():
+            explicit_followup_metadata.setdefault(key, value)
+    followup_route_metadata.update(explicit_followup_metadata)
     followup_axis = _first_analysis_axis(existing_targets)
     analysis_axes = followup_analysis_axes or [
         {
@@ -477,8 +582,13 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
         "followup_requirements": [] if followup_analysis_axes else followup_requirements,
         "followup_requests": normalized_followup_requests,
         "company": planner_plan.get("company", "") or "",
-        "time_hint": "",
+        "time_hint": str(followup_route_metadata.get("time_hint", "") or "").strip(),
         "need_web": bool(planner_plan.get("need_web", False)),
+        **{
+            key: value
+            for key, value in followup_route_metadata.items()
+            if key != "time_hint"
+        },
     }
 
     return {
@@ -515,16 +625,20 @@ def prepare_analysis_dispatch_state(state: dict) -> dict:
     ]
     expected = sorted({target["agent"] for target in analysis_targets})
     prepared_targets = []
+    planner_metadata = _route_metadata(state.get("planner_plan", {}) or {})
 
     for target in analysis_targets:
         agent = str(target.get("agent", "") or "").strip()
         analysis_input_results = _analysis_input_results_for_target(state, target)
+        target_metadata = dict(planner_metadata)
+        target_metadata.update(_route_metadata(target))
         prepared_targets.append(
             {
                 "agent": agent,
                 "objective": str(target.get("objective", "") or "").strip(),
                 "evidence_queries": list(target.get("evidence_queries", []) or []),
                 "analysis_input_results": analysis_input_results,
+                **target_metadata,
             }
         )
 

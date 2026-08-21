@@ -8,18 +8,19 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.agent_tools_list import get_tools_list
+from tools.langchain_tools import get_tools_list
 from agents.line_item_matcher import (
     DIRECT_LINE_ITEM_EVALUATIVE_PATTERNS,
     contains_intent,
     direct_line_item_match,
 )
 from agents.profiles import AGENT_PROFILES
-from datasets.registry import get_dataset
+from dataset_catalog.registry import get_dataset
 from schemas.agent_outputs import PlannerEvidencePlan
 from llm.invoke import extract_usage_metadata, invoke_prompt
 from agents.prompts import PROMPT_TEMPLATE
 from graph.logger import make_debug_log, make_log
+from common import dedupe_keep_order as _dedupe_keep_order
 
 DEFAULT_PLANNER_PLAN = {
     "difficulty_level": "easy",
@@ -147,6 +148,27 @@ def _extract_company_from_query(user_query: str) -> str:
     return ""
 
 
+def _extract_time_hint_from_query(user_query: str) -> str:
+    """Recover an explicit period when the planner omits or fails to parse it."""
+    text = " ".join(str(user_query or "").strip().split())
+    if not text:
+        return ""
+
+    patterns = (
+        r"\b\d{1,2}[/-]\d{1,2}[/-]\d{4}\b",
+        r"\b(?:quý|quy)\s*[1-4](?:\s*[/-]\s*\d{4}|\s+năm\s+\d{4})?\b",
+        r"\bq[1-4](?:\s*[/-]?\s*\d{4})?\b",
+        r"\b(?:năm|nam)\s+\d{4}\b",
+        r"\b(?:cuối kỳ|cuoi ky|đầu kỳ|dau ky|cuối năm|cuoi nam|"
+        r"đầu năm|dau nam|trong kỳ|trong ky|lũy kế|luy ke)\b",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, text, flags=re.IGNORECASE)
+        if match:
+            return match.group(0).strip()
+    return ""
+
+
 def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str], Optional[str]]:
     if isinstance(result, PlannerEvidencePlan):
         return result, None, None
@@ -188,19 +210,6 @@ def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str
 def _normalize_company(value: str) -> str:
     return " ".join(str(value or "").strip().lower().split())
 
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
-
 def _planner_trace_summary(planner_plan: dict) -> dict:
     analysis_axes = planner_plan.get("analysis_axes", []) or []
     analysis_axes_trace = []
@@ -234,7 +243,8 @@ def _enrich_plan_fields(state: dict, planner_plan: dict) -> dict:
         elif dataset is not None:
             enriched["company"] = dataset.company
 
-    enriched["time_hint"] = ""
+    planner_time_hint = str(enriched.get("time_hint", "") or "").strip()
+    enriched["time_hint"] = planner_time_hint or _extract_time_hint_from_query(user_query)
 
     return enriched
 
@@ -245,6 +255,19 @@ def _normalize_intent_text(value: Any) -> str:
 
 def _contains_evaluative_intent(text: str) -> bool:
     return contains_intent(text, EVALUATIVE_INTENT_PATTERNS)
+
+
+def _is_qualitative_concept_query(user_query: str) -> bool:
+    """True when the question is about a front-matter / qualitative concept
+    (going concern, internal control, governance, audit opinion, accounting
+    policy) rather than a financial figure. Such questions must not be routed to
+    the financial analysis agents."""
+    from agents.keyworder_runner import _requires_report_section_followup
+
+    if _requires_report_section_followup(user_query):
+        return True
+    text = str(user_query or "").lower()
+    return "chính sách kế toán" in text or "chinh sach ke toan" in text
 
 
 def _collect_planner_objectives(planner_plan: dict) -> list[str]:
@@ -278,6 +301,30 @@ def _apply_planner_difficulty_heuristics(state: dict, planner_plan: dict) -> tup
                 downgraded_difficulty="easy",
                 direct_line_item=direct_line_item.get("canonical", ""),
                 table=direct_line_item.get("table", ""),
+            )
+            if changed
+            else None
+        )
+
+    # Qualitative / front-matter concepts (going concern, internal control,
+    # governance, accounting policy, audit opinion) must NOT be dispatched to the
+    # financial analysis agents even when phrased with "đánh giá/phân tích" — those
+    # agents return generic profitability figures and the answer goes off-topic
+    # (recall=0). Strip financial axes and avoid the hard 4-axis format for them.
+    if _is_qualitative_concept_query(user_query):
+        previous_axes = list(enriched.get("analysis_axes", []) or [])
+        enriched["analysis_axes"] = []
+        # Avoid the hard 4-axis financial format; a concise, grounded answer from
+        # the report-section / note text fits qualitative concepts best.
+        if current == "hard":
+            enriched["difficulty_level"] = "easy"
+        changed = current == "hard" or bool(previous_axes)
+        return enriched, (
+            make_debug_log(
+                state,
+                "planner:qualitative_concept_no_financial_axes",
+                previous_difficulty=current or "",
+                difficulty=enriched.get("difficulty_level", ""),
             )
             if changed
             else None

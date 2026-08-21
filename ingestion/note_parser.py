@@ -7,6 +7,7 @@ from typing import Iterable
 import pandas as pd
 
 from ingestion.kb_builder import _strip_inline_formatting
+from ingestion.period_normalize import parse_unit
 from ingestion.table_parser import markdown_table_to_df
 from schemas.table_names import TABLE_NOTE
 
@@ -18,7 +19,11 @@ _NOTE_TOC_RE = re.compile(
     flags=re.IGNORECASE | re.DOTALL,
 )
 _NOTE_HEADING_RE = re.compile(
-    r"(?im)^\s*#{0,6}\s*thuy[ếe]t\s+minh\s+b[áa]o\s+c[áa]o\s+t[àa]i\s+ch[íi]nh\s*$"
+    r"(?im)^\s*#{0,6}\s*(?:b[ảa]n\s+)?"
+    r"thuy[ếe]t\s+minh\s+b[áa]o\s+c[áa]o\s+t[àa]i\s+ch[íi]nh"
+    r"(?:\s+(?:ri[êe]ng|h[ợo]p\s+nh[ấa]t|t[ổo]ng\s+h[ợo]p))?"
+    r"(?:\s+cho\s+(?:n[ăa]m|k[ỳy]).*?)?"
+    r"(?:\s*\(ti[ếe]p\s+theo\))?\s*$"
 )
 _NUMBERED_SECTION_RE = re.compile(
     r"^\s*(?:#{1,6}\s*)?\d+(?:\.\d+)*\s+.{2,}$",
@@ -33,12 +38,35 @@ _SUBSECTION_HEADING_RE = re.compile(
     r"^\s*(?P<label>[a-zđ])\)\s+(?P<title>.+?)\s*$",
     flags=re.IGNORECASE,
 )
+# A note-schedule heading like "### 5. Phải thu về cho vay ngắn hạn", "2c. Đầu tư
+# góp vốn vào đơn vị khác" or "17a. Phải trả ngắn hạn khác". The number carries an
+# optional single-letter suffix (2c, 3a, 17a, 18b) that _NOTE_SECTION_RE misses.
+# Used to backfill the 'V.<n>' note reference onto note rows so they link to the
+# primary-statement line that references them (e.g. BS "Phải thu về cho vay" V.5).
+_NOTE_SCHEDULE_RE = re.compile(
+    r"^\s*(?:thuy[ếe]t\s+minh\s*)?(?P<num>\d{1,2}[a-zđ]?)\s*[.).:-]\s+\S",
+    flags=re.IGNORECASE,
+)
 _FISCAL_YEAR_RE = re.compile(
     r"năm\s+tài\s+chính\s+kết\s+thúc\s+ngày.*?(?P<year>(?:19|20)\d{2})",
     flags=re.IGNORECASE | re.DOTALL,
 )
 _DATE_YEAR_RE = re.compile(r"\b(?:31|30)/12/(?P<year>(?:19|20)\d{2})\b")
 _COMPANY_LINE_RE = re.compile(r"^\s*#{0,6}\s*(công\s+ty\b.+?)\s*$", flags=re.IGNORECASE)
+# A company-name line in the cover/front matter is often the start of a prose
+# sentence ("Công ty ... là Công ty cổ phần hoạt động theo Giấy chứng nhận...").
+# Cut at the first clause boundary so only the name survives — otherwise the
+# whole sentence becomes the "company" and gets prepended to every embedded
+# document, drowning the discriminative text and polluting interpretation hints.
+_COMPANY_CLAUSE_RE = re.compile(
+    r"\s+(?:là|được|hoạt\s+động|thành\s+lập|gọi\s+tắt|có\s+trụ\s+sở|trình\s+bày)\b"
+    r"|[.,;:(]",
+    flags=re.IGNORECASE,
+)
+
+
+def _trim_company_name(name: str) -> str:
+    return _COMPANY_CLAUSE_RE.split(str(name or ""), maxsplit=1)[0].strip()
 _NUMERIC_AMOUNT_RE = re.compile(r"^\(?-?[\d.,\s]+%?\)?$")
 _REPORT_HEADER_PREFIXES = (
     "địa chỉ:",
@@ -68,7 +96,7 @@ def infer_company(md_text: str) -> str:
         if not match:
             continue
 
-        company = _readable_note_title(str(match.group(1) or "").strip())
+        company = _trim_company_name(_readable_note_title(str(match.group(1) or "").strip()))
         if len(company) <= 8:
             continue
         if not str(line or "").lstrip().startswith("#"):
@@ -128,6 +156,12 @@ def _slice_from_note_heading(text: str) -> str:
 
 
 def extract_note_section_pages(md_text: str) -> list[dict]:
+    # Never treat an arbitrary report body as notes. The old fallback returned
+    # the complete document when no heading existed, causing primary statements
+    # and front matter to be indexed as NOTE rows.
+    if not _NOTE_HEADING_RE.search(str(md_text or "")):
+        return []
+
     pages = _split_marked_pages(md_text)
     page_range = _parse_note_page_range(md_text)
 
@@ -141,7 +175,11 @@ def extract_note_section_pages(md_text: str) -> list[dict]:
             for page in pages
             if start_page <= int(page["printed_page"]) <= end_page
         ]
-        if selected:
+        # Only trust the TOC page range when the notes heading actually falls
+        # inside the selected pages. Otherwise the TOC parse latched onto the
+        # wrong number (e.g. a running footer) and we would slice a main
+        # statement (the Balance Sheet) into the notes section.
+        if selected and any(_NOTE_HEADING_RE.search(page["content"]) for page in selected):
             selected[0] = {
                 **selected[0],
                 "content": _slice_from_note_heading(selected[0]["content"]),
@@ -238,6 +276,38 @@ def _parse_note_section(section: str) -> tuple[str, str]:
     )
 
 
+def note_schedule_ref(heading: str) -> str:
+    """Return the 'V.<n>' note reference for a note-schedule heading, else "".
+
+    "### 5. Phải thu về cho vay ngắn hạn" -> "V.5"; "2c. Đầu tư góp vốn vào đơn
+    vị khác" -> "V.2c". This is the back-link that lets a note schedule be joined
+    to the primary-statement row whose note_ref column points at it.
+    """
+    cleaned = _clean_line(heading).strip("#").strip()
+    if not cleaned or _NOTE_HEADING_RE.match(cleaned):
+        return ""
+    match = _NOTE_SCHEDULE_RE.match(cleaned)
+    if not match:
+        return ""
+    return "V." + str(match.group("num") or "").lower()
+
+
+def note_schedule_title(heading: str) -> str:
+    """The numbered schedule heading itself ("10. Tài sản cố định vô hình"), or "".
+
+    Kept alongside note_schedule_ref so descriptive sub-headings that follow
+    ("Là chương trình phần mềm, chi tiết như sau:") can be re-anchored to the
+    schedule they belong to — otherwise those rows lose the line-item tokens
+    the retrieval needs ("tài sản cố định vô hình").
+    """
+    cleaned = _clean_line(heading).strip("#").strip()
+    if not cleaned or _NOTE_HEADING_RE.match(cleaned):
+        return ""
+    if not _NOTE_SCHEDULE_RE.match(cleaned):
+        return ""
+    return cleaned
+
+
 def _note_item_name(section: str) -> str:
     note_number, note_title = _parse_note_section(section)
     if note_number and note_title:
@@ -265,22 +335,35 @@ def _row_tuple(
     item_name: str,
     value: str,
     source: str,
+    note_ref: str = "",
+    period: str = "",
+    default_unit: str = "",
 ):
     text = _strip_inline_formatting(value)
     if not text:
         return None
 
+    unit = parse_unit(text) or str(default_unit or "").strip()
+    if "số lượng cổ phiếu" in _clean_line(f"{item_name} {text}").lower():
+        unit = "cổ phiếu"
+
+    # 14-tuple in canonical order so provenance and calculation slots survive
+    # the same typed SQLite contract as statement-table facts.
     return (
         company,
         fiscal_year,
         TABLE_NOTE,
         item_code,
+        note_ref,
         subheading,
         item_name,
         text,
         text,
         text,
         source,
+        period,
+        "",
+        unit,
     )
 
 
@@ -311,6 +394,8 @@ def _note_text_row(
         item_name=item_name,
         value=value,
         source=_page_source(source, page),
+        note_ref=note_schedule_ref(section),
+        period=fiscal_year,
     )
 
 
@@ -319,7 +404,9 @@ def _iter_table_rows(df: pd.DataFrame) -> Iterable[tuple[str, str]]:
     columns = [_strip_inline_formatting(column) for column in df.columns]
 
     for _, row in df.iterrows():
-        cells = [str(row.get(column, "") or "").strip() for column in df.columns]
+        # Access by position, not column name: note tables often repeat header
+        # labels (e.g. "Số cuối năm"), which makes row.get(name) return a Series.
+        cells = [str(value or "").strip() for value in row.values]
         if not any(cells):
             continue
         if all(_clean_line(cell).lower() in _UNIT_ONLY_CELLS for cell in cells if cell):
@@ -345,6 +432,7 @@ def _note_table_rows(
     subsection: str,
     source: str,
     page: int | None,
+    default_unit: str = "",
 ) -> list[tuple]:
     try:
         df = markdown_table_to_df(table_lines)
@@ -368,6 +456,9 @@ def _note_table_rows(
             item_name=item_name,
             value=table_value,
             source=_page_source(source, page),
+            note_ref=note_schedule_ref(section),
+            period=fiscal_year,
+            default_unit=default_unit,
         )
         if row is not None:
             rows.append(row)
@@ -396,9 +487,23 @@ def _table_row_label(cells: list[str]) -> str:
 
 
 def build_note_rows(md_text: str, company: str, source: str, fiscal_year=None) -> list[tuple]:
+    text = str(md_text or "")
+    note_heading = _NOTE_HEADING_RE.search(text)
+    if not note_heading:
+        return []
+
     rows = []
     year = _normalize_fiscal_year(fiscal_year, md_text)
     company_name = str(company or "").strip() or infer_company(md_text)
+    # A report-level caption before the notes is only a fallback.  Captions
+    # encountered inside the notes override it for subsequent tables, avoiding
+    # the old bug where the first unit anywhere in the report won forever.
+    prefix_units = [
+        parse_unit(line)
+        for line in text[: note_heading.start()].splitlines()
+        if "đơn vị tính" in _clean_line(line).lower() and parse_unit(line)
+    ]
+    active_unit = prefix_units[-1] if prefix_units else ""
     current_section = "Thuyết minh báo cáo tài chính"
     current_subsection = ""
     paragraph_lines: list[str] = []
@@ -439,6 +544,7 @@ def build_note_rows(md_text: str, company: str, source: str, fiscal_year=None) -
                 subsection=current_subsection,
                 source=source,
                 page=page,
+                default_unit=active_unit,
             )
         )
         table_lines = []
@@ -447,6 +553,17 @@ def build_note_rows(md_text: str, company: str, source: str, fiscal_year=None) -
         page_number = page.get("printed_page")
         for line in str(page.get("content", "") or "").splitlines():
             stripped = line.strip()
+
+            caption_unit = (
+                parse_unit(line)
+                if "đơn vị tính" in _clean_line(line).lower()
+                else ""
+            )
+            if caption_unit and not stripped.startswith("|"):
+                flush_table(page_number)
+                flush_paragraph(page_number)
+                active_unit = caption_unit
+                continue
 
             if stripped.startswith("|"):
                 flush_paragraph(page_number)

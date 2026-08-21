@@ -8,24 +8,17 @@ from datetime import datetime, timezone
 from json import JSONDecodeError
 from pathlib import Path
 
-from datasets.registry import describe_dataset, load_registry
+from dataset_catalog.registry import describe_dataset, load_registry
+from dataset_batch_result import build_runtime_fingerprints, dataset_identity_payload
+from evaluation.contracts import (
+    REPORT_SCHEMA_VERSION,
+    atomic_write_text,
+    provider_limit_reason,
+    stable_json_fingerprint,
+)
 from output_formatter import format_final_answer
 from test import collect_pipeline_errors, ensure_built, execute_query, extract_run_summary
-
-
-def _dedupe_keep_order(items):
-    seen = set()
-    output = []
-
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-
-    return output
-
+from common import dedupe_keep_order as _dedupe_keep_order
 
 def _normalize_reference(value) -> str:
     if value is None:
@@ -37,6 +30,7 @@ def _normalize_reference(value) -> str:
 
 def _normalize_query_record(item) -> dict:
     if isinstance(item, dict):
+        query_id = item.get("id") if "id" in item else item.get("query_id")
         query = str(
             item.get("query")
             or item.get("question")
@@ -49,15 +43,32 @@ def _normalize_query_record(item) -> dict:
             else item.get("references")
         )
     else:
+        query_id = None
         query = str(item or "").strip()
         reference = ""
 
     if not query:
         return {}
-    return {
+    record = {
         "query": query,
         "reference": reference,
     }
+    if query_id not in (None, ""):
+        record["id"] = query_id
+    return record
+
+
+def _query_record_key(item: dict) -> str:
+    record = _normalize_query_record(item)
+    if not record:
+        return ""
+    return stable_json_fingerprint(
+        {
+            "id": record.get("id"),
+            "query": record.get("query", ""),
+            "reference": record.get("reference", ""),
+        }
+    )
 
 
 def _dedupe_query_records(records: list) -> list[dict]:
@@ -67,10 +78,11 @@ def _dedupe_query_records(records: list) -> list[dict]:
     for item in records or []:
         record = _normalize_query_record(item)
         query = str(record.get("query", "") or "").strip()
-        if not query or query in seen:
+        key = _query_record_key(record)
+        if not query or key in seen:
             continue
         output.append(record)
-        seen.add(query)
+        seen.add(key)
 
     return output
 
@@ -235,6 +247,7 @@ def serialize_run_result(
     final_state: dict,
     query: str,
     *,
+    query_id=None,
     reference: str = "",
     include_trace: bool = False,
 ) -> dict:
@@ -256,6 +269,8 @@ def serialize_run_result(
         "total_tokens": _total_tokens_from_summary(run_summary),
         "run_summary": run_summary,
     }
+    if query_id not in (None, ""):
+        result["query_id"] = query_id
 
     if include_trace:
         result["trace"] = final_state.get("trace", []) or []
@@ -263,8 +278,14 @@ def serialize_run_result(
     return result
 
 
-def _runtime_error_result(query: str, exc: Exception, *, reference: str = "") -> dict:
-    return {
+def _runtime_error_result(
+    query: str,
+    exc: Exception,
+    *,
+    query_id=None,
+    reference: str = "",
+) -> dict:
+    result = {
         "query": query,
         "references": str(reference or "").strip(),
         "final_answer": "",
@@ -280,6 +301,9 @@ def _runtime_error_result(query: str, exc: Exception, *, reference: str = "") ->
             "trace_events_n": 0,
         },
     }
+    if query_id not in (None, ""):
+        result["query_id"] = query_id
+    return result
 
 
 def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, include_trace: bool = False) -> dict:
@@ -298,7 +322,7 @@ def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, in
     }
 
     try:
-        dataset, _conn, collection = ensure_built(dataset)
+        dataset, conn, collection = ensure_built(dataset)
     except Exception as exc:
         dataset_result["setup_error"] = f"{type(exc).__name__}: {exc}"
         return dataset_result
@@ -306,10 +330,47 @@ def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, in
     dataset_result["status"] = dataset.status
     dataset_result["facts_count"] = dataset.facts_count
     dataset_result["vector_docs_count"] = dataset.vector_docs_count
+    try:
+        from kb.sqlite_repo import read_kb_manifest
+
+        kb_manifest = read_kb_manifest(conn)
+    except Exception:
+        kb_manifest = {}
+    index_generation = str(
+        getattr(collection, "generation", "")
+        or getattr(collection, "build_fingerprint", "")
+        or ""
+    ).strip()
+    dataset_result.update(
+        {
+            "ingestion_version": dataset.ingestion_version,
+            "vector_collection_name": dataset.vector_collection_name,
+            "source_sha256": kb_manifest.get("source_sha256", ""),
+            "facts_sha256": kb_manifest.get("facts_sha256", ""),
+            "parser_version": kb_manifest.get("parser_version", ""),
+            "kb_schema_version": kb_manifest.get("schema_version", ""),
+            "kb_generation": (
+                stable_json_fingerprint(kb_manifest) if kb_manifest else ""
+            ),
+            "index_generation": index_generation,
+        }
+    )
+    dataset_result["dataset_generation"] = stable_json_fingerprint(
+        {
+            "dataset_id": dataset.dataset_id,
+            "ingestion_version": dataset.ingestion_version,
+            "source_sha256": kb_manifest.get("source_sha256", ""),
+            "parser_version": kb_manifest.get("parser_version", ""),
+            "schema_version": kb_manifest.get("schema_version", ""),
+            "facts_sha256": kb_manifest.get("facts_sha256", ""),
+        }
+    )
+    dataset_result["dataset_identity"] = dataset_identity_payload(dataset_result)
 
     for query_record in query_records:
         query = str(query_record.get("query", "") or "").strip()
         reference = str(query_record.get("reference", "") or "").strip()
+        query_id = query_record.get("id")
         try:
             final_state = execute_query(
                 dataset,
@@ -321,14 +382,113 @@ def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, in
                 serialize_run_result(
                     final_state,
                     query,
+                    query_id=query_id,
                     reference=reference,
                     include_trace=include_trace,
                 )
             )
         except Exception as exc:
-            dataset_result["runs"].append(_runtime_error_result(query, exc, reference=reference))
+            dataset_result["runs"].append(
+                _runtime_error_result(
+                    query,
+                    exc,
+                    query_id=query_id,
+                    reference=reference,
+                )
+            )
 
     return dataset_result
+
+
+def _batch_provider_limit_reasons(results: list[dict]) -> list[str]:
+    reasons = []
+    for dataset_result in results or []:
+        if not isinstance(dataset_result, dict):
+            continue
+        values = [dataset_result.get("setup_error", "")]
+        for run in dataset_result.get("runs", []) or []:
+            if not isinstance(run, dict):
+                continue
+            values.extend(run.get("errors", []) or [])
+            values.append(run.get("final_answer", ""))
+        for value in values:
+            if provider_limit_reason(value):
+                text = str(value or "").strip()
+                if text and text not in reasons:
+                    reasons.append(text)
+    return reasons
+
+
+def build_batch_run_identity(
+    *,
+    query_records: list[dict],
+    results: list[dict],
+    selected_dataset_ids: list[str] | None,
+    debug_trace: bool,
+    include_trace: bool,
+) -> dict:
+    records = _dedupe_query_records(query_records)
+    actual_dataset_ids = [
+        str(item.get("dataset_id", "") or "").strip()
+        for item in results or []
+        if isinstance(item, dict) and str(item.get("dataset_id", "") or "").strip()
+    ]
+    selection = {
+        "full": True,
+        "offset": 0,
+        "limit": None,
+        "selected_count": len(records),
+        "selected_query_ids": [record.get("id") for record in records],
+        "selected_query_keys": [_query_record_key(record) for record in records],
+        "selected_dataset_ids": actual_dataset_ids,
+        "requested_dataset_ids": resolve_dataset_ids(selected_dataset_ids),
+    }
+    datasets = [
+        dataset_identity_payload(
+            item.get("dataset_identity", {}) or item
+        )
+        for item in results or []
+        if isinstance(item, dict)
+    ]
+    runtime = build_runtime_fingerprints(
+        debug_trace=debug_trace,
+        skip_eval=True,
+    )
+    config_payload = {
+        "runtime_config": runtime["config"],
+        "include_trace": bool(include_trace),
+    }
+    identity = {
+        "identity_version": 1,
+        "selection": selection,
+        "datasets": datasets,
+        "fingerprints": {
+            "selection": stable_json_fingerprint(selection),
+            "query": stable_json_fingerprint(
+                {
+                    "selected_query_ids": selection["selected_query_ids"],
+                    "selected_query_keys": selection["selected_query_keys"],
+                }
+            ),
+            "dataset": stable_json_fingerprint(datasets),
+            "index": stable_json_fingerprint(
+                [
+                    {
+                        "dataset_id": item.get("dataset_id", ""),
+                        "collection": item.get("vector_collection_name", ""),
+                        "generation": item.get("index_generation", ""),
+                    }
+                    for item in datasets
+                ]
+            ),
+            "embedding": runtime["embedding"],
+            "prompt": runtime["prompt"],
+            "model": runtime["model"],
+            "config": stable_json_fingerprint(config_payload),
+        },
+    }
+    identity["run_fingerprint"] = stable_json_fingerprint(identity)
+    return identity
 
 
 def build_report(
@@ -362,6 +522,21 @@ def build_report(
         if run.get("errors")
     )
     datasets_with_setup_error = sum(1 for item in results if item.get("setup_error"))
+    provider_limit_reasons = _batch_provider_limit_reasons(results)
+    run_identity = build_batch_run_identity(
+        query_records=query_records,
+        results=results,
+        selected_dataset_ids=selected_dataset_ids,
+        debug_trace=debug_trace,
+        include_trace=include_trace,
+    )
+    expected_runs = len(results) * len(query_records)
+    run_complete = (
+        datasets_with_setup_error == 0
+        and total_runs == expected_runs
+        and runs_with_errors == 0
+        and not provider_limit_reasons
+    )
 
     return {
         "generated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
@@ -371,6 +546,14 @@ def build_report(
         "selected_dataset_ids": resolve_dataset_ids(selected_dataset_ids),
         "debug_trace": bool(debug_trace),
         "include_trace": bool(include_trace),
+        "selection_contract": run_identity["selection"],
+        "run_identity": run_identity,
+        "run_fingerprint": run_identity["run_fingerprint"],
+        "fingerprints": run_identity["fingerprints"],
+        "run_complete": run_complete,
+        "run_status": "complete" if run_complete else "incomplete",
+        "latency_valid": not provider_limit_reasons,
+        "latency_invalid_reasons": provider_limit_reasons,
         "total_runs": total_runs,
         "runs_with_errors": runs_with_errors,
         "datasets_with_setup_error": datasets_with_setup_error,
@@ -397,6 +580,8 @@ def build_query_reports(report: dict) -> list[dict]:
     for query_record in query_records:
         query = str(query_record.get("query", "") or "").strip()
         reference = str(query_record.get("reference", "") or "").strip()
+        query_id = query_record.get("id")
+        query_key = _query_record_key(query_record)
         query_results = []
         runs_with_errors = 0
         datasets_with_setup_error = 0
@@ -416,7 +601,7 @@ def build_query_reports(report: dict) -> list[dict]:
             for candidate in (dataset_result.get("runs", []) or []):
                 if not isinstance(candidate, dict):
                     continue
-                if str(candidate.get("query", "") or "").strip() == query:
+                if _query_record_key(candidate) == query_key:
                     run = dict(candidate)
                     if reference and not run.get("references"):
                         run["references"] = reference
@@ -431,8 +616,25 @@ def build_query_reports(report: dict) -> list[dict]:
             if run.get("errors"):
                 runs_with_errors += 1
 
-        query_reports.append(
-            {
+        provider_reasons = []
+        for result in query_results:
+            values = [result.get("setup_error", "")]
+            run = result.get("run", {}) or {}
+            values.extend(run.get("errors", []) or [])
+            values.append(run.get("final_answer", ""))
+            for value in values:
+                if provider_limit_reason(value):
+                    text = str(value or "").strip()
+                    if text and text not in provider_reasons:
+                        provider_reasons.append(text)
+        query_complete = (
+            len(query_results) == len(results)
+            and datasets_with_setup_error == 0
+            and total_runs == len(results)
+            and runs_with_errors == 0
+            and not provider_reasons
+        )
+        query_report = {
                 "query": query,
                 "references": reference,
                 "generated_at": report.get("generated_at", ""),
@@ -442,9 +644,17 @@ def build_query_reports(report: dict) -> list[dict]:
                 "total_runs": total_runs,
                 "runs_with_errors": runs_with_errors,
                 "datasets_with_setup_error": datasets_with_setup_error,
+                "run_fingerprint": report.get("run_fingerprint", ""),
+                "fingerprints": dict(report.get("fingerprints", {}) or {}),
+                "run_complete": query_complete,
+                "run_status": "complete" if query_complete else "incomplete",
+                "latency_valid": not provider_reasons,
+                "latency_invalid_reasons": provider_reasons,
                 "results": query_results,
             }
-        )
+        if query_id not in (None, ""):
+            query_report["query_id"] = query_id
+        query_reports.append(query_report)
 
     return query_reports
 
@@ -467,6 +677,18 @@ def _normalize_query_report(item: dict) -> dict:
     cleaned.pop("reference", None)
     cleaned["references"] = reference
     return cleaned
+
+
+def _query_report_key(item: dict) -> str:
+    if not isinstance(item, dict):
+        return ""
+    return _query_record_key(
+        {
+            "id": item.get("query_id") if "query_id" in item else item.get("id"),
+            "query": item.get("query", ""),
+            "reference": item.get("references", item.get("reference", "")),
+        }
+    )
 
 
 def normalize_existing_query_reports(existing_output: dict | None) -> list[dict]:
@@ -495,11 +717,11 @@ def normalize_existing_query_reports(existing_output: dict | None) -> list[dict]
             normalized = _normalize_query_report(item)
             if not normalized:
                 continue
-            query = normalized["query"]
-            if query in index_by_query:
-                merged[index_by_query[query]] = normalized
+            query_key = _query_report_key(normalized)
+            if query_key in index_by_query:
+                merged[index_by_query[query_key]] = normalized
             else:
-                index_by_query[query] = len(merged)
+                index_by_query[query_key] = len(merged)
                 merged.append(normalized)
         return merged
 
@@ -517,27 +739,43 @@ def _primary_run_for_query_report(query_report: dict) -> tuple[dict, dict]:
 
 
 def _query_output_record(query_report: dict) -> dict:
-    _dataset_result, run = _primary_run_for_query_report(query_report)
-    run_summary = run.get("run_summary", {}) if isinstance(run, dict) else {}
+    dataset_summaries = []
+    for result in query_report.get("results", []) or []:
+        if not isinstance(result, dict) or not isinstance(result.get("run"), dict):
+            continue
+        run = result["run"]
+        summary = run.get("run_summary", {}) or {}
+        runtime = run.get("runtime")
+        if runtime is None:
+            runtime = _runtime_from_summary(summary)
+        tokens = run.get("total_tokens")
+        if tokens is None:
+            tokens = _total_tokens_from_summary(summary)
+        dataset_summaries.append(
+            {
+                "dataset_id": str(result.get("dataset_id", "") or ""),
+                "final_answer": run.get("final_answer", "") or run.get("answer", ""),
+                "runtime": runtime,
+                "total_tokens": int(tokens or 0),
+                "errors": list(run.get("errors", []) or []),
+            }
+        )
+
+    single = dataset_summaries[0] if len(dataset_summaries) == 1 else {}
     reference = _normalize_reference(
         query_report.get("references")
         or query_report.get("reference")
-        or run.get("references", "")
-        or run.get("reference", "")
     )
-    runtime = run.get("runtime")
-    if runtime is None:
-        runtime = _runtime_from_summary(run_summary)
-    total_tokens = run.get("total_tokens")
-    if total_tokens is None:
-        total_tokens = _total_tokens_from_summary(run_summary)
 
     return {
         "query": str(query_report.get("query", "") or "").strip(),
-        "final_answer": run.get("final_answer", "") or run.get("answer", ""),
+        # Legacy scalar answer remains valid only when the query ran on one
+        # dataset.  Multi-dataset output is explicit and never picks index zero.
+        "final_answer": single.get("final_answer", ""),
         "references": reference,
-        "runtime": runtime,
-        "total_tokens": int(total_tokens or 0),
+        "runtime": sum(float(item.get("runtime") or 0) for item in dataset_summaries),
+        "total_tokens": sum(int(item.get("total_tokens") or 0) for item in dataset_summaries),
+        "dataset_summaries": dataset_summaries,
     }
 
 
@@ -602,6 +840,17 @@ def _merge_query_report(existing_item: dict, latest_item: dict, *, partial_datas
     merged["total_runs"] = total_runs
     merged["runs_with_errors"] = runs_with_errors
     merged["datasets_with_setup_error"] = datasets_with_setup_error
+    source_incomplete = existing_item.get("run_complete") is False
+    merged["run_complete"] = bool(merged.get("run_complete", True)) and not source_incomplete
+    merged["run_status"] = "complete" if merged["run_complete"] else "incomplete"
+    source_latency_invalid = existing_item.get("latency_valid") is False
+    merged["latency_valid"] = bool(merged.get("latency_valid", True)) and not source_latency_invalid
+    merged["latency_invalid_reasons"] = _dedupe_keep_order(
+        [
+            *(existing_item.get("latency_invalid_reasons", []) or []),
+            *(merged.get("latency_invalid_reasons", []) or []),
+        ]
+    )
     return merged
 
 
@@ -613,27 +862,36 @@ def build_output_document(report: dict, *, existing_output: dict | None = None, 
     else:
         merged_reports = normalize_existing_query_reports(existing_output)
         index_by_query = {
-            str(item.get("query", "") or "").strip(): idx
+            _query_report_key(item): idx
             for idx, item in enumerate(merged_reports)
-            if str(item.get("query", "") or "").strip()
+            if _query_report_key(item)
         }
 
         for item in new_query_reports:
-            query = str(item.get("query", "") or "").strip()
-            if query in index_by_query:
-                merged_reports[index_by_query[query]] = _merge_query_report(
-                    merged_reports[index_by_query[query]],
+            query_key = _query_report_key(item)
+            if query_key in index_by_query:
+                merged_reports[index_by_query[query_key]] = _merge_query_report(
+                    merged_reports[index_by_query[query_key]],
                     item,
                     partial_dataset_update=partial_dataset_update,
                 )
             else:
-                index_by_query[query] = len(merged_reports)
+                index_by_query[query_key] = len(merged_reports)
                 merged_reports.append(item)
 
     queries = build_output_queries(merged_reports)
 
     return {
+        "schema_version": REPORT_SCHEMA_VERSION,
         "updated_at": report.get("generated_at", ""),
+        "run_identity": dict(report.get("run_identity", {}) or {}),
+        "run_fingerprint": str(report.get("run_fingerprint", "") or ""),
+        "fingerprints": dict(report.get("fingerprints", {}) or {}),
+        "run_complete": bool(report.get("run_complete", False)),
+        "run_status": str(report.get("run_status", "incomplete") or "incomplete"),
+        "latency_valid": bool(report.get("latency_valid", False)),
+        "latency_invalid_reasons": list(report.get("latency_invalid_reasons", []) or []),
+        "document_fingerprint": stable_json_fingerprint(merged_reports),
         "queries_n": len(queries),
         "queries": queries,
         "query_reports": merged_reports,
@@ -664,9 +922,9 @@ def main():
         existing_output=existing_output,
         overwrite=args.overwrite_output,
     )
-    output_path.write_text(
+    atomic_write_text(
+        output_path,
         json.dumps(output_document, ensure_ascii=False, indent=2),
-        encoding="utf-8",
     )
 
     print(f"Saved batch results to {output_path.resolve()}")

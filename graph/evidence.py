@@ -25,31 +25,38 @@ from tools.evidence import (
     set_runtime_cache_item,
 )
 from tools.tool_runner import get_collection
-from tools.tools import get_related_info, web_search
+from tools.tools import get_related_info, needs_full_schedule
+from common import dedupe_keep_order as _dedupe_keep_order
 
 
-EVIDENCE_FACTS_LIMIT = 5
-NOTE_EVIDENCE_FACTS_LIMIT = EVIDENCE_FACTS_LIMIT
-EASY_NOTE_OR_REPORT_SECTION_FACTS_LIMIT = 10
-NOTE_LLM_FACTS_LIMIT = NOTE_EVIDENCE_FACTS_LIMIT
+# Defaults validated on batch apec q181-210 v3 (2026-07-19): raising 5->10/12
+# lifted context_recall 0.545->0.609 AND context_precision 0.466->0.528 — the
+# gold rows previously cut at rank 6-15 (entity/per-class note rows) carry both.
+EVIDENCE_FACTS_LIMIT = 10
+NOTE_FACTS_LIMIT = 12
+# Compatibility aliases share one canonical value; retrieval and LLM dispatch
+# must never drift to independent 5/10-fact defaults again.
+NOTE_EVIDENCE_FACTS_LIMIT = NOTE_FACTS_LIMIT
+NOTE_LLM_FACTS_LIMIT = NOTE_FACTS_LIMIT
+REPORT_SECTION_FACTS_LIMIT = 10
+# List / superlative / per-entity questions need EVERY row of a note schedule
+# (per-project receivables, per-borrower loans, ~20 rows) in the evidence pack —
+# the default 5-fact cap structurally zeroes their context_recall. Matches the
+# retrieval-side _SCHEDULE_LIMIT in tools/tools.py.
+SCHEDULE_FACTS_LIMIT = 24
+# Main-statement routes on schedule questions carry a cross-table note slice
+# (e.g. the 4-class × 2-value V.9 block), not a whole 24-row schedule — a
+# tighter cap keeps precision while the NOTE route holds the full schedule.
+SCHEDULE_MAIN_FACTS_LIMIT = 16
 NOTE_REF_FACTS_SCAN_LIMIT = 15
 EVIDENCE_VALUE_PREVIEW_LIMIT = 220
 EVIDENCE_HINT_PREVIEW_LIMIT = 180
 WEB_RESULT_KEY = "WEB"
 NOTE_REF_SCOPE = "note_ref"
-
-
-def _dedupe_keep_order(items: list[Any]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
+FACT_ROUTE_METADATA_FIELDS = ("time_hint", "period", "unit", "value_type", "source")
+WEB_UNSUPPORTED_MESSAGE = (
+    "Web retrieval is not configured for this runtime; no external evidence was retrieved."
+)
 
 def _needby_values(item: dict) -> list[str]:
     if not isinstance(item, dict):
@@ -116,10 +123,19 @@ def _compact_fact_for_prompt(fact: dict) -> dict:
         "table",
         "item_name",
         "time_hint",
+        "period",
+        "unit",
+        "value_type",
         "value",
         "source",
         "status",
-        "interpretation_hint",
+        "message",
+        "retrieval_status",
+        "evidence_query",
+        "evidence_queries",
+        "source_table",
+        "source_item",
+        "needby",
         "note_ref",
         "note_number",
         "note_title",
@@ -128,8 +144,24 @@ def _compact_fact_for_prompt(fact: dict) -> dict:
         value = fact.get(key)
         if value in ("", None, [], {}):
             continue
+        if key in {"evidence_queries", "needby"}:
+            values = _dedupe_keep_order(value if isinstance(value, (list, tuple, set)) else [value])
+            if values:
+                compact[key] = values
+            continue
         limit = EVIDENCE_VALUE_PREVIEW_LIMIT if key == "value" else EVIDENCE_HINT_PREVIEW_LIMIT
-        if key in {"item_name", "source", "table", "time_hint", "status", "content_type"}:
+        if key in {
+            "item_name",
+            "source",
+            "table",
+            "time_hint",
+            "period",
+            "unit",
+            "value_type",
+            "status",
+            "retrieval_status",
+            "content_type",
+        }:
             limit = 120
         compact[key] = _compact_text(value, limit=limit)
     return compact
@@ -142,12 +174,14 @@ def _annotate_facts_for_route(
     evidence_query: str = "",
     source_table: str = "",
     source_item: str = "",
+    route_metadata: dict | None = None,
 ) -> list[dict]:
     routed_facts = []
     needed_by = _dedupe_keep_order(needby or [])
     query_text = str(evidence_query or "").strip()
     source_table_text = str(source_table or "").strip()
     source_item_text = str(source_item or "").strip()
+    metadata = route_metadata if isinstance(route_metadata, dict) else {}
 
     for fact in facts or []:
         if not isinstance(fact, dict):
@@ -163,6 +197,9 @@ def _annotate_facts_for_route(
             payload["source_table"] = source_table_text
         if source_item_text:
             payload["source_item"] = source_item_text
+        for key in FACT_ROUTE_METADATA_FIELDS:
+            if payload.get(key) in ("", None, [], {}) and metadata.get(key) not in ("", None, [], {}):
+                payload[key] = metadata.get(key)
         routed_facts.append(payload)
 
     return routed_facts
@@ -187,6 +224,23 @@ def _compact_worker_result_payload(payload: dict) -> dict:
         "table": _compact_text(payload.get("table", ""), limit=120),
         "facts": _compact_facts_for_prompt(payload.get("facts", [])),
     }
+    for key in (
+        "query",
+        "canonical_query",
+        "search_query",
+        "evidence_query",
+        "source",
+        "status",
+        "retrieval_status",
+        "message",
+        "time_hint",
+        "period",
+        "unit",
+        "value_type",
+    ):
+        value = payload.get(key)
+        if value not in ("", None, [], {}):
+            compact[key] = _compact_text(value, limit=EVIDENCE_HINT_PREVIEW_LIMIT)
     return {key: value for key, value in compact.items() if value not in ("", None, [], {})}
 
 
@@ -228,6 +282,14 @@ def _compact_evidence_item(item: dict) -> dict:
         "needby": _needby_values(item),
         "facts_n": int(item.get("facts_n", 0) or 0),
         "source": _compact_text(item.get("source", ""), limit=120),
+        "status": _compact_text(item.get("status", ""), limit=80),
+        "retrieval_status": _compact_text(item.get("retrieval_status", ""), limit=80),
+        "message": _compact_text(item.get("message", ""), limit=EVIDENCE_HINT_PREVIEW_LIMIT),
+        "time_hint": _compact_text(item.get("time_hint", ""), limit=120),
+        "period": _compact_text(item.get("period", ""), limit=120),
+        "unit": _compact_text(item.get("unit", ""), limit=80),
+        "value_type": _compact_text(item.get("value_type", ""), limit=120),
+        "evidence_query": _compact_text(item.get("evidence_query", ""), limit=120),
         "cache_hit": bool(item.get("cache_hit", False)),
         "facts_preview": _compact_facts_for_prompt(item.get("facts_preview", []) or []),
     }
@@ -268,6 +330,7 @@ def _normalized_retrieval_targets(worker_plan: dict) -> list[dict]:
                     "needby_by_query": {},
                     "search_queries": {},
                     "canonical_queries": {},
+                    "metadata_by_query": {},
                     "source": str(item.get("source", "") or "").strip(),
                     "evidence_items": [],
                 }
@@ -300,6 +363,14 @@ def _normalized_retrieval_targets(worker_plan: dict) -> list[dict]:
                     )
                     if search_query:
                         grouped[key]["search_queries"][query] = search_query
+                    metadata = grouped[key]["metadata_by_query"].setdefault(query, {})
+                    for metadata_key in FACT_ROUTE_METADATA_FIELDS:
+                        metadata_value = item.get(metadata_key)
+                        if (
+                            metadata.get(metadata_key) in ("", None, [], {})
+                            and metadata_value not in ("", None, [], {})
+                        ):
+                            metadata[metadata_key] = metadata_value
             grouped[key]["evidence_items"].append(dict(item))
 
         output = []
@@ -327,6 +398,14 @@ def _normalized_retrieval_targets(worker_plan: dict) -> list[dict]:
                 "table": table,
                 "requirements": requirements,
                 "source": str(target.get("source", "") or "").strip(),
+                "metadata_by_query": {
+                    query: {
+                        key: target.get(key)
+                        for key in FACT_ROUTE_METADATA_FIELDS
+                        if target.get(key) not in ("", None, [], {})
+                    }
+                    for query in requirements
+                },
             }
         )
     return targets
@@ -350,6 +429,24 @@ def _planned_analysis_agents(worker_plan: dict) -> list[str]:
     return agents
 
 
+def _target_metadata_for_query(target: dict, query: str) -> dict:
+    metadata_by_query = target.get("metadata_by_query", {}) if isinstance(target, dict) else {}
+    if not isinstance(metadata_by_query, dict):
+        return {}
+    direct = metadata_by_query.get(query)
+    if isinstance(direct, dict):
+        return dict(direct)
+
+    merged = {}
+    for metadata in metadata_by_query.values():
+        if not isinstance(metadata, dict):
+            continue
+        for key in FACT_ROUTE_METADATA_FIELDS:
+            if merged.get(key) in ("", None, [], {}) and metadata.get(key) not in ("", None, [], {}):
+                merged[key] = metadata.get(key)
+    return merged
+
+
 def _difficulty_level_from_state(state: dict, worker_plan: dict) -> str:
     for source in (state.get("planner_plan", {}), worker_plan):
         if not isinstance(source, dict):
@@ -360,30 +457,20 @@ def _difficulty_level_from_state(state: dict, worker_plan: dict) -> str:
     return ""
 
 
-def _easy_note_or_report_section_only(state: dict, worker_plan: dict) -> bool:
-    if _difficulty_level_from_state(state, worker_plan) != "easy":
-        return False
-
-    targets = _normalized_retrieval_targets(worker_plan)
-    if not targets:
-        return False
-
-    allowed_tables = {TABLE_NOTE, TABLE_REPORT_SECTION}
-    for target in targets:
-        table = normalize_evidence_table(target.get("table", ""))
-        mode = str(target.get("mode", "") or "").strip().lower() or ("table" if table else "web")
-        if mode != "table" or table not in allowed_tables:
-            return False
-    return True
-
-
 def _facts_limit_for_table(state: dict, worker_plan: dict, table: str) -> int:
     table_name = normalize_evidence_table(table)
-    if (
-        table_name in {TABLE_NOTE, TABLE_REPORT_SECTION}
-        and _easy_note_or_report_section_only(state, worker_plan)
-    ):
-        return EASY_NOTE_OR_REPORT_SECTION_FACTS_LIMIT
+    # Report-section prose has its own contract. It must never inherit either
+    # the wider NOTE cap or the schedule widening used by financial statements.
+    if table_name == TABLE_REPORT_SECTION:
+        return REPORT_SECTION_FACTS_LIMIT
+    # Any-table, not just NOTE: get_related_info already widens its rerank cut to
+    # _SCHEDULE_LIMIT for schedule questions on main-table routes, and a per-class
+    # note schedule (V.9) answering a BS-routed question would otherwise be sliced
+    # back to EVIDENCE_FACTS_LIMIT by result_to_facts.
+    if needs_full_schedule(str((state or {}).get("user_query", "") or "")):
+        if table_name == TABLE_NOTE:
+            return SCHEDULE_FACTS_LIMIT
+        return SCHEDULE_MAIN_FACTS_LIMIT
     if table_name == TABLE_NOTE:
         return NOTE_EVIDENCE_FACTS_LIMIT
     return EVIDENCE_FACTS_LIMIT
@@ -407,8 +494,17 @@ def _should_fetch_note_ref_context(state: dict, worker_plan: dict, planned_agent
 
 def _web_result_to_payload(result: dict, query: str) -> dict:
     context = str((result or {}).get("context", "") or "").strip()
+    retrieval_status = str((result or {}).get("retrieval_status", "") or "").strip()
+    if not retrieval_status:
+        retrieval_status = "found" if context else "unsupported"
+    message = str((result or {}).get("message", "") or "").strip()
+    if not context and not message:
+        message = WEB_UNSUPPORTED_MESSAGE
     return {
         "table": "",
+        "status": "found" if context else "not_found_after_search",
+        "retrieval_status": retrieval_status,
+        "message": message,
         "facts": [
             {
                 "content_type": "web_fact",
@@ -418,9 +514,11 @@ def _web_result_to_payload(result: dict, query: str) -> dict:
                 "source": str((result or {}).get("source", "") or "").strip(),
                 "table": "",
                 "status": "found" if context else "not_found_after_search",
-                "interpretation_hint": context[:300],
+                "retrieval_status": retrieval_status,
+                "message": message,
+                "evidence_text": context,
             }
-        ] if context else [],
+        ],
     }
 
 
@@ -485,11 +583,14 @@ def _merge_worker_results(existing: dict, current: dict) -> dict:
 
 def _llm_facts_limit_for_table(state: dict, worker_plan: dict, table: str) -> int:
     table_name = normalize_evidence_table(table)
-    if (
-        table_name in {TABLE_NOTE, TABLE_REPORT_SECTION}
-        and _easy_note_or_report_section_only(state, worker_plan)
-    ):
-        return EASY_NOTE_OR_REPORT_SECTION_FACTS_LIMIT
+    if table_name == TABLE_REPORT_SECTION:
+        return REPORT_SECTION_FACTS_LIMIT
+    if needs_full_schedule(str((state or {}).get("user_query", "") or "")):
+        # ragas_facts_by_table (RAGAS retrieved_contexts) flows through this cap
+        # too, so schedule questions must keep the whole per-entity schedule.
+        if table_name == TABLE_NOTE:
+            return SCHEDULE_FACTS_LIMIT
+        return SCHEDULE_MAIN_FACTS_LIMIT
     if table_name == TABLE_NOTE:
         return NOTE_LLM_FACTS_LIMIT
     return EVIDENCE_FACTS_LIMIT
@@ -501,17 +602,19 @@ def _limit_note_facts_for_llm(results: dict, *, state: dict, worker_plan: dict) 
         if not isinstance(payload, dict):
             output[result_key] = payload
             continue
+        if is_analysis_agent(str(result_key or "").strip()) or not isinstance(payload.get("facts"), list):
+            output[result_key] = payload
+            continue
 
         item = dict(payload)
         table = _result_key_for_table(item.get("table", "") or result_key)
         facts = item.get("facts", [])
-        if table in {TABLE_NOTE, TABLE_REPORT_SECTION} and isinstance(facts, list):
-            limit = _llm_facts_limit_for_table(state, worker_plan, table)
-            item["facts"] = [
-                fact
-                for fact in facts
-                if isinstance(fact, dict)
-            ][:limit]
+        limit = _llm_facts_limit_for_table(state, worker_plan, table)
+        item["facts"] = [
+            fact
+            for fact in facts
+            if isinstance(fact, dict)
+        ][:limit]
         output[result_key] = item
     return output
 
@@ -527,7 +630,7 @@ def _limit_note_item_previews_for_llm(items: list[dict], *, state: dict, worker_
         payload = dict(item)
         table = normalize_evidence_table(payload.get("table", ""))
         previews = payload.get("facts_preview", [])
-        if table in {TABLE_NOTE, TABLE_REPORT_SECTION} and isinstance(previews, list):
+        if table and isinstance(previews, list):
             limit = _llm_facts_limit_for_table(state, worker_plan, table)
             seen = int(facts_seen_by_table.get(table, 0) or 0)
             remaining = max(limit - seen, 0)
@@ -682,6 +785,7 @@ def build_evidence_pack(state: dict) -> dict:
     processed_keys = set()
     retrieval_calls = 0
     cache_hits = 0
+    web_unsupported = 0
 
     for target in retrieval_targets:
         table = normalize_evidence_table(target.get("table", ""))
@@ -690,6 +794,7 @@ def build_evidence_pack(state: dict) -> dict:
 
         if mode == "web":
             query = " ".join(requirements) or str(state.get("user_query", "") or "").strip()
+            route_metadata = _target_metadata_for_query(target, query)
             needby = _dedupe_keep_order(
                 agent
                 for requirement in requirements
@@ -700,79 +805,43 @@ def build_evidence_pack(state: dict) -> dict:
                 table="",
                 query=query,
                 mode="web",
+                generation=str(state.get("index_fingerprint", "") or state.get("collection_generation", "") or ""),
             )
             if cache_key in processed_keys:
                 continue
             processed_keys.add(cache_key)
 
-            cached = (
-                existing_cache.get(cache_key)
-                or evidence_cache_updates.get(cache_key)
-                or get_runtime_cache_item(cache_key)
+            # There is no configured web provider in this runtime.  No callable
+            # placeholder exists: a synthetic result must never be promoted to
+            # financial evidence.  Ignore old cached web payloads as well.
+            result = {
+                "tool": "web_search",
+                "table": "",
+                "query": query,
+                "canonical_query": query,
+                "context": "",
+                "source": "",
+                "documents": [],
+                "metadatas": [],
+                "status": "not_found_after_search",
+                "retrieval_status": "unsupported",
+                "message": WEB_UNSUPPORTED_MESSAGE,
+            }
+            web_unsupported += 1
+            trace.append(
+                make_log(
+                    state,
+                    "evidence_tool:unsupported",
+                    tool="web_search",
+                    scope="web",
+                    table="",
+                    query=query,
+                    cache_key=cache_key,
+                    status="not_found_after_search",
+                    retrieval_status="unsupported",
+                    message=WEB_UNSUPPORTED_MESSAGE,
+                )
             )
-            if isinstance(cached, dict) and cached:
-                cache_hits += 1
-                result = cached
-                trace.append(
-                    make_log(
-                        state,
-                        "evidence_tool:cache_hit",
-                        tool="web_search",
-                        scope="web",
-                        table="",
-                        query=query,
-                        cache_key=cache_key,
-                        facts_n=len(_limit_evidence_facts(result.get("facts", []))),
-                        facts_preview=_facts_log_preview(_limit_evidence_facts(result.get("facts", []))),
-                    )
-                )
-            else:
-                tool_started_at = time.perf_counter()
-                trace.append(
-                    make_log(
-                        state,
-                        "evidence_tool:start",
-                        tool="web_search",
-                        scope="web",
-                        table="",
-                        query=query,
-                        cache_key=cache_key,
-                    )
-                )
-                raw_result = web_search(query)
-                web_payload = _web_result_to_payload(raw_result, query)
-                facts = _limit_evidence_facts(web_payload.get("facts", []))
-                result = {
-                    "tool": "web_search",
-                    "table": "",
-                    "query": query,
-                    "canonical_query": query,
-                    "context": str(raw_result.get("context", "") or ""),
-                    "source": str(raw_result.get("source", "") or ""),
-                    "documents": [],
-                    "metadatas": [],
-                    "facts": facts,
-                }
-                evidence_cache_updates[cache_key] = result
-                set_runtime_cache_item(cache_key, result)
-                retrieval_calls += 1
-                trace.append(
-                    make_log(
-                        state,
-                        "evidence_tool:done",
-                        tool="web_search",
-                        scope="web",
-                        table="",
-                        query=query,
-                        cache_key=cache_key,
-                        source=result.get("source", ""),
-                        context_len=len(str(result.get("context", "") or "")),
-                        facts_n=len(result.get("facts", []) or []),
-                        facts_preview=_facts_log_preview(result.get("facts", [])),
-                        cache_stored=True,
-                        duration_ms=int((time.perf_counter() - tool_started_at) * 1000),
-                    )
-                )
 
             payload = _web_result_to_payload(result, query)
             payload["facts"] = _limit_evidence_facts(payload.get("facts", []))
@@ -780,6 +849,7 @@ def build_evidence_pack(state: dict) -> dict:
                 payload.get("facts", []),
                 needby=needby,
                 evidence_query=query,
+                route_metadata=route_metadata,
             )
             result_key = _result_key_for_table("", mode="web")
             current_worker_results[result_key] = merge_worker_fact_payload(
@@ -789,6 +859,9 @@ def build_evidence_pack(state: dict) -> dict:
             web_summary_payload[cache_key] = {
                 "query": query,
                 "source": result.get("source", ""),
+                "status": result.get("status", ""),
+                "retrieval_status": result.get("retrieval_status", ""),
+                "message": result.get("message", ""),
                 "facts": _compact_facts_for_prompt(payload.get("facts", [])),
                 "context_preview": _compact_text(result.get("context", ""), limit=360),
             }
@@ -798,17 +871,23 @@ def build_evidence_pack(state: dict) -> dict:
                     "scope": "web",
                     "table": "",
                     "query": query,
+                    "evidence_query": query,
                     "needby": needby,
-                    "cache_hit": isinstance(cached, dict) and bool(cached),
+                    **route_metadata,
+                    "cache_hit": False,
                     "facts_n": len(payload.get("facts", []) or []),
                     "facts_preview": _facts_log_preview(payload.get("facts", [])),
                     "source": result.get("source", ""),
+                    "status": result.get("status", ""),
+                    "retrieval_status": result.get("retrieval_status", ""),
+                    "message": result.get("message", ""),
                 }
             )
             continue
 
         for requirement in requirements:
             query = str(requirement or "").strip()
+            route_metadata = _target_metadata_for_query(target, query)
             needby = _dedupe_keep_order(
                 (target.get("needby_by_query", {}) or {}).get(query, []) or []
             )
@@ -822,6 +901,8 @@ def build_evidence_pack(state: dict) -> dict:
                 table=table,
                 query=search_query,
                 mode="table",
+                intent=str(state.get("user_query", "") or ""),
+                generation=str(state.get("index_fingerprint", "") or state.get("collection_generation", "") or ""),
             )
             if cache_key in processed_keys:
                 continue
@@ -893,6 +974,7 @@ def build_evidence_pack(state: dict) -> dict:
                     collection=collection,
                     strict_table=(table in {TABLE_NOTE, TABLE_REPORT_SECTION}),
                     limit=retrieval_limit,
+                    intent=str(state.get("user_query", "") or "").strip(),
                 )
                 cache_facts = result_to_facts(
                     raw_result,
@@ -944,6 +1026,7 @@ def build_evidence_pack(state: dict) -> dict:
                     facts,
                     needby=needby,
                     evidence_query=query,
+                    route_metadata=route_metadata,
                 ),
             }
             result_key = _result_key_for_table(table, mode="table")
@@ -957,7 +1040,9 @@ def build_evidence_pack(state: dict) -> dict:
                     "scope": "table",
                     "table": table,
                     "query": query,
+                    "evidence_query": query,
                     "needby": needby,
+                    **route_metadata,
                     "cache_hit": isinstance(cached, dict) and bool(cached),
                     "facts_n": len(facts),
                     "facts_preview": _facts_log_preview(facts),
@@ -975,6 +1060,8 @@ def build_evidence_pack(state: dict) -> dict:
                 table=TABLE_NOTE,
                 query=query,
                 mode="table",
+                intent=str(state.get("user_query", "") or ""),
+                generation=str(state.get("index_fingerprint", "") or state.get("collection_generation", "") or ""),
             )
             if cache_key in processed_keys:
                 continue
@@ -1044,6 +1131,7 @@ def build_evidence_pack(state: dict) -> dict:
                     collection=collection,
                     strict_table=True,
                     limit=NOTE_REF_FACTS_SCAN_LIMIT,
+                    intent=str(state.get("user_query", "") or "").strip(),
                 )
                 cache_facts = _filter_note_ref_facts(
                     result_to_facts(
@@ -1150,6 +1238,7 @@ def build_evidence_pack(state: dict) -> dict:
             "items_n": len(evidence_items),
             "retrieval_calls_n": retrieval_calls,
             "cache_hits_n": cache_hits,
+            "web_unsupported_n": web_unsupported,
             "facts_n": sum(
                 len((payload or {}).get("facts", []) or [])
                 for payload in merged_worker_results.values()
@@ -1160,6 +1249,11 @@ def build_evidence_pack(state: dict) -> dict:
 
     updates = {
         "evidence_pack": evidence_pack,
+        "ragas_facts_by_table": {
+            result_key: payload
+            for result_key, payload in merged_worker_results.items()
+            if not is_analysis_agent(str(result_key or "").strip())
+        },
         "evidence_cache": evidence_cache_updates,
         "worker_results": compact_worker_results,
         "web_summary": json.dumps(web_summary_payload, ensure_ascii=False) if web_summary_payload else state.get("web_summary", ""),

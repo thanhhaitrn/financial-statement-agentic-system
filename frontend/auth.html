@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Đăng nhập AgenFin-X</title>
+<link rel="icon" href="data:," />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="tokens.css" />
+<link rel="stylesheet" href="auth.css" />
+</head>
+<body>
+<a class="skip-link" href="#authForm">Bỏ qua đến biểu mẫu</a>
+
+<div class="auth-shell">
+
+  <a class="auth-brand" href="landing.html">
+    <span class="brand-mark" aria-hidden="true">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 18L9 8L13 15L16 10L20 6" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </span>
+    <span class="brand-name">AgenFin<span class="brand-x">-X</span></span>
+  </a>
+
+  <main class="auth-card card">
+
+    <!-- LOGIN PANEL -->
+    <section id="loginPanel" class="auth-panel">
+      <h1>Đăng nhập vào tài khoản</h1>
+
+
+      <form id="loginForm" novalidate>
+        <div class="field">
+          <label for="loginEmail">Email</label>
+          <input id="loginEmail" name="email" type="email" autocomplete="email" placeholder="aboutyou1975@gmail.com" required />
+          <p class="field-error" id="loginEmailError"></p>
+        </div>
+
+        <div class="field">
+          <label for="loginPassword">Mật khẩu</label>
+          <div class="input-with-action">
+            <input id="loginPassword" name="password" type="password" autocomplete="current-password" placeholder="••••••••" required />
+            <button type="button" class="input-action" data-toggle-password="loginPassword" aria-label="Hiện mật khẩu">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+            </button>
+          </div>
+          <p class="field-error" id="loginPasswordError"></p>
+        </div>
+
+        <div class="auth-row">
+          <label class="checkbox">
+            <input type="checkbox" id="rememberMe" />
+            <span>Ghi nhớ đăng nhập</span>
+          </label>
+          <a class="link" href="#" id="forgotPasswordLink">Quên mật khẩu?</a>
+        </div>
+
+        <p class="form-banner" id="loginBanner" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="loginSubmit">
+          <span class="btn-label">Đăng nhập</span>
+        </button>
+
+        <div class="divider"><span>hoặc</span></div>
+
+        <button type="button" class="btn btn-secondary btn-block btn-lg" id="googleBtn">
+          <svg width="18" height="18" viewBox="0 0 24 24"><path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1Z"/><path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.99.66-2.25 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.85A11 11 0 0 0 12 23Z"/><path fill="#FBBC05" d="M5.84 14.1a6.6 6.6 0 0 1 0-4.2V7.05H2.18a11 11 0 0 0 0 9.9l3.66-2.85Z"/><path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1a11 11 0 0 0-9.82 6.05l3.66 2.85C6.71 7.3 9.14 5.38 12 5.38Z"/></svg>
+          Tiếp tục với Google
+        </button>
+      </form>
+
+      <p class="auth-switch">
+        Chưa có tài khoản?
+        <button type="button" class="link" id="showRegister">Tạo tài khoản</button>
+      </p>
+    </section>
+
+    <!-- REGISTER PANEL -->
+    <section id="registerPanel" class="auth-panel" hidden>
+      <h1>Tạo tài khoản</h1>
+     
+
+      <form id="registerForm" novalidate>
+        <div class="field">
+          <label for="registerName">Họ và tên</label>
+          <input id="registerName" name="name" type="text" autocomplete="name" placeholder="Trần Kanye Hải" required />
+          <p class="field-error" id="registerNameError"></p>
+        </div>
+
+        <div class="field">
+          <label for="registerEmail">Email</label>
+          <input id="registerEmail" name="email" type="email" autocomplete="email" placeholder="aboutyou1975@gmail.com" required />
+          <p class="field-error" id="registerEmailError"></p>
+        </div>
+
+        <div class="field">
+          <label for="registerPassword">Mật khẩu</label>
+          <div class="input-with-action">
+            <input id="registerPassword" name="password" type="password" autocomplete="new-password" placeholder="Tối thiểu 6 ký tự" required minlength="6" />
+            <button type="button" class="input-action" data-toggle-password="registerPassword" aria-label="Hiện mật khẩu">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7-10-7-10-7Z" stroke="currentColor" stroke-width="1.6"/><circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.6"/></svg>
+            </button>
+          </div>
+          <p class="field-error" id="registerPasswordError"></p>
+        </div>
+
+        <div class="field">
+          <label for="registerConfirm">Xác nhận mật khẩu</label>
+          <input id="registerConfirm" name="confirm" type="password" autocomplete="new-password" placeholder="Nhập lại mật khẩu" required minlength="6" />
+          <p class="field-error" id="registerConfirmError"></p>
+        </div>
+
+        <p class="form-banner" id="registerBanner" hidden></p>
+
+        <button type="submit" class="btn btn-primary btn-block btn-lg" id="registerSubmit">
+          <span class="btn-label">Tạo tài khoản</span>
+        </button>
+      </form>
+
+      <p class="auth-switch">
+        Đã có tài khoản?
+        <button type="button" class="link" id="showLogin">Đăng nhập</button>
+      </p>
+    </section>
+
+  </main>
+
+  <p class="auth-footer">© 2026 AgenFin-X. Thrifty Jungler</p>
+</div>
+
+<script src="auth.js"></script>
+</body>
+</html>

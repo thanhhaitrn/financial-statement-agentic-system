@@ -7,6 +7,7 @@ from typing import List, Literal, Any, Optional
 import re, json
 from schemas.requirements import normalize_fact_status
 from schemas.table_names import normalize_table_heading
+from common import dedupe_keep_order as _dedupe_keep_order
 
 TABLE_NAME = Literal[
     "BẢNG CÂN ĐỐI KẾ TOÁN",
@@ -340,18 +341,6 @@ def _coerce_followups_payload(value: Any) -> Any:
 
     return normalized
 
-
-def _dedupe_keep_order(items: List[str]) -> List[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
-
 AGENT_NAME = Literal[
     "agent_profitability",
     "agent_liquidity_solvency",
@@ -384,6 +373,32 @@ def _map_question_type_to_difficulty(value: Any) -> str:
 
 
 # ---------- Planner evidence plan ---------
+class RerankRanking(BaseModel):
+    """Listwise rerank output: candidate IDs ordered by relevance (best first)."""
+
+    ranking: List[int] = Field(default_factory=list)
+
+    @field_validator("ranking", mode="before")
+    @classmethod
+    def normalize_ranking(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, (int, str)):
+            v = [v]
+        seen: set = set()
+        result: List[int] = []
+        for item in v:
+            try:
+                idx = int(item)
+            except (TypeError, ValueError):
+                continue
+            if idx < 0 or idx in seen:
+                continue
+            seen.add(idx)
+            result.append(idx)
+        return result
+
+
 class PlannerAnalysisAxis(BaseModel):
     axis: ANALYSIS_AXIS
     components: SkipJsonSchema[List[str]] = Field(default_factory=list, exclude=True)
@@ -726,7 +741,7 @@ class WorkerFact(BaseModel):
     item_name: str = ""
     time_hint: str = ""
     value: str = ""
-    interpretation_hint: str = ""
+    message: str = ""
     source: str = ""
     status: Literal["found", "not_found_after_search", "ambiguous"] = "found"
 
@@ -738,7 +753,7 @@ class WorkerFact(BaseModel):
         "item_name",
         "time_hint",
         "value",
-        "interpretation_hint",
+        "message",
         "source",
         mode="before",
     )

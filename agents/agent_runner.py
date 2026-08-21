@@ -4,7 +4,7 @@
 import json
 import time
 
-from agents.agent_tools_list import get_tools_for_bind, get_tools_list
+from tools.langchain_tools import get_langchain_tools_for_agent, get_tools_list
 from agents.agent_registry import is_analysis_agent
 from agents.prompts import PROMPT_TEMPLATE
 from agents.profiles import AGENT_PROFILES
@@ -35,28 +35,16 @@ from schemas.table_names import (
 )
 from tools.tool_calls import invalid_tool_calls, response_tool_calls, synthetic_tool_call
 from tools.evidence import merge_worker_fact_payload, scoped_tool_name_for_query, scoped_tool_name_for_table
+from common import dedupe_keep_order as _dedupe_keep_order
 
 
 DEFAULT_MAX_ANALYSIS_TOOL_CALLS_PER_ROUND = 2
 ANALYSIS_ALLOWED_KEYWORD_TABLES = {
-    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
+    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE},
+    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
+    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
+    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE},
 }
-
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
 
 def extract_text(resp):
     if isinstance(resp, str):
@@ -337,6 +325,21 @@ def _scoped_analysis_input_results(state: dict, agent_name: str) -> dict:
     return {}
 
 
+def _has_explicit_analysis_input_scope(state: dict, agent_name: str = "") -> bool:
+    """Return whether dispatch explicitly scoped analysis inputs.
+
+    An empty mapping is meaningful: it says the analysis target received no
+    validated facts.  Falling back to the global evidence pack in that case can
+    leak facts assigned to another analysis axis.
+    """
+    dispatch_target = _dispatch_target_for_agent(state, agent_name)
+    if isinstance(dispatch_target, dict) and "analysis_input_results" in dispatch_target:
+        return isinstance(dispatch_target.get("analysis_input_results"), dict)
+    return "analysis_input_results" in state and isinstance(
+        state.get("analysis_input_results"), dict
+    )
+
+
 def _evidence_pack_payload_for_prompt(state: dict, agent_name: str = "") -> dict:
     pack = state.get("evidence_pack", {}) or {}
     if not isinstance(pack, dict):
@@ -367,7 +370,7 @@ def _evidence_pack_payload_for_prompt(state: dict, agent_name: str = "") -> dict
         "items": items,
         "stats": pack.get("stats", {}) or {},
     }
-    if not _scoped_analysis_input_results(state, agent_name):
+    if not _has_explicit_analysis_input_scope(state, agent_name):
         payload["facts_by_table"] = _compact_analysis_results_for_prompt(
             pack.get("facts_by_table", {}) or pack.get("facts_by_agent", {}) or {}
         )
@@ -384,7 +387,12 @@ def _compact_analysis_fact_for_prompt(fact: dict) -> dict:
         "item_name",
         "time_hint",
         "value",
-        "interpretation_hint",
+        "unit",
+        "value_type",
+        "source",
+        "evidence_query",
+        "evidence_queries",
+        "message",
         "note_ref",
         "note_number",
         "note_title",
@@ -563,7 +571,7 @@ def _dedupe_fact_payloads(facts: list[dict]) -> list[dict]:
 
 def _analysis_evidence_facts(state: dict, agent_name: str) -> list[dict]:
     facts = list(_analysis_input_facts(state, agent_name))
-    if not _scoped_analysis_input_results(state, agent_name):
+    if not _has_explicit_analysis_input_scope(state, agent_name):
         facts.extend(_evidence_pack_facts(state))
     facts.extend(_tool_result_facts_for_agent(state, agent_name))
     return _dedupe_fact_payloads(facts)
@@ -759,7 +767,7 @@ def _run_analysis_tool_call_once(payload: dict, agent_name: str):
     usage = {}
     response_text = ""
 
-    tools = get_tools_for_bind(agent_name)
+    tools = get_langchain_tools_for_agent(agent_name)
     if not tools:
         return None, "", f"No bound tools configured for {agent_name}.", "", usage
 
@@ -862,9 +870,9 @@ def _force_analysis_tool_call_instruction(base_instruction: str, requirement: st
         f"{requirement_line}"
         "- Objective phân tích nằm trong plan_json.analysis_plan[].objective; KHÔNG dùng objective dài làm query.\n"
         "- Query tool phải lấy từ evidence_queries được giao hoặc keyword phù hợp trong allowed_keywords_json theo đúng table tương ứng.\n"
-        "- Dùng get_balance_sheet_info cho bảng cân đối kế toán, get_income_statement_info cho báo cáo kết quả kinh doanh, get_cashflow_info cho lưu chuyển tiền tệ, get_note_info cho thuyết minh, get_report_section_info cho phần đầu báo cáo như báo cáo Ban Tổng Giám đốc/kiểm toán/soát xét.\n"
-        "- Evidence ban đầu chỉ gửi tối đa 2 facts cho mỗi phần thuyết minh; nếu cần thêm dòng/chi tiết trong đúng phần thuyết minh đó, dùng get_note_info với query là số thuyết minh, tiêu đề note, hoặc chủ đề note ngắn.\n"
-        "- query của tool PHẢI là 1 khoản mục/line-item báo cáo tài chính ngắn bằng tiếng Việt, ví dụ: \"lợi nhuận sau thuế thu nhập doanh nghiệp\", \"tổng cộng tài sản\", \"lưu chuyển tiền thuần từ hoạt động kinh doanh\"; riêng get_note_info dùng chủ đề/số thuyết minh ngắn, get_report_section_info dùng chủ đề phần đầu báo cáo ngắn.\n"
+        "- Dùng get_balance_sheet_info cho bảng cân đối kế toán, get_income_statement_info cho báo cáo kết quả kinh doanh, get_cashflow_info cho lưu chuyển tiền tệ và get_note_info cho thuyết minh. Phần đầu báo cáo chỉ được cung cấp qua evidence stage, không gọi lại từ analysis agent.\n"
+        "- Evidence NOTE ban đầu giữ tối đa 12 facts; nếu cần thêm dòng/chi tiết trong đúng phần thuyết minh đó, dùng get_note_info với query là số thuyết minh, tiêu đề note, hoặc chủ đề note ngắn.\n"
+        "- query của tool PHẢI là 1 khoản mục/line-item báo cáo tài chính ngắn bằng tiếng Việt, ví dụ: \"lợi nhuận sau thuế thu nhập doanh nghiệp\", \"tổng cộng tài sản\", \"lưu chuyển tiền thuần từ hoạt động kinh doanh\"; riêng get_note_info dùng chủ đề/số thuyết minh ngắn.\n"
         "- Không dùng objective phân tích dài làm query, không dùng câu như \"đánh giá khả năng sinh lời\" làm query, và không ghép nhiều khoản mục vào cùng một query.\n"
         "- Nếu không gọi tool nhưng vẫn thiếu dữ liệu, requirements phải dùng cùng kiểu khoản mục/line-item hoặc chủ đề thuyết minh ngắn để hệ thống có thể truy xuất tiếp.\n"
     )
@@ -1009,6 +1017,9 @@ def _table_for_requirement(state: dict, requirement: str) -> str:
 
 def _statement_query_from_requirement(value: str, *, table: str = "") -> str:
     raw_text = " ".join(str(value or "").strip().split())
+    normalized = normalize_requirement_text(value, table=table)
+    if _looks_like_statement_line_item(normalized):
+        return normalized
     if _looks_like_statement_line_item(raw_text):
         return raw_text
 
@@ -1016,9 +1027,6 @@ def _statement_query_from_requirement(value: str, *, table: str = "") -> str:
     if keywords:
         return keywords[0]
 
-    normalized = normalize_requirement_text(value, table=table)
-    if _looks_like_statement_line_item(normalized):
-        return normalized
     return ""
 
 
@@ -1060,7 +1068,9 @@ def _analysis_allowed_keyword_tables(state: dict, agent_name: str, requirement: 
             if table and table != TABLE_NOTE:
                 tables.add(table)
 
-    return [table for table in (TABLE_BS, TABLE_IS, TABLE_CF, TABLE_REPORT_SECTION) if table in tables]
+    # Report sections are retrieved and validated in the evidence stage.  They
+    # are not exposed as a default analysis-agent tool surface.
+    return [table for table in (TABLE_BS, TABLE_IS, TABLE_CF) if table in tables]
 
 
 def _allowed_keywords_payload_for_analysis(state: dict, agent_name: str, requirement: str = "") -> str:
@@ -1076,7 +1086,9 @@ def _deterministic_tool_call_for_missing_requirement(
     table = _table_for_requirement(state, requirement)
     raw_query = " ".join(str(requirement or "").strip().split())
     normalized_table = normalize_table_heading(table)
-    if normalized_table in {TABLE_NOTE, TABLE_REPORT_SECTION} and raw_query:
+    if normalized_table == TABLE_REPORT_SECTION:
+        return {}
+    if normalized_table == TABLE_NOTE and raw_query:
         return _tool_call_payload(
             [
                 synthetic_tool_call(
@@ -1179,7 +1191,7 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
     evidence_facts_n = len(_analysis_evidence_facts(state, agent_name))
     forced_collect = _is_forced_collect(state, agent_name)
     should_call_tool = (
-        bool(get_tools_for_bind(agent_name))
+        bool(get_langchain_tools_for_agent(agent_name))
         and bool(missing_requirements)
         and next_requirement_index < len(missing_requirements)
         and tool_count < max_tool_calls

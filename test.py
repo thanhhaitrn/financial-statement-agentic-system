@@ -8,7 +8,7 @@ import uuid
 from pathlib import Path
 
 from config.settings import DEFAULT_DATASET, DEFAULT_DATA_FILE
-from datasets.registry import (
+from dataset_catalog.registry import (
     build_dataset_record,
     delete_dataset as delete_dataset_record,
     describe_dataset,
@@ -17,33 +17,16 @@ from datasets.registry import (
     load_registry,
     save_dataset,
 )
+from config.allowed_keywords import set_dynamic_keywords
 from ingestion.pipeline import build_knowledge_base
 from kb.sqlite_repo import (
-    init_db,
+    derive_keyword_augmentation,
     sqlite_count_facts,
-    sqlite_has_fact_columns,
-    sqlite_has_facts,
-    sqlite_has_populated_fact_values,
 )
 from output_formatter import format_final_answer
-from tools.tool_runner import set_collection
 from vectorstore.qdrant_store import create_collection
 from vectorstore.index_builder import build_vector_store
-
-
-def _dedupe_keep_order(items):
-    seen = set()
-    output = []
-
-    for item in items:
-        text = str(item).strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-
-    return output
-
+from common import dedupe_keep_order as _dedupe_keep_order
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run the agentic financial QA pipeline.")
@@ -250,95 +233,57 @@ def resolve_dataset_for_delete(args):
 
 
 def ensure_built(dataset):
-    required_fact_columns = {
-        "company",
-        "fiscal_year",
-        "heading",
-        "item_code",
-        "note_ref",
-        "subheading",
-        "item_name",
-        "value",
-        "raw_value",
-        "normalized_value",
-        "source",
-    }
-    conn = init_db(dataset.sqlite_db_path)
-    schema_outdated = not sqlite_has_fact_columns(conn, required_fact_columns)
-    values_outdated = not sqlite_has_populated_fact_values(conn)
-
-    rebuild_required = (
+    version_rebuild_required = (
         str(dataset.ingestion_version or "").strip()
         != str(DEFAULT_DATASET["ingestion_version"] or "").strip()
-    ) or schema_outdated or values_outdated
+    )
+    effective_dataset = dataset.model_copy(
+        update={"ingestion_version": DEFAULT_DATASET["ingestion_version"]}
+    )
+    if version_rebuild_required:
+        print(
+            "Dataset ingestion_version is outdated "
+            f"({dataset.ingestion_version or 'unknown'} -> {DEFAULT_DATASET['ingestion_version']}). "
+            "Rebuilding derived artifacts."
+        )
 
+    # Always enter the manifest-aware builder. It returns n_rows=0 only when
+    # source SHA, parser version and SQLite schema all match; legacy/stale data
+    # can no longer bypass the source fingerprint check merely because rows exist.
+    conn, n_rows = build_knowledge_base(
+        effective_dataset,
+        reset=version_rebuild_required,
+    )
+    kb_rebuilt = n_rows > 0
     facts_count = sqlite_count_facts(conn)
 
-    if rebuild_required:
-        reasons = []
-        if str(dataset.ingestion_version or "").strip() != str(DEFAULT_DATASET["ingestion_version"] or "").strip():
-            reasons.append(
-                "Dataset ingestion_version is outdated "
-                f"({dataset.ingestion_version or 'unknown'} -> {DEFAULT_DATASET['ingestion_version']})."
-            )
-        if schema_outdated:
-            reasons.append("financial_facts schema is missing required columns.")
-        if values_outdated:
-            reasons.append("financial_facts is missing populated raw_value/normalized_value data.")
-        print(" ".join(reasons) + " Rebuilding derived artifacts.")
-        conn, n_rows = build_knowledge_base(dataset, reset=True)
-        facts_count = n_rows
-        dataset = save_dataset(
-            dataset.model_copy(
-                update={
-                    "facts_count": facts_count,
-                    "vector_docs_count": 0,
-                    "status": "kb_ready" if facts_count > 0 else "registered",
-                    "ingestion_version": DEFAULT_DATASET["ingestion_version"],
-                }
-            )
-        )
-    elif not sqlite_has_facts(conn):
-        conn, n_rows = build_knowledge_base(dataset)
-        facts_count = n_rows
-        dataset = save_dataset(
-            dataset.model_copy(
-                update={
-                    "facts_count": facts_count,
-                    "status": "kb_ready" if facts_count > 0 else "registered",
-                }
-            )
-        )
     collection = create_collection(dataset.vector_collection_name)
-    vector_docs_count = collection.count()
-    if rebuild_required or vector_docs_count == 0:
-        collection, n_docs = build_vector_store(
-            conn,
-            dataset.vector_collection_name,
-            reset=rebuild_required,
+    # The vector builder has its own SQLite/model fingerprint and staged swap.
+    # Calling it on every readiness check lets it detect stale vectors even when
+    # the collection is non-empty.
+    collection, vector_docs_count = build_vector_store(
+        conn,
+        dataset.vector_collection_name,
+        reset=kb_rebuilt,
+    )
+    dataset = save_dataset(
+        effective_dataset.model_copy(
+            update={
+                "facts_count": facts_count,
+                "vector_docs_count": vector_docs_count,
+                "status": "ready" if facts_count > 0 and vector_docs_count > 0 else "kb_ready",
+            }
         )
-        vector_docs_count = n_docs
-        dataset = save_dataset(
-            dataset.model_copy(
-                update={
-                    "facts_count": facts_count,
-                    "vector_docs_count": vector_docs_count,
-                    "status": "ready",
-                    "ingestion_version": DEFAULT_DATASET["ingestion_version"],
-                }
-            )
-        )
-    else:
-        dataset = save_dataset(
-            dataset.model_copy(
-                update={
-                    "facts_count": facts_count,
-                    "vector_docs_count": vector_docs_count,
-                    "status": "ready" if facts_count > 0 else dataset.status,
-                    "ingestion_version": DEFAULT_DATASET["ingestion_version"],
-                }
-            )
-        )
+    )
+
+    # Augment the routing vocabulary with this dataset's own note-schedule
+    # titles and note-linked primary lines, so the keyworder can route line
+    # items the static list never anticipated. Best-effort: routing falls back
+    # to the static vocabulary if derivation fails.
+    try:
+        set_dynamic_keywords(derive_keyword_augmentation(conn))
+    except Exception:
+        pass
 
     return dataset, conn, collection
 
@@ -507,13 +452,37 @@ def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> d
 
 
 def execute_query(dataset, collection, query: str, *, debug_trace: bool = False, on_trace_entry=None) -> dict:
-    from graph.workflow import agentic_graph
+    import hashlib
 
-    set_collection(collection)
+    from graph.state import WorkflowServices
+    from graph.workflow import build_graph
+    from llm.client import get_llm_identity
+
+    collection_generation = str(
+        getattr(collection, "generation", "")
+        or getattr(collection, "build_fingerprint", "")
+        or getattr(collection, "qdrant_name", "")
+        or getattr(collection, "name", "")
+        or getattr(dataset, "collection_name", "")
+        or ""
+    )
+    model_fingerprint = hashlib.sha256(
+        "\x1f".join(get_llm_identity()).encode("utf-8")
+    ).hexdigest()
+    graph = build_graph(
+        WorkflowServices(
+            collection=collection,
+            index_fingerprint=collection_generation,
+            model_fingerprint=model_fingerprint,
+        )
+    )
     initial_state = _build_initial_state(dataset, query, debug_trace=debug_trace)
+    initial_state["index_fingerprint"] = collection_generation
+    initial_state["collection_generation"] = collection_generation
+    initial_state["model_fingerprint"] = model_fingerprint
     started_at = time.perf_counter()
     final_state = _run_graph(
-        agentic_graph,
+        graph,
         initial_state,
         on_trace_entry=on_trace_entry,
     )

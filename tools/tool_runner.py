@@ -3,11 +3,11 @@
 
 import json
 import time
+from contextvars import ContextVar
 from typing import Any, Optional, Tuple
 
-from tools.registry import TOOLS_MAPPING_2_FUNCTIONS
+from tools.langchain_tools import TOOLS_MAPPING_2_FUNCTIONS, get_tool_names_for_agent
 from tools.tool_calls import normalize_tool_call
-from agents.agent_tools_list import get_tool_names_for_agent
 from graph.logger import make_debug_log, make_log
 from schemas.requirements import normalize_requirement_text
 from tools.evidence import (
@@ -21,21 +21,30 @@ from tools.evidence import (
     scoped_tool_name_for_table,
     set_runtime_cache_item,
 )
+from common import dedupe_keep_order as _dedupe_keep_order
 
 
-_COLLECTION = None
+_COLLECTION_CONTEXT: ContextVar[Any] = ContextVar(
+    "agentfinx_collection",
+    default=None,
+)
 TOOL_CONTEXT_PREVIEW_LIMIT = 1200
 TOOL_RESULT_FACTS_LIMIT = 5
 DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
+_INTERNAL_TOOL_ARG_KEYS = {"collection"}
 
 
 def set_collection(collection):
-    global _COLLECTION
-    _COLLECTION = collection
+    """Set the collection for the current execution context.
+
+    Kept as a compatibility shim for existing CLIs.  Context-local storage
+    prevents concurrent dataset runs from overwriting one process-global handle.
+    """
+    _COLLECTION_CONTEXT.set(collection)
 
 
 def get_collection():
-    return _COLLECTION
+    return _COLLECTION_CONTEXT.get()
 
 
 SCOPED_TOOL_NAMES = set(SCOPED_TOOL_TO_TABLE.keys())
@@ -43,6 +52,15 @@ SCOPED_TOOL_NAMES = set(SCOPED_TOOL_TO_TABLE.keys())
 
 def _safe_json_dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _public_tool_args(args: dict) -> dict:
+    """Return serializable, user-visible arguments only."""
+    return {
+        key: value
+        for key, value in dict(args or {}).items()
+        if key not in _INTERNAL_TOOL_ARG_KEYS
+    }
 
 
 def _coerce_tool_context(value: Any) -> str:
@@ -59,19 +77,6 @@ def _build_tool_context_debug_fields(state: dict, context: str) -> dict:
 
 def _get_allowed_tools(agent_name: str) -> set:
     return get_tool_names_for_agent(agent_name)
-
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    output = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        output.append(text)
-        seen.add(text)
-    return output
-
 
 def _latest_agent_response_for(state: dict, agent_name: str) -> str:
     items = state.get("worker_messages", []) or []
@@ -238,17 +243,20 @@ def _prepare_scoped_info_args(
     tool_name: str,
     args: dict,
 ) -> Tuple[Optional[dict], Optional[str], Optional[dict]]:
-    global _COLLECTION
-
-    if _COLLECTION is None:
+    collection = get_collection()
+    if collection is None:
         return None, "collection not set. Call set_collection(collection) before running workflow.", None
 
     table = SCOPED_TOOL_TO_TABLE.get(tool_name, "")
     prepared = dict(args)
-    prepared["collection"] = _COLLECTION
+    prepared["collection"] = collection
     prepared["table"] = table
     raw_query = str(prepared.get("query", "") or "").strip()
-    prepared["query"] = raw_query
+    prepared["query"] = normalize_requirement_text(raw_query, table=table) or raw_query
+    # Thread the full user question into agent-initiated scoped retrieval so the
+    # intent lexical fold + slot matching run there too — the agent's own query
+    # often drops the discriminating tokens (entity names, "khác", asset class).
+    prepared["intent"] = str((state or {}).get("user_query", "") or "").strip()
 
     if not prepared["query"]:
         return None, f"missing query for scoped retrieval table={table}", None
@@ -352,6 +360,12 @@ def _cache_key_for_prepared_args(state: dict, tool_name: str, prepared_args: dic
         table=str(prepared_args.get("table", "") or ""),
         query=str(prepared_args.get("query", "") or ""),
         mode="table",
+        intent=str(prepared_args.get("intent", "") or ""),
+        generation=str(
+            (state or {}).get("index_fingerprint", "")
+            or (state or {}).get("collection_generation", "")
+            or ""
+        ),
     )
 
 
@@ -388,7 +402,7 @@ def _cache_hit_update(
                 "round": current_round,
                 "tool": tool_name,
                 "tool_call_id": "",
-                "args": prepared_args,
+                "args": _public_tool_args(prepared_args),
                 "cache_key": cache_key,
                 "results": cache_payload,
             }
@@ -441,9 +455,17 @@ def _already_called(state: dict, agent_name: str, tool_name: str, args: dict) ->
     return False
 
 
-def call_tool_for_agent(state: dict, agent_name: str) -> dict:
+def _call_tool_for_agent_once(
+    state: dict,
+    agent_name: str,
+    tool_calls_override: Optional[list[dict]] = None,
+) -> dict:
     response_text = _latest_agent_response_for(state, agent_name)
-    tool_calls = _latest_tool_calls_for(state, agent_name)
+    tool_calls = (
+        list(tool_calls_override)
+        if tool_calls_override is not None
+        else _latest_tool_calls_for(state, agent_name)
+    )
     current_round = _current_round(state)
     count = _tool_call_count_for_round(state, agent_name)
 
@@ -524,7 +546,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
             round=current_round,
             count=count,
             max_calls=max_calls,
-            args_preview=_safe_json_dumps(args)[:200],
+            args_preview=_safe_json_dumps(_public_tool_args(args))[:200],
         )
     ]
 
@@ -638,7 +660,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                 tool=tool_name,
                 table=prepared_args.get("table", ""),
                 query=prepared_args.get("query", ""),
-                args_preview=_safe_json_dumps(prepared_args)[:200],
+                args_preview=_safe_json_dumps(_public_tool_args(prepared_args))[:200],
             )
         )
         return {
@@ -788,7 +810,7 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
                 "round": current_round,
                 "tool": tool_name,
                 "tool_call_id": tool_call_id,
-                "args": prepared_args,
+                "args": _public_tool_args(prepared_args),
                 "results": tool_result_payload,
             }
         ],
@@ -796,3 +818,94 @@ def call_tool_for_agent(state: dict, agent_name: str) -> dict:
         "trace": trace_logs,
         "evidence_cache": evidence_cache_update,
     }
+
+
+_LIST_UPDATE_FIELDS = {"tool_observations", "tool_results", "trace"}
+_DICT_UPDATE_FIELDS = {
+    "tool_call_counts",
+    "force_collect_agents",
+    "evidence_cache",
+}
+
+
+def _merge_tool_updates(base: dict, update: dict) -> dict:
+    merged = dict(base or {})
+    for key, value in (update or {}).items():
+        if key in _LIST_UPDATE_FIELDS:
+            merged[key] = list(merged.get(key, []) or []) + list(value or [])
+        elif key in _DICT_UPDATE_FIELDS:
+            merged[key] = {
+                **dict(merged.get(key, {}) or {}),
+                **dict(value or {}),
+            }
+        else:
+            merged[key] = value
+    return merged
+
+
+def _apply_tool_update_to_state(state: dict, update: dict) -> dict:
+    working = dict(state or {})
+    for key, value in (update or {}).items():
+        if key in _LIST_UPDATE_FIELDS:
+            working[key] = list(working.get(key, []) or []) + list(value or [])
+        elif key in _DICT_UPDATE_FIELDS:
+            working[key] = {
+                **dict(working.get(key, {}) or {}),
+                **dict(value or {}),
+            }
+        else:
+            working[key] = value
+    return working
+
+
+def call_tool_for_agent(state: dict, agent_name: str) -> dict:
+    """Execute all native calls allowed in this round, in model order.
+
+    The old runner silently executed only the first call.  We preserve the
+    per-round cap while returning reducer-compatible updates for every executed
+    call.
+    """
+    tool_calls = _latest_tool_calls_for(state, agent_name)
+    if len(tool_calls) <= 1:
+        return _call_tool_for_agent_once(state, agent_name, tool_calls)
+
+    count = _tool_call_count_for_round(state, agent_name)
+    remaining = max(0, _max_tool_calls_for_agent(state, agent_name) - count)
+    if remaining <= 0:
+        return _call_tool_for_agent_once(state, agent_name, [])
+
+    working = dict(state or {})
+    combined: dict = {}
+    for tool_call in tool_calls[:remaining]:
+        update = _call_tool_for_agent_once(
+            working,
+            agent_name,
+            [tool_call],
+        )
+        combined = _merge_tool_updates(combined, update)
+        working = _apply_tool_update_to_state(working, update)
+
+    if len(tool_calls) > remaining:
+        current_round = _current_round(working)
+        overflow = {
+            "tool_observations": [
+                _tool_observation_entry(
+                    agent_name,
+                    "[Additional tool calls skipped: per-round cap reached.]",
+                    current_round,
+                )
+            ],
+            "force_collect_agents": _force_collect_update(working, agent_name),
+            "trace": [
+                make_log(
+                    working,
+                    "tool:multi_call_cap_reached",
+                    agent=agent_name,
+                    requested=len(tool_calls),
+                    executed=remaining,
+                )
+            ],
+        }
+        combined = _merge_tool_updates(combined, overflow)
+
+    return combined

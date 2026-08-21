@@ -8,7 +8,7 @@ from typing import Any, Optional
 
 from pydantic import ValidationError
 
-from agents.agent_tools_list import get_tools_list
+from tools.langchain_tools import get_tools_list
 from agents.agent_registry import is_analysis_agent
 from agents.line_item_matcher import (
     DIRECT_LINE_ITEM_CALCULATION_PATTERNS,
@@ -24,12 +24,15 @@ from config.allowed_keywords import (
     TABLE_NOTE,
     TABLE_REPORT_SECTION,
     build_allowed_keywords_payload,
+    iter_keyword_table_pairs,
+    normalize_keyword_synonyms,
 )
 from graph.logger import make_debug_log, make_log
 from llm.invoke import extract_usage_metadata, invoke_prompt
 from schemas.agent_outputs import AnalysisPlanItem, EvidenceDispatchPlan, EvidencePlanItem, Target
 from schemas.table_names import normalize_table_heading
 from agents.prompts import PROMPT_TEMPLATE
+from common import dedupe_keep_order as _dedupe_keep_order
 
 MAX_TARGET_REQUIREMENTS = 8
 OPTIONAL_ROUTER_REQUIREMENTS = {
@@ -101,6 +104,13 @@ MAP BẢNG:
 - Doanh thu, giá vốn, lợi nhuận, chi phí, EPS -> "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH".
 - Dòng tiền, lưu chuyển tiền, tiền đầu kỳ/cuối kỳ -> "BÁO CÁO LƯU CHUYỂN TIỀN TỆ".
 - Thuyết minh, chính sách kế toán, chi tiết khoản mục, bên liên quan, cam kết, rủi ro tài chính -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH".
+- Chi tiết đầu tư (DỰ PHÒNG giảm giá/tổn thất của một khoản đầu tư, GIÁ GỐC vs dự phòng, giá trị hợp lý), hoặc nêu TÊN công ty con/đơn vị cụ thể (vd Túc Duyên, Apec Land Huế, Lagoon Lăng Cô, Kim Bôi) -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH" (chi tiết ở note 2a/2c). KHÔNG dùng BẢNG CÂN ĐỐI KẾ TOÁN vì bảng đó chỉ có số tổng giá gốc, không có cột dự phòng/per-đơn-vị.
+- CẶP DỄ NHẦM — chọn đúng hướng, không lấy keyword "gần giống":
+  - "TRẢ TRƯỚC cho người bán" (tài sản, mình trả trước cho nhà cung cấp) KHÁC "PHẢI TRẢ người bán" (nợ phải trả). Hỏi trả trước -> keyword "trả trước cho người bán ngắn hạn/dài hạn".
+  - "Chi phí TRẢ TRƯỚC" (tài sản chờ phân bổ: hoa hồng môi giới, thưởng bán hàng, công cụ dụng cụ…) KHÁC "chi phí PHẢI TRẢ" (nợ trích trước). Hỏi chi phí trả trước/hoa hồng môi giới/công cụ dụng cụ -> "chi phí trả trước ngắn hạn/dài hạn".
+  - "PHẢI THU về CHO VAY" (mình CHO vay, tài sản) KHÁC "vay và nợ thuê tài chính" (mình ĐI vay, nợ). Hỏi cho vay/thu hồi cho vay/lãi cho vay phải thu -> keyword "phải thu về cho vay ngắn hạn/dài hạn".
+- Câu hỏi PER-ĐƠN-VỊ hoặc SO SÁNH/XẾP HẠNG chi tiết ("dự án NÀO", "công ty NÀO", "khoản NÀO", "liệt kê…", "giảm/tăng nhiều nhất") -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH" với query là khoản mục tương ứng: chi tiết per-dự-án/per-công-ty/per-khoản-vay chỉ có trong note; báo cáo chính chỉ có số tổng.
+- Tình trạng hoạt động của công ty con/đơn vị được đầu tư (bị lỗ, chờ giải thể, chưa hoạt động, tỷ lệ sở hữu) -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH", query "tỷ lệ sở hữu của công ty tại các đơn vị" hoặc "tình trạng hoạt động công ty con".
 - Thông tin công ty, địa chỉ/trụ sở chính, hoạt động kinh doanh chính, giấy đăng ký doanh nghiệp, chuẩn mực/chế độ kế toán áp dụng, tuyên bố tuân thủ chuẩn mực kế toán, Báo cáo của Ban Tổng Giám đốc/Ban Giám đốc, HĐQT/Ban TGĐ/Ban kiểm soát, ban điều hành, kế toán trưởng, báo cáo kiểm toán độc lập, báo cáo soát xét, ý kiến kiểm toán, kết luận soát xét, vấn đề cần nhấn mạnh, kiểm toán viên, công ty/đơn vị/hãng kiểm toán, người ký/ngày ký -> "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH".
 
 OUTPUT:
@@ -108,11 +118,6 @@ OUTPUT:
 - Evidence item cho BCTC phải có table hợp lệ và query không rỗng.
 """
 VALID_EVIDENCE_TABLES = {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION}
-KEYWORD_TABLE_PAIRS = [
-    (keyword, table)
-    for table, keywords in ALLOWED_KEYWORDS.items()
-    for keyword in keywords
-]
 
 
 def _normalize_evidence_table(value: Any) -> str:
@@ -170,8 +175,20 @@ def _text_tokens(text: str) -> set[str]:
 
 
 def _candidate_route_specs() -> list[dict]:
+    """Route candidates over the static + dataset-derived keyword vocabulary.
+
+    Rebuilt lazily (cached per vocabulary snapshot) instead of at import time so
+    keywords registered by ensure_built via set_dynamic_keywords are visible to
+    the followup router.
+    """
+    pairs = iter_keyword_table_pairs()
+    cache_key = len(pairs)
+    cached = _ROUTE_CANDIDATES_CACHE.get("specs")
+    if cached is not None and _ROUTE_CANDIDATES_CACHE.get("key") == cache_key:
+        return cached
+
     candidates = []
-    for keyword, table in KEYWORD_TABLE_PAIRS:
+    for keyword, table in pairs:
         candidates.append(
             {
                 "table": table,
@@ -180,10 +197,12 @@ def _candidate_route_specs() -> list[dict]:
             }
         )
 
+    _ROUTE_CANDIDATES_CACHE["key"] = cache_key
+    _ROUTE_CANDIDATES_CACHE["specs"] = candidates
     return candidates
 
 
-FOLLOWUP_ROUTE_CANDIDATES = _candidate_route_specs()
+_ROUTE_CANDIDATES_CACHE: dict = {}
 MAIN_REPORT_TABLE_ORDER = (TABLE_BS, TABLE_IS, TABLE_CF)
 MAIN_REPORT_TABLES = set(MAIN_REPORT_TABLE_ORDER)
 NOTE_FOLLOWUP_MARKERS = (
@@ -214,8 +233,21 @@ NOTE_FOLLOWUP_MARKERS = (
     "chi tiet khoan muc",
     "tài sản thuê ngoài",
     "tai san thue ngoai",
+    # These rows are note-schedule revenue details, not the cash-flow/interest
+    # expense lines that share the token "lãi".
+    "lãi cho vay",
+    "lai cho vay",
+    "lãi tiền gửi ngân hàng",
+    "lai tien gui ngan hang",
 )
 REPORT_SECTION_MARKERS = (
+    "kiểm soát nội bộ",
+    "kiem soat noi bo",
+    "cơ sở hoạt động liên tục",
+    "co so hoat dong lien tuc",
+    "hoạt động liên tục",
+    "hoat dong lien tuc",
+    "going concern",
     "báo cáo của ban tổng giám đốc",
     "bao cao cua ban tong giam doc",
     "báo cáo của ban giám đốc",
@@ -332,6 +364,39 @@ def _direct_line_item_evidence_from_query(user_query: str) -> list[dict]:
     ]
 
 
+def _entity_evidence_from_query(user_query: str) -> list[dict]:
+    """Fetch named entities only from deterministically supported tables.
+
+    The former fallback queried BS, IS, CF, and NOTE for every hard question,
+    which inflated latency and let unrelated rows outrank the target.
+    """
+    raw_query = str(user_query or "").strip()
+    if not raw_query:
+        return []
+
+    items: list[dict] = []
+    seen_tables: set[str] = set()
+
+    def _add(table: str) -> None:
+        table = str(table or "").strip()
+        if table and table not in seen_tables:
+            seen_tables.add(table)
+            items.append({"table": table, "query": raw_query, "needby": []})
+
+    if _requires_report_section_followup(raw_query):
+        _add(TABLE_REPORT_SECTION)
+        return items
+
+    matches = _matching_main_report_keywords(raw_query)
+    for table in MAIN_REPORT_TABLE_ORDER:
+        if matches.get(table):
+            _add(table)
+    if _requires_note_followup(raw_query):
+        _add(TABLE_NOTE)
+
+    return items
+
+
 def _keyword_match_score(requirement: str, candidate_text: str) -> float:
     req_norm = str(requirement or "").strip().lower()
     candidate_norm = str(candidate_text or "").strip().lower()
@@ -381,11 +446,71 @@ def _normalize_main_report_followup_requirement(requirement: str, table: str) ->
     return str(requirement or "").strip()
 
 
+def _upgrade_query_to_user_keyword(query: str, table: str, user_query: str) -> str:
+    """Prefer the fuller line-item the user actually named.
+
+    The LLM router often narrows a query by dropping a distinguishing qualifier
+    ("tiền và các khoản tương đương tiền" -> "các khoản tương đương tiền",
+    "phải trả dài hạn khác" -> "phải trả khác"), which then retrieves the wrong
+    (sub-)line. If the user query contains a longer allowed-keyword for this table
+    that *contains* the narrowed query, restore the longer keyword.
+    """
+    q_norm = str(query or "").strip().lower()
+    uq_norm = str(user_query or "").strip().lower()
+    if not q_norm or not uq_norm:
+        return query
+    q_tokens = _text_tokens(q_norm)
+    if not q_tokens:
+        return query
+    allowed = ALLOWED_KEYWORDS.get(table, set()) or set()
+    best = query
+    best_len = len(q_norm)
+    for keyword in allowed:
+        kw_norm = str(keyword or "").strip().lower()
+        if not kw_norm or len(kw_norm) <= best_len:
+            continue
+        # The keyword must be one the user actually mentioned, and must be a
+        # more-specific superset of the narrowed query (all its tokens, plus the
+        # dropped qualifier). Token-superset catches non-contiguous qualifiers
+        # ("phải trả khác" -> "phải trả dài hạn khác").
+        if kw_norm in uq_norm and q_tokens <= _text_tokens(kw_norm):
+            best = keyword
+            best_len = len(kw_norm)
+    return best
+
+
+def _restore_user_keywords_in_evidence_plan(evidence_plan: list[dict], user_query: str) -> list[dict]:
+    restored = []
+    for item in evidence_plan or []:
+        if not isinstance(item, dict):
+            continue
+        new_item = dict(item)
+        upgraded = _upgrade_query_to_user_keyword(
+            str(item.get("query", "") or ""),
+            str(item.get("table", "") or ""),
+            user_query,
+        )
+        if upgraded and upgraded != item.get("query"):
+            new_item["query"] = upgraded
+        restored.append(new_item)
+    return restored
+
+
 def _matching_main_report_keywords(requirement: str) -> dict[str, list[str]]:
+    requirement = normalize_keyword_synonyms(requirement)
     matches: dict[str, list[str]] = {}
     for table in MAIN_REPORT_TABLE_ORDER:
         allowed = ALLOWED_KEYWORDS.get(table, set()) or set()
-        for keyword in allowed:
+        for keyword in sorted(
+            allowed,
+            key=lambda item: (
+                requirement.find(str(item).lower())
+                if str(item).lower() in requirement
+                else len(requirement) + 1,
+                -len(str(item)),
+                str(item),
+            ),
+        ):
             if _keyword_match_score(requirement, keyword) >= 60.0:
                 matches.setdefault(table, []).append(keyword)
 
@@ -394,6 +519,16 @@ def _matching_main_report_keywords(requirement: str) -> dict[str, list[str]]:
         for table, requirements in matches.items()
         if requirements
     }
+
+
+def _supplemental_main_report_table(table: str, query_text: str) -> str:
+    """Recall-first: when a NOTE / report-section query also names a main-report
+    line item, return the BS/IS/CF table to pull alongside it (the primary line
+    carries the headline figure / total). Returns "" when nothing applies or the
+    query is already routed to a main-report table."""
+    if table in MAIN_REPORT_TABLES:
+        return ""
+    return _main_report_route_for_requirement(query_text) or ""
 
 
 def _main_report_route_for_requirement(requirement: str) -> Optional[str]:
@@ -527,7 +662,7 @@ def _followup_route_hints_from_worker_plan(worker_plan: dict) -> dict[str, str]:
 
 
 def _heuristic_followup_route(requirement: str) -> str:
-    text = str(requirement or "").strip().lower()
+    text = normalize_keyword_synonyms(requirement)
 
     if _requires_report_section_followup(text):
         return TABLE_REPORT_SECTION
@@ -564,7 +699,8 @@ def _heuristic_followup_route(requirement: str) -> str:
     ):
         return TABLE_BS
 
-    return TABLE_IS
+    # Unknown follow-ups remain unscoped instead of silently querying IS.
+    return ""
 
 
 def _route_followup_requirement(requirement: str, hint: Optional[str] = None) -> str:
@@ -579,6 +715,12 @@ def _route_followup_requirement(requirement: str, hint: Optional[str] = None) ->
     if _requires_note_followup(normalized_requirement):
         return TABLE_NOTE
 
+    # A stale NOTE hint must not override an explicit main-statement concept
+    # such as "tổng tài sản" or the alias "tài sản lưu động".
+    heuristic_route = _heuristic_followup_route(normalized_requirement)
+    if heuristic_route in MAIN_REPORT_TABLES:
+        return heuristic_route
+
     if hint:
         hinted_table = _normalize_evidence_table(hint)
         if hinted_table:
@@ -588,7 +730,7 @@ def _route_followup_requirement(requirement: str, hint: Optional[str] = None) ->
     best_candidate = None
     best_score = 0.0
 
-    for candidate in FOLLOWUP_ROUTE_CANDIDATES:
+    for candidate in _candidate_route_specs():
         score = 0.0
         match_text = str(candidate.get("match_text", "") or "").strip()
         candidate_tokens = set(candidate.get("tokens", set()) or set())
@@ -608,7 +750,7 @@ def _route_followup_requirement(requirement: str, hint: Optional[str] = None) ->
     if best_candidate and best_score >= 1.0:
         return str(best_candidate.get("table", "") or "").strip()
 
-    return _heuristic_followup_route(requirement)
+    return heuristic_route
 
 
 def _normalize_followup_router_targets(
@@ -658,19 +800,6 @@ def _normalize_followup_router_targets(
         "analysis_plan": [],
         "targets": [],
     }
-
-
-def _dedupe_keep_order(items: list[str]) -> list[str]:
-    seen = set()
-    out = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
-
 
 def _split_target_requirement_item(value: str) -> list[str]:
     text = str(value or "").strip()
@@ -1068,18 +1197,31 @@ def _normalize_evidence_plan_payloads(items: list[Any]) -> list[dict]:
                 continue
 
             needby = _needby_values(payload)
-            key = (table, query_text)
-            if key not in merged_by_key:
-                merged_by_key[key] = {
-                    "table": table,
-                    "query": query_text,
-                    "needby": [],
-                }
-                order.append(key)
 
-            merged_by_key[key]["needby"] = _dedupe_keep_order(
-                list(merged_by_key[key].get("needby", []) or []) + needby
-            )
+            # Recall-first routing: a NOTE / report-section query that ALSO names
+            # a main-report line item (e.g. "tiền và các khoản tương đương tiền")
+            # must still pull the primary BS/IS/CF line, where the headline figure
+            # and the total live. The LLM often routes such queries to THUYẾT MINH
+            # only, so the code-110/410 total never enters the candidate pool. We
+            # add the main-report table alongside (never replacing) the chosen one.
+            tables_for_query = [table]
+            supplemental = _supplemental_main_report_table(table, query_text)
+            if supplemental and supplemental != table:
+                tables_for_query.append(supplemental)
+
+            for plan_table in tables_for_query:
+                key = (plan_table, query_text)
+                if key not in merged_by_key:
+                    merged_by_key[key] = {
+                        "table": plan_table,
+                        "query": query_text,
+                        "needby": [],
+                    }
+                    order.append(key)
+
+                merged_by_key[key]["needby"] = _dedupe_keep_order(
+                    list(merged_by_key[key].get("needby", []) or []) + needby
+                )
 
     for key in order:
         normalized.append(merged_by_key[key])
@@ -1337,12 +1479,11 @@ def _analysis_plan_from_targets(
                 continue
             table = str(item.get("table", "") or "").strip()
             for query in _evidence_item_queries(item):
-                evidence_queries.append(
-                    {
-                        "table": table,
-                        "query": query,
-                    }
-                )
+                evidence_queries.append({
+                    "table": table,
+                    "query": query,
+                    **_query_metadata_for_item(item, query),
+                })
 
         plan.append(
             {
@@ -1409,10 +1550,36 @@ def _with_inferred_needed_by(evidence_plan: list[dict], analysis_targets: list[d
                     "table": table,
                     "query": query,
                     "needby": _dedupe_keep_order(needby),
+                    **_query_metadata_for_item(item, query),
                 }
             )
 
     return output
+
+
+_EVIDENCE_METADATA_FIELDS = (
+    "time_hint",
+    "period",
+    "unit",
+    "value_type",
+    "evidence_query",
+    "source",
+    "note_ref",
+    "source_table",
+    "source_item",
+)
+
+
+def _query_metadata_for_item(item: dict, query: str) -> dict:
+    metadata = {}
+    per_query = item.get("query_metadata", {}) if isinstance(item, dict) else {}
+    if isinstance(per_query, dict) and isinstance(per_query.get(query), dict):
+        metadata.update(per_query[query])
+    for field in _EVIDENCE_METADATA_FIELDS:
+        value = item.get(field) if isinstance(item, dict) else None
+        if value not in ("", None, [], {}) and field not in metadata:
+            metadata[field] = value
+    return metadata
 
 
 def _merge_evidence_plans(*plans: list[dict]) -> list[dict]:
@@ -1451,6 +1618,10 @@ def _merge_evidence_plans(*plans: list[dict]) -> list[dict]:
                         merged[key]["canonical_query"] = canonical_query
                     order.append(key)
 
+                for field, value in _query_metadata_for_item(item, raw_query).items():
+                    if value not in ("", None, [], {}) and merged[key].get(field) in ("", None, [], {}):
+                        merged[key][field] = value
+
                 search_query = (
                     _first_query_map_value(item, "search_queries", "search_query", raw_query)
                     or str(item.get("original_query") or item.get("raw_query") or "").strip()
@@ -1483,6 +1654,7 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
                 "_queries": [],
                 "_canonical_queries": {},
                 "_search_queries": {},
+                "_query_metadata": {},
             }
             order.append(key)
 
@@ -1507,12 +1679,18 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
             if search_query and search_query != query:
                 group["_search_queries"][query] = search_query
 
+            metadata = _query_metadata_for_item(item, query)
+            if metadata:
+                current = dict(group["_query_metadata"].get(query, {}) or {})
+                group["_query_metadata"][query] = {**current, **metadata}
+
     output = []
     for key in order:
         group = grouped[key]
         queries = list(group.pop("_queries", []) or [])
         canonical_queries = dict(group.pop("_canonical_queries", {}) or {})
         search_queries = dict(group.pop("_search_queries", {}) or {})
+        query_metadata = dict(group.pop("_query_metadata", {}) or {})
         if not queries:
             continue
 
@@ -1527,12 +1705,15 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
                 payload["canonical_query"] = canonical_queries[query]
             if search_queries.get(query):
                 payload["search_query"] = search_queries[query]
+            payload.update(query_metadata.get(query, {}) or {})
         else:
             payload["queries"] = queries
             if canonical_queries:
                 payload["canonical_queries"] = canonical_queries
             if search_queries:
                 payload["search_queries"] = search_queries
+            if query_metadata:
+                payload["query_metadata"] = query_metadata
 
         output.append(
             {
@@ -1660,7 +1841,10 @@ def _fallback_router_payload_from_planner(planner_plan: dict, user_query: str = 
 
 def _finalize_router_targets(worker_plan: dict, planner_plan: dict, user_query: str = "") -> dict:
     normalized_targets = list((worker_plan or {}).get("targets", []) or [])
-    direct_evidence_plan = list((worker_plan or {}).get("evidence_plan", []) or [])
+    direct_evidence_plan = _restore_user_keywords_in_evidence_plan(
+        list((worker_plan or {}).get("evidence_plan", []) or []),
+        user_query,
+    )
     direct_analysis_plan = list((worker_plan or {}).get("analysis_plan", []) or [])
     table_targets = [
         target
@@ -1722,6 +1906,10 @@ def _finalize_router_targets(worker_plan: dict, planner_plan: dict, user_query: 
             table_targets,
             analysis_targets,
         ),
+        # G1: also fetch the specific line item the question names, so narrow
+        # analytical questions retrieve their own entity (recall-first), not just
+        # the generic axis figures the analysis agents gather.
+        _with_inferred_needed_by(_entity_evidence_from_query(user_query), analysis_targets),
     )
     analysis_plan = _analysis_plan_from_targets(
         analysis_targets,

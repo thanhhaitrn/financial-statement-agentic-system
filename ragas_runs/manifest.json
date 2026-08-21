@@ -1,0 +1,15 @@
+{
+  "schema_version": 1,
+  "artifact_policy": {
+    "generated_reports": "ignored",
+    "reviewed_fixtures": "ragas_runs/fixtures/",
+    "baseline_fixture": "ragas_runs/fixtures/baseline_report_v2.csv",
+    "baseline_fixture_status": "contract_example_not_a_measured_baseline",
+    "fact_contract_fixture": "tests/fixtures/apec_q211_250_factual_facts.json",
+    "fact_contract_unit_fixture": "tests/fixtures/factual_recall_cases.json",
+    "quality_gate": "deterministic_factual_recall >= 0.95",
+    "ragas": "diagnostic_only",
+    "latency": "valid only with clean-environment attestation and without session/usage/quota/backoff signals",
+    "latency_baseline": "median of at least 3 complete APEC q181-250 runs with identical fingerprints"
+  }
+}

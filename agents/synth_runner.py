@@ -6,6 +6,8 @@ from __future__ import annotations
 import json
 import re
 import time
+import unicodedata
+from decimal import Decimal
 from typing import Any, Dict, List, Optional, Tuple, TypedDict
 
 from pydantic import ValidationError
@@ -29,6 +31,8 @@ from schemas.requirements import (
     normalize_requirements_keep_order,
     requirement_matches_fact,
 )
+from schemas.numbers import format_decimal_vi, parse_financial_decimal
+from common import dedupe_keep_order as _dedupe_keep_order
 
 DEFAULT_DECISION = {
     "status": "error",
@@ -38,7 +42,10 @@ DEFAULT_DECISION = {
 
 MAX_SYNTH_FACTS_PER_AGENT = 20
 MAX_FOLLOWUP_REQUIREMENTS = 10
-MAX_FOLLOWUP_ROUNDS = 1
+# Two follow-up rounds: the missing data for stub answers exists in the source
+# (front-matter, note schedules, policies) and just needs one more routed fetch.
+# The extra round only runs when round 1 returns need_more with pending followups.
+MAX_FOLLOWUP_ROUNDS = 2
 OPTIONAL_FOLLOWUP_REQUIREMENTS = {
     "chi phí bán hàng",
     "các khoản phải trả ngắn hạn",
@@ -66,15 +73,37 @@ _INSUFFICIENT_ANSWER_MARKERS = (
     "không có dữ liệu",
     "not_found_after_search",
 )
+_CURRENT_PERIOD_MARKERS = (
+    "nam nay",
+    "nam hien tai",
+    "ky nay",
+    "hien tai",
+    "cuoi ky",
+    "cuoi nam",
+)
+_PREVIOUS_PERIOD_MARKERS = (
+    "nam truoc",
+    "ky truoc",
+    "truoc do",
+    "dau ky",
+    "dau nam",
+)
+_PERIOD_WORD_RE = re.compile(
+    r"\b(nam nay|nam hien tai|nam truoc|ky nay|ky truoc|hien tai|truoc do|"
+    r"cuoi ky|cuoi nam|dau ky|dau nam|20\d{2})\b"
+)
 
 
 class NormalizedFact(TypedDict):
     item_name: str
+    subheading: str
     time_hint: str
+    value_type: str
+    unit: str
     value: Any
     source: str
     table: str
-    interpretation_hint: str
+    message: str
     status: str
 
 
@@ -114,19 +143,6 @@ class SynthUsage(TypedDict, total=False):
     output_tokens: Optional[int]
     total_tokens: Optional[int]
     model: str
-
-
-def _dedupe_keep_order(items: List[str]) -> List[str]:
-    seen = set()
-    out: List[str] = []
-    for item in items or []:
-        text = str(item or "").strip()
-        if not text or text in seen:
-            continue
-        out.append(text)
-        seen.add(text)
-    return out
-
 
 def _normalize_requirements_list(value: Any, limit: int = MAX_FOLLOWUP_REQUIREMENTS) -> List[str]:
     if value is None:
@@ -255,23 +271,33 @@ def _normalize_fact(raw_fact: Any, fallback_table: str = "") -> Optional[Normali
         return None
 
     item_name = str(raw_fact.get("item_name", "")).strip()
+    subheading = str(raw_fact.get("subheading", "")).strip()
     time_hint = str(raw_fact.get("time_hint", "")).strip()
     value = raw_fact.get("value", "")
     source = str(raw_fact.get("source", "")).strip()
     table = str(raw_fact.get("table", fallback_table)).strip() or fallback_table
-    interpretation_hint = str(raw_fact.get("interpretation_hint", "") or "").strip()
+    message = str(raw_fact.get("message", "") or "").strip()
     status = normalize_fact_status(raw_fact.get("status", "found"))
+    value_type = str(raw_fact.get("value_type", "") or "").strip()
+    unit = str(raw_fact.get("unit", "") or "").strip()
 
     if not item_name and value in ("", None):
         return None
 
     return {
         "item_name": item_name,
+        # Parent line / matrix section (e.g. "Tài sản cố định hữu hình — Nguyên
+        # giá"); lets the LLM disambiguate flattened labels like "Số cuối kỳ | Cộng".
+        "subheading": subheading,
         "time_hint": time_hint,
+        # Slot disambiguators so the LLM picks the exact period / value-type asked
+        # (nguyên giá vs giá trị còn lại vs hao mòn) and states the right unit.
+        "value_type": value_type,
+        "unit": unit,
         "value": value,
         "source": source,
         "table": table,
-        "interpretation_hint": interpretation_hint,
+        "message": message,
         "status": status,
     }
 
@@ -362,6 +388,7 @@ def _dedupe_facts(facts: List[NormalizedFact]) -> List[NormalizedFact]:
         key = (
             str(fact.get("table", "")).strip(),
             str(fact.get("item_name", "")).strip(),
+            str(fact.get("subheading", "")).strip(),
             str(fact.get("time_hint", "")).strip(),
             str(fact.get("value", "")).strip(),
             str(fact.get("source", "")).strip(),
@@ -379,6 +406,26 @@ def _cap_facts(facts: List[NormalizedFact], limit: int = MAX_SYNTH_FACTS_PER_AGE
     if limit <= 0 or len(facts) <= limit:
         return facts
     return facts[:limit]
+
+
+def _fact_for_prompt(fact: NormalizedFact) -> Dict[str, Any]:
+    """Project a fact down to the fields the synth LLM needs.
+
+    Drops internal-only fields that are noise in the prompt: ``source`` (a
+    constant file path) and ``status`` ("found"); ``message`` is kept only when
+    present (it carries the not-found explanation). Empty fields are omitted.
+    """
+    out = {
+        "item_name": fact.get("item_name", ""),
+        "subheading": fact.get("subheading", ""),
+        "time_hint": fact.get("time_hint", ""),
+        "value_type": fact.get("value_type", ""),
+        "unit": fact.get("unit", ""),
+        "value": fact.get("value", ""),
+        "table": fact.get("table", ""),
+        "message": str(fact.get("message", "") or "").strip(),
+    }
+    return {key: val for key, val in out.items() if str(val).strip()}
 
 
 def _build_compact_worker_results(
@@ -402,7 +449,7 @@ def _build_compact_worker_results(
 
         compact[agent_name] = {
             "table": str(item.get("table", "")).strip(),
-            "facts": facts,
+            "facts": [_fact_for_prompt(fact) for fact in facts],
         }
         stats["agents_n"] += 1
         stats["facts_n_raw"] += facts_raw_n
@@ -692,11 +739,167 @@ def _synth_difficulty_instruction(state: dict) -> str:
             - Tập trung tính toán đúng yêu cầu từ facts có trong worker_results_json.
             - Không viết phân tích, không đánh giá xu hướng/nguyên nhân/rủi ro nếu người dùng không hỏi hard.
             - answer cần nêu dữ liệu đầu vào, công thức, kết quả; có thể thêm 1 câu diễn giải rất ngắn về kết quả.
+            - Nếu payload có deterministic_decimal_calculation, dùng nguyên kết quả Decimal đó; không tính lại bằng float hoặc tự thay biến đầu vào.
             - Không dùng format phân tích theo khía cạnh, không thêm mục "*Nhận xét*:" hoặc "**Kết luận tổng thể**".
             - Chỉ tạo followups khi thiếu biến đầu vào bắt buộc cho phép tính/câu hỏi chính.
             """
 
     return ""
+
+
+def _ascii_text(value: Any) -> str:
+    normalized = unicodedata.normalize("NFD", str(value or "").lower())
+    return " ".join(
+        "".join(char for char in normalized if unicodedata.category(char) != "Mn")
+        .replace("đ", "d")
+        .split()
+    )
+
+
+def _period_role(fact: dict) -> str:
+    text = _ascii_text(
+        " ".join(
+            str(fact.get(key, "") or "")
+            for key in ("time_hint", "period", "item_name", "subheading")
+        )
+    )
+    if any(marker in text for marker in _CURRENT_PERIOD_MARKERS):
+        return "current"
+    if any(marker in text for marker in _PREVIOUS_PERIOD_MARKERS):
+        return "previous"
+    return ""
+
+
+def _metric_key(fact: dict) -> tuple[str, str, str]:
+    item = _PERIOD_WORD_RE.sub(" ", _ascii_text(fact.get("item_name", "")))
+    item = " ".join(re.sub(r"[^a-z0-9]+", " ", item).split())
+    subheading = _PERIOD_WORD_RE.sub(" ", _ascii_text(fact.get("subheading", "")))
+    subheading = " ".join(re.sub(r"[^a-z0-9]+", " ", subheading).split())
+    return (
+        _ascii_text(fact.get("table", "")),
+        item,
+        subheading,
+    )
+
+
+def _label_overlap_score(query: str, facts: list[dict]) -> int:
+    query_tokens = set(re.findall(r"[a-z0-9]+", _ascii_text(query)))
+    label_tokens = set()
+    for fact in facts:
+        label_tokens.update(
+            re.findall(
+                r"[a-z0-9]+",
+                _ascii_text(
+                    f"{fact.get('subheading', '')} {fact.get('item_name', '')}"
+                ),
+            )
+        )
+    return len({token for token in query_tokens & label_tokens if len(token) > 2})
+
+
+def _deterministic_decimal_calculation(
+    state: dict,
+    worker_results_payload: Dict[str, Any],
+) -> dict[str, Any] | None:
+    """Return a safe two-period variation computed exactly with ``Decimal``."""
+
+    if _difficulty_level_from_state(state) != "medium":
+        return None
+    query = str(state.get("user_query", "") or "").strip()
+    query_norm = _ascii_text(query)
+    percent_requested = any(
+        marker in query_norm for marker in ("phan tram", "ty le thay doi", "%")
+    )
+    difference_requested = percent_requested or any(
+        marker in query_norm
+        for marker in ("chenh lech", "su thay doi", "thay doi la bao nhieu", "tang bao nhieu", "giam bao nhieu")
+    )
+    if not difference_requested:
+        return None
+
+    groups: dict[tuple[str, str, str], dict[str, list[tuple[dict, Decimal]]]] = {}
+    for payload in (worker_results_payload or {}).values():
+        if not isinstance(payload, dict):
+            continue
+        for fact in payload.get("facts", []) or []:
+            if not isinstance(fact, dict):
+                continue
+            value = parse_financial_decimal(fact.get("value"))
+            role = _period_role(fact)
+            key = _metric_key(fact)
+            if value is None or not role or not key[1]:
+                continue
+            groups.setdefault(key, {"current": [], "previous": []})[role].append((fact, value))
+
+    candidates = []
+    for key, roles in groups.items():
+        if len(roles["current"]) != 1 or len(roles["previous"]) != 1:
+            continue
+        current_fact, current = roles["current"][0]
+        previous_fact, previous = roles["previous"][0]
+        current_unit = str(current_fact.get("unit", "") or "").strip()
+        previous_unit = str(previous_fact.get("unit", "") or "").strip()
+        if current_unit and previous_unit and _ascii_text(current_unit) != _ascii_text(previous_unit):
+            continue
+        score = _label_overlap_score(query, [current_fact, previous_fact])
+        candidates.append((score, key, current_fact, current, previous_fact, previous))
+
+    if not candidates:
+        return None
+    candidates.sort(key=lambda item: (item[0], item[1]), reverse=True)
+    if len(candidates) > 1 and candidates[0][0] == candidates[1][0]:
+        return None
+
+    _, _, current_fact, current, previous_fact, previous = candidates[0]
+    difference = current - previous
+    result: dict[str, Any] = {
+        "operation": "two_period_variation",
+        "metric": str(current_fact.get("item_name", "") or "").strip(),
+        "current_period": str(current_fact.get("time_hint", "") or "năm hiện tại").strip(),
+        "current_value": str(current),
+        "previous_period": str(previous_fact.get("time_hint", "") or "năm trước").strip(),
+        "previous_value": str(previous),
+        "difference": str(difference),
+        "direction": "tăng" if difference > 0 else "giảm" if difference < 0 else "không đổi",
+        "unit": str(current_fact.get("unit", "") or previous_fact.get("unit", "") or "").strip(),
+        "table": str(current_fact.get("table", "") or "").strip(),
+    }
+    if percent_requested:
+        if previous == 0:
+            return None
+        result["percentage_change"] = str((difference / abs(previous)) * Decimal(100))
+    return result
+
+
+def _deterministic_decimal_decision(calculation: dict[str, Any]) -> dict[str, Any]:
+    current = Decimal(str(calculation["current_value"]))
+    previous = Decimal(str(calculation["previous_value"]))
+    difference = Decimal(str(calculation["difference"]))
+    unit = str(calculation.get("unit", "") or "").strip()
+    suffix = f" {unit}" if unit else ""
+    metric = str(calculation.get("metric", "") or "chỉ tiêu").strip()
+    table = str(calculation.get("table", "") or "").strip()
+    source_suffix = f" ({table})" if table else ""
+    lines = [
+        f"- {calculation['current_period']}: {format_decimal_vi(current)}{suffix}{source_suffix}.",
+        f"- {calculation['previous_period']}: {format_decimal_vi(previous)}{suffix}{source_suffix}.",
+        (
+            f"- Chênh lệch = {format_decimal_vi(current)} - {format_decimal_vi(previous)} "
+            f"= {format_decimal_vi(difference)}{suffix}; {metric} "
+            f"{calculation['direction']} {format_decimal_vi(abs(difference))}{suffix}."
+        ),
+    ]
+    if calculation.get("percentage_change") is not None:
+        percentage = Decimal(str(calculation["percentage_change"]))
+        lines.append(
+            "- Tỷ lệ thay đổi = chênh lệch / |năm trước| × 100 "
+            f"= {format_decimal_vi(percentage, max_decimal_places=2)}%."
+        )
+    return {
+        "status": "answer",
+        "answer": "Dựa trên số liệu hiện có:\n" + "\n".join(lines),
+        "followups": [],
+    }
 
 
 def _synth_system_instruction(state: dict, profile: Dict[str, Any]) -> str:
@@ -708,6 +911,13 @@ def _build_payload(
     profile: Dict[str, Any],
     worker_results_payload: Dict[str, Any],
 ) -> SynthPayload:
+    prompt_worker_results = dict(worker_results_payload or {})
+    deterministic_calculation = _deterministic_decimal_calculation(
+        state,
+        prompt_worker_results,
+    )
+    if deterministic_calculation:
+        prompt_worker_results["deterministic_decimal_calculation"] = deterministic_calculation
     return {
         "role": profile["role"],
         "tools_list": "",
@@ -715,7 +925,7 @@ def _build_payload(
         "user_query": state.get("user_query", ""),
         "worker_query": "",
         "plan_json": _safe_json_dumps(_synth_plan_payload(state)),
-        "worker_results_json": _safe_json_dumps(worker_results_payload),
+        "worker_results_json": _safe_json_dumps(prompt_worker_results),
         "allowed_keywords_json": "{}",
         "web_summary": "",
         "last_agent_response": state.get("last_agent_response", "") or "",
@@ -1131,14 +1341,49 @@ def _followup_requirement_items(followups: List[Dict[str, Any]]) -> List[str]:
     return _dedupe_keep_order([str(item).strip() for item in requirements if str(item).strip()])
 
 
+_FOLLOWUP_PLACEHOLDER_ANSWER = "Trả lời dựa trên dữ liệu hiện có."
+
+
+def _facts_summary_from_state(state: dict, limit: int = MAX_SYNTH_FACTS_PER_AGENT) -> str:
+    """Render the facts already gathered as a short Markdown answer.
+
+    Used as a fallback when the follow-up budget is exhausted and the synth LLM
+    left the answer empty: surfacing the retrieved facts keeps the answer grounded
+    (non-zero faithfulness/relevancy) instead of emitting a content-free stub.
+    """
+    if not isinstance(state, dict):
+        return ""
+    normalized, _ = _normalize_all_worker_results(state.get("worker_results", {}) or {})
+    facts = _dedupe_facts(_flatten_facts(normalized))
+    lines: List[str] = []
+    for fact in facts:
+        value = str(fact.get("value", "") or "").strip()
+        item_name = str(fact.get("item_name", "") or "").strip()
+        if not value or not item_name:
+            continue
+        subheading = str(fact.get("subheading", "") or "").strip()
+        label = f"{subheading} — {item_name}" if subheading else item_name
+        lines.append(f"- {label}: {value}")
+        if len(lines) >= limit:
+            break
+    return "\n".join(lines)
+
+
 def _answer_with_followup_limit_note(
     decision: Dict[str, Any],
     followups: List[Dict[str, Any]],
+    state: Optional[dict] = None,
 ) -> Dict[str, Any]:
     updated = dict(decision)
     answer = str(updated.get("answer", "") or "").strip()
-    if not answer:
-        answer = "Trả lời dựa trên dữ liệu hiện có."
+    if not answer or answer == _FOLLOWUP_PLACEHOLDER_ANSWER:
+        # Recall-first fallback: answer from whatever facts were gathered rather
+        # than emitting a content-free placeholder that scores 0 on RAGAs.
+        facts_summary = _facts_summary_from_state(state) if state is not None else ""
+        if facts_summary:
+            answer = "Dựa trên số liệu hiện có:\n" + facts_summary
+        elif not answer:
+            answer = _FOLLOWUP_PLACEHOLDER_ANSWER
 
     requirements = _followup_requirement_items(followups)
     if requirements:
@@ -1416,7 +1661,24 @@ def run_synth(state: dict) -> dict:
 
     payload_worker_results, normalize_logs, context_mode, facts_n, requirements_n = _prepare_synth_inputs(state)
     payload = _build_payload(state, profile, payload_worker_results)
-    decision, usage, invoke_mode = _invoke_synth(payload)
+    deterministic_calculation = _deterministic_decimal_calculation(
+        state,
+        payload_worker_results,
+    )
+    if deterministic_calculation:
+        decision = _deterministic_decimal_decision(deterministic_calculation)
+        usage = None
+        invoke_mode = "deterministic_decimal"
+        trace.append(
+            make_log(
+                state,
+                "synth:deterministic_decimal",
+                operation=deterministic_calculation["operation"],
+                metric=deterministic_calculation["metric"],
+            )
+        )
+    else:
+        decision, usage, invoke_mode = _invoke_synth(payload)
     auto_followup_log = None
     decision, followup_sanitize_log = _sanitize_followups(state, decision)
     complete_analysis_suppression_log = None
@@ -1492,7 +1754,7 @@ def run_synth(state: dict) -> dict:
                 followups_n=len(dispatchable_followups),
             )
         )
-        decision = _answer_with_followup_limit_note(decision, dispatchable_followups)
+        decision = _answer_with_followup_limit_note(decision, dispatchable_followups, state)
         dispatchable_followups = []
 
     done_log = make_log(

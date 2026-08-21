@@ -1,0 +1,38 @@
+[
+  {
+    "id": "normalized-pass",
+    "question": "Tổng vay ngắn hạn cuối kỳ là bao nhiêu VND?",
+    "ground_truth": "Tổng vay ngắn hạn cuối kỳ là 156.502.422.354 VND.",
+    "expected_facts": [
+      {
+        "entity": "Công ty Cổ phần Đầu tư APEC",
+        "metric": "Tổng vay ngắn hạn",
+        "period": "cuối kỳ",
+        "value": "156.502.422.354",
+        "unit": "VND",
+        "reference": "V.18a"
+      }
+    ],
+    "retrieved_contexts": [
+      "Entity: CONG TY CO PHAN DAU TU APEC\nMetric: Tổng vay ngắn hạn\nPeriod: cuối\nValue: 156502422354\nUnit: đồng\nReference: Thuyết minh V.18a"
+    ]
+  },
+  {
+    "id": "reference-miss",
+    "question": "Tổng phải trả dài hạn khác cuối kỳ là bao nhiêu VND?",
+    "ground_truth": "Tổng phải trả dài hạn khác cuối kỳ là 46.440.397.112 VND.",
+    "expected_facts": [
+      {
+        "entity": "APEC",
+        "metric": "phải trả dài hạn khác",
+        "period": "cuối kỳ",
+        "value": "46.440.397.112",
+        "unit": "VND",
+        "reference": "V.17b"
+      }
+    ],
+    "retrieved_contexts": [
+      "Entity: APEC\nMetric: Phải trả dài hạn khác\nPeriod: cuối kỳ\nValue: 46.440.397.112\nUnit: VND\nReference: V.6"
+    ]
+  }
+]

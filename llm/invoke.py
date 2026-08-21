@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import os
+import json
+import re
 from typing import Any, Callable, Dict, Optional
 
 from pydantic import ValidationError
 
-from llm.client import llm
+from llm.client import get_llm, get_llm_identity
 
 
 STRUCTURED_OUTPUT_ERROR_MARKERS = (
@@ -40,7 +42,7 @@ def _normalize_structured_output_mode(value: str) -> str:
 LLM_STRUCTURED_OUTPUT_MODE = _normalize_structured_output_mode(
     os.getenv("LLM_STRUCTURED_OUTPUT_MODE", "auto")
 )
-_STRUCTURED_OUTPUT_SUPPORTED: Optional[bool] = None
+_STRUCTURED_OUTPUT_SUPPORTED: dict[tuple[str, str], bool] = {}
 
 
 def looks_like_schema_support_error(error: Exception) -> bool:
@@ -65,7 +67,42 @@ def _should_try_structured_output() -> bool:
         return True
     if LLM_STRUCTURED_OUTPUT_MODE == "off":
         return False
-    return _STRUCTURED_OUTPUT_SUPPORTED is not False
+    return _STRUCTURED_OUTPUT_SUPPORTED.get(get_llm_identity()) is not False
+
+
+def _json_value_from_text(value: Any) -> Any:
+    content = getattr(value, "content", value)
+    if isinstance(content, list):
+        content = "".join(
+            str(item.get("text", "") if isinstance(item, dict) else item)
+            for item in content
+        )
+    text = str(content or "").strip()
+    text = re.sub(r"^```(?:json)?\s*", "", text, flags=re.IGNORECASE)
+    text = re.sub(r"\s*```$", "", text).strip()
+    decoder = json.JSONDecoder()
+    for index, char in enumerate(text):
+        if char not in "[{":
+            continue
+        try:
+            parsed, _ = decoder.raw_decode(text[index:])
+            return parsed
+        except json.JSONDecodeError:
+            continue
+    return None
+
+
+def _recover_structured_raw(raw: Any, schema: Any) -> Any:
+    parsed = _json_value_from_text(raw)
+    if parsed is None:
+        return None
+    validator = getattr(schema, "model_validate", None)
+    if callable(validator):
+        try:
+            return validator(parsed)
+        except ValidationError:
+            return None
+    return parsed
 
 
 def _normalize_structured_schema(schema: Any) -> Any:
@@ -183,7 +220,7 @@ def _invoke_plain_prompt(
         plain_payload = plain_payload_factory(dict(payload))
 
     resolved_prompt_template = _resolve_prompt_template(prompt_template, plain_payload)
-    chain = resolved_prompt_template | llm
+    chain = resolved_prompt_template | get_llm()
     result = chain.invoke(plain_payload)
     fallback_mode = mode or ("plain_json" if normalized_schema is not None else "plain")
     normalized = _normalize_invoke_result(
@@ -207,20 +244,19 @@ def invoke_prompt(
     plain_payload_factory: Optional[Callable[[dict], dict]] = None,
     include_raw: bool = True,
 ) -> Dict[str, Any]:
-    global _STRUCTURED_OUTPUT_SUPPORTED
     normalized_schema = _normalize_structured_schema(structured_schema)
 
     if normalized_schema is not None and _should_try_structured_output():
         try:
             resolved_prompt_template = _resolve_prompt_template(prompt_template, payload)
-            chain = resolved_prompt_template | llm.with_structured_output(
+            chain = resolved_prompt_template | get_llm().with_structured_output(
                 normalized_schema,
                 include_raw=include_raw,
             )
             result = chain.invoke(payload)
         except Exception as exc:
             if LLM_STRUCTURED_OUTPUT_MODE == "auto" and looks_like_schema_support_error(exc):
-                _STRUCTURED_OUTPUT_SUPPORTED = False
+                _STRUCTURED_OUTPUT_SUPPORTED[get_llm_identity()] = False
                 return _invoke_plain_prompt(
                     prompt_template,
                     payload,
@@ -241,9 +277,18 @@ def invoke_prompt(
             raise
         else:
             if LLM_STRUCTURED_OUTPUT_MODE == "auto":
-                _STRUCTURED_OUTPUT_SUPPORTED = True
+                _STRUCTURED_OUTPUT_SUPPORTED[get_llm_identity()] = True
             normalized = _normalize_invoke_result(result, mode="structured")
             if normalized.get("parsing_error") is not None:
+                recovered = _recover_structured_raw(
+                    normalized.get("raw"),
+                    normalized_schema,
+                )
+                if recovered is not None:
+                    normalized["parsed"] = recovered
+                    normalized["parsing_error"] = None
+                    normalized["mode"] = "structured_raw_recovered"
+                    return normalized
                 return _invoke_plain_prompt(
                     prompt_template,
                     payload,
