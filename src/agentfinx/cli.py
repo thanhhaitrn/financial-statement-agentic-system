@@ -29,11 +29,13 @@ _COMMANDS: dict[str, tuple[str, bool]] = {
     "score": ("ragas_eval_runner", True),
     "recall": ("eval_retrieval_recall", True),
     "analyze": ("analyze_batch_metrics", True),
+    "reports": ("acquisition.cli", True),
 }
 
 
 def _load_main(module_name: str) -> Callable[..., object]:
-    module = __import__(module_name)
+    from importlib import import_module
+    module = import_module(module_name)
     return getattr(module, "main")
 
 

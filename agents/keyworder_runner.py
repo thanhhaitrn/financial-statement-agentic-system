@@ -9,10 +9,23 @@ from typing import Any, Optional
 from pydantic import ValidationError
 
 from tools.langchain_tools import get_tools_list
-from agents.agent_registry import is_analysis_agent
+from tools.query_routing import parse_query_slots, route_candidates
+from agents.agent_registry import (
+    ANALYSIS_ASPECT_LABELS,
+    ANALYSIS_TABLE_ALLOWLIST,
+    is_analysis_agent,
+)
+from config.runtime_policy import (
+    DEFAULT_POLICY,
+    active_policy,
+    evidence_augmentation_enabled,
+    router_direct_bypass_enabled,
+    shadow_routing,
+)
 from agents.line_item_matcher import (
     DIRECT_LINE_ITEM_CALCULATION_PATTERNS,
     DIRECT_LINE_ITEM_EVALUATIVE_PATTERNS,
+    contains_intent,
     direct_line_item_match,
 )
 from agents.profiles import AGENT_PROFILES
@@ -34,16 +47,11 @@ from schemas.table_names import normalize_table_heading
 from agents.prompts import PROMPT_TEMPLATE
 from common import dedupe_keep_order as _dedupe_keep_order
 
-MAX_TARGET_REQUIREMENTS = 8
+MAX_TARGET_REQUIREMENTS = DEFAULT_POLICY.execution.max_target_requirements
 OPTIONAL_ROUTER_REQUIREMENTS = {
     "chi phí bán hàng",
 }
-ANALYSIS_TABLE_ALLOWLIST = {
-    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
-}
+
 FOLLOWUP_ROUTE_STOPWORDS = {
     "va",
     "và",
@@ -104,7 +112,7 @@ MAP BẢNG:
 - Doanh thu, giá vốn, lợi nhuận, chi phí, EPS -> "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH".
 - Dòng tiền, lưu chuyển tiền, tiền đầu kỳ/cuối kỳ -> "BÁO CÁO LƯU CHUYỂN TIỀN TỆ".
 - Thuyết minh, chính sách kế toán, chi tiết khoản mục, bên liên quan, cam kết, rủi ro tài chính -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH".
-- Chi tiết đầu tư (DỰ PHÒNG giảm giá/tổn thất của một khoản đầu tư, GIÁ GỐC vs dự phòng, giá trị hợp lý), hoặc nêu TÊN công ty con/đơn vị cụ thể (vd Túc Duyên, Apec Land Huế, Lagoon Lăng Cô, Kim Bôi) -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH" (chi tiết ở note 2a/2c). KHÔNG dùng BẢNG CÂN ĐỐI KẾ TOÁN vì bảng đó chỉ có số tổng giá gốc, không có cột dự phòng/per-đơn-vị.
+- Chi tiết theo một khoản đầu tư/đơn vị cụ thể (DỰ PHÒNG giảm giá/tổn thất, GIÁ GỐC, giá trị hợp lý, tỷ lệ sở hữu...) -> "THUYẾT MINH BÁO CÁO TÀI CHÍNH". Giữ nguyên entity và metric/value type trong query để khớp typed metadata; không giả định tên doanh nghiệp hay số thuyết minh. Chỉ dùng báo cáo chính khi user hỏi số tổng hợp.
 - CẶP DỄ NHẦM — chọn đúng hướng, không lấy keyword "gần giống":
   - "TRẢ TRƯỚC cho người bán" (tài sản, mình trả trước cho nhà cung cấp) KHÁC "PHẢI TRẢ người bán" (nợ phải trả). Hỏi trả trước -> keyword "trả trước cho người bán ngắn hạn/dài hạn".
   - "Chi phí TRẢ TRƯỚC" (tài sản chờ phân bổ: hoa hồng môi giới, thưởng bán hàng, công cụ dụng cụ…) KHÁC "chi phí PHẢI TRẢ" (nợ trích trước). Hỏi chi phí trả trước/hoa hồng môi giới/công cụ dụng cụ -> "chi phí trả trước ngắn hạn/dài hạn".
@@ -136,13 +144,9 @@ def _table_from_route_payload(item: dict) -> str:
         return table
 
     for query in _evidence_queries_from_raw_item(item):
-        if _requires_report_section_followup(query):
-            return TABLE_REPORT_SECTION
-        table = _main_report_route_for_requirement(query)
-        if table:
-            return table
-        if _requires_note_followup(query):
-            return TABLE_NOTE
+        candidates = route_candidates(query)
+        if candidates and candidates[0].confidence >= 0.60:
+            return candidates[0].table
 
     return ""
 
@@ -205,138 +209,22 @@ def _candidate_route_specs() -> list[dict]:
 _ROUTE_CANDIDATES_CACHE: dict = {}
 MAIN_REPORT_TABLE_ORDER = (TABLE_BS, TABLE_IS, TABLE_CF)
 MAIN_REPORT_TABLES = set(MAIN_REPORT_TABLE_ORDER)
-NOTE_FOLLOWUP_MARKERS = (
-    "thuyết minh",
-    "thuyet minh",
-    "note",
-    "chính sách kế toán",
-    "chinh sach ke toan",
-    "bên liên quan",
-    "ben lien quan",
-    "cam kết",
-    "cam ket",
-    "nghĩa vụ tiềm tàng",
-    "nghia vu tiem tang",
-    "rủi ro tài chính",
-    "rui ro tai chinh",
-    "sự kiện sau ngày",
-    "su kien sau ngay",
-    "kỳ hạn vay",
-    "ky han vay",
-    "tài sản bảo đảm",
-    "tai san bao dam",
-    "tài sản đảm bảo",
-    "tai san dam bao",
-    "cơ cấu nợ",
-    "co cau no",
-    "chi tiết khoản mục",
-    "chi tiet khoan muc",
-    "tài sản thuê ngoài",
-    "tai san thue ngoai",
-    # These rows are note-schedule revenue details, not the cash-flow/interest
-    # expense lines that share the token "lãi".
-    "lãi cho vay",
-    "lai cho vay",
-    "lãi tiền gửi ngân hàng",
-    "lai tien gui ngan hang",
-)
-REPORT_SECTION_MARKERS = (
-    "kiểm soát nội bộ",
-    "kiem soat noi bo",
-    "cơ sở hoạt động liên tục",
-    "co so hoat dong lien tuc",
-    "hoạt động liên tục",
-    "hoat dong lien tuc",
-    "going concern",
-    "báo cáo của ban tổng giám đốc",
-    "bao cao cua ban tong giam doc",
-    "báo cáo của ban giám đốc",
-    "bao cao cua ban giam doc",
-    "thông tin công ty",
-    "thong tin cong ty",
-    "khái quát về công ty",
-    "khai quat ve cong ty",
-    "địa chỉ",
-    "dia chi",
-    "trụ sở",
-    "tru so",
-    "trụ sở chính",
-    "tru so chinh",
-    "trụ sở hoạt động",
-    "tru so hoat dong",
-    "hoạt động kinh doanh chính",
-    "hoat dong kinh doanh chinh",
-    "giấy chứng nhận đăng ký doanh nghiệp",
-    "giay chung nhan dang ky doanh nghiep",
-    "chuẩn mực kế toán",
-    "chuan muc ke toan",
-    "chuẩn mực kế toán áp dụng",
-    "chuan muc ke toan ap dung",
-    "chế độ kế toán",
-    "che do ke toan",
-    "chế độ kế toán áp dụng",
-    "che do ke toan ap dung",
-    "tuyên bố tuân thủ chuẩn mực kế toán",
-    "tuyen bo tuan thu chuan muc ke toan",
-    "ban tổng giám đốc",
-    "ban tong giam doc",
-    "ban giám đốc",
-    "ban giam doc",
-    "ban điều hành",
-    "ban dieu hanh",
-    "ban điều hành quản lý",
-    "ban dieu hanh quan ly",
-    "hội đồng quản trị",
-    "hoi dong quan tri",
-    "ban kiểm soát",
-    "ban kiem soat",
-    "kế toán trưởng",
-    "ke toan truong",
-    "người đại diện theo pháp luật",
-    "nguoi dai dien theo phap luat",
-    "kiểm toán viên",
-    "kiem toan vien",
-    "đơn vị kiểm toán",
-    "don vi kiem toan",
-    "công ty kiểm toán",
-    "cong ty kiem toan",
-    "hãng kiểm toán",
-    "hang kiem toan",
-    "công ty thực hiện kiểm toán",
-    "cong ty thuc hien kiem toan",
-    "đơn vị thực hiện kiểm toán",
-    "don vi thuc hien kiem toan",
-    "công ty thực hiện kế toán kiểm toán",
-    "cong ty thuc hien ke toan kiem toan",
-    "báo cáo kiểm toán",
-    "bao cao kiem toan",
-    "báo cáo soát xét",
-    "bao cao soat xet",
-    "ý kiến kiểm toán",
-    "y kien kiem toan",
-    "kết luận của kiểm toán viên",
-    "ket luan cua kiem toan vien",
-    "kết luận soát xét",
-    "ket luan soat xet",
-    "vấn đề cần nhấn mạnh",
-    "van de can nhan manh",
-    "người ký",
-    "nguoi ky",
-    "ngày ký",
-    "ngay ky",
-    "ngày lập báo cáo",
-    "ngay lap bao cao",
-)
 
 
 def _requires_note_followup(requirement: str) -> bool:
-    text = str(requirement or "").strip().lower()
-    return any(marker in text for marker in NOTE_FOLLOWUP_MARKERS)
+    return any(
+        candidate.table == TABLE_NOTE and candidate.confidence >= 0.80
+        for candidate in route_candidates(requirement)
+    )
 
 
 def _requires_report_section_followup(requirement: str) -> bool:
-    text = str(requirement or "").strip().lower()
-    return any(marker in text for marker in REPORT_SECTION_MARKERS)
+    candidates = route_candidates(requirement)
+    return bool(
+        candidates
+        and candidates[0].table == TABLE_REPORT_SECTION
+        and candidates[0].confidence >= 0.85
+    )
 
 
 def _direct_line_item_evidence_from_query(user_query: str) -> list[dict]:
@@ -374,6 +262,10 @@ def _entity_evidence_from_query(user_query: str) -> list[dict]:
     if not raw_query:
         return []
 
+    calculation_items = _calculation_operand_evidence_items(raw_query)
+    if calculation_items:
+        return calculation_items
+
     items: list[dict] = []
     seen_tables: set[str] = set()
 
@@ -383,16 +275,9 @@ def _entity_evidence_from_query(user_query: str) -> list[dict]:
             seen_tables.add(table)
             items.append({"table": table, "query": raw_query, "needby": []})
 
-    if _requires_report_section_followup(raw_query):
-        _add(TABLE_REPORT_SECTION)
-        return items
-
-    matches = _matching_main_report_keywords(raw_query)
-    for table in MAIN_REPORT_TABLE_ORDER:
-        if matches.get(table):
-            _add(table)
-    if _requires_note_followup(raw_query):
-        _add(TABLE_NOTE)
+    for candidate in route_candidates(raw_query):
+        if candidate.confidence >= 0.60:
+            _add(candidate.table)
 
     return items
 
@@ -662,64 +547,18 @@ def _followup_route_hints_from_worker_plan(worker_plan: dict) -> dict[str, str]:
 
 
 def _heuristic_followup_route(requirement: str) -> str:
-    text = normalize_keyword_synonyms(requirement)
-
-    if _requires_report_section_followup(text):
-        return TABLE_REPORT_SECTION
-
-    if _requires_note_followup(text):
-        return TABLE_NOTE
-
-    if any(
-        marker in text
-        for marker in (
-            "dòng tiền",
-            "lưu chuyển tiền",
-            "tiền thu",
-            "tiền chi",
-            "trả nợ",
-            "vay",
-            "cổ tức",
-        )
-    ):
-        return TABLE_CF
-
-    if any(
-        marker in text
-        for marker in (
-            "vốn chủ sở hữu",
-            "tổng tài sản",
-            "tổng cộng tài sản",
-            "nguồn vốn",
-            "nợ",
-            "hàng tồn kho",
-            "phải thu",
-            "phải trả",
-        )
-    ):
-        return TABLE_BS
-
+    candidates = route_candidates(requirement)
+    if candidates and candidates[0].confidence >= 0.60:
+        return candidates[0].table
     # Unknown follow-ups remain unscoped instead of silently querying IS.
     return ""
 
 
 def _route_followup_requirement(requirement: str, hint: Optional[str] = None) -> str:
     normalized_requirement = str(requirement or "").strip().lower()
-    if _requires_report_section_followup(normalized_requirement):
-        return TABLE_REPORT_SECTION
-
-    main_report_route = _main_report_route_for_requirement(normalized_requirement)
-    if main_report_route:
-        return main_report_route
-
-    if _requires_note_followup(normalized_requirement):
-        return TABLE_NOTE
-
-    # A stale NOTE hint must not override an explicit main-statement concept
-    # such as "tổng tài sản" or the alias "tài sản lưu động".
-    heuristic_route = _heuristic_followup_route(normalized_requirement)
-    if heuristic_route in MAIN_REPORT_TABLES:
-        return heuristic_route
+    candidates = route_candidates(normalized_requirement)
+    if candidates and candidates[0].confidence >= 0.60:
+        return candidates[0].table
 
     if hint:
         hinted_table = _normalize_evidence_table(hint)
@@ -750,7 +589,7 @@ def _route_followup_requirement(requirement: str, hint: Optional[str] = None) ->
     if best_candidate and best_score >= 1.0:
         return str(best_candidate.get("table", "") or "").strip()
 
-    return heuristic_route
+    return _heuristic_followup_route(normalized_requirement)
 
 
 def _normalize_followup_router_targets(
@@ -1166,12 +1005,431 @@ def _evidence_queries_from_raw_item(item: dict) -> list[str]:
     return _dedupe_keep_order([str(value).strip() for value in raw_items if str(value).strip()])
 
 
+def _typed_calculation_metadata(query: str, table: str) -> dict:
+    """Build a contract only when every operand is explicit and direction is fixed."""
+
+    slots = parse_query_slots(query)
+    coverage_metadata = {
+        "coverage_template": slots.coverage_template,
+        "required_legs": list(slots.required_legs),
+    } if slots.coverage_template and slots.required_legs else {}
+    if slots.operation in {"ratio", "share"} and len(slots.operands) == 2:
+        operands = []
+        matrix_ratio = _is_multi_value_type_ratio(slots)
+        note_share_schedule = bool(
+            slots.operation == "share"
+            and _ratio_operands_share_schedule(slots)
+        )
+        for operand in slots.operands:
+            operand_table = _operand_contract_table(
+                slots,
+                operand,
+                fallback_table=table,
+            )
+            if matrix_ratio or note_share_schedule:
+                operand_table = TABLE_NOTE
+            operands.append(
+                {
+                    "role": operand.role,
+                    "query": operand.query,
+                    "metric": operand.metric,
+                    "entity": operand.entity,
+                    "period": operand.period,
+                    "period_role": operand.period_role,
+                    "reporting_basis": operand.reporting_basis,
+                    "period_label": operand.period_label,
+                    "value_type": operand.value_type,
+                    "aggregation_level": operand.aggregation,
+                    "scope_label": operand.scope_label,
+                    "counterparty": operand.counterparty,
+                    "transaction_type": operand.transaction_type,
+                    "movement_type": operand.movement_type,
+                    "geography": operand.geography,
+                    "policy_topic": operand.policy_topic,
+                    "section_key": operand.section_key,
+                    **({"table": operand_table} if operand_table else {}),
+                }
+            )
+        return {
+            **coverage_metadata,
+            "operation": slots.operation,
+            "operands": operands,
+        }
+
+    if (
+        not slots.metric
+        or not _two_period_operand_specs(query, slots)
+        or len(slots.value_type) > 1
+        or slots.operation
+        not in {"delta", "percent_change", "multiple"}
+    ):
+        return coverage_metadata
+
+    common = {
+        "query": str(query or "").strip(),
+        "metric": slots.metric,
+        "entity": slots.entity,
+        "value_type": slots.value_type[0] if slots.value_type else "",
+        "aggregation_level": slots.aggregation,
+        "scope_label": slots.scope_label,
+        "counterparty": slots.counterparty,
+        "transaction_type": slots.transaction_type,
+        "movement_type": slots.movement_type,
+        "geography": slots.geography,
+        "policy_topic": slots.policy_topic,
+        "section_key": slots.section_key,
+        "reporting_basis": slots.reporting_basis,
+    }
+    if table:
+        common["table"] = table
+    roles = _two_period_operand_specs(query, slots)
+
+    return {
+        **coverage_metadata,
+        "operation": slots.operation,
+        "operands": [
+            {
+                **common,
+                "role": role,
+                "query": operand_query,
+                "period": period,
+                "period_label": (
+                    (parse_query_slots(operand_query).period_labels or ("",))[0]
+                ),
+                "reporting_basis": (
+                    parse_query_slots(operand_query).reporting_basis
+                    or slots.reporting_basis
+                ),
+                **({"period_role": period_role} if period_role else {}),
+            }
+            for role, operand_query, period, period_role in roles
+        ],
+    }
+
+
+def _two_period_operand_specs(query: str, slots) -> tuple[tuple[str, str, str, str], ...]:
+    """Return ordered, self-contained current/previous retrieval legs."""
+
+    temporal_specs: tuple[tuple[str, str, str, str], ...] = ()
+    if slots.period_role == "both":
+        temporal_specs = (
+            ("current", "năm nay", "", "current"),
+            ("previous", "năm trước", "", "previous"),
+        )
+    elif slots.period == "both":
+        temporal_specs = (
+            ("current", "cuối kỳ", "cuối", ""),
+            ("previous", "đầu kỳ", "đầu", ""),
+        )
+    elif len(slots.period_labels) >= 2:
+        first, second = slots.period_labels[:2]
+        # "từ A đến B" declares B - A.  Other common forms name the target
+        # first ("2025 so với 2024", "2025 và 2024").
+        if re.search(
+            r"\b(?:từ|tu)\b.+\b(?:đến|den)\b",
+            str(query or "").casefold(),
+        ):
+            current_label, previous_label = second, first
+        else:
+            current_label, previous_label = first, second
+        temporal_specs = (
+            ("current", current_label, "", "current"),
+            ("previous", previous_label, "", "previous"),
+        )
+    if not temporal_specs:
+        return ()
+
+    base_parts = [slots.metric]
+    if (
+        slots.aggregation == "total"
+        and not re.search(
+            r"\b(?:tổng|tong)\b",
+            str(slots.metric or "").casefold(),
+        )
+    ):
+        base_parts.insert(0, "tổng")
+    for value in (
+        slots.entity,
+        slots.scope_label,
+        slots.counterparty,
+        slots.geography,
+    ):
+        if str(value or "").strip():
+            base_parts.append(str(value).strip())
+    if slots.value_type:
+        base_parts.extend(slots.value_type)
+
+    base = " ".join(_dedupe_keep_order(base_parts)).strip()
+    return tuple(
+        (
+            role,
+            " ".join(part for part in (base, label) if part).strip(),
+            period,
+            period_role,
+        )
+        for role, label, period, period_role in temporal_specs
+    )
+
+
+def _is_multi_value_type_ratio(slots) -> bool:
+    operands = tuple(getattr(slots, "operands", ()) or ())
+    if len(operands) != 2:
+        return False
+    metrics = {str(operand.metric or "").strip().casefold() for operand in operands}
+    value_types = {
+        str(operand.value_type or "").strip().casefold()
+        for operand in operands
+        if str(operand.value_type or "").strip()
+    }
+    return len(metrics) == 1 and "" not in metrics and len(value_types) == 2
+
+
+def _strong_operand_route_tables(operand) -> list[str]:
+    return _dedupe_keep_order(
+        [
+            candidate.table
+            for candidate in route_candidates(operand.query)
+            if candidate.confidence >= 0.60
+        ]
+    )[:2]
+
+
+def _operand_contract_table(slots, operand, *, fallback_table: str = "") -> str:
+    """Pin a calculation leg only when its semantic route is unambiguous."""
+
+    if _is_multi_value_type_ratio(slots):
+        return TABLE_NOTE
+    strong_tables = _strong_operand_route_tables(operand)
+    return strong_tables[0] if len(strong_tables) == 1 else ""
+
+
+def _operand_route_tables(slots, operand, *, fallback_table: str = "") -> list[str]:
+    """Return a bounded route set for one calculation leg.
+
+    A same-metric, multi-value-type ratio is a matrix/schedule lookup.  Its
+    detailed cost/depreciation columns normally live in NOTE, while the main
+    statement route is retained as a bounded fallback.
+    """
+
+    tables = []
+    if _is_multi_value_type_ratio(slots):
+        tables.append(TABLE_NOTE)
+    strong_tables = _strong_operand_route_tables(operand)
+    for candidate_table in strong_tables:
+        if candidate_table not in tables:
+            tables.append(candidate_table)
+    # A specific share numerator that has no confident statement route is
+    # normally a schedule component.  Keep NOTE as a bounded candidate while
+    # retaining the statement fallback; this is not a global note expansion.
+    if (
+        not strong_tables
+        and slots.operation == "share"
+        and operand.role == "numerator"
+        and TABLE_NOTE not in tables
+    ):
+        tables.append(TABLE_NOTE)
+    fallback = _normalize_evidence_table(fallback_table)
+    if fallback and fallback not in tables:
+        tables.append(fallback)
+    return tables[:2]
+
+
+def _ratio_operands_share_schedule(slots) -> bool:
+    if len(slots.operands) != 2:
+        return False
+    numerator, denominator = slots.operands
+    left = {
+        token
+        for token in _text_tokens(numerator.metric)
+        if token not in {"tong", "cong"}
+    }
+    right = {
+        token
+        for token in _text_tokens(denominator.metric)
+        if token not in {"tong", "cong"}
+    }
+    return bool(left and right and left.intersection(right))
+
+
+def _ratio_operand_evidence_items(
+    query: str,
+    *,
+    needby: list[str] | None = None,
+    fallback_table: str = "",
+) -> list[dict]:
+    slots = parse_query_slots(query)
+    if slots.operation not in {"ratio", "share"} or len(slots.operands) != 2:
+        return []
+
+    contract = _typed_calculation_metadata(query, fallback_table).get("operands", [])
+    if len(contract) != 2:
+        return []
+    needed_by = _dedupe_keep_order(needby or [])
+    tables_by_role = {
+        operand.role: _operand_route_tables(
+            slots,
+            operand,
+            fallback_table=fallback_table,
+        )
+        for operand in slots.operands
+    }
+    if (
+        _ratio_operands_share_schedule(slots)
+        and TABLE_NOTE in tables_by_role.get("numerator", [])
+        and TABLE_NOTE not in tables_by_role.get("denominator", [])
+    ):
+        tables_by_role["denominator"] = (
+            tables_by_role.get("denominator", []) + [TABLE_NOTE]
+        )[:2]
+
+    items = []
+    for operand in slots.operands:
+        for table in tables_by_role.get(operand.role, []):
+            items.append(
+                {
+                    "table": table,
+                    "query": operand.query,
+                    "canonical_query": operand.metric,
+                    "search_query": operand.query,
+                    "needby": needed_by,
+                    "operation": slots.operation,
+                    "operand_role": operand.role,
+                    "operands": contract,
+                    "period": operand.period,
+                    "period_role": operand.period_role,
+                    "reporting_basis": operand.reporting_basis,
+                    "period_label": operand.period_label,
+                    "value_type": operand.value_type,
+                    "scope_label": operand.scope_label,
+                    "counterparty": operand.counterparty,
+                    "transaction_type": operand.transaction_type,
+                    "movement_type": operand.movement_type,
+                    "geography": operand.geography,
+                    "policy_topic": operand.policy_topic,
+                    "section_key": operand.section_key,
+                }
+            )
+    return items
+
+
+def _period_operand_evidence_items(
+    query: str,
+    *,
+    needby: list[str] | None = None,
+    fallback_table: str = "",
+) -> list[dict]:
+    slots = parse_query_slots(query)
+    if slots.operation not in {"delta", "percent_change", "multiple"}:
+        return []
+    fallback = _normalize_evidence_table(fallback_table)
+    if not fallback:
+        fallback = next(
+            (
+                candidate.table
+                for candidate in route_candidates(query)
+                if candidate.confidence >= 0.60
+            ),
+            "",
+        )
+    metadata = _typed_calculation_metadata(query, fallback)
+    contract = metadata.get("operands", [])
+    if len(contract) != 2:
+        return []
+
+    needed_by = _dedupe_keep_order(needby or [])
+
+    items = []
+    for operand in contract:
+        operand_query = str(operand.get("query", "") or "").strip()
+        tables = _dedupe_keep_order(
+            [
+                candidate.table
+                for candidate in route_candidates(operand_query)
+                if candidate.confidence >= 0.60
+            ]
+            + ([fallback] if fallback else [])
+        )[:2]
+        for table in tables:
+            items.append(
+                {
+                    "table": table,
+                    "query": operand_query,
+                    "canonical_query": str(operand.get("metric", "") or "").strip(),
+                    "search_query": operand_query,
+                    "needby": needed_by,
+                    "operation": slots.operation,
+                    "operand_role": operand.get("role", ""),
+                    "operands": contract,
+                    "period": operand.get("period", ""),
+                    "period_role": operand.get("period_role", ""),
+                    "reporting_basis": operand.get("reporting_basis", ""),
+                    "period_label": operand.get("period_label", ""),
+                    "value_type": operand.get("value_type", ""),
+                    "scope_label": operand.get("scope_label", ""),
+                    "counterparty": operand.get("counterparty", ""),
+                    "transaction_type": operand.get("transaction_type", ""),
+                    "movement_type": operand.get("movement_type", ""),
+                    "geography": operand.get("geography", ""),
+                    "policy_topic": operand.get("policy_topic", ""),
+                    "section_key": operand.get("section_key", ""),
+                }
+            )
+    return items
+
+
+def _calculation_operand_evidence_items(
+    query: str,
+    *,
+    needby: list[str] | None = None,
+    fallback_table: str = "",
+) -> list[dict]:
+    ratio_items = _ratio_operand_evidence_items(
+        query,
+        needby=needby,
+        fallback_table=fallback_table,
+    )
+    if ratio_items:
+        return ratio_items
+    return _period_operand_evidence_items(
+        query,
+        needby=needby,
+        fallback_table=fallback_table,
+    )
+
+
+def _expand_ratio_evidence_items(items: list[Any]) -> list[dict]:
+    expanded = []
+    for item in items or []:
+        if not isinstance(item, dict):
+            continue
+        queries = _evidence_queries_from_raw_item(item) or [""]
+        for query in queries:
+            candidate = dict(item)
+            candidate["query"] = query
+            calculation_items = []
+            if not str(candidate.get("operand_role", "") or "").strip():
+                calculation_items = _calculation_operand_evidence_items(
+                    query,
+                    needby=_needby_values(candidate),
+                    fallback_table=_table_from_route_payload(candidate),
+                )
+            if calculation_items:
+                source = str(candidate.get("source", "") or "").strip()
+                for calculation_item in calculation_items:
+                    if source:
+                        calculation_item["source"] = source
+                    expanded.append(calculation_item)
+            else:
+                expanded.append(candidate)
+    return expanded
+
+
 def _normalize_evidence_plan_payloads(items: list[Any]) -> list[dict]:
     normalized: list[dict] = []
     merged_by_key: dict[tuple[str, str, str], dict] = {}
     order: list[tuple[str, str, str]] = []
 
-    for item in items or []:
+    for item in _expand_ratio_evidence_items(items):
         if not isinstance(item, dict):
             continue
 
@@ -1188,11 +1446,35 @@ def _normalize_evidence_plan_payloads(items: list[Any]) -> list[dict]:
                 continue
 
             payload = evidence_item.model_dump(exclude_none=True)
+            for field in (
+                "web_intent",
+                "canonical_query",
+                "search_query",
+                "period",
+                "period_role",
+                "period_label",
+                "value_type",
+                "scope_label",
+                "counterparty",
+                "transaction_type",
+                "movement_type",
+                    "geography",
+                    "policy_topic",
+                    "section_key",
+                    "source",
+            ):
+                if item.get(field) not in ("", None, [], {}):
+                    payload[field] = item.get(field)
             table = (
                 _normalize_evidence_table(payload.get("table", ""))
                 or _table_for_allowed_query(payload.get("query", ""))
             )
-            query_text = _normalize_followup_requirement_for_target(payload.get("query", ""), table)
+            raw_query_text = str(payload.get("query", "") or "").strip()
+            query_text = (
+                raw_query_text
+                if str(payload.get("operand_role", "") or "").strip()
+                else _normalize_followup_requirement_for_target(raw_query_text, table)
+            )
             if not query_text:
                 continue
 
@@ -1208,6 +1490,15 @@ def _normalize_evidence_plan_payloads(items: list[Any]) -> list[dict]:
             supplemental = _supplemental_main_report_table(table, query_text)
             if supplemental and supplemental != table:
                 tables_for_query.append(supplemental)
+            # Recall-first augmentation: never replaces the table the router
+            # chose, only also fetches the main-report line the query names.
+            # Measured load-bearing (A/B 2026-09-03: disabling it cut cash-flow
+            # facts 39 -> 1), so it is independent of the model_first switch.
+            if evidence_augmentation_enabled():
+                threshold = active_policy().routing.fallback_confidence_threshold
+                for route in route_candidates(query_text):
+                    if route.confidence >= threshold and route.table not in tables_for_query:
+                        tables_for_query.append(route.table)
 
             for plan_table in tables_for_query:
                 key = (plan_table, query_text)
@@ -1217,7 +1508,42 @@ def _normalize_evidence_plan_payloads(items: list[Any]) -> list[dict]:
                         "query": query_text,
                         "needby": [],
                     }
+                    canonical_query = str(payload.get("canonical_query", "") or "").strip()
+                    search_query = str(payload.get("search_query", "") or "").strip()
+                    if canonical_query and canonical_query != query_text:
+                        merged_by_key[key]["canonical_query"] = canonical_query
+                    if search_query and search_query != query_text:
+                        merged_by_key[key]["search_query"] = search_query
                     order.append(key)
+
+                calculation_metadata = {
+                    field: payload.get(field)
+                    for field in (
+                        "operation",
+                        "operand_role",
+                        "operands",
+                        "period",
+                        "period_role",
+                        "period_label",
+                        "value_type",
+                        "scope_label",
+                        "counterparty",
+                        "transaction_type",
+                        "movement_type",
+                        "geography",
+                        "policy_topic",
+                        "section_key",
+                        "source",
+                    )
+                    if payload.get(field) not in ("", None, [], {})
+                }
+                if not calculation_metadata:
+                    calculation_metadata = _typed_calculation_metadata(
+                        str(payload.get("query", "") or query_text), plan_table
+                    )
+                for field, value in calculation_metadata.items():
+                    if merged_by_key[key].get(field) in ("", None, [], {}):
+                        merged_by_key[key][field] = value
 
                 merged_by_key[key]["needby"] = _dedupe_keep_order(
                     list(merged_by_key[key].get("needby", []) or []) + needby
@@ -1330,6 +1656,69 @@ def _planner_analysis_targets(planner_plan: dict) -> list[dict]:
     return [merged[agent] for agent in order]
 
 
+def _planner_axis_agents(planner_plan: dict) -> list[str]:
+    """Analysis agents the planner actually chose, in planner order."""
+
+    order: list[str] = []
+    for axis in ((planner_plan or {}).get("analysis_axes", []) or []):
+        if not isinstance(axis, dict):
+            continue
+        agent = str(axis.get("axis", "") or "").strip()
+        if is_analysis_agent(agent) and agent not in order:
+            order.append(agent)
+    return order
+
+
+def reconcile_analysis_plan_coverage(
+    analysis_plan: list[dict],
+    planner_plan: dict,
+) -> tuple[list[dict], list[str]]:
+    """Make the analysis plan cover exactly the planner's axes.
+
+    A planner axis with no analysis item is an agent that will never run, and
+    the final answer would then be missing that aspect with nothing in the trace
+    to explain it.  Missing agents are materialized from the planner's own axis
+    and objective; no agent is inferred beyond what the model chose.
+    """
+
+    axis_agents = _planner_axis_agents(planner_plan)
+    if not axis_agents:
+        return list(analysis_plan or []), []
+
+    by_agent: dict[str, dict] = {}
+    for item in analysis_plan or []:
+        if not isinstance(item, dict):
+            continue
+        agent = str(item.get("agent", "") or "").strip()
+        if agent and agent not in by_agent:
+            by_agent[agent] = dict(item)
+
+    planned_by_agent = {
+        target["agent"]: target for target in _planner_analysis_targets(planner_plan)
+    }
+
+    notes: list[str] = []
+    reconciled: list[dict] = []
+    for agent in axis_agents:
+        item = by_agent.get(agent)
+        if item is None:
+            planned = planned_by_agent.get(agent, {})
+            objective = str(planned.get("objective", "") or "").strip()
+            if not objective:
+                objective = "; ".join(planned.get("objectives", []) or [])
+            if not objective:
+                objective = ANALYSIS_ASPECT_LABELS.get(agent, agent)
+            item = {"agent": agent, "objective": objective, "evidence_queries": []}
+            notes.append(f"materialized_from_axis:{agent}")
+        reconciled.append(item)
+
+    for agent in by_agent:
+        if agent not in axis_agents:
+            notes.append(f"dropped_unplanned_agent:{agent}")
+
+    return reconciled, notes
+
+
 def _user_query_mentions_optional_requirement(user_query: str, requirement: str) -> bool:
     query_text = str(user_query or "").strip().lower()
     requirement_text = str(requirement or "").strip().lower()
@@ -1403,15 +1792,509 @@ def _merge_table_targets(table_targets: list[dict]) -> list[dict]:
     return [merged[key] for key in order]
 
 
+_ANALYSIS_QUERY_FOCUS_MARKERS = {
+    "agent_profitability": (
+        "doanh thu",
+        "giá vốn",
+        "lợi nhuận",
+        "thu nhập",
+        "chi phí",
+        "eps",
+        "lãi cơ bản trên cổ phiếu",
+        "tổng cộng tài sản",
+        "vốn chủ sở hữu",
+    ),
+    "agent_liquidity_solvency": (
+        "tài sản ngắn hạn",
+        "nợ ngắn hạn",
+        "nợ dài hạn",
+        "nợ phải trả",
+        "vốn chủ sở hữu",
+        "hàng tồn kho",
+        "phải thu",
+        "phải trả",
+        "tiền và các khoản tương đương tiền",
+        "đầu tư tài chính ngắn hạn",
+        "chi phí lãi vay",
+        "vay",
+    ),
+    "agent_cashflow_analysis": (
+        "lưu chuyển tiền",
+        "dòng tiền",
+        "tiền thu",
+        "tiền chi",
+        "trả nợ gốc",
+        "đi vay",
+        "cổ tức",
+        "capex",
+        "lợi nhuận sau thuế",
+    ),
+    "agent_efficiency": (
+        "doanh thu",
+        "giá vốn",
+        "tổng cộng tài sản",
+        "tài sản cố định",
+        "hàng tồn kho",
+        "phải thu",
+        "phải trả người bán",
+        "chi phí bán hàng",
+    ),
+}
+_PRIMARY_ANALYSIS_AGENT_BY_TABLE = {
+    TABLE_BS: "agent_liquidity_solvency",
+    TABLE_IS: "agent_profitability",
+    TABLE_CF: "agent_cashflow_analysis",
+}
+_BROAD_PROFITABILITY_ASSESSMENT_PATTERNS = (
+    r"\bkha nang sinh loi\b",
+    r"\bhieu qua sinh loi\b",
+    r"\bprofitability\b",
+)
+_BROAD_PROFITABILITY_CORE_METRICS = (
+    (
+        TABLE_IS,
+        "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+        ("agent_profitability", "agent_efficiency"),
+        "flow",
+    ),
+    (
+        TABLE_IS,
+        "lợi nhuận gộp về bán hàng và cung cấp dịch vụ",
+        ("agent_profitability",),
+        "flow",
+    ),
+    (
+        TABLE_IS,
+        "lợi nhuận thuần từ hoạt động kinh doanh",
+        ("agent_profitability",),
+        "flow",
+    ),
+    (
+        TABLE_IS,
+        "lợi nhuận sau thuế thu nhập doanh nghiệp",
+        ("agent_profitability", "agent_cashflow_analysis"),
+        "flow",
+    ),
+    (
+        TABLE_BS,
+        "tổng cộng tài sản",
+        ("agent_profitability", "agent_efficiency"),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "tổng vốn chủ sở hữu",
+        ("agent_profitability", "agent_liquidity_solvency"),
+        "stock",
+    ),
+    (
+        TABLE_CF,
+        "lưu chuyển tiền thuần từ hoạt động kinh doanh",
+        ("agent_cashflow_analysis",),
+        "flow",
+    ),
+)
+_COMPREHENSIVE_FINANCIAL_CORE_METRICS = (
+    *_BROAD_PROFITABILITY_CORE_METRICS,
+    (
+        TABLE_IS,
+        "giá vốn hàng bán và dịch vụ cung cấp",
+        ("agent_profitability", "agent_efficiency"),
+        "flow",
+    ),
+    (
+        TABLE_IS,
+        "chi phí lãi vay",
+        ("agent_liquidity_solvency",),
+        "flow",
+    ),
+    (
+        TABLE_BS,
+        "tổng tài sản ngắn hạn",
+        ("agent_liquidity_solvency",),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "tổng nợ ngắn hạn",
+        ("agent_liquidity_solvency",),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "tổng nợ phải trả",
+        ("agent_liquidity_solvency",),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "tiền và các khoản tương đương tiền",
+        ("agent_liquidity_solvency", "agent_cashflow_analysis"),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "hàng tồn kho",
+        ("agent_liquidity_solvency", "agent_efficiency"),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "các khoản phải thu ngắn hạn",
+        ("agent_liquidity_solvency", "agent_efficiency"),
+        "stock",
+    ),
+    (
+        TABLE_BS,
+        "phải trả người bán ngắn hạn",
+        ("agent_efficiency",),
+        "stock",
+    ),
+    (
+        TABLE_CF,
+        "lưu chuyển tiền thuần từ hoạt động đầu tư",
+        ("agent_cashflow_analysis",),
+        "flow",
+    ),
+    (
+        TABLE_CF,
+        "lưu chuyển tiền thuần từ hoạt động tài chính",
+        ("agent_cashflow_analysis",),
+        "flow",
+    ),
+    (
+        TABLE_CF,
+        "lưu chuyển tiền thuần trong kỳ",
+        ("agent_cashflow_analysis",),
+        "flow",
+    ),
+)
+_BROAD_PROFITABILITY_CORE_ALIASES = {
+    "lợi nhuận gộp về bán hàng và cung cấp dịch vụ": {"lợi nhuận gộp"},
+    "tổng vốn chủ sở hữu": {"vốn chủ sở hữu"},
+}
+
+
+def _is_broad_profitability_assessment(
+    planner_plan: dict,
+    user_query: str,
+    analysis_targets: list[dict],
+) -> bool:
+    """Recognize only the hard, overall profitability path.
+
+    A standalone ROA/ROE/margin request must keep its narrow retrieval plan. The
+    broad path is already normalized by Planner, so Router only needs to enforce
+    the core operands that every comparative profitability assessment consumes.
+    """
+
+    difficulty = str(
+        planner_plan.get("difficulty_level", "") or ""
+    ).strip().lower()
+    if difficulty != "hard":
+        return False
+    response_mode = str(planner_plan.get("response_mode", "") or "").strip().lower()
+    if response_mode not in {"", "extractive"}:
+        return False
+    planned_agents = {
+        str(target.get("agent", "") or "").strip()
+        for target in (analysis_targets or [])
+        if isinstance(target, dict)
+    }
+    comprehensive_agents = {
+        "agent_profitability",
+        "agent_liquidity_solvency",
+        "agent_cashflow_analysis",
+        "agent_efficiency",
+    }
+    return (
+        "agent_profitability" in planned_agents
+        and (
+            comprehensive_agents.issubset(planned_agents)
+            or contains_intent(
+                user_query,
+                _BROAD_PROFITABILITY_ASSESSMENT_PATTERNS,
+            )
+        )
+    )
+
+
+def _is_comprehensive_financial_assessment(
+    planner_plan: dict,
+    analysis_targets: list[dict],
+) -> bool:
+    if str(planner_plan.get("difficulty_level", "") or "").lower() != "hard":
+        return False
+    planned_agents = {
+        str(target.get("agent", "") or "").strip()
+        for target in (analysis_targets or [])
+        if isinstance(target, dict)
+    }
+    return {
+        "agent_profitability",
+        "agent_liquidity_solvency",
+        "agent_cashflow_analysis",
+        "agent_efficiency",
+    }.issubset(planned_agents)
+
+
+def _profitability_comparison_suffix(user_query: str) -> str:
+    """Use explicit report years when supplied, otherwise current/prior roles."""
+
+    labels = [
+        str(label).strip()
+        for label in parse_query_slots(user_query).period_labels
+        if re.fullmatch(r"(?:19|20)\d{2}", str(label).strip())
+    ]
+    if len(labels) >= 2:
+        return f"năm {labels[0]} và năm {labels[1]}"
+    if len(labels) == 1:
+        current_year = int(labels[0])
+        return f"năm {current_year} và năm {current_year - 1}"
+    return "năm nay và năm trước"
+
+
+def _unscoped_core_profitability_metric(
+    item: dict,
+    *,
+    core_metrics: tuple = _BROAD_PROFITABILITY_CORE_METRICS,
+) -> tuple[str, str] | None:
+    """Return a core metric only for its consolidated main-statement route."""
+
+    table = _normalize_evidence_table(item.get("table", ""))
+    if table not in {TABLE_BS, TABLE_IS, TABLE_CF}:
+        return None
+    queries = _evidence_item_queries(item)
+    if len(queries) != 1:
+        return None
+    slots = parse_query_slots(queries[0])
+    if any(
+        str(value or "").strip()
+        for value in (
+            slots.entity,
+            slots.scope_label,
+            slots.counterparty,
+            slots.geography,
+            slots.policy_topic,
+        )
+    ):
+        return None
+    metric = normalize_keyword_synonyms(slots.metric)
+    for (
+        core_table,
+        core_metric,
+        _audience,
+        _period_kind,
+    ) in core_metrics:
+        aliases = _BROAD_PROFITABILITY_CORE_ALIASES.get(core_metric, set())
+        if table == core_table and (metric == core_metric or metric in aliases):
+            return (core_table, core_metric)
+    return None
+
+
+def _keep_broad_profitability_support_item(
+    item: dict,
+    *,
+    user_query: str,
+    planned_agents: list[str],
+) -> bool:
+    """Keep only support explicitly requested outside the canonical core.
+
+    The broad profitability contract already supplies every operand used by its
+    three default analysis axes. Router guesses such as current assets/current
+    liabilities or a generic NOTE lookup add requirements the agents then try
+    to close, despite the user never asking for them. Explicitly named metrics
+    remain eligible, as do facts assigned to a planned sustainability/liquidity
+    axis.
+    """
+
+    if not isinstance(item, dict):
+        return False
+    needby = _needby_values(item)
+    if (
+        "agent_liquidity_solvency" in planned_agents
+        and "agent_liquidity_solvency" in needby
+    ):
+        return True
+
+    table = _normalize_evidence_table(item.get("table", ""))
+    if table in {TABLE_NOTE, TABLE_REPORT_SECTION} and contains_intent(
+        user_query,
+        (
+            r"\bthuyet minh\b",
+            r"\bchinh sach\b",
+            r"\bchi tiet\b",
+        ),
+    ):
+        return True
+
+    user_text = normalize_keyword_synonyms(user_query).casefold()
+    for query in _evidence_item_queries(item):
+        if " ".join(query.casefold().split()) == " ".join(
+            str(user_query or "").casefold().split()
+        ):
+            # `_entity_evidence_from_query` may fan the entire analytical
+            # sentence back out as a retrieval query. Canonical core/support
+            # items already carry its actual line-item metrics.
+            continue
+        slots = parse_query_slots(query)
+        for value in (
+            slots.metric,
+            slots.entity,
+            slots.scope_label,
+            slots.counterparty,
+            slots.geography,
+        ):
+            term = normalize_keyword_synonyms(value).casefold().strip()
+            if term and term in user_text:
+                return True
+    return False
+
+
+def _ensure_broad_profitability_core_evidence(
+    evidence_plan: list[dict],
+    *,
+    planner_plan: dict,
+    user_query: str,
+    analysis_targets: list[dict],
+) -> list[dict]:
+    """Prepend complete comparative profitability inputs and audiences.
+
+    Planner objectives are guidance for the Router model, not an evidence
+    contract. Enforcing the metric pairs after model routing prevents any omitted
+    operand from making margins/returns/cash-conversion impossible. Core pairs
+    are placed first so per-statement prompt caps cannot discard them behind
+    optional facts.
+    """
+
+    if not _is_broad_profitability_assessment(
+        planner_plan,
+        user_query,
+        analysis_targets,
+    ):
+        return list(evidence_plan or [])
+
+    planned_agents = _dedupe_keep_order(
+        str(target.get("agent", "") or "").strip()
+        for target in (analysis_targets or [])
+        if isinstance(target, dict)
+        and is_analysis_agent(str(target.get("agent", "") or "").strip())
+    )
+    core_metrics = (
+        _COMPREHENSIVE_FINANCIAL_CORE_METRICS
+        if _is_comprehensive_financial_assessment(
+            planner_plan,
+            analysis_targets,
+        )
+        else _BROAD_PROFITABILITY_CORE_METRICS
+    )
+    inherited_audiences: dict[tuple[str, str], list[str]] = {}
+    remaining_items = []
+    for item in evidence_plan or []:
+        if not isinstance(item, dict):
+            continue
+        metric_key = _unscoped_core_profitability_metric(
+            item,
+            core_metrics=core_metrics,
+        )
+        if metric_key is None:
+            if _keep_broad_profitability_support_item(
+                item,
+                user_query=user_query,
+                planned_agents=planned_agents,
+            ):
+                remaining_items.append(item)
+            continue
+        inherited_audiences[metric_key] = _dedupe_keep_order(
+            list(inherited_audiences.get(metric_key, []) or [])
+            + _needby_values(item)
+        )
+
+    flow_suffix = _profitability_comparison_suffix(user_query)
+    core_items = []
+    for table, metric, default_audience, period_kind in core_metrics:
+        needby = _dedupe_keep_order(
+            [
+                agent
+                for agent in (
+                    *default_audience,
+                    *inherited_audiences.get((table, metric), []),
+                )
+                if agent in planned_agents
+            ]
+        )
+        suffix = flow_suffix if period_kind == "flow" else "cuối kỳ và đầu kỳ"
+        core_items.append(
+            {
+                "table": table,
+                "query": f"{metric} {suffix}",
+                "canonical_query": metric,
+                "needby": needby or ["agent_profitability"],
+                **(
+                    {"period_role": "both"}
+                    if period_kind == "flow"
+                    else {"period": "both"}
+                ),
+            }
+        )
+
+    return [*core_items, *remaining_items]
+
+
+def _focused_needed_by(
+    table: str,
+    query: str,
+    analysis_targets: list[dict],
+) -> list[str]:
+    """Infer the smallest useful analysis audience for an unscoped fact."""
+
+    table_name = _normalize_evidence_table(table)
+    query_text = " ".join(str(query or "").strip().casefold().split())
+    planned_agents = _dedupe_keep_order(
+        str(target.get("agent", "") or "").strip()
+        for target in (analysis_targets or [])
+        if isinstance(target, dict)
+        and is_analysis_agent(str(target.get("agent", "") or "").strip())
+    )
+    compatible_agents = [
+        agent
+        for agent in planned_agents
+        if table_name in ANALYSIS_TABLE_ALLOWLIST.get(agent, set())
+    ]
+    if not compatible_agents:
+        return []
+
+    focused = [
+        agent
+        for agent in compatible_agents
+        if any(
+            marker in query_text
+            for marker in _ANALYSIS_QUERY_FOCUS_MARKERS.get(agent, ())
+        )
+    ]
+    # Every cash-flow statement line belongs to the cash-flow axis even if the
+    # caption is an unusual synonym not covered by the marker list.
+    if (
+        table_name == TABLE_CF
+        and "agent_cashflow_analysis" in compatible_agents
+        and "agent_cashflow_analysis" not in focused
+    ):
+        focused.append("agent_cashflow_analysis")
+    if focused:
+        return _dedupe_keep_order(focused)
+
+    primary = _PRIMARY_ANALYSIS_AGENT_BY_TABLE.get(table_name, "")
+    if primary in compatible_agents:
+        return [primary]
+
+    # A note or an uncommon line item with no recognizable focus still goes to
+    # one planned axis instead of being broadcast to every analysis worker.
+    return compatible_agents[:1]
+
+
 def _evidence_plan_from_table_targets(
     table_targets: list[dict],
     analysis_targets: list[dict],
 ) -> list[dict]:
-    analysis_agents = [
-        str(target.get("agent", "") or "").strip()
-        for target in analysis_targets or []
-        if str(target.get("agent", "") or "").strip()
-    ]
     evidence_plan = []
     seen = set()
 
@@ -1422,13 +2305,6 @@ def _evidence_plan_from_table_targets(
         if not table:
             continue
         requirements = _dedupe_keep_order(target.get("requirements", []) or [])
-        needed_by = [
-            analysis_agent
-            for analysis_agent in analysis_agents
-            if table in ANALYSIS_TABLE_ALLOWLIST.get(analysis_agent, set())
-        ]
-        if not needed_by and analysis_agents:
-            needed_by = list(analysis_agents)
 
         for requirement in requirements:
             query = _normalize_followup_requirement_for_target(requirement, table)
@@ -1442,7 +2318,11 @@ def _evidence_plan_from_table_targets(
                 {
                     "table": table,
                     "query": query,
-                    "needby": needed_by,
+                    "needby": _focused_needed_by(
+                        table,
+                        query,
+                        analysis_targets,
+                    ),
                 }
             )
 
@@ -1515,11 +2395,6 @@ def _analysis_targets_from_plan(analysis_plan: list[dict]) -> list[dict]:
 
 
 def _with_inferred_needed_by(evidence_plan: list[dict], analysis_targets: list[dict]) -> list[dict]:
-    analysis_agents = [
-        str(target.get("agent", "") or "").strip()
-        for target in analysis_targets or []
-        if is_analysis_agent(str(target.get("agent", "") or "").strip())
-    ]
     output = []
 
     for item in evidence_plan or []:
@@ -1536,13 +2411,11 @@ def _with_inferred_needed_by(evidence_plan: list[dict], analysis_targets: list[d
             table = ""
 
         explicit_needby = _needby_values(item)
-        inferred_needed_by = [
-            analysis_agent
-            for analysis_agent in analysis_agents
-            if table in ANALYSIS_TABLE_ALLOWLIST.get(analysis_agent, set())
-        ]
-        if not inferred_needed_by and analysis_agents:
-            inferred_needed_by = list(analysis_agents)
+        inferred_needed_by = _focused_needed_by(
+            table,
+            " | ".join(_evidence_item_queries(item)),
+            analysis_targets,
+        )
         needby = explicit_needby or inferred_needed_by
         for query in _evidence_item_queries(item):
             output.append(
@@ -1558,8 +2431,11 @@ def _with_inferred_needed_by(evidence_plan: list[dict], analysis_targets: list[d
 
 
 _EVIDENCE_METADATA_FIELDS = (
+    "web_intent",
     "time_hint",
     "period",
+    "period_role",
+    "period_label",
     "unit",
     "value_type",
     "evidence_query",
@@ -1567,6 +2443,18 @@ _EVIDENCE_METADATA_FIELDS = (
     "note_ref",
     "source_table",
     "source_item",
+    "operation",
+    "operand_role",
+    "operands",
+    "scope_label",
+    "counterparty",
+    "transaction_type",
+    "movement_type",
+    "geography",
+    "policy_topic",
+    "section_key",
+    "coverage_template",
+    "required_legs",
 )
 
 
@@ -1577,6 +2465,10 @@ def _query_metadata_for_item(item: dict, query: str) -> dict:
         metadata.update(per_query[query])
     for field in _EVIDENCE_METADATA_FIELDS:
         value = item.get(field) if isinstance(item, dict) else None
+        if value not in ("", None, [], {}) and field not in metadata:
+            metadata[field] = value
+    table = _table_from_route_payload(item) if isinstance(item, dict) else ""
+    for field, value in _typed_calculation_metadata(query, table).items():
         if value not in ("", None, [], {}) and field not in metadata:
             metadata[field] = value
     return metadata
@@ -1598,10 +2490,26 @@ def _merge_evidence_plans(*plans: list[dict]) -> list[dict]:
                     if table:
                         break
             for raw_query in _evidence_item_queries(item):
-                canonical_query = _normalize_followup_requirement_for_target(
-                    _first_query_map_value(item, "canonical_queries", "canonical_query", raw_query)
-                    or raw_query,
-                    table,
+                item_metadata = _query_metadata_for_item(item, raw_query)
+                raw_canonical_query = (
+                    _first_query_map_value(
+                        item,
+                        "canonical_queries",
+                        "canonical_query",
+                        raw_query,
+                    )
+                    or raw_query
+                )
+                canonical_query = (
+                    raw_canonical_query
+                    if str(
+                        item_metadata.get("operand_role", "")
+                        or item.get("operand_role", "")
+                    ).strip()
+                    else _normalize_followup_requirement_for_target(
+                        raw_canonical_query,
+                        table,
+                    )
                 )
                 query = raw_query or canonical_query
                 if not query:
@@ -1618,7 +2526,7 @@ def _merge_evidence_plans(*plans: list[dict]) -> list[dict]:
                         merged[key]["canonical_query"] = canonical_query
                     order.append(key)
 
-                for field, value in _query_metadata_for_item(item, raw_query).items():
+                for field, value in item_metadata.items():
                     if value not in ("", None, [], {}) and merged[key].get(field) in ("", None, [], {}):
                         merged[key][field] = value
 
@@ -1714,6 +2622,28 @@ def _compact_evidence_plan_by_table_needby(evidence_plan: list[dict]) -> list[di
                 payload["search_queries"] = search_queries
             if query_metadata:
                 payload["query_metadata"] = query_metadata
+                # Operation and the complete ordered operand contract are
+                # global to the calculation, even though operand_role/period
+                # remain query-specific.  Promote the shared fields so plan
+                # consumers that do not inspect query_metadata still retain
+                # the deterministic arithmetic contract.
+                metadata_values = [
+                    query_metadata.get(query, {})
+                    for query in queries
+                    if isinstance(query_metadata.get(query, {}), dict)
+                ]
+                for field in ("operation", "operands"):
+                    field_values = [
+                        metadata.get(field)
+                        for metadata in metadata_values
+                        if metadata.get(field) not in ("", None, [], {})
+                    ]
+                    common_value = field_values[0] if field_values else None
+                    if (
+                        common_value not in ("", None, [], {})
+                        and all(value == common_value for value in field_values)
+                    ):
+                        payload[field] = common_value
 
         output.append(
             {
@@ -1737,6 +2667,12 @@ def _fallback_evidence_items_from_text(text: str, needby: list[str] | None = Non
         for agent in (needby or [])
         if is_analysis_agent(str(agent).strip())
     ]
+    calculation_items = _calculation_operand_evidence_items(
+        text_value,
+        needby=needed_by,
+    )
+    if calculation_items:
+        return _merge_evidence_plans(calculation_items)
 
     if _requires_report_section_followup(text_value):
         report_query = _compact_note_followup_requirement(text_value)
@@ -1764,16 +2700,20 @@ def _fallback_evidence_items_from_text(text: str, needby: list[str] | None = Non
                     }
                 )
 
-    if _requires_note_followup(text_value):
-        note_query = _compact_note_followup_requirement(text_value)
-        if note_query:
-            items.append(
-                {
-                    "table": TABLE_NOTE,
-                    "query": note_query,
-                    "needby": needed_by,
-                }
-            )
+    compact_query = _compact_note_followup_requirement(text_value)
+    if compact_query:
+        for candidate in route_candidates(text_value):
+            if (
+                candidate.table in {TABLE_NOTE, TABLE_REPORT_SECTION}
+                and candidate.confidence >= 0.60
+            ):
+                items.append(
+                    {
+                        "table": candidate.table,
+                        "query": compact_query,
+                        "needby": needed_by,
+                    }
+                )
 
     return _merge_evidence_plans(items)
 
@@ -1787,6 +2727,53 @@ def _planner_axis_agents(planner_plan: dict) -> list[str]:
         if is_analysis_agent(agent):
             agents.append(agent)
     return _dedupe_keep_order(agents)
+
+
+def _planner_premise_evidence_items(planner_plan: dict) -> list[dict]:
+    if str(planner_plan.get("response_mode", "") or "").strip() != "grounded_interpretation":
+        return []
+    items = []
+    for premise in _dedupe_keep_order(
+        planner_plan.get("premise_requirements", []) or []
+    ):
+        premise_text = str(premise)
+        premise_items = _fallback_evidence_items_from_text(
+            premise_text,
+            needby=[],
+        )
+        narrative_routes = [
+            candidate.table
+            for candidate in route_candidates(premise_text)
+            if (
+                candidate.table in {TABLE_NOTE, TABLE_REPORT_SECTION}
+                and candidate.confidence >= 0.60
+            )
+        ]
+        present_tables = {
+            str(item.get("table", "") or "").strip()
+            for item in premise_items
+            if isinstance(item, dict)
+        }
+        for table in narrative_routes:
+            if table not in present_tables:
+                premise_items.append(
+                    {"table": table, "query": premise_text, "needby": []}
+                )
+                present_tables.add(table)
+        if not premise_items:
+            # A premise is a report fact, not an external conclusion. When its
+            # vocabulary is not exclusive enough for the deterministic router,
+            # keep both narrative sources instead of silently dropping it.
+            premise_items = [
+                {"table": TABLE_NOTE, "query": premise_text, "needby": []},
+                {
+                    "table": TABLE_REPORT_SECTION,
+                    "query": premise_text,
+                    "needby": [],
+                },
+            ]
+        items.extend(premise_items)
+    return _merge_evidence_plans(items)
 
 
 def _fallback_router_payload_from_planner(planner_plan: dict, user_query: str = "") -> dict:
@@ -1822,6 +2809,7 @@ def _fallback_router_payload_from_planner(planner_plan: dict, user_query: str = 
 
     for text, needby in text_entries:
         evidence_items.extend(_fallback_evidence_items_from_text(text, needby=needby))
+    evidence_items.extend(_planner_premise_evidence_items(planner_plan))
 
     if bool(planner_plan.get("need_web", False)) and user_query:
         evidence_items.append(
@@ -1829,6 +2817,7 @@ def _fallback_router_payload_from_planner(planner_plan: dict, user_query: str = 
                 "table": "",
                 "query": str(user_query or "").strip(),
                 "needby": axis_agents,
+                "web_intent": str(planner_plan.get("web_intent", "") or "").strip(),
             }
         )
 
@@ -1839,7 +2828,40 @@ def _fallback_router_payload_from_planner(planner_plan: dict, user_query: str = 
     }
 
 
-def _finalize_router_targets(worker_plan: dict, planner_plan: dict, user_query: str = "") -> dict:
+def _analysis_coverage_log(
+    state: dict,
+    planner_plan: dict,
+    worker_plan: dict,
+    coverage_notes: list[str],
+):
+    """Trace planner axes vs the agents the router will actually dispatch."""
+
+    planned = _planner_axis_agents(planner_plan)
+    dispatched = [
+        str(item.get("agent", "") or "").strip()
+        for item in (worker_plan.get("analysis_plan", []) or [])
+        if isinstance(item, dict) and str(item.get("agent", "") or "").strip()
+    ]
+    if not planned and not dispatched:
+        return None
+    return make_log(
+        state,
+        "router:analysis_coverage",
+        planned_agents=planned,
+        dispatched_agents=dispatched,
+        missing_agents=sorted(set(planned) - set(dispatched)),
+        unplanned_agents=sorted(set(dispatched) - set(planned)) if planned else [],
+        reconciliation=coverage_notes,
+    )
+
+
+def _finalize_router_targets(
+    worker_plan: dict,
+    planner_plan: dict,
+    user_query: str = "",
+    coverage_notes: Optional[list[str]] = None,
+    model_authored: bool = False,
+) -> dict:
     normalized_targets = list((worker_plan or {}).get("targets", []) or [])
     direct_evidence_plan = _restore_user_keywords_in_evidence_plan(
         list((worker_plan or {}).get("evidence_plan", []) or []),
@@ -1854,10 +2876,14 @@ def _finalize_router_targets(worker_plan: dict, planner_plan: dict, user_query: 
     table_targets = _filter_optional_table_requirements(table_targets, user_query)
 
     table_targets = _merge_table_targets(table_targets)
+    calculation_evidence = _calculation_operand_evidence_items(user_query)
+    premise_evidence = _planner_premise_evidence_items(planner_plan)
 
     difficulty_level = str(planner_plan.get("difficulty_level", "") or "").strip().lower()
     if difficulty_level != "hard":
         evidence_plan = _merge_evidence_plans(
+            calculation_evidence,
+            premise_evidence,
             direct_evidence_plan,
             _evidence_plan_from_table_targets(
                 table_targets,
@@ -1901,6 +2927,7 @@ def _finalize_router_targets(worker_plan: dict, planner_plan: dict, user_query: 
         )
 
     evidence_plan_expanded = _merge_evidence_plans(
+        _with_inferred_needed_by(calculation_evidence, analysis_targets),
         _with_inferred_needed_by(direct_evidence_plan, analysis_targets),
         _evidence_plan_from_table_targets(
             table_targets,
@@ -1911,10 +2938,25 @@ def _finalize_router_targets(worker_plan: dict, planner_plan: dict, user_query: 
         # the generic axis figures the analysis agents gather.
         _with_inferred_needed_by(_entity_evidence_from_query(user_query), analysis_targets),
     )
+    # Heuristic top-up of the router's evidence, on the same recall-first
+    # switch as the table augmentation above.
+    if evidence_augmentation_enabled() or not model_authored:
+        evidence_plan_expanded = _ensure_broad_profitability_core_evidence(
+            evidence_plan_expanded,
+            planner_plan=planner_plan,
+            user_query=user_query,
+            analysis_targets=analysis_targets,
+        )
     analysis_plan = _analysis_plan_from_targets(
         analysis_targets,
         evidence_plan_expanded,
     )
+    analysis_plan, reconciliation_notes = reconcile_analysis_plan_coverage(
+        analysis_plan,
+        planner_plan,
+    )
+    if coverage_notes is not None:
+        coverage_notes.extend(reconciliation_notes)
     return {
         "evidence_plan": _compact_evidence_plan_by_table_needby(evidence_plan_expanded),
         "analysis_plan": analysis_plan,
@@ -1971,13 +3013,11 @@ def _router_allowed_keyword_tables(planner_plan: dict, user_query: str) -> list[
 
     tables.extend(_router_tables_from_analysis_axes(planner_plan))
 
-    if not tables:
-        if _requires_report_section_followup(user_query):
-            tables.append(TABLE_REPORT_SECTION)
-        else:
-            route = _main_report_route_for_requirement(user_query)
-            if route:
-                tables.append(route)
+    tables.extend(
+        candidate.table
+        for candidate in route_candidates(user_query)
+        if candidate.confidence >= 0.60
+    )
 
     tables = _dedupe_keep_order(tables)
     return tables or None
@@ -2014,7 +3054,21 @@ def run_router(state: dict) -> dict:
         "trace": trace,
     }
     user_query = state.get("user_query", "")
+    # Model-first: no deterministic plan may stand in for the router. The bypass
+    # remains for `legacy`, and `shadow` reports every query it would have taken.
     direct_worker_plan = _direct_router_plan_from_query(planner_plan, user_query)
+    if direct_worker_plan is not None and not router_direct_bypass_enabled():
+        direct_worker_plan = None
+    elif direct_worker_plan is not None and shadow_routing():
+        trace.append(
+            make_log(
+                state,
+                "routing:shadow_diff",
+                stage="router_direct_bypass",
+                bypassed=True,
+                evidence_items_n=len(direct_worker_plan.get("evidence_plan", []) or []),
+            )
+        )
     if direct_worker_plan is not None:
         updates["worker_plan"] = direct_worker_plan
         updates["expected_workers"] = []
@@ -2057,7 +3111,6 @@ def run_router(state: dict) -> dict:
         "allowed_keywords_json": build_allowed_keywords_payload(
             selected_tables=allowed_keyword_tables
         ),
-        "web_summary": "",
         "last_agent_response": "",
         "tool_observations": "",
         "tools_list": get_tools_list("agent_router"),
@@ -2072,10 +3125,13 @@ def run_router(state: dict) -> dict:
         )
         llm_usage = extract_usage_metadata(raw_result.get("raw"))
         plan_obj, parse_warning, recovered_from = _coerce_dispatch_plan(raw_result)
+        coverage_notes: list[str] = []
         worker_plan = _finalize_router_targets(
             _sanitize_router_plan_payload(plan_obj.model_dump()),
             planner_plan,
             user_query=state.get("user_query", ""),
+            coverage_notes=coverage_notes,
+            model_authored=True,
         )
         if _is_followup_mode(planner_plan):
             worker_plan = _normalize_followup_router_targets(
@@ -2094,6 +3150,14 @@ def run_router(state: dict) -> dict:
         updates["expected_workers"] = []
         updates["dispatch_phase"] = "evidence"
         updates["pending_analysis_targets"] = []
+        coverage_log = _analysis_coverage_log(
+            state,
+            planner_plan,
+            worker_plan,
+            coverage_notes,
+        )
+        if coverage_log:
+            updates["trace"].append(coverage_log)
 
         if raw_result.get("mode") != "structured":
             fallback_log = make_debug_log(
@@ -2131,6 +3195,7 @@ def run_router(state: dict) -> dict:
         return updates
 
     except Exception as e:
+        coverage_notes = []
         worker_plan = _finalize_router_targets(
             _fallback_router_payload_from_planner(
                 planner_plan,
@@ -2138,6 +3203,7 @@ def run_router(state: dict) -> dict:
             ),
             planner_plan,
             user_query=state.get("user_query", ""),
+            coverage_notes=coverage_notes,
         )
         if _is_followup_mode(planner_plan):
             worker_plan = _normalize_followup_router_targets(
@@ -2156,6 +3222,14 @@ def run_router(state: dict) -> dict:
         updates["expected_workers"] = []
         updates["dispatch_phase"] = "evidence"
         updates["pending_analysis_targets"] = []
+        coverage_log = _analysis_coverage_log(
+            state,
+            planner_plan,
+            worker_plan,
+            coverage_notes,
+        )
+        if coverage_log:
+            updates["trace"].append(coverage_log)
         updates["trace"].append(
             make_log(
                 state,

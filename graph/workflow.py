@@ -6,6 +6,7 @@ from functools import wraps
 
 from langgraph.graph import END, StateGraph
 
+from agents.agent_registry import ANALYSIS_AGENT_ORDER
 from graph.conditions import make_should_continue, should_synthesize_after_collect, synth_route
 from graph.nodes import (
     agent_cashflow_analysis_node,
@@ -28,7 +29,8 @@ from graph.nodes import (
 )
 from graph.router import route_after_evidence
 from graph.state import GraphState, WorkflowServices
-from tools.tool_runner import set_collection
+from config.runtime_policy import reset_active_policy, set_active_policy
+from tools.tool_runner import reset_collection, set_collection
 
 
 ANALYSIS_NODES = {
@@ -63,20 +65,52 @@ ANALYSIS_NODES = {
 }
 
 
-def _bind_services(node, services: WorkflowServices | None):
+def assert_analysis_nodes_match_registry() -> None:
+    """Fail at import time if the graph cannot run every registered agent.
+
+    A registered analysis agent without a node is silently un-runnable: the
+    planner may select it, the dispatcher may target it, and the answer would
+    then be missing that aspect with no error anywhere.
+    """
+
+    registered = set(ANALYSIS_AGENT_ORDER)
+    wired = set(ANALYSIS_NODES)
+    if registered != wired:
+        raise RuntimeError(
+            "ANALYSIS_NODES is out of sync with the agent registry: "
+            f"missing nodes {sorted(registered - wired)}, "
+            f"unregistered nodes {sorted(wired - registered)}"
+        )
+
+
+assert_analysis_nodes_match_registry()
+
+
+def _bind_services(
+    node,
+    services: WorkflowServices | None,
+    *,
+    inject_web_provider: bool = False,
+):
     if services is None:
         return node
 
     @wraps(node)
     def bound(state: dict):
-        if services.collection is not None:
-            set_collection(services.collection)
-        scoped_state = dict(state or {})
-        if services.index_fingerprint:
-            scoped_state.setdefault("index_fingerprint", services.index_fingerprint)
-        if services.model_fingerprint:
-            scoped_state.setdefault("model_fingerprint", services.model_fingerprint)
-        return node(scoped_state)
+        collection_token = set_collection(services.collection)
+        policy_token = set_active_policy(services.policy)
+        try:
+            scoped_state = dict(state or {})
+            if services.index_fingerprint:
+                scoped_state.setdefault("index_fingerprint", services.index_fingerprint)
+            if services.model_fingerprint:
+                scoped_state.setdefault("model_fingerprint", services.model_fingerprint)
+            if inject_web_provider:
+                return node(scoped_state, web_provider=services.web_provider)
+            return node(scoped_state)
+        finally:
+            reset_active_policy(policy_token)
+            reset_collection(collection_token)
 
     return bound
 
@@ -85,11 +119,19 @@ def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
     workflow = StateGraph(state_schema=GraphState)
     workflow.add_node("agent_main", _bind_services(agent_planner, services))
     workflow.add_node("agent_router", _bind_services(agent_router, services))
-    workflow.add_node("build_evidence", _bind_services(evidence_pack_node, services))
+    workflow.add_node(
+        "build_evidence",
+        _bind_services(
+            evidence_pack_node,
+            services,
+            inject_web_provider=True,
+        ),
+    )
     workflow.add_node("collect_analysis", _bind_services(collect_analysis_results_node, services))
     workflow.add_node("agent_synth", _bind_services(agent_synth_node, services))
 
-    for agent_name, (agent_node, tool_name, tool_node, finalize_name, finalize_node) in ANALYSIS_NODES.items():
+    for agent_name in ANALYSIS_AGENT_ORDER:
+        agent_node, tool_name, tool_node, finalize_name, finalize_node = ANALYSIS_NODES[agent_name]
         workflow.add_node(agent_name, _bind_services(agent_node, services))
         workflow.add_node(tool_name, _bind_services(tool_node, services))
         workflow.add_node(finalize_name, _bind_services(finalize_node, services))
@@ -107,7 +149,8 @@ def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
         },
     )
 
-    for agent_name, (_agent_node, tool_name, _tool_node, finalize_name, _finalize_node) in ANALYSIS_NODES.items():
+    for agent_name in ANALYSIS_AGENT_ORDER:
+        _agent_node, tool_name, _tool_node, finalize_name, _finalize_node = ANALYSIS_NODES[agent_name]
         workflow.add_conditional_edges(
             agent_name,
             make_should_continue(agent_name),

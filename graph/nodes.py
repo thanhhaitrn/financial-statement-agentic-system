@@ -22,8 +22,8 @@ def agent_router(state: dict) -> dict:
     return run_router(state)
 
 
-def evidence_pack_node(state: dict) -> dict:
-    return build_evidence_pack(state)
+def evidence_pack_node(state: dict, *, web_provider=None) -> dict:
+    return build_evidence_pack(state, web_provider=web_provider)
 
 
 def agent_profitability_node(state: dict) -> dict:
@@ -168,6 +168,8 @@ def _collect_expected_analysis_agents(state: dict) -> dict:
                 round=round_n,
                 expected=sorted(expected),
                 done=sorted(done),
+                completed_agents=sorted(expected & done),
+                missing_agents=sorted(expected - done),
             )
         )
         updates["collect_decision"] = "stop"

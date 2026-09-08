@@ -1,0 +1,103 @@
+[
+  {
+    "name": "vnm_related_party_transaction_orientation",
+    "source_format": "VNM_related_party_schedule",
+    "fiscal_year": "2025",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 35. Các giao dịch chủ yếu với bên liên quan\n\n| Bên liên quan | Mua hàng hóa và dịch vụ<br/>Năm 2025 | Bán hàng hóa<br/>Năm 2025 |\n| --- | ---: | ---: |\n| Công ty Cổ phần APIS | 1.000 | 500 |\n",
+    "select": {
+      "row_label": "Công ty Cổ phần APIS",
+      "column_contains": "Mua hàng hóa và dịch vụ"
+    },
+    "expected": {
+      "metric_label": "Mua hàng hóa và dịch vụ",
+      "entity_label": "Công ty Cổ phần APIS",
+      "scope_label": "Các giao dịch chủ yếu với bên liên quan",
+      "counterparty": "Công ty Cổ phần APIS",
+      "transaction_type": "purchase",
+      "movement_type": "",
+      "geography": "",
+      "policy_topic": ""
+    }
+  },
+  {
+    "name": "apec_geographic_segment_orientation",
+    "source_format": "APEC_geographic_segment_schedule",
+    "fiscal_year": "2024",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 40. Báo cáo bộ phận theo khu vực địa lý\n\n| Chỉ tiêu | Trong nước | Nước ngoài | Tổng cộng |\n| --- | ---: | ---: | ---: |\n| Doanh thu thuần | 100 | 20 | 120 |\n",
+    "select": {
+      "row_label": "Doanh thu thuần",
+      "column_contains": "Nước ngoài"
+    },
+    "expected": {
+      "metric_label": "Doanh thu thuần",
+      "entity_label": "Nước ngoài",
+      "scope_label": "Báo cáo bộ phận theo khu vực địa lý",
+      "counterparty": "",
+      "transaction_type": "",
+      "movement_type": "",
+      "geography": "Nước ngoài",
+      "policy_topic": ""
+    }
+  },
+  {
+    "name": "cnc_directional_loan_schedule",
+    "source_format": "CNC_directional_loan_schedule",
+    "fiscal_year": "2024",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 5. Phải thu về cho vay ngắn hạn\n\n| Đối tượng | 31/12/2024 | 01/01/2024 |\n| --- | ---: | ---: |\n| Công ty Cổ phần A | 100 | 80 |\n",
+    "select": {
+      "row_label": "Công ty Cổ phần A",
+      "column_contains": "31/12/2024"
+    },
+    "expected": {
+      "metric_label": "Phải thu về cho vay ngắn hạn",
+      "entity_label": "Công ty Cổ phần A",
+      "scope_label": "Phải thu về cho vay ngắn hạn",
+      "counterparty": "",
+      "transaction_type": "lending",
+      "movement_type": "",
+      "geography": "",
+      "policy_topic": ""
+    }
+  },
+  {
+    "name": "ger_roll_forward_movement",
+    "source_format": "GER_roll_forward_schedule",
+    "fiscal_year": "2025",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 18. Dự phòng phải trả\n\n| Chỉ tiêu | Năm 2025 |\n| --- | ---: |\n| Số dư đầu năm | 100 |\n| Trích lập dự phòng trong năm | 25 |\n| Hoàn nhập trong năm | (5) |\n| Số dư cuối năm | 120 |\n",
+    "select": {
+      "row_label": "Hoàn nhập trong năm",
+      "column_contains": "Năm 2025"
+    },
+    "expected": {
+      "metric_label": "Hoàn nhập trong năm",
+      "entity_label": "",
+      "scope_label": "Dự phòng phải trả",
+      "counterparty": "",
+      "transaction_type": "",
+      "movement_type": "reversal",
+      "geography": "",
+      "policy_topic": ""
+    }
+  },
+  {
+    "name": "dpc_policy_topic_narrative",
+    "source_format": "DPC_policy_narrative",
+    "fiscal_year": "2025",
+    "parser": "note",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 3. Các chính sách kế toán\n\n#### Tài sản cố định hữu hình\n\nTài sản cố định hữu hình được khấu hao theo phương pháp đường thẳng trong suốt thời gian sử dụng hữu ích.\n",
+    "select": {
+      "item_code": "note_policy_atom",
+      "row_label": "Phương pháp khấu hao"
+    },
+    "expected": {
+      "metric_label": "Phương pháp khấu hao",
+      "entity_label": "Tài sản cố định hữu hình",
+      "scope_label": "Tài sản cố định hữu hình",
+      "counterparty": "",
+      "transaction_type": "",
+      "movement_type": "",
+      "geography": "",
+      "policy_topic": "depreciation_method"
+    }
+  }
+]

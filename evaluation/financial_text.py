@@ -23,7 +23,9 @@ _DATE_RE = re.compile(
     r"(?P<month>\d{1,2})(?:\s*(?:/|-)\s*|\s+nam\s+|\s+)"
     r"(?P<year>\d{4})\b"
 )
-_QUARTER_RE = re.compile(r"\b(?:quy|q)\s*([1-4])\s*(?:/|nam\s*)?(\d{4})?\b")
+_QUARTER_RE = re.compile(
+    r"\b(?:quy|q)\s*(iv|iii|ii|i|[1-4])\s*(?:/|nam\s*)?(\d{4})?\b"
+)
 _YEAR_RE = re.compile(r"\b(?:nam\s*)?(20\d{2})\b")
 
 
@@ -106,7 +108,13 @@ def normalize_period(value: Any) -> str:
     quarter_match = _QUARTER_RE.search(text)
     if quarter_match:
         year = quarter_match.group(2)
-        return f"{year + '-' if year else ''}q{quarter_match.group(1)}"
+        quarter = {
+            "i": "1",
+            "ii": "2",
+            "iii": "3",
+            "iv": "4",
+        }.get(quarter_match.group(1), quarter_match.group(1))
+        return f"{year + '-' if year else ''}q{quarter}"
     if any(marker in text for marker in ("nam hien tai", "nam nay", "current year")):
         return "current_year"
     if any(marker in text for marker in ("nam truoc", "previous year", "prior year")):

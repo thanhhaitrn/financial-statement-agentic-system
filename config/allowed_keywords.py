@@ -44,6 +44,9 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "tài sản cố định",
         "tài sản cố định hữu hình",
         "tài sản cố định vô hình",
+        "tài sản ngắn hạn khác",
+        "tài sản thuế thu nhập hoãn lại",
+        "tài sản thuế thu nhập doanh nghiệp hoãn lại",
         "bất động sản đầu tư",
         "chi phí trả trước ngắn hạn",
         "chi phí trả trước dài hạn",
@@ -225,6 +228,57 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
         "người ký báo cáo tài chính",
         "ngày ký báo cáo tài chính",
         "ngày lập báo cáo",
+        # --- Bao trọn phần đầu theo mục lục các báo cáo trong data/ ---
+        "thông tin chung",
+        "thông tin khái quát",
+        "báo cáo của hội đồng quản trị",
+        "báo cáo của ban điều hành",
+        "báo cáo của ban kiểm soát",
+        "báo cáo kiểm toán số",
+        "số báo cáo kiểm toán",
+        "số hiệu báo cáo kiểm toán",
+        "cơ sở của ý kiến",
+        "cơ sở ý kiến kiểm toán",
+        "ý kiến ngoại trừ",
+        "ý kiến chấp nhận toàn phần",
+        # Nhân sự HĐQT / ban lãnh đạo
+        "thành viên hội đồng quản trị",
+        "thành viên ban điều hành",
+        "chủ tịch hội đồng quản trị",
+        "tổng giám đốc",
+        "giám đốc điều hành",
+        "bổ nhiệm",
+        "miễn nhiệm",
+        "từ nhiệm",
+        "bãi nhiệm",
+        "thay đổi nhân sự",
+        # Lịch sử / hình thức doanh nghiệp
+        "hình thức sở hữu",
+        "được thành lập",
+        "thành lập công ty",
+        "ngày thành lập",
+        "tiền thân",
+        "cổ phần hóa",
+        "chuyển đổi sang công ty cổ phần",
+        "niêm yết",
+        "mã cổ phiếu",
+        "mã chứng khoán",
+        "sở giao dịch chứng khoán",
+        # Ngành nghề / hoạt động / cấu trúc tập đoàn / đơn vị trực thuộc
+        "hoạt động chính",
+        "ngành nghề kinh doanh",
+        "lĩnh vực kinh doanh",
+        "chu kỳ sản xuất kinh doanh",
+        "cấu trúc tập đoàn",
+        "công ty con",
+        "công ty liên kết",
+        "công ty liên doanh",
+        "đơn vị trực thuộc",
+        "chi nhánh",
+        "nhà máy",
+        "kho vận",
+        "số lượng nhân viên",
+        "tổng số nhân viên",
     },
 }
 
@@ -236,6 +290,7 @@ ALLOWED_KEYWORDS: Dict[str, Set[str]] = {
 # keyworder fall back to a near-sounding WRONG line ("phải trả người bán" for
 # "trả trước cho người bán").
 _DYNAMIC_KEYWORDS: Dict[str, Set[str]] = {}
+_DYNAMIC_KEYWORDS_VERSION = 0
 
 # Canonical vocabulary aliases shared by routing and evidence matching.  Keep
 # semantic aliases here instead of scattering one-off replacements through the
@@ -273,6 +328,7 @@ def normalize_keyword_synonyms(value: Any) -> str:
 
 
 def set_dynamic_keywords(mapping: Dict[str, Iterable[str]] | None) -> None:
+    global _DYNAMIC_KEYWORDS_VERSION
     _DYNAMIC_KEYWORDS.clear()
     for table, keywords in (mapping or {}).items():
         table_name = str(table or "").strip()
@@ -282,6 +338,13 @@ def set_dynamic_keywords(mapping: Dict[str, Iterable[str]] | None) -> None:
         cleaned.discard("")
         if cleaned:
             _DYNAMIC_KEYWORDS[table_name] = cleaned
+    _DYNAMIC_KEYWORDS_VERSION += 1
+
+
+def keyword_vocabulary_version() -> int:
+    """Monotonic cache key for consumers of the dynamic routing vocabulary."""
+
+    return _DYNAMIC_KEYWORDS_VERSION
 
 
 def _merged_keywords(table: str) -> Set[str]:

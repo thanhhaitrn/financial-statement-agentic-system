@@ -1,0 +1,255 @@
+{
+  "schema_version": 2,
+  "dataset_id": "suavietnam",
+  "records": [
+    {
+      "question": "Ý nghĩa của việc Công ty chuyển đổi từ doanh nghiệp nhà nước sang công ty cổ phần niêm yết đối với quản trị doanh nghiệp là gì?",
+      "benchmark_issues": [
+        "GT_PARTIALLY_UNSUPPORTED"
+      ],
+      "narrative_contract": {
+        "propositions": [
+          {
+            "name": "legal_form_transition",
+            "patterns": [
+              {
+                "all_of": [
+                  "doanh nghiệp nhà nước",
+                  "công ty cổ phần"
+                ],
+                "any_of": [
+                  "chuyển",
+                  "cổ phần hóa",
+                  "cổ phần hoá"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "all_of": [
+                  "doanh nghiệp nhà nước",
+                  "công ty cổ phần"
+                ],
+                "any_of": [
+                  "cổ phần hóa",
+                  "cổ phần hoá",
+                  "đăng ký"
+                ]
+              }
+            ],
+            "required_in_evidence": true,
+            "required_in_answer": true,
+            "support": "explicit"
+          },
+          {
+            "name": "public_listing",
+            "patterns": [
+              {
+                "all_of": [
+                  "niêm yết"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "all_of": [
+                  "niêm yết",
+                  "sở giao dịch chứng khoán"
+                ]
+              }
+            ],
+            "required_in_evidence": true,
+            "required_in_answer": true,
+            "evidence_semantic": "listing_event",
+            "support": "explicit"
+          },
+          {
+            "name": "governance_accountability",
+            "patterns": [
+              {
+                "all_of": [
+                  "trách nhiệm giải trình"
+                ],
+                "any_of": [
+                  "cổ đông",
+                  "thị trường"
+                ]
+              },
+              {
+                "all_of": [
+                  "quản trị"
+                ],
+                "any_of": [
+                  "cổ đông",
+                  "công ty đại chúng",
+                  "thị trường"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "all_of": [
+                  "doanh nghiệp nhà nước",
+                  "công ty cổ phần",
+                  "niêm yết"
+                ]
+              }
+            ],
+            "required_in_answer": true,
+            "support": "bounded_inference"
+          },
+          {
+            "name": "transparency_and_disclosure",
+            "patterns": [
+              {
+                "any_of": [
+                  "minh bạch",
+                  "công bố thông tin"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "any_of": [
+                  "minh bạch",
+                  "công bố thông tin"
+                ]
+              }
+            ],
+            "support_patterns": [
+              {
+                "all_of": [
+                  "nghĩa vụ công bố thông tin"
+                ]
+              }
+            ],
+            "optional": true,
+            "validate_if_present": true,
+            "support": "external_required"
+          },
+          {
+            "name": "management_shareholder_incentive_alignment",
+            "patterns": [
+              {
+                "all_of": [
+                  "lợi ích"
+                ],
+                "any_of": [
+                  "ban điều hành",
+                  "cổ đông"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "all_of": [
+                  "lợi ích",
+                  "ban điều hành",
+                  "cổ đông"
+                ]
+              }
+            ],
+            "support_patterns": [
+              {
+                "all_of": [
+                  "chính sách thù lao"
+                ],
+                "any_of": [
+                  "cổ phiếu",
+                  "khuyến khích"
+                ]
+              }
+            ],
+            "optional": true,
+            "validate_if_present": true,
+            "support": "external_required"
+          },
+          {
+            "name": "ownership_diversification",
+            "patterns": [
+              {
+                "all_of": [
+                  "đa dạng"
+                ],
+                "any_of": [
+                  "cơ cấu sở hữu",
+                  "cổ đông"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "any_of": [
+                  "cơ cấu cổ đông",
+                  "tỷ lệ sở hữu"
+                ]
+              }
+            ],
+            "support_patterns": [
+              {
+                "any_of": [
+                  "cơ cấu cổ đông",
+                  "tỷ lệ sở hữu"
+                ]
+              }
+            ],
+            "optional": true,
+            "validate_if_present": true,
+            "support": "external_required"
+          },
+          {
+            "name": "capital_market_fundraising",
+            "patterns": [
+              {
+                "any_of": [
+                  "huy động vốn",
+                  "kênh vốn"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "any_of": [
+                  "phát hành cổ phiếu",
+                  "chào bán"
+                ]
+              }
+            ],
+            "support_patterns": [
+              {
+                "any_of": [
+                  "phát hành cổ phiếu",
+                  "chào bán"
+                ]
+              }
+            ],
+            "optional": true,
+            "validate_if_present": true,
+            "support": "external_required"
+          },
+          {
+            "name": "still_state_owned",
+            "patterns": [
+              {
+                "all_of": [
+                  "vẫn là",
+                  "doanh nghiệp nhà nước"
+                ]
+              }
+            ],
+            "evidence_patterns": [
+              {
+                "all_of": [
+                  "vẫn là",
+                  "doanh nghiệp nhà nước"
+                ]
+              }
+            ],
+            "prohibited": true,
+            "support": "explicit"
+          }
+        ]
+      }
+    }
+  ]
+}

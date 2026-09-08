@@ -44,6 +44,7 @@ QDRANT_TIMEOUT = int(os.getenv("QDRANT_TIMEOUT", "60"))
 QDRANT_VECTOR_SIZE = int(os.getenv("QDRANT_VECTOR_SIZE", "1024"))
 QDRANT_MAX_DOCUMENT_CHARS = int(os.getenv("QDRANT_MAX_DOCUMENT_CHARS", "32768"))
 QDRANT_DISTANCE = models.Distance.COSINE
+VECTOR_INDEX_SCHEMA_VERSION = 4
 
 _DOCUMENT_PAYLOAD_KEY = "document"
 _SOURCE_ID_PAYLOAD_KEY = "_source_id"
@@ -130,7 +131,16 @@ embedding_function = _LazyEmbeddingProxy()
 
 def _make_client() -> QdrantClient:
     if QDRANT_LOCATION:
-        return QdrantClient(location=QDRANT_LOCATION, timeout=QDRANT_TIMEOUT)
+        # qdrant-client treats ``location`` as a server URL (except the special
+        # ``:memory:`` value). A filesystem location must use ``path``;
+        # otherwise an absolute path is parsed as a host and triggers network
+        # access instead of creating a local persistent index.
+        if QDRANT_LOCATION == ":memory:":
+            return QdrantClient(location=":memory:", timeout=QDRANT_TIMEOUT)
+        location_scheme = urlparse(QDRANT_LOCATION).scheme.casefold()
+        if location_scheme in {"http", "https"}:
+            return QdrantClient(location=QDRANT_LOCATION, timeout=QDRANT_TIMEOUT)
+        return QdrantClient(path=QDRANT_LOCATION, timeout=QDRANT_TIMEOUT)
 
     if not QDRANT_URL:
         raise RuntimeError(
@@ -159,6 +169,7 @@ def _collection_metadata(extra: dict | None = None) -> dict:
         "embedding_model": EMBEDDING_MODEL,
         "embedding_document_instruction": EMBEDDING_DOCUMENT_INSTRUCTION,
         "vector_size": QDRANT_VECTOR_SIZE,
+        "vector_index_schema_version": VECTOR_INDEX_SCHEMA_VERSION,
     }
     metadata.update(dict(extra or {}))
     # Build metadata may add fields but cannot lie about the embedding contract.
@@ -167,6 +178,7 @@ def _collection_metadata(extra: dict | None = None) -> dict:
             "embedding_model": EMBEDDING_MODEL,
             "embedding_document_instruction": EMBEDDING_DOCUMENT_INSTRUCTION,
             "vector_size": QDRANT_VECTOR_SIZE,
+            "vector_index_schema_version": VECTOR_INDEX_SCHEMA_VERSION,
         }
     )
     return metadata
@@ -181,11 +193,34 @@ def _collection_matches_current_config(info) -> bool:
         and metadata.get("embedding_model") == EMBEDDING_MODEL
         and metadata.get("embedding_document_instruction", "")
         == EMBEDDING_DOCUMENT_INSTRUCTION
+        and int(metadata.get("vector_index_schema_version", 0) or 0)
+        == VECTOR_INDEX_SCHEMA_VERSION
     )
 
 
 def _ensure_payload_indexes(client: QdrantClient, collection_name: str) -> None:
-    for field_name in ("heading", "note_ref"):
+    # Typed retrieval applies these exact filters before dense fallback.  Keep
+    # them as keyword indexes so period/value-type/aggregation probes do not
+    # degrade into full collection scans.
+    for field_name in (
+        "heading",
+        "note_ref",
+        "period",
+        "value_type",
+        "aggregation_level",
+        "period_role",
+        "value_kind",
+        "block_id",
+        "metric_label",
+        "entity_label",
+        "scope_label",
+        "counterparty",
+        "transaction_type",
+        "movement_type",
+        "geography",
+        "policy_topic",
+        "section_key",
+    ):
         try:
             client.create_payload_index(
                 collection_name=collection_name,
@@ -304,6 +339,7 @@ class QdrantCollectionAdapter:
         all_documents = []
         all_metadatas = []
         all_distances = []
+        all_similarities = []
         all_ids = []
         query_filter = _where_filter(where)
 
@@ -322,12 +358,20 @@ class QdrantCollectionAdapter:
                 for point in points
             ]
             metadatas = [_metadata_from_payload(point.payload) for point in points]
-            distances = [1.0 - float(point.score or 0.0) for point in points]
+            similarities = [
+                float(point.score) if point.score is not None else None
+                for point in points
+            ]
+            distances = [
+                1.0 - score if score is not None else None
+                for score in similarities
+            ]
             ids = [str(point.id) for point in points]
 
             all_documents.append(documents)
             all_metadatas.append(metadatas)
             all_distances.append(distances)
+            all_similarities.append(similarities)
             all_ids.append(ids)
 
         return {
@@ -335,6 +379,7 @@ class QdrantCollectionAdapter:
             "documents": all_documents,
             "metadatas": all_metadatas,
             "distances": all_distances,
+            "similarities": all_similarities,
         }
 
     def get(self, where: dict | None = None, include=None):

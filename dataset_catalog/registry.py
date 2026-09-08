@@ -12,14 +12,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 
-from schemas.datasets import (
-    DatasetRecord,
-    DatasetRegistryEnvelope,
-    DatasetRegistryMigration,
-    DatasetRegistryQuarantineEntry,
-    validate_dataset_id,
-)
-
+from schemas.datasets import (DatasetRecord, DatasetRegistryEnvelope,
+                              DatasetRegistryMigration,
+                              DatasetRegistryQuarantineEntry,
+                              validate_dataset_id)
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DATASETS_DIR = ROOT_DIR / "dataset_store"
@@ -27,12 +23,20 @@ REGISTRY_PATH = DATASETS_DIR / "registry.json"
 MANIFESTS_DIR = DATASETS_DIR / "manifests"
 RAW_TABLES_DIR = DATASETS_DIR / "raw_tables"
 SQLITE_DIR = DATASETS_DIR / "sqlite"
+SOURCES_DIR = DATASETS_DIR / "sources"
 REGISTRY_SCHEMA_VERSION = 2
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _BUILD_INPUT_FIELDS = (
+    "owner_id",
     "company",
+    "ticker",
     "file_path",
+    "source_origin",
+    "source_sha256",
+    "source_converter_identity",
+    "source_converter_version",
+    "source_pdf_path",
     "report_type",
     "fiscal_year",
     "fiscal_quarter",
@@ -54,6 +58,7 @@ def _ensure_layout() -> None:
     MANIFESTS_DIR.mkdir(parents=True, exist_ok=True)
     RAW_TABLES_DIR.mkdir(parents=True, exist_ok=True)
     SQLITE_DIR.mkdir(parents=True, exist_ok=True)
+    SOURCES_DIR.mkdir(parents=True, exist_ok=True)
 
 
 def _fsync_directory(directory: Path) -> None:
@@ -152,7 +157,7 @@ def _normalize_record_paths(record: DatasetRecord) -> DatasetRecord:
     dataset_key = validate_dataset_id(record.dataset_id)
     source_path = _resolve_confined_path(
         record.file_path,
-        allowed_dir=ROOT_DIR,
+        allowed_dir=SOURCES_DIR if record.managed_source else ROOT_DIR,
         field_name="file_path",
     )
     managed_paths = {
@@ -211,6 +216,7 @@ def build_dataset_record(
     *,
     file_path: str,
     company: str,
+    owner_id: str = "",
     dataset_id: str = "",
     ticker: str = "",
     industry: str = "",
@@ -220,6 +226,12 @@ def build_dataset_record(
     scope: str = "unknown",
     audit_status: str = "unknown",
     ingestion_version: str = "v1",
+    source_origin: str = "local",
+    source_sha256: str = "",
+    source_converter_identity: str = "",
+    source_converter_version: str = "",
+    source_pdf_path: str = "",
+    managed_source: bool = False,
 ) -> DatasetRecord:
     dataset_key = validate_dataset_id(dataset_id) if dataset_id else make_dataset_id(
         company,
@@ -231,13 +243,14 @@ def build_dataset_record(
     )
     source_path = _resolve_confined_path(
         file_path,
-        allowed_dir=ROOT_DIR,
+        allowed_dir=SOURCES_DIR if managed_source else ROOT_DIR,
         field_name="file_path",
     )
     _ensure_layout()
 
     record = DatasetRecord(
         dataset_id=dataset_key,
+        owner_id=owner_id,
         company=company,
         ticker=ticker,
         industry=industry,
@@ -247,6 +260,12 @@ def build_dataset_record(
         scope=scope,
         audit_status=audit_status,
         file_path=str(source_path),
+        source_origin=source_origin,
+        source_sha256=source_sha256,
+        source_converter_identity=source_converter_identity,
+        source_converter_version=source_converter_version,
+        source_pdf_path=source_pdf_path,
+        managed_source=managed_source,
         sqlite_db_path=str(_expected_managed_path(SQLITE_DIR, dataset_key, ".db")),
         vector_collection_name=f"financial_statement__{dataset_key}",
         manifest_path=str(_expected_managed_path(MANIFESTS_DIR, dataset_key, ".json")),
@@ -625,6 +644,8 @@ def delete_dataset(
     _remove_managed_file(current.manifest_path, allowed_dir=MANIFESTS_DIR)
     _remove_managed_file(current.sqlite_db_path, allowed_dir=SQLITE_DIR)
     _remove_managed_file(current.raw_tables_path, allowed_dir=RAW_TABLES_DIR)
+    if current.managed_source:
+        _remove_managed_file(current.file_path, allowed_dir=SOURCES_DIR)
     _delete_vector_collection_if_exists(
         current.vector_collection_name,
         delete_vector_collection_fn=delete_vector_collection_fn,
@@ -633,12 +654,14 @@ def delete_dataset(
     return current
 
 
-def get_dataset(dataset_id: str) -> Optional[DatasetRecord]:
+def get_dataset(dataset_id: str, *, owner_id: str = "") -> Optional[DatasetRecord]:
     if not str(dataset_id or "").strip():
         return None
     dataset_key = validate_dataset_id(dataset_id)
     for record in load_registry():
-        if record.dataset_id == dataset_key:
+        if record.dataset_id == dataset_key and (
+            not owner_id or record.owner_id == str(owner_id).strip()
+        ):
             return record
     return None
 
@@ -685,6 +708,7 @@ def find_datasets(
     fiscal_quarter: Optional[int] = None,
     scope: str = "",
     audit_status: str = "",
+    owner_id: str = "",
 ) -> List[DatasetRecord]:
     records = load_registry()
     matches: List[DatasetRecord] = []
@@ -695,8 +719,11 @@ def find_datasets(
     report_type_norm = _normalize_str(report_type)
     scope_norm = _normalize_str(scope)
     audit_status_norm = _normalize_str(audit_status)
+    owner_id_norm = _normalize_str(owner_id)
 
     for record in records:
+        if owner_id_norm and _normalize_str(record.owner_id) != owner_id_norm:
+            continue
         if dataset_id_norm and _normalize_str(record.dataset_id) != dataset_id_norm:
             continue
         if company_norm and company_norm not in _normalize_str(record.company):

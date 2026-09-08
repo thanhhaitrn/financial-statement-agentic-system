@@ -1,0 +1,62 @@
+[
+  {
+    "name": "ger_toc_and_assurance_atoms",
+    "source_format": "GER_Baocaotaichinh_2025_Kiemtoan.md:16-181",
+    "fiscal_year": "2025",
+    "markdown": "-----------Page 0\n# MỤC LỤC\n\n**BÁO CÁO CỦA BAN TỔNG GIÁM ĐỐC** 1 - 2\n**BÁO CÁO KIỂM TOÁN ĐỘC LẬP** 3 - 4\nBảng cân đối kế toán tổng hợp 5 - 6\nBáo cáo kết quả hoạt động kinh doanh tổng hợp 7\nBáo cáo lưu chuyển tiền tệ tổng hợp 8\nThuyết minh Báo cáo tài chính tổng hợp 9 - 37\n\n# BÁO CÁO CỦA BAN TỔNG GIÁM ĐỐC\nBan Tổng Giám đốc trình bày báo cáo cho năm 2025.\n\n-----------Page 1\nCông ty TNHH Kiểm toán và Định giá Quốc tế\nInternational Auditing and Valuation Company Limited\n\nSố: 2810/2025/BCTC/IAV\n\n# BÁO CÁO KIỂM TOÁN ĐỘC LẬP\nChúng tôi đã kiểm toán báo cáo tài chính tổng hợp.\n\nHà Nội, ngày 26 tháng 02 năm 2026\n\n-----------Page 2\n# BẢNG CÂN ĐỐI KẾ TOÁN TỔNG HỢP\n| TÀI SẢN | Năm 2025 |\n| --- | ---: |\n| Tiền | 100 |\n",
+    "expected_identifier": "2810/2025/BCTC/IAV",
+    "expected_entity": "Công ty TNHH Kiểm toán và Định giá Quốc tế",
+    "expected_date": "ngày 26 tháng 02 năm 2026"
+  },
+  {
+    "name": "vnm_numbered_letter_and_sentence_atoms",
+    "source_format": "VNM_Baocaotaichinh_2025_Kiemtoan_Congtyme.md:724-924",
+    "fiscal_year": "2025",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n**14. Chính sách tài sản cố định vô hình**\n\n**Phần mềm máy vi tính**\n\nPhần mềm máy vi tính được tính khấu hao theo phương pháp đường thẳng trong thời gian từ 2 – 8 năm. Các chi phí phát sinh chỉ được ghi tăng nguyên giá nếu chắc chắn làm tăng lợi ích kinh tế trong tương lai.\n\n(b) Niêm yết và mã chứng khoán\n\nCổ phiếu của Công ty được niêm yết trên Sở Giao dịch Chứng khoán Thành phố Hồ Chí Minh. **Mã chứng khoán:** VNM\n\n**3.14. Chi phí đi vay**\n\nChi phí đi vay chỉ được vốn hóa nếu liên quan trực tiếp đến tài sản đủ điều kiện.\n",
+    "expected_duration_text": "từ 2 – 8 năm",
+    "expected_ticker": "VNM",
+    "expected_note_refs": [
+      "V.14",
+      "V.3.14"
+    ]
+  },
+  {
+    "name": "apec_tab_separated_policy_cells",
+    "source_format": "dau_tu_APEC.md:628-638",
+    "fiscal_year": "2024",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n**7. Tài sản cố định hữu hình**\n\n**Khấu hao theo nhóm tài sản**\n\nTài sản cố định hữu hình được khấu hao theo phương pháp đường thẳng.\n\n**Loại tài sản cố định**\t**Số năm**\nNhà cửa, vật kiến trúc\t20 - 50\nPhương tiện vận tải, truyền dẫn\t10\n",
+    "expected_cells": [
+      {
+        "row_label": "Nhà cửa, vật kiến trúc",
+        "column_label": "Số năm",
+        "value": "20 - 50"
+      },
+      {
+        "row_label": "Phương tiện vận tải, truyền dẫn",
+        "column_label": "Số năm",
+        "value": "10"
+      }
+    ]
+  },
+  {
+    "name": "dpc_person_event_and_policy_atoms",
+    "source_format": "DPC_front_and_policy_narrative",
+    "fiscal_year": "2025",
+    "markdown": "# BÁO CÁO CỦA HỘI ĐỒNG QUẢN TRỊ\n\nNgày 15/03/2025, Hội đồng quản trị bổ nhiệm Bà Nguyễn Thị Lan làm Tổng Giám đốc. Ông Trần Văn Bình từ nhiệm chức vụ Thành viên Hội đồng quản trị.\n\nSố lượng nhân viên tại ngày cuối năm là 593 người.\n\n# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n## 4. Chính sách kế toán\n\nTài sản cố định được khấu hao theo phương pháp đường thẳng. Quyền sử dụng đất lâu dài không khấu hao.\n",
+    "expected_person_events": [
+      {
+        "topic": "Bổ nhiệm nhân sự",
+        "entity_label": "Nguyễn Thị Lan"
+      },
+      {
+        "topic": "Miễn nhiệm hoặc từ nhiệm nhân sự",
+        "entity_label": "Trần Văn Bình"
+      }
+    ],
+    "expected_policy_topics": [
+      "Phương pháp khấu hao",
+      "Chính sách không khấu hao"
+    ],
+    "expected_person_metric": "Số lượng nhân viên"
+  }
+]

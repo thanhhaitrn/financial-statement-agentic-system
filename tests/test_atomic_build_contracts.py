@@ -69,6 +69,44 @@ def _install_deterministic_parser(monkeypatch, dataset) -> None:
     monkeypatch.setattr(pipeline, "build_note_rows", lambda *_args, **_kwargs: [])
 
 
+def test_pdf_requires_explicit_conversion_before_ingestion(tmp_path):
+    dataset = _dataset(tmp_path)
+    source = tmp_path / "source.pdf"
+    source.write_bytes(b"%PDF-1.7\nfixture")
+    dataset.file_path = str(source)
+    with pytest.raises(pipeline.UnsupportedSourceFormat, match=".md only"):
+        pipeline._read_source(dataset)
+
+
+def test_converter_version_and_markdown_hash_drive_rebuild(monkeypatch, tmp_path):
+    dataset = _dataset(tmp_path)
+    source = Path(dataset.file_path)
+    source.write_text("100", encoding="utf-8")
+    dataset.source_sha256 = "same-pdf-sha"
+    dataset.source_converter_identity = "converter-contract-v2"
+    dataset.source_converter_version = "provider-v1"
+    _install_deterministic_parser(monkeypatch, dataset)
+    conn, count = pipeline.build_knowledge_base(dataset)
+    first = read_kb_manifest(conn)
+    conn.close()
+    assert count == 1
+    assert first["source_sha256"] == hashlib.sha256(b"100").hexdigest()
+    conn, count = pipeline.build_knowledge_base(dataset)
+    conn.close()
+    assert count == 0
+    dataset.source_converter_version = "provider-v2"
+    conn, count = pipeline.build_knowledge_base(dataset)
+    second = read_kb_manifest(conn)
+    conn.close()
+    assert count == 1 and first != second
+    source.write_text("200", encoding="utf-8")
+    conn, count = pipeline.build_knowledge_base(dataset)
+    third = read_kb_manifest(conn)
+    conn.close()
+    assert count == 1 and third["source_sha256"] != second["source_sha256"]
+    assert dataset.source_sha256 == "same-pdf-sha"
+
+
 def test_changed_source_rebuilds_but_unchanged_manifest_reuses(monkeypatch, tmp_path):
     dataset = _dataset(tmp_path)
     Path(dataset.file_path).write_text("100", encoding="utf-8")

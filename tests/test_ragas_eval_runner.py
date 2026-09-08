@@ -10,6 +10,8 @@ if str(ROOT_DIR) not in sys.path:
 
 from dataset_batch_result import (
     METRIC_NAMES,
+    evidence_ledger_contract_errors,
+    extract_evidence_ledger,
     extract_retrieved_contexts,
     is_session_limit_error,
     load_seed_records,
@@ -157,6 +159,163 @@ class RagasEvalRunnerTests(unittest.TestCase):
         self.assertNotIn("Full retrieved document without truncation.", contexts[0])
         self.assertNotIn("Hint:", contexts[0])
         self.assertNotIn("Compact message", contexts[0])
+
+    def test_extract_retrieved_contexts_unions_all_evidence_sources(self):
+        def payload(item, value):
+            return {
+                "facts": [
+                    {
+                        "fact_id": f"fact-{value}",
+                        "table": "THUYET MINH",
+                        "item_name": item,
+                        "value": value,
+                        "source": "report.md",
+                    }
+                ]
+            }
+
+        final_state = {
+            "ragas_facts_by_table": {"a": payload("A", "1")},
+            "evidence_pack": {"facts_by_table": {"b": payload("B", "2")}},
+            "analysis_input_results": {"c": payload("C", "3")},
+            "worker_results": {"d": payload("D", "4")},
+            "tool_results": [{"results": payload("E", "5")}],
+        }
+
+        contexts = extract_retrieved_contexts(final_state)
+
+        self.assertEqual(len(contexts), 5)
+        self.assertEqual(
+            [
+                next(
+                    line.removeprefix("Fact ID: ")
+                    for line in context.splitlines()
+                    if line.startswith("Fact ID: ")
+                )
+                for context in contexts
+            ],
+            ["fact-1", "fact-2", "fact-3", "fact-4", "fact-5"],
+        )
+
+    def test_evidence_ledger_is_persisted_without_answer_parsing_and_validated(self):
+        ledger = {
+            "schema_version": 1,
+            "entries": [
+                {
+                    "kind": "derived_calculation",
+                    "operation": "ratio",
+                    "metric": "tỷ trọng hàng tồn kho",
+                    "result": "12.5",
+                    "result_unit": "percent",
+                    "operands": [
+                        {
+                            "role": "numerator",
+                            "fact_id": "inventory-current",
+                            "value": "25",
+                            "source": "report.md#page=12",
+                        },
+                        {
+                            "role": "denominator",
+                            "fact_id": "assets-current",
+                            "value": "200",
+                            "source": "report.md#page=4",
+                        },
+                    ],
+                }
+            ],
+        }
+
+        extracted = extract_evidence_ledger(
+            {
+                "answer": "unrelated surface text",
+                "evidence_ledger": ledger,
+            }
+        )
+
+        self.assertEqual(extracted, ledger)
+        self.assertEqual(evidence_ledger_contract_errors(extracted), [])
+        extracted["entries"][0]["operands"][1].pop("fact_id")
+        self.assertIn(
+            "evidence_ledger: entry 0 operand 1 missing fact_id",
+            evidence_ledger_contract_errors(extracted),
+        )
+
+    def test_evidence_ledger_accepts_retrieval_and_calculation_entries_together(self):
+        retrieval_entry = {
+            "kind": "retrieval_requirement",
+            "requirement": "chi phí bán hàng",
+            "table": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+            "parsed_query_slots": {
+                "metric": "chi phí bán hàng",
+                "operation": "lookup",
+            },
+            "route_candidates": [
+                {
+                    "rank": 1,
+                    "table": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+                    "confidence": 0.9,
+                    "reason": "keyword_table_match",
+                }
+            ],
+            "requirement_state": {
+                "before_retry": "unmatched_topk",
+                "after_retry": "matched",
+            },
+            "targeted_retry": {
+                "performed": True,
+                "query": "chi phí bán hàng",
+            },
+            "selected_facts": [
+                {
+                    "fact_id": "selling-expense-current",
+                    "rank": 1,
+                    "rerank_score": 91.5,
+                    "score_query": "chi phí bán hàng",
+                    "score_intent": "chi phí bán hàng",
+                    "retrieval_origin": "hybrid",
+                }
+            ],
+        }
+        calculation_entry = {
+            "kind": "derived_calculation",
+            "operation": "delta",
+            "result": "20",
+            "operands": [
+                {
+                    "role": "current",
+                    "fact_id": "selling-expense-current",
+                    "source": "report.md#current",
+                },
+                {
+                    "role": "previous",
+                    "fact_id": "selling-expense-previous",
+                    "source": "report.md#previous",
+                },
+            ],
+        }
+        ledger = {
+            "schema_version": 1,
+            "entries": [retrieval_entry, calculation_entry],
+        }
+
+        extracted = extract_evidence_ledger({"evidence_ledger": ledger})
+
+        self.assertEqual(extracted, ledger)
+        self.assertEqual(evidence_ledger_contract_errors(extracted), [])
+        extracted["entries"][0]["selected_facts"][0][
+            "rerank_score"
+        ] = float("nan")
+        self.assertIn(
+            "evidence_ledger: entry 0 selected fact 0 missing finite "
+            "rerank_score",
+            evidence_ledger_contract_errors(extracted),
+        )
+        extracted["entries"][0]["selected_facts"][0]["rerank_score"] = 91.5
+        extracted["entries"][1]["operands"][0].pop("source")
+        self.assertIn(
+            "evidence_ledger: entry 1 operand 0 missing source",
+            evidence_ledger_contract_errors(extracted),
+        )
 
     def test_build_ragas_evaluation_samples(self):
         samples = build_ragas_evaluation_samples(

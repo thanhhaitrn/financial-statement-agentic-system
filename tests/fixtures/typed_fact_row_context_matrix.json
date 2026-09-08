@@ -1,0 +1,49 @@
+{
+  "name": "generic_related_party_row_context",
+  "fiscal_year": "2025",
+  "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 30. Giao dịch với các bên liên quan\n\n| Bên liên quan | Mối quan hệ | Nội dung nghiệp vụ | Năm 2025 | Năm 2024 |\n| --- | --- | --- | ---: | ---: |\n| Công ty Cổ phần Alpha | Công ty liên kết | Mua hàng hóa và dịch vụ | 100 | 80 |\n|  |  | Bán tài sản cố định | 12 | 9 |\n|  |  | Cổ tức được chia | 7 | 5 |\n|  |  | Thu nhập khác | 6 | 4 |\n|  |  | Hỗ trợ bán hàng | 3 | 2 |\n| Công ty TNHH Beta | Công ty con | Mua nguyên vật liệu | 20 | 18 |\n",
+  "expected_numeric_facts": [
+    {
+      "counterparty": "Công ty Cổ phần Alpha",
+      "relationship": "Công ty liên kết",
+      "metric_label": "Mua hàng hóa và dịch vụ",
+      "transaction_type": "purchase",
+      "values": ["100", "80"]
+    },
+    {
+      "counterparty": "Công ty Cổ phần Alpha",
+      "relationship": "Công ty liên kết",
+      "metric_label": "Bán tài sản cố định",
+      "transaction_type": "sale",
+      "values": ["12", "9"]
+    },
+    {
+      "counterparty": "Công ty Cổ phần Alpha",
+      "relationship": "Công ty liên kết",
+      "metric_label": "Cổ tức được chia",
+      "transaction_type": "dividend",
+      "values": ["7", "5"]
+    },
+    {
+      "counterparty": "Công ty Cổ phần Alpha",
+      "relationship": "Công ty liên kết",
+      "metric_label": "Thu nhập khác",
+      "transaction_type": "other_income",
+      "values": ["6", "4"]
+    },
+    {
+      "counterparty": "Công ty Cổ phần Alpha",
+      "relationship": "Công ty liên kết",
+      "metric_label": "Hỗ trợ bán hàng",
+      "transaction_type": "sales_support",
+      "values": ["3", "2"]
+    },
+    {
+      "counterparty": "Công ty TNHH Beta",
+      "relationship": "Công ty con",
+      "metric_label": "Mua nguyên vật liệu",
+      "transaction_type": "purchase",
+      "values": ["20", "18"]
+    }
+  ]
+}

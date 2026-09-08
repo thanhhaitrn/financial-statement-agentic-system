@@ -9,7 +9,7 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from schemas.agent_outputs import parse_worker_response_payload
+from schemas.agent_outputs import EvidencePlanItem, parse_worker_response_payload
 
 
 def test_parse_worker_response_payload_allows_missing_fact_source():
@@ -78,3 +78,85 @@ def test_parse_worker_response_payload_preserves_fact_status_values():
 
     assert payload["facts"][0]["status"] == "not_found_after_search"
     assert payload["facts"][1]["status"] == "ambiguous"
+
+
+def test_worker_fact_preserves_canonical_semantic_dimensions():
+    parsed = parse_worker_response_payload(
+        {
+            "kind": "answer",
+            "facts": [
+                {
+                    "item_name": "Mua hàng hóa | Công ty A",
+                    "value": "100",
+                    "metric_label": "Mua hàng hóa",
+                    "entity_label": "Công ty A",
+                    "scope_label": "Giao dịch với bên liên quan",
+                    "counterparty": "Công ty A",
+                    "transaction_type": "purchase",
+                    "movement_type": "",
+                    "geography": "",
+                    "policy_topic": "",
+                }
+            ],
+        }
+    )
+
+    fact = parsed.model_dump()["facts"][0]
+    assert fact["counterparty"] == "Công ty A"
+    assert fact["transaction_type"] == "purchase"
+    assert fact["metric_label"] == "Mua hàng hóa"
+
+
+def test_evidence_plan_preserves_typed_calculation_operands():
+    item = EvidencePlanItem.model_validate(
+        {
+            "table": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+            "query": "cam kết thuê tăng bao nhiêu lần",
+            "operation": "multiple",
+            "operands": [
+                {
+                    "role": "current",
+                    "metric": "cam kết thuê",
+                    "entity": "Nhà máy Alpha",
+                    "period": "cuối",
+                    "scope_label": "Cam kết thuê hoạt động",
+                    "counterparty": "Bên cho thuê Alpha",
+                    "transaction_type": "lease",
+                    "movement_type": "closing_balance",
+                    "geography": "Miền Bắc",
+                    "policy_topic": "lease_commitment",
+                },
+                {
+                    "role": "previous",
+                    "metric": "cam kết thuê",
+                    "period": "đầu",
+                },
+            ],
+        }
+    )
+
+    payload = item.model_dump(exclude_none=True)
+    assert payload["operation"] == "multiple"
+    assert [operand["role"] for operand in payload["operands"]] == [
+        "current",
+        "previous",
+    ]
+    assert payload["operands"][0] == {
+        "role": "current",
+        "query": "",
+        "metric": "cam kết thuê",
+            "entity": "Nhà máy Alpha",
+            "period": "cuối",
+            "period_role": "",
+            "reporting_basis": "",
+            "period_label": "",
+            "value_type": "",
+        "aggregation_level": "",
+        "scope_label": "Cam kết thuê hoạt động",
+        "counterparty": "Bên cho thuê Alpha",
+        "transaction_type": "lease",
+        "movement_type": "closing_balance",
+        "geography": "Miền Bắc",
+            "policy_topic": "lease_commitment",
+            "section_key": "",
+        }

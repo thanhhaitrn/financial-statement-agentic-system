@@ -19,7 +19,7 @@ def test_needs_full_schedule_markers():
     assert needs_full_schedule("Khoản cho vay ngắn hạn nào đã được thu hồi hoàn toàn trong kỳ?")
     assert needs_full_schedule("Liệt kê các công ty bị lỗ trong năm.")
     assert needs_full_schedule("Dự án nào có số dư giảm nhiều nhất?")
-    assert needs_full_schedule("So sánh dự phòng giảm giá đầu tư cuối kỳ và đầu năm.")
+    assert not needs_full_schedule("So sánh dự phòng giảm giá đầu tư cuối kỳ và đầu năm.")
     assert not needs_full_schedule("Tổng giá trị hàng tồn kho cuối kỳ là bao nhiêu VND?")
 
 

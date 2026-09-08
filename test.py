@@ -7,26 +7,21 @@ import time
 import uuid
 from pathlib import Path
 
-from config.settings import DEFAULT_DATASET, DEFAULT_DATA_FILE
-from dataset_catalog.registry import (
-    build_dataset_record,
-    delete_dataset as delete_dataset_record,
-    describe_dataset,
-    find_datasets,
-    get_dataset,
-    load_registry,
-    save_dataset,
-)
-from config.allowed_keywords import set_dynamic_keywords
-from ingestion.pipeline import build_knowledge_base
-from kb.sqlite_repo import (
-    derive_keyword_augmentation,
-    sqlite_count_facts,
-)
-from output_formatter import format_final_answer
-from vectorstore.qdrant_store import create_collection
-from vectorstore.index_builder import build_vector_store
 from common import dedupe_keep_order as _dedupe_keep_order
+from config.allowed_keywords import set_dynamic_keywords
+from config.settings import DEFAULT_DATA_FILE, DEFAULT_DATASET
+from dataset_catalog.registry import build_dataset_record
+from dataset_catalog.registry import delete_dataset as delete_dataset_record
+from dataset_catalog.registry import (describe_dataset, find_datasets,
+                                      get_dataset, load_registry, save_dataset)
+from ingestion.pipeline import build_knowledge_base, resolve_dataset_metadata
+from kb.sqlite_repo import (derive_keyword_augmentation,
+                            derive_query_slot_lexicon, sqlite_count_facts)
+from output_formatter import format_final_answer
+from tools.query_routing import set_dataset_slot_lexicon
+from vectorstore.index_builder import build_vector_store
+from vectorstore.qdrant_store import create_collection
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Run the agentic financial QA pipeline.")
@@ -240,6 +235,7 @@ def ensure_built(dataset):
     effective_dataset = dataset.model_copy(
         update={"ingestion_version": DEFAULT_DATASET["ingestion_version"]}
     )
+    effective_dataset = resolve_dataset_metadata(effective_dataset)
     if version_rebuild_required:
         print(
             "Dataset ingestion_version is outdated "
@@ -281,9 +277,19 @@ def ensure_built(dataset):
     # items the static list never anticipated. Best-effort: routing falls back
     # to the static vocabulary if derivation fails.
     try:
-        set_dynamic_keywords(derive_keyword_augmentation(conn))
+        dynamic_keywords = derive_keyword_augmentation(conn)
     except Exception:
-        pass
+        dynamic_keywords = {}
+    set_dynamic_keywords(dynamic_keywords)
+
+    # Bind exact typed metric/entity phrases for this active dataset. The
+    # replacement is explicit even on derivation failure so a long-lived
+    # process cannot reuse the previous dataset's slot vocabulary.
+    try:
+        slot_lexicon = derive_query_slot_lexicon(conn)
+    except Exception:
+        slot_lexicon = {}
+    set_dataset_slot_lexicon(slot_lexicon, dataset_id=dataset.dataset_id)
 
     return dataset, conn, collection
 
@@ -435,6 +441,8 @@ def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> d
     return {
         "user_query": query,
         "dataset_id": dataset.dataset_id,
+        "dataset_company": str(getattr(dataset, "company", "") or ""),
+        "dataset_ticker": str(getattr(dataset, "ticker", "") or ""),
         "debug_trace": debug_trace,
         "tool_observations": [],
         "planner_plan": {},
@@ -442,7 +450,6 @@ def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> d
         "evidence_pack": {},
         "evidence_cache": {},
         "worker_results": {},
-        "web_summary": "",
         "expected_workers": [],
         "done_workers": {},
         "followup_rounds": 0,
@@ -451,12 +458,32 @@ def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> d
     }
 
 
-def execute_query(dataset, collection, query: str, *, debug_trace: bool = False, on_trace_entry=None) -> dict:
+def execute_query(
+    dataset,
+    collection,
+    query: str,
+    *,
+    debug_trace: bool = False,
+    on_trace_entry=None,
+    web_provider=None,
+    owner_id: str = "",
+    admission_quota=None,
+) -> dict:
     import hashlib
 
+    from config.runtime_policy import DEFAULT_POLICY
     from graph.state import WorkflowServices
     from graph.workflow import build_graph
     from llm.client import get_llm_identity
+    from web_evidence import build_default_web_provider
+
+    owner_id = str(owner_id or "").strip()
+    if owner_id:
+        if admission_quota is None:
+            from acquisition import build_default_acquisition_quota
+
+            admission_quota = build_default_acquisition_quota(DEFAULT_POLICY)
+        admission_quota.admit_question(owner_id)
 
     collection_generation = str(
         getattr(collection, "generation", "")
@@ -474,9 +501,16 @@ def execute_query(dataset, collection, query: str, *, debug_trace: bool = False,
             collection=collection,
             index_fingerprint=collection_generation,
             model_fingerprint=model_fingerprint,
+            web_provider=(
+                web_provider
+                if web_provider is not None
+                else build_default_web_provider(DEFAULT_POLICY)
+            ),
         )
     )
     initial_state = _build_initial_state(dataset, query, debug_trace=debug_trace)
+    if owner_id:
+        initial_state["owner_id"] = owner_id
     initial_state["index_fingerprint"] = collection_generation
     initial_state["collection_generation"] = collection_generation
     initial_state["model_fingerprint"] = model_fingerprint
@@ -510,8 +544,9 @@ def run_query(dataset, collection, query: str, *, debug_trace: bool = False):
     run_log = extract_run_summary(final_state)
     print(run_log)
     sys.stdout.flush()
-    print("\n=== FINAL ANSWER ===")
-    print(format_final_answer(final_state))
+    # ``format_final_answer`` owns the public heading so API and CLI rendering
+    # share one presentation contract without printing it twice.
+    print("\n" + format_final_answer(final_state))
 
     return final_state
 

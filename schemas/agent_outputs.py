@@ -1,10 +1,21 @@
 """Pydantic models and coercion helpers for planner, router, and worker outputs."""
 # Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
 
-from pydantic import BaseModel, Field, TypeAdapter, field_validator, model_validator
+from enum import StrEnum
+
+from pydantic import (
+    BaseModel,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
 from pydantic.json_schema import SkipJsonSchema
 from typing import List, Literal, Any, Optional
 import re, json
+from agents.agent_registry import ANALYSIS_AGENT_ORDER
+from config.domain_catalog import ANALYSIS_AXIS_ALIASES, TABLE_CANON
 from schemas.requirements import normalize_fact_status
 from schemas.table_names import normalize_table_heading
 from common import dedupe_keep_order as _dedupe_keep_order
@@ -17,89 +28,30 @@ TABLE_NAME = Literal[
     "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
 ]
 
-TABLE_CANON = {
-    "bảng cân đối kế toán": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "báo cáo kết quả hoạt động kinh doanh": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "báo cáo lưu chuyển tiền tệ": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    "bcdkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "bcđkt": "BẢNG CÂN ĐỐI KẾ TOÁN",
-    "kqhđkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "kqhdkd": "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
-    "lctt": "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
-    "thuyết minh báo cáo tài chính": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-    "thuyet minh bao cao tai chinh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-    "thuyết minh bctc": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-    "thuyet minh bctc": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-    "thuyết minh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-    "thuyet minh": "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
-    "phần đầu báo cáo tài chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "phan dau bao cao tai chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "báo cáo của ban tổng giám đốc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "bao cao cua ban tong giam doc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "báo cáo của ban giám đốc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "bao cao cua ban giam doc": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "báo cáo kiểm toán độc lập": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "bao cao kiem toan doc lap": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "báo cáo kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "bao cao kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "báo cáo soát xét": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "bao cao soat xet": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "báo cáo soát xét báo cáo tài chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "bao cao soat xet bao cao tai chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "thông tin công ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "thong tin cong ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "khái quát về công ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "khai quat ve cong ty": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "địa chỉ": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "dia chi": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "địa chỉ trụ sở chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "dia chi tru so chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "trụ sở chính": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "tru so chinh": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "chuẩn mực kế toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "chuan muc ke toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "chuẩn mực kế toán áp dụng": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "chuan muc ke toan ap dung": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "chế độ kế toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "che do ke toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "công ty kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "cong ty kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "hãng kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "hang kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "đơn vị kiểm toán": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-    "don vi kiem toan": "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
-}
 
 VALID_TABLE_NAMES = set(TABLE_CANON.values())
-AGENT_NAME_VALUES = {
-    "agent_profitability",
-    "agent_liquidity_solvency",
-    "agent_cashflow_analysis",
-    "agent_efficiency",
-}
-ANALYSIS_AXIS_ALIASES = {
-    "profitability": "agent_profitability",
-    "profit": "agent_profitability",
-    "earnings": "agent_profitability",
-    "agent_profitability": "agent_profitability",
-    "liquidity": "agent_liquidity_solvency",
-    "solvency": "agent_liquidity_solvency",
-    "leverage": "agent_liquidity_solvency",
-    "liquidity_solvency": "agent_liquidity_solvency",
-    "agent_liquidity_solvency": "agent_liquidity_solvency",
-    "cashflow": "agent_cashflow_analysis",
-    "cash_flow": "agent_cashflow_analysis",
-    "cashflow_analysis": "agent_cashflow_analysis",
-    "cash_flow_analysis": "agent_cashflow_analysis",
-    "cash_flow_quality": "agent_cashflow_analysis",
-    "cashflow_quality": "agent_cashflow_analysis",
-    "agent_cashflow_analysis": "agent_cashflow_analysis",
-    "efficiency": "agent_efficiency",
-    "capital_efficiency": "agent_efficiency",
-    "operating_efficiency": "agent_efficiency",
-    "asset_efficiency": "agent_efficiency",
-    "agent_efficiency": "agent_efficiency",
-}
+class AnalysisAgentName(StrEnum):
+    """Wire-level name of an analysis agent.
+
+    Members are plain strings (``str(x) == "agent_profitability"``), so the wire
+    format is unchanged; the enum only makes the accepted set explicit and
+    derived from the registry rather than re-typed per schema.
+    """
+
+    PROFITABILITY = "agent_profitability"
+    LIQUIDITY_SOLVENCY = "agent_liquidity_solvency"
+    CASHFLOW_ANALYSIS = "agent_cashflow_analysis"
+    EFFICIENCY = "agent_efficiency"
+
+
+# The registry stays the single source of truth: a spec added there without a
+# matching member here is a wiring bug, not a silently narrower schema.
+assert tuple(member.value for member in AnalysisAgentName) == ANALYSIS_AGENT_ORDER, (
+    "AnalysisAgentName is out of sync with the agent registry: "
+    f"{[m.value for m in AnalysisAgentName]} != {list(ANALYSIS_AGENT_ORDER)}"
+)
+
+AGENT_NAME_VALUES = {member.value for member in AnalysisAgentName}
 
 
 def _normalize_table_value(value: Any) -> Any:
@@ -341,24 +293,19 @@ def _coerce_followups_payload(value: Any) -> Any:
 
     return normalized
 
-AGENT_NAME = Literal[
-    "agent_profitability",
-    "agent_liquidity_solvency",
-    "agent_cashflow_analysis",
-    "agent_efficiency",
-]
-ANALYSIS_AXIS = Literal[
-    "agent_profitability",
-    "agent_liquidity_solvency",
-    "agent_cashflow_analysis",
-    "agent_efficiency",
-]
+AGENT_NAME = AnalysisAgentName
+ANALYSIS_AXIS = AnalysisAgentName
 
 PLANNER_DIFFICULTY_LEVEL = Literal[
     "easy",
     "medium",
     "hard",
 ]
+PLANNER_RESPONSE_MODE = Literal[
+    "extractive",
+    "grounded_interpretation",
+]
+WEB_INTENT = Literal["", "company_news", "unsupported_external"]
 
 
 def _map_question_type_to_difficulty(value: Any) -> str:
@@ -432,12 +379,15 @@ class PlannerAnalysisAxis(BaseModel):
 
 class PlannerEvidencePlan(BaseModel):
     difficulty_level: PLANNER_DIFFICULTY_LEVEL = "easy"
+    response_mode: PLANNER_RESPONSE_MODE = "extractive"
+    premise_requirements: List[str] = Field(default_factory=list)
     tables: SkipJsonSchema[List[TABLE_NAME]] = Field(default_factory=list, exclude=True)
     analysis_axes: List[PlannerAnalysisAxis] = Field(default_factory=list)
     required_components: SkipJsonSchema[List[str]] = Field(default_factory=list, exclude=True)
     company: Optional[str] = ""
     time_hint: Optional[str] = ""
     need_web: bool = False
+    web_intent: WEB_INTENT = ""
 
     @model_validator(mode="before")
     @classmethod
@@ -454,6 +404,14 @@ class PlannerEvidencePlan(BaseModel):
     @classmethod
     def normalize_difficulty_level(cls, value):
         return _map_question_type_to_difficulty(value)
+
+    @field_validator("response_mode", mode="before")
+    @classmethod
+    def normalize_response_mode(cls, value):
+        normalized = str(value or "").strip().lower()
+        if normalized in {"grounded_interpretation", "grounded-interpretation"}:
+            return "grounded_interpretation"
+        return "extractive"
 
     @field_validator("tables", mode="before")
     @classmethod
@@ -477,9 +435,23 @@ class PlannerEvidencePlan(BaseModel):
             return ""
         return str(v).strip()
 
-    @field_validator("required_components", mode="before")
+    @field_validator("web_intent", mode="before")
     @classmethod
-    def normalize_required_components(cls, v):
+    def normalize_web_intent(cls, value):
+        normalized = str(value or "").strip().lower().replace("-", "_")
+        aliases = {
+            "news": "company_news",
+            "tin_tuc": "company_news",
+            "company_news": "company_news",
+            "external": "unsupported_external",
+            "market": "unsupported_external",
+            "macro": "unsupported_external",
+        }
+        return aliases.get(normalized, normalized)
+
+    @field_validator("required_components", "premise_requirements", mode="before")
+    @classmethod
+    def normalize_string_lists(cls, v):
         if v is None:
             return []
         return [str(item).strip() for item in v if str(item).strip()]
@@ -532,6 +504,7 @@ class PlannerEvidencePlan(BaseModel):
         self.tables = tables
         self.analysis_axes = normalized_axes
         self.required_components = _dedupe_keep_order(self.required_components)
+        self.premise_requirements = _dedupe_keep_order(self.premise_requirements)
         return self
 
 
@@ -583,10 +556,84 @@ class Target(BaseModel):
         return self
 
 
+CALCULATION_OPERATION = Literal[
+    "delta",
+    "percent_change",
+    "ratio",
+    "share",
+    "multiple",
+    "sum",
+]
+OPERAND_ROLE = Literal[
+    "current",
+    "previous",
+    "numerator",
+    "denominator",
+    "component",
+]
+
+
+class EvidenceOperand(BaseModel):
+    """A typed slot that must bind to one fact before deterministic arithmetic."""
+
+    role: OPERAND_ROLE
+    query: str = ""
+    metric: str = ""
+    entity: str = ""
+    period: str = ""
+    period_role: str = ""
+    reporting_basis: str = ""
+    period_label: str = ""
+    value_type: str = ""
+    aggregation_level: str = ""
+    scope_label: str = ""
+    counterparty: str = ""
+    transaction_type: str = ""
+    movement_type: str = ""
+    geography: str = ""
+    policy_topic: str = ""
+    section_key: str = ""
+    table: Optional[TABLE_NAME] = None
+
+    @field_validator(
+        "query",
+        "metric",
+        "entity",
+        "period",
+        "period_role",
+        "reporting_basis",
+        "period_label",
+        "value_type",
+        "aggregation_level",
+        "scope_label",
+        "counterparty",
+        "transaction_type",
+        "movement_type",
+        "geography",
+        "policy_topic",
+        "section_key",
+        mode="before",
+    )
+    @classmethod
+    def normalize_operand_text(cls, value):
+        return str(value or "").strip()
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_operand_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        return normalized if normalized in VALID_TABLE_NAMES else None
+
+
 class EvidencePlanItem(BaseModel):
     table: Optional[TABLE_NAME] = None
     query: str = ""
     needby: List[ANALYSIS_AXIS] = Field(default_factory=list)
+    operation: Optional[CALCULATION_OPERATION] = None
+    operand_role: Optional[OPERAND_ROLE] = None
+    operands: Optional[List[EvidenceOperand]] = None
 
     @model_validator(mode="before")
     @classmethod
@@ -637,6 +684,17 @@ class EvidencePlanItem(BaseModel):
                 normalized.append(agent)
         return normalized
 
+    @field_validator("operands", mode="before")
+    @classmethod
+    def normalize_operands(cls, value):
+        if value in (None, ""):
+            return None
+        if isinstance(value, dict):
+            return [value]
+        if isinstance(value, list):
+            return value or None
+        return None
+
 
 class AnalysisPlanItem(BaseModel):
     agent: ANALYSIS_AXIS
@@ -657,8 +715,22 @@ class AnalysisPlanItem(BaseModel):
 
 
 class EvidenceDispatchPlan(BaseModel):
+    """Lenient transport envelope for one raw router response.
+
+    ``analysis_plan`` is typed: it carries nothing beyond ``agent``/``objective``
+    and an entry that cannot be typed is dropped rather than failing the plan.
+
+    ``evidence_plan`` and ``targets`` stay ``List[dict]`` on purpose. The router
+    emits per-item retrieval metadata (``period``, ``period_role``,
+    ``value_type``, ``operands``, ``scope_label``, ``counterparty`` and more)
+    that ``EvidencePlanItem`` does not model but that the keyworder reads back
+    to build typed calculation contracts. Typing the envelope would silently
+    strip that metadata, and one malformed item would reject the whole plan
+    instead of being dropped downstream.
+    """
+
     evidence_plan: List[dict] = Field(default_factory=list)
-    analysis_plan: List[dict] = Field(default_factory=list)
+    analysis_plan: List[AnalysisPlanItem] = Field(default_factory=list)
     targets: List[dict] = Field(default_factory=list)
 
     @model_validator(mode="before")
@@ -706,7 +778,21 @@ class EvidenceDispatchPlan(BaseModel):
 
         return data
 
-    @field_validator("evidence_plan", "analysis_plan", "targets", mode="before")
+    @field_validator("analysis_plan", mode="before")
+    @classmethod
+    def keep_typeable_analysis_items(cls, value):
+        """Drop analysis entries the schema cannot type, keep the rest."""
+
+        items = cls.normalize_router_items(value)
+        typed = []
+        for item in items:
+            try:
+                typed.append(AnalysisPlanItem.model_validate(item))
+            except ValidationError:
+                continue
+        return typed
+
+    @field_validator("evidence_plan", "targets", mode="before")
     @classmethod
     def normalize_router_items(cls, value):
         if value is None:
@@ -735,26 +821,111 @@ class EvidenceDispatchPlan(BaseModel):
 
 class WorkerFact(BaseModel):
     content_type: str = ""
+    company: str = ""
+    fiscal_year: str = ""
+    index_generation: str = ""
+    table: str = ""
+    fact_id: str = ""
     note_number: str = ""
+    note_ref: str = ""
     note_title: str = ""
+    section_path: str = ""
+    block_id: str = ""
     subheading: str = ""
     item_name: str = ""
+    row_label: str = ""
+    column_label: str = ""
     time_hint: str = ""
+    period: str = ""
+    period_label: str = ""
+    period_role: str = ""
+    reporting_basis: str = ""
+    value_type: str = ""
+    aggregation_level: str = ""
+    unit: str = ""
+    value_kind: str = ""
     value: str = ""
+    parsed_value: str = ""
+    metric_label: str = ""
+    entity_label: str = ""
+    scope_label: str = ""
+    counterparty: str = ""
+    transaction_type: str = ""
+    movement_type: str = ""
+    geography: str = ""
+    policy_topic: str = ""
+    section_key: str = ""
     message: str = ""
     source: str = ""
+    source_url: str = ""
+    publisher: str = ""
+    published_at: str = ""
+    retrieved_at: str = ""
+    source_page: str = ""
+    source_table: str = ""
+    source_item: str = ""
+    evidence_role: str = ""
+    linked_parent_fact_id: str = ""
+    linked_parent_item: str = ""
+    linked_parent_value: str = ""
+    linked_parent_period_label: str = ""
+    linked_parent_aggregation_level: str = ""
+    evidence_state: str = ""
+    search_exhaustive: bool = False
     status: Literal["found", "not_found_after_search", "ambiguous"] = "found"
 
     @field_validator(
         "content_type",
+        "company",
+        "fiscal_year",
+        "index_generation",
+        "table",
+        "fact_id",
         "note_number",
+        "note_ref",
         "note_title",
+        "section_path",
+        "block_id",
         "subheading",
         "item_name",
+        "row_label",
+        "column_label",
         "time_hint",
+        "period",
+        "period_label",
+        "period_role",
+        "reporting_basis",
+        "value_type",
+        "aggregation_level",
+        "unit",
+        "value_kind",
         "value",
+        "parsed_value",
+        "metric_label",
+        "entity_label",
+        "scope_label",
+        "counterparty",
+        "transaction_type",
+        "movement_type",
+        "geography",
+        "policy_topic",
+        "section_key",
         "message",
         "source",
+        "source_url",
+        "publisher",
+        "published_at",
+        "retrieved_at",
+        "source_page",
+        "source_table",
+        "source_item",
+        "evidence_role",
+        "linked_parent_fact_id",
+        "linked_parent_item",
+        "linked_parent_value",
+        "linked_parent_period_label",
+        "linked_parent_aggregation_level",
+        "evidence_state",
         mode="before",
     )
     @classmethod

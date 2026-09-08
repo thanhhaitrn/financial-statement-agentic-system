@@ -15,10 +15,14 @@ from vectorstore.qdrant_store import (
     add_in_batches,
     create_collection,
     create_versioned_collection,
+    VECTOR_INDEX_SCHEMA_VERSION,
     validate_index_inputs,
     validate_versioned_collection,
 )
-from vectorstore.text_builder import build_documents_and_metadata
+from vectorstore.text_builder import (
+    build_documents_and_metadata,
+    validate_canonical_vector_metadata,
+)
 
 
 def _stable_vector_ids(
@@ -76,6 +80,8 @@ def _vector_build_fingerprint(input_sha256: str, kb_manifest: dict) -> str:
             "parser_version": kb_manifest.get("parser_version", ""),
             "schema_version": kb_manifest.get("schema_version", ""),
             "facts_sha256": kb_manifest.get("facts_sha256", ""),
+            "metadata_sha256": kb_manifest.get("metadata_sha256", ""),
+            "vector_index_schema_version": VECTOR_INDEX_SCHEMA_VERSION,
         },
         sort_keys=True,
         separators=(",", ":"),
@@ -85,6 +91,33 @@ def _vector_build_fingerprint(input_sha256: str, kb_manifest: dict) -> str:
 
 def _fact_query(conn) -> str:
     fact_id_projection = "fact_id" if sqlite_has_fact_columns(conn, {"fact_id"}) else "'' AS fact_id"
+    typed_columns = (
+        "row_label",
+        "column_label",
+        "value_kind",
+        "parsed_value",
+        "period_label",
+        "period_role",
+        "aggregation_level",
+        "section_path",
+        "block_id",
+        "source_page",
+        "metric_label",
+        "entity_label",
+        "scope_label",
+        "counterparty",
+        "transaction_type",
+        "movement_type",
+        "geography",
+        "policy_topic",
+        "section_key",
+    )
+    typed_projection = ",\n            ".join(
+        column
+        if sqlite_has_fact_columns(conn, {column})
+        else f"'' AS {column}"
+        for column in typed_columns
+    )
     return f"""
         SELECT
             company,
@@ -101,6 +134,7 @@ def _fact_query(conn) -> str:
             period,
             value_type,
             unit,
+            {typed_projection},
             {fact_id_projection}
         FROM financial_facts
         ORDER BY rowid
@@ -117,6 +151,7 @@ def _fact_chunks(conn):
 
 def _chunk_payload(df: pd.DataFrame, occurrence_by_hash: dict[str, int]):
     documents, metadatas, _legacy_ids = build_documents_and_metadata(df)
+    validate_canonical_vector_metadata(metadatas)
     ids = _stable_vector_ids(
         df,
         documents,
@@ -168,8 +203,10 @@ def build_vector_store(conn, collection_name: str, *, reset: bool = False):
             "parser_version": kb_manifest.get("parser_version", ""),
             "schema_version": kb_manifest.get("schema_version", ""),
             "facts_sha256": kb_manifest.get("facts_sha256", ""),
+            "metadata_sha256": kb_manifest.get("metadata_sha256", ""),
             "input_sha256": input_sha256,
             "expected_count": expected_count,
+            "vector_index_schema_version": VECTOR_INDEX_SCHEMA_VERSION,
         },
     )
 

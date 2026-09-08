@@ -326,7 +326,11 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     if not FACTUAL_RECALL_THRESHOLD <= args.threshold <= 1:
         raise SystemExit("--threshold must be between 0.95 and 1")
-    paths = args.paths or ["ragas_runs/apec_q181_210_v3.json", "ragas_runs/apec_q211_250.json"]
+    paths = list(args.paths or [])
+    if not paths:
+        raise SystemExit(
+            "Pass at least one report JSON; there is no implicit dataset to analyze."
+        )
     try:
         results = [
             analyze(

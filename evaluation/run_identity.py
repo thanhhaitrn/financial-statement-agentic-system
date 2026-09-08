@@ -9,30 +9,48 @@ them changed and refuse to reuse stale scores.
 
 from __future__ import annotations
 
+import json
 import os
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 from common import prediction_key
-from evaluation.contracts import sha256_file, stable_json_fingerprint
+from config.domain_catalog import DOMAIN_CATALOG_VERSION, catalog_fingerprint
+from config.runtime_policy import active_policy
+from evaluation.contracts import (git_worktree_provenance, sha256_file,
+                                  stable_json_fingerprint)
 
-ROOT_DIR = Path(__file__).resolve().parent
-RUN_IDENTITY_VERSION = 1
+ROOT_DIR = Path(__file__).resolve().parents[1]
+RUN_IDENTITY_VERSION = 4
 _PROMPT_IDENTITY_FILES = (
     "agents/prompts.py",
     "agents/profiles.py",
 )
 _CONFIG_IDENTITY_FILES = (
+    "output_formatter.py",
     "agents/agent_registry.py",
+    "config/domain_catalog.py",
+    "config/runtime_policy.py",
     "agents/keyworder_runner.py",
     "agents/planner_runner.py",
     "agents/synth_runner.py",
     "graph/dispatch_nodes.py",
     "graph/evidence.py",
     "graph/router.py",
+    "schemas/web_evidence.py",
+    "schemas/evidence_origin.py",
+    "acquisition/llamaparse.py",
+    "acquisition/local_text.py",
+    "acquisition/quality.py",
+    "acquisition/cafef.py",
+    "acquisition/download.py",
+    "schemas/financial_validation.py",
+    "tools/http_safety.py",
     "tools/tool_runner.py",
     "tools/tools.py",
+    "web_evidence/cache.py",
+    "web_evidence/vietstock.py",
 )
 _RUNTIME_CONFIG_DEFAULTS = {
     "LLM_REQUEST_TIMEOUT_SECONDS": "900",
@@ -139,13 +157,17 @@ def build_runtime_fingerprints(
     model_config = _model_identity_payload()
     embedding_config = _embedding_identity_payload()
     prompt_files = _source_files_identity(_PROMPT_IDENTITY_FILES)
+    # The effective policy, not a re-typed copy of it: an env-only cap change
+    # leaves the git tree untouched, so without this a resumed batch would reuse
+    # answers produced under different limits.
+    policy = active_policy()
     runtime_config = {
         "debug_trace": bool(debug_trace),
         "skip_eval": bool(skip_eval),
-        "note_facts_limit": 12,
-        "schedule_note_facts_limit": 24,
-        "main_statement_facts_limit": 10,
-        "main_statement_schedule_facts_limit": 16,
+        "runtime_policy_fingerprint": policy.fingerprint(),
+        "runtime_policy": policy.as_dict(),
+        "domain_catalog_version": DOMAIN_CATALOG_VERSION,
+        "domain_catalog_fingerprint": catalog_fingerprint(),
         "tool_result_facts_limit": 5,
         "environment": {
             name: os.getenv(name, default).strip()
@@ -153,7 +175,35 @@ def build_runtime_fingerprints(
         },
         "source_files": _source_files_identity(_CONFIG_IDENTITY_FILES),
     }
+    worktree = git_worktree_provenance(ROOT_DIR)
+    code_sha256 = str(worktree.get("code_sha256", "") or "").strip()
+    if not code_sha256:
+        # Installed source trees still need a deterministic identity when Git
+        # metadata is unavailable. This fallback covers every configured
+        # runtime/prompt file and fails closed when one changes.
+        code_sha256 = stable_json_fingerprint(
+            {
+                "scheme": "runtime-source-files-fallback-v1",
+                "prompt_files": prompt_files,
+                "runtime_files": runtime_config["source_files"],
+            }
+        )
+    code_provenance = {
+        "scheme": str(
+            worktree.get("scheme", "")
+            or "runtime-source-files-fallback-v1"
+        ),
+        "git_revision": str(worktree.get("git_revision", "") or ""),
+        "worktree_diff_sha256": worktree.get("worktree_diff_sha256"),
+        "worktree_dirty": worktree.get("worktree_dirty"),
+        "relevant_untracked_files_n": worktree.get(
+            "relevant_untracked_files_n"
+        ),
+        "error": str(worktree.get("error", "") or ""),
+    }
     return {
+        "code": code_sha256,
+        "code_provenance": code_provenance,
         "model": stable_json_fingerprint(model_config),
         "embedding": stable_json_fingerprint(embedding_config),
         "prompt": stable_json_fingerprint(prompt_files),
@@ -179,6 +229,7 @@ def dataset_identity_payload(dataset_meta: dict | None) -> dict[str, Any]:
             "ingestion_version",
             "vector_collection_name",
             "source_sha256",
+            "source_converter_identity",
             "facts_sha256",
             "parser_version",
             "kb_schema_version",
@@ -213,16 +264,36 @@ def build_selection_contract(
     full: bool,
     limit: int | None,
     offset: int = 0,
+    seed_population_count: int | None = None,
 ) -> dict[str, Any]:
     selected_records = [item for item in (records or []) if isinstance(item, dict)]
+    selected_count = len(selected_records)
+    full_seed_selection = bool(
+        full
+        and int(offset) == 0
+        and seed_population_count is not None
+        and selected_count == seed_population_count
+    )
     return {
         "full": bool(full),
         "offset": int(offset),
         "limit": None if full else limit,
-        "selected_count": len(selected_records),
+        "selected_count": selected_count,
+        "seed_population_count": seed_population_count,
+        "is_full_seed_selection": full_seed_selection,
         "selected_query_ids": [item.get("id") for item in selected_records],
         "selected_sample_keys": [prediction_key(item) for item in selected_records],
     }
+
+
+def _seed_population_count(seed_path: Path) -> int | None:
+    if not seed_path.is_file():
+        return None
+    try:
+        payload = json.loads(seed_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return None
+    return len(payload) if isinstance(payload, list) else None
 
 
 def build_run_identity(
@@ -243,6 +314,7 @@ def build_run_identity(
         full=full,
         limit=limit,
         offset=offset,
+        seed_population_count=_seed_population_count(seed_path),
     )
     dataset_identity = dataset_identity_payload(dataset_meta)
     runtime = build_runtime_fingerprints(
@@ -254,7 +326,9 @@ def build_run_identity(
         "seed_sha256": seed_checksum,
         "selection": selection,
         "dataset": dataset_identity,
+        "code_provenance": dict(runtime["code_provenance"]),
         "fingerprints": {
+            "code": runtime["code"],
             "seed": seed_checksum,
             "selection": stable_json_fingerprint(selection),
             "query": stable_json_fingerprint(

@@ -10,13 +10,19 @@ ROOT_DIR = Path(__file__).resolve().parents[1]
 if str(ROOT_DIR) not in sys.path:
     sys.path.insert(0, str(ROOT_DIR))
 
-from agents import keyworder_runner, planner_runner
+from agents import agent_runner, keyworder_runner, planner_runner, synth_runner
 from graph import dispatch_nodes
 from graph import evidence as evidence_node
 from graph.router import build_worker_query, route_after_evidence
 from ingestion.table_parser import attach_context
 from schemas.agent_outputs import EvidenceDispatchPlan
-from schemas.table_names import TABLE_IS, TABLE_NOTE, normalize_table_heading
+from schemas.table_names import (
+    TABLE_CF,
+    TABLE_IS,
+    TABLE_NOTE,
+    TABLE_REPORT_SECTION,
+    normalize_table_heading,
+)
 from tools import tools as tools_module
 from tools.evidence import result_to_facts
 from tools.tools import get_related_info
@@ -367,41 +373,626 @@ def test_followup_router_routes_debt_detail_to_note_without_allowed_keyword_requ
     assert normalized["targets"] == []
 
 
-def test_router_finalize_preserves_hard_analysis_axes_without_legacy_baseline_facts():
+def test_router_finalize_requires_comparative_core_facts_for_broad_profitability():
     planner_plan = {
         "difficulty_level": "hard",
+        "response_mode": "extractive",
         "analysis_axes": [
             {
                 "axis": "agent_profitability",
-                "objective": "Đánh giá khả năng sinh lời năm 2024.",
+                "objective": "Đánh giá khả năng sinh lời.",
+            },
+            {
+                "axis": "agent_cashflow_analysis",
+                "objective": "Đánh giá chất lượng dòng tiền.",
             },
             {
                 "axis": "agent_efficiency",
-                "objective": "Đánh giá hiệu quả hoạt động năm 2024.",
+                "objective": "Đánh giá hiệu quả hoạt động.",
             },
         ],
     }
 
     finalized = keyworder_runner._finalize_router_targets(
-        {"targets": []},
+        {
+            "evidence_plan": [
+                {
+                    "table": TABLE_IS,
+                    "query": "doanh thu thuần",
+                    # Simulate the failure mode where Router retrieved revenue
+                    # for efficiency but hid it from profitability.
+                    "needby": ["agent_efficiency"],
+                },
+                {
+                    "table": TABLE_IS,
+                    "query": "lợi nhuận sau thuế",
+                    "needby": ["agent_profitability"],
+                },
+                {
+                    "table": TABLE_BS,
+                    "queries": ["tài sản ngắn hạn", "nợ ngắn hạn"],
+                    "needby": ["agent_efficiency"],
+                },
+                {
+                    "table": TABLE_NOTE,
+                    "query": "Đánh giá khả năng sinh lời của công ty",
+                    "needby": ["agent_profitability"],
+                },
+            ],
+            "targets": [],
+        },
         planner_plan,
-        user_query="Đánh giá khả năng sinh lời và hiệu quả hoạt động năm 2024",
+        user_query="Đánh giá khả năng sinh lời của công ty",
     )
 
-    assert finalized["evidence_plan"] == []
-    assert finalized["analysis_plan"] == [
-        {
-            "agent": "agent_profitability",
-            "objective": "Đánh giá khả năng sinh lời năm 2024.",
-            "evidence_queries": [],
-        },
-        {
-            "agent": "agent_efficiency",
-            "objective": "Đánh giá hiệu quả hoạt động năm 2024.",
-            "evidence_queries": [],
-        },
+    core_routes = []
+    for item in finalized["evidence_plan"]:
+        for query in keyworder_runner._evidence_item_queries(item):
+            query_metadata = dict(
+                (item.get("query_metadata", {}) or {}).get(query, {}) or {}
+            )
+            canonical_query = str(
+                (item.get("canonical_queries", {}) or {}).get(query, "")
+                or item.get("canonical_query", "")
+                or query
+            )
+            core_routes.append(
+                (
+                    item["table"],
+                    canonical_query,
+                    item["needby"],
+                    query_metadata.get(
+                        "period_role", item.get("period_role", "")
+                    ),
+                    query_metadata.get("period", item.get("period", "")),
+                )
+            )
+    assert core_routes == [
+        (
+            TABLE_IS,
+            "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+            ["agent_profitability", "agent_efficiency"],
+            "both",
+            "",
+        ),
+        (
+            TABLE_IS,
+            "lợi nhuận gộp về bán hàng và cung cấp dịch vụ",
+            ["agent_profitability"],
+            "both",
+            "",
+        ),
+        (
+            TABLE_IS,
+            "lợi nhuận thuần từ hoạt động kinh doanh",
+            ["agent_profitability"],
+            "both",
+            "",
+        ),
+        (
+            TABLE_IS,
+            "lợi nhuận sau thuế thu nhập doanh nghiệp",
+            ["agent_profitability", "agent_cashflow_analysis"],
+            "both",
+            "",
+        ),
+        (
+            TABLE_BS,
+            "tổng cộng tài sản",
+            ["agent_profitability", "agent_efficiency"],
+            "",
+            "both",
+        ),
+        (
+            TABLE_BS,
+            "tổng vốn chủ sở hữu",
+            ["agent_profitability"],
+            "",
+            "both",
+        ),
+        (
+            TABLE_CF,
+            "lưu chuyển tiền thuần từ hoạt động kinh doanh",
+            ["agent_cashflow_analysis"],
+            "both",
+            "",
+        ),
     ]
+    analysis_by_agent = {
+        item["agent"]: item for item in finalized["analysis_plan"]
+    }
+    core_queries = [
+        query
+        for item in finalized["evidence_plan"]
+        for query in keyworder_runner._evidence_item_queries(item)
+    ]
+    revenue_query, gross_query, operating_query, pat_query = core_queries[:4]
+    assets_query, equity_query, cfo_query = core_queries[4:]
+    assert [
+        item["query"]
+        for item in analysis_by_agent["agent_profitability"]["evidence_queries"]
+    ] == [
+        revenue_query,
+        gross_query,
+        operating_query,
+        pat_query,
+        assets_query,
+        equity_query,
+    ]
+    assert [
+        item["query"]
+        for item in analysis_by_agent["agent_cashflow_analysis"]["evidence_queries"]
+    ] == [pat_query, cfo_query]
+    assert [
+        item["query"]
+        for item in analysis_by_agent["agent_efficiency"]["evidence_queries"]
+    ] == [revenue_query, assets_query]
     assert finalized["targets"] == finalized["analysis_plan"]
+
+
+def test_router_does_not_expand_standalone_roa_assessment_to_broad_core():
+    finalized = keyworder_runner._finalize_router_targets(
+        {
+            "evidence_plan": [
+                {
+                    "table": TABLE_BS,
+                    "query": "tổng cộng tài sản",
+                    "needby": ["agent_profitability"],
+                }
+            ]
+        },
+        {
+            "difficulty_level": "hard",
+            "response_mode": "extractive",
+            "analysis_axes": [
+                {
+                    "axis": "agent_profitability",
+                    "objective": "Đánh giá ROA.",
+                }
+            ],
+        },
+        user_query="Đánh giá ROA của công ty",
+    )
+
+    assert finalized["evidence_plan"] == [
+        {
+            "table": TABLE_BS,
+            "query": "tổng cộng tài sản",
+            "needby": ["agent_profitability"],
+        }
+    ]
+
+
+def test_comprehensive_financial_assessment_gets_core_evidence_for_all_axes():
+    planner_plan = {
+        "difficulty_level": "hard",
+        "response_mode": "extractive",
+        "analysis_axes": [
+            {"axis": "agent_profitability", "objective": "Đánh giá sinh lời."},
+            {"axis": "agent_liquidity_solvency", "objective": "Đánh giá thanh khoản."},
+            {"axis": "agent_cashflow_analysis", "objective": "Đánh giá dòng tiền."},
+            {"axis": "agent_efficiency", "objective": "Đánh giá hiệu quả."},
+        ],
+    }
+
+    finalized = keyworder_runner._finalize_router_targets(
+        {"evidence_plan": [], "targets": []},
+        planner_plan,
+        user_query="Đánh giá tình hình tài chính công ty",
+    )
+    by_agent = {
+        item["agent"]: {
+            query["query"]
+            for query in item.get("evidence_queries", [])
+        }
+        for item in finalized["analysis_plan"]
+    }
+
+    assert any("giá vốn hàng bán" in item for item in by_agent["agent_efficiency"])
+    assert any("hàng tồn kho" in item for item in by_agent["agent_efficiency"])
+    assert any("phải thu ngắn hạn" in item for item in by_agent["agent_efficiency"])
+    assert any("tổng tài sản ngắn hạn" in item for item in by_agent["agent_liquidity_solvency"])
+    assert any("tổng nợ ngắn hạn" in item for item in by_agent["agent_liquidity_solvency"])
+    assert any("hoạt động đầu tư" in item for item in by_agent["agent_cashflow_analysis"])
+    assert any("hoạt động tài chính" in item for item in by_agent["agent_cashflow_analysis"])
+    assert any("trong kỳ" in item for item in by_agent["agent_cashflow_analysis"])
+    assert all(by_agent[agent] for agent in by_agent)
+
+
+def test_generic_financial_assessment_expands_missing_fourth_axis():
+    plan, added = planner_runner._expand_broad_profitability_axes(
+        {"user_query": "Đánh giá tình hình tài chính công ty"},
+        {
+            "difficulty_level": "hard",
+            "response_mode": "extractive",
+            "analysis_axes": [
+                {"axis": "agent_profitability", "objective": "Đánh giá sinh lời."},
+                {"axis": "agent_cashflow_analysis", "objective": "Đánh giá CFO."},
+                {"axis": "agent_efficiency", "objective": "Đánh giá hiệu quả."},
+            ],
+        },
+    )
+
+    assert added == ["agent_liquidity_solvency"]
+    assert [axis["axis"] for axis in plan["analysis_axes"]] == [
+        "agent_profitability",
+        "agent_liquidity_solvency",
+        "agent_cashflow_analysis",
+        "agent_efficiency",
+    ]
+    objectives = {axis["axis"]: axis["objective"] for axis in plan["analysis_axes"]}
+    assert "lưu chuyển tiền thuần từ hoạt động đầu tư" in objectives[
+        "agent_cashflow_analysis"
+    ]
+    assert "tổng tài sản ngắn hạn" in objectives["agent_liquidity_solvency"]
+    assert "hàng tồn kho" in objectives["agent_efficiency"]
+
+
+def test_broad_profitability_keeps_an_explicit_additional_metric():
+    finalized = keyworder_runner._finalize_router_targets(
+        {
+            "evidence_plan": [
+                {
+                    "table": TABLE_IS,
+                    "query": "chi phí bán hàng",
+                    "needby": ["agent_profitability"],
+                }
+            ]
+        },
+        {
+            "difficulty_level": "hard",
+            "response_mode": "extractive",
+            "analysis_axes": [
+                {
+                    "axis": "agent_profitability",
+                    "objective": "Đánh giá khả năng sinh lời và chi phí bán hàng.",
+                }
+            ],
+        },
+        user_query="Đánh giá khả năng sinh lời và chi phí bán hàng",
+    )
+
+    queries = [
+        query
+        for item in finalized["evidence_plan"]
+        for query in keyworder_runner._evidence_item_queries(item)
+    ]
+    assert len(queries) == 8
+    assert queries.count("chi phí bán hàng") == 1
+
+
+def test_broad_profitability_core_pairs_reach_each_scoped_analysis_input(
+    monkeypatch,
+):
+    planner_plan = {
+        "difficulty_level": "hard",
+        "response_mode": "extractive",
+        "analysis_axes": [
+            {"axis": "agent_profitability", "objective": "Đánh giá sinh lời."},
+            {
+                "axis": "agent_cashflow_analysis",
+                "objective": "Đánh giá chất lượng lợi nhuận.",
+            },
+            {"axis": "agent_efficiency", "objective": "Đánh giá hiệu quả."},
+        ],
+    }
+    worker_plan = keyworder_runner._finalize_router_targets(
+        {"evidence_plan": [], "targets": []},
+        planner_plan,
+        user_query="Đánh giá khả năng sinh lời của công ty",
+    )
+    rows_by_query_prefix = {
+        "doanh thu thuần": (TABLE_IS, "Doanh thu thuần về bán hàng và cung cấp dịch vụ"),
+        "lợi nhuận gộp": (TABLE_IS, "Lợi nhuận gộp về bán hàng và cung cấp dịch vụ"),
+        "lợi nhuận thuần": (TABLE_IS, "Lợi nhuận thuần từ hoạt động kinh doanh"),
+        "lợi nhuận sau thuế": (TABLE_IS, "Lợi nhuận sau thuế thu nhập doanh nghiệp"),
+        "tổng cộng tài sản": (TABLE_BS, "Tổng tài sản"),
+        "tổng vốn chủ sở hữu": (TABLE_BS, "Tổng vốn chủ sở hữu"),
+        "lưu chuyển tiền thuần": (TABLE_CF, "Lưu chuyển tiền thuần từ hoạt động kinh doanh"),
+    }
+
+    retrieval_queries = []
+
+    def fake_get_related_info(**kwargs):
+        query = str(kwargs["query"])
+        retrieval_queries.append(query)
+        table, metric = next(
+            payload
+            for prefix, payload in rows_by_query_prefix.items()
+            if query.startswith(prefix)
+        )
+        if table == TABLE_BS:
+            periods = [
+                ("31/12/2025 VND", "cuối", "current", "200"),
+                ("1/1/2025 VND", "đầu", "previous", "180"),
+            ]
+        else:
+            periods = [
+                ("2025 VND", "cuối", "current", "120"),
+                ("2024 VND", "đầu", "previous", "100"),
+            ]
+        core_documents = [
+            f"{metric} | {label}: {value}"
+            for label, _period, _role, value in periods
+        ]
+        core_metadatas = [
+            {
+                "heading": table,
+                "item_name": f"{metric} | {label}",
+                "metric_label": metric,
+                "raw_value": value,
+                "period": period,
+                "period_label": label,
+                "period_role": role,
+                "source": "report.md",
+                "block_id": f"{table}:{metric}:core",
+                "fact_id": f"{table}:{metric}:{role}",
+                "note_ref": "V.99",
+            }
+            for label, period, role, value in periods
+        ]
+        # Each real core retrieval can return the full 10-row cut. These
+        # same-metric sibling groups model the near-matches that used to let the
+        # first route consume the table cap and evict every later core pair.
+        distractor_documents = []
+        distractor_metadatas = []
+        for group_index in range(1, 5):
+            for label, period, role, _value in periods:
+                value = str(group_index * 1000 + (1 if role == "current" else 0))
+                distractor_documents.append(
+                    f"{metric} | Phụ {group_index} | {label}: {value}"
+                )
+                distractor_metadatas.append(
+                    {
+                        "heading": table,
+                        "item_name": f"{metric} | Phụ {group_index} | {label}",
+                        "metric_label": metric,
+                        "raw_value": value,
+                        "period": period,
+                        "period_label": label,
+                        "period_role": role,
+                        "source": "report.md",
+                        "block_id": f"{table}:{metric}:distractor:{group_index}",
+                        "fact_id": f"{table}:{metric}:distractor:{group_index}:{role}",
+                        "note_ref": "V.99",
+                    }
+                )
+        documents = [*core_documents, *distractor_documents]
+        metadatas = [*core_metadatas, *distractor_metadatas]
+        return {
+            "context": "\n".join(documents),
+            "source": "report.md",
+            "documents": documents,
+            "metadatas": metadatas,
+        }
+
+    monkeypatch.setattr(evidence_node, "get_collection", lambda: object())
+    monkeypatch.setattr(evidence_node, "get_related_info", fake_get_related_info)
+
+    updates = evidence_node.build_evidence_pack(
+        {
+            "dataset_id": "broad-profitability-core-dispatch",
+            "user_query": "Đánh giá khả năng sinh lời của công ty",
+            "planner_plan": planner_plan,
+            "worker_plan": worker_plan,
+        }
+    )
+    targets = {
+        target["agent"]: target
+        for target in updates["analysis_dispatch_targets"]
+    }
+
+    def selected(agent, table):
+        return [
+            (fact["metric_label"], fact["period_role"])
+            for fact in targets[agent]["analysis_input_results"][table]["facts"]
+        ]
+
+    profitability_is = selected("agent_profitability", TABLE_IS)
+    assert len(profitability_is) == 8
+    assert {
+        role
+        for metric, role in profitability_is
+        if metric.startswith("Doanh thu thuần")
+    } == {"current", "previous"}
+    assert {
+        role
+        for metric, role in profitability_is
+        if metric.startswith("Lợi nhuận sau thuế")
+    } == {"current", "previous"}
+    assert selected("agent_efficiency", TABLE_IS) == [
+        ("Doanh thu thuần về bán hàng và cung cấp dịch vụ", "current"),
+        ("Doanh thu thuần về bán hàng và cung cấp dịch vụ", "previous"),
+    ]
+    assert selected("agent_cashflow_analysis", TABLE_IS) == [
+        ("Lợi nhuận sau thuế thu nhập doanh nghiệp", "current"),
+        ("Lợi nhuận sau thuế thu nhập doanh nghiệp", "previous"),
+    ]
+    assert {
+        role
+        for _metric, role in selected("agent_efficiency", TABLE_BS)
+    } == {"current", "previous"}
+    assert selected("agent_cashflow_analysis", TABLE_CF) == [
+        ("Lưu chuyển tiền thuần từ hoạt động kinh doanh", "current"),
+        ("Lưu chuyển tiền thuần từ hoạt động kinh doanh", "previous"),
+    ]
+    assert updates["evidence_pack"]["stats"]["items_n"] == 7
+    assert updates["evidence_pack"]["stats"]["retrieval_calls_n"] == 7
+    assert updates["evidence_pack"]["stats"]["targeted_retries_n"] == 0
+    assert len(updates["evidence_ledger"]["entries"]) == 7
+    assert all(
+        entry["requirement_state"]["after_retry"] == "matched"
+        and len(entry["selected_facts"]) == 10
+        for entry in updates["evidence_ledger"]["entries"]
+    )
+    assert len(retrieval_queries) == 7
+    assert not any(query.startswith("thuyết minh ") for query in retrieval_queries)
+    for dispatch_target in updates["analysis_dispatch_targets"]:
+        analysis_state = {
+            "dataset_id": "broad-profitability-core-dispatch",
+            "user_query": "Đánh giá khả năng sinh lời của công ty",
+            "planner_plan": planner_plan,
+            "worker_plan": worker_plan,
+            **updates,
+            "dispatch_target": dispatch_target,
+        }
+        assert agent_runner._missing_requirements_after_evidence_check(
+            analysis_state,
+            dispatch_target["agent"],
+        ) == []
+
+
+def test_attached_vnd_pat_pair_closes_evidence_and_analysis_requirement(monkeypatch):
+    requirement = (
+        "lợi nhuận sau thuế thu nhập doanh nghiệp năm nay và năm trước"
+    )
+    metric = "Lợi nhuận sau thuế TNDN (60 = 50 - 51 - 52)"
+    rows = [
+        (
+            f"{metric} | 2025VND: 9.359.349.635.629",
+            {
+                "heading": TABLE_IS,
+                "company": "Công ty Cổ phần Sữa Việt Nam",
+                "fiscal_year": "2025",
+                "block_id": "income-statement",
+                "fact_id": "is-60-current",
+                "item_code": "60",
+                "item_name": f"{metric} | 2025VND",
+                "row_label": metric,
+                "column_label": "2025VND",
+                "metric_label": metric,
+                "period_role": "current",
+                "period_label": "2025VND",
+                "unit": "VND",
+                "value_kind": "amount",
+                "raw_value": "9.359.349.635.629",
+                "normalized_value": "9359349635629",
+                "source": "suavietnam.md",
+            },
+        ),
+        (
+            f"{metric} | 2024VND: 9.262.413.822.949",
+            {
+                "heading": TABLE_IS,
+                "company": "Công ty Cổ phần Sữa Việt Nam",
+                "fiscal_year": "2025",
+                "block_id": "income-statement",
+                "fact_id": "is-60-previous",
+                "item_code": "60",
+                "item_name": f"{metric} | 2024VND",
+                "row_label": metric,
+                "column_label": "2024VND",
+                "metric_label": metric,
+                "period_role": "previous",
+                "period_label": "2024VND",
+                "unit": "VND",
+                "value_kind": "amount",
+                "raw_value": "9.262.413.822.949",
+                "normalized_value": "9262413822949",
+                "source": "suavietnam.md",
+            },
+        ),
+    ]
+
+    class ProductionShapeCollection:
+        name = "suavietnam-regression"
+        generation = "attached-vnd-pat"
+
+        def __init__(self):
+            self.get_calls = []
+            self.query_calls = 0
+
+        def get(self, where=None, include=None):
+            where = dict(where or {})
+            self.get_calls.append(where)
+            selected = [
+                (document, metadata)
+                for document, metadata in rows
+                if all(
+                    str(metadata.get(key, "") or "") == str(value)
+                    for key, value in where.items()
+                )
+            ]
+            return {
+                "documents": [document for document, _metadata in selected],
+                "metadatas": [metadata for _document, metadata in selected],
+            }
+
+        def query(self, query_embeddings, n_results, where=None):
+            self.query_calls += 1
+            selected = [
+                (document, metadata)
+                for document, metadata in rows
+                if all(
+                    str(metadata.get(key, "") or "") == str(value)
+                    for key, value in dict(where or {}).items()
+                )
+            ]
+            return {
+                "documents": [[document for document, _metadata in selected]],
+                "metadatas": [[metadata for _document, metadata in selected]],
+            }
+
+    collection = ProductionShapeCollection()
+    monkeypatch.setattr(evidence_node, "get_collection", lambda: collection)
+    monkeypatch.setattr(tools_module, "embed_query_text", lambda _query: [0.0])
+
+    worker_plan = {
+        "difficulty_level": "hard",
+        "evidence_plan": [
+            {
+                "table": TABLE_IS,
+                "query": requirement,
+                "period_role": "both",
+                "needby": ["agent_profitability"],
+            }
+        ],
+        "analysis_plan": [
+            {
+                "agent": "agent_profitability",
+                "objective": "Đánh giá khả năng sinh lời.",
+                "requirements": [requirement],
+                "evidence_queries": [
+                    {"table": TABLE_IS, "query": requirement}
+                ],
+            }
+        ],
+    }
+    state = {
+        "dataset_id": "suavietnam-attached-vnd-pat-regression",
+        "user_query": "Đánh giá khả năng sinh lời của công ty",
+        "planner_plan": {"difficulty_level": "hard"},
+        "worker_plan": worker_plan,
+    }
+
+    updates = evidence_node.build_evidence_pack(state)
+
+    assert collection.query_calls == 0
+    assert updates["evidence_pack"]["stats"]["retrieval_calls_n"] == 1
+    assert updates["evidence_pack"]["stats"]["targeted_retries_n"] == 0
+    assert updates["evidence_pack"]["items"][0]["retrieval_status"] == "matched"
+    ledger_entry = updates["evidence_ledger"]["entries"][0]
+    assert ledger_entry["requirement_state"] == {
+        "before_retry": "matched",
+        "after_retry": "matched",
+    }
+    assert ledger_entry["targeted_retry"]["performed"] is False
+    assert {
+        fact["period_role"]
+        for fact in updates["ragas_facts_by_table"][TABLE_IS]["facts"]
+        if fact.get("item_code") == "60"
+    } == {"current", "previous"}
+
+    dispatch_target = updates["analysis_dispatch_targets"][0]
+    analysis_state = {
+        **state,
+        **updates,
+        "dispatch_target": dispatch_target,
+    }
+    assert agent_runner._missing_requirements_after_evidence_check(
+        analysis_state,
+        "agent_profitability",
+    ) == []
 
 
 def test_router_finalize_drops_optional_selling_expense_when_not_requested():
@@ -471,7 +1062,7 @@ def test_router_finalize_groups_evidence_plan_by_table_and_needby():
                 }
             ],
         },
-        user_query="Phân tích khả năng sinh lời",
+        user_query="Phân tích các khoản mục đã chọn",
     )
 
     assert finalized["evidence_plan"] == [
@@ -634,10 +1225,12 @@ def test_build_evidence_expands_grouped_evidence_plan_queries(monkeypatch):
         }
     )
 
-    assert [call["query"] for call in calls] == [
+    # Backend start/completion order is scheduler-dependent; the merged graph
+    # outputs below remain in deterministic plan order.
+    assert {call["query"] for call in calls} == {
         "chi phí tài chính",
         "doanh thu bán hàng và cung cấp dịch vụ",
-    ]
+    }
     assert updates["evidence_pack"]["targets"][0]["requirements"] == [
         "chi phí tài chính",
         "doanh thu bán hàng và cung cấp dịch vụ",
@@ -646,6 +1239,119 @@ def test_build_evidence_expands_grouped_evidence_plan_queries(monkeypatch):
         {"table": TABLE_IS, "query": "chi phí tài chính"},
         {"table": TABLE_IS, "query": "doanh thu bán hàng và cung cấp dịch vụ"},
     ]
+
+
+def test_build_evidence_retries_one_targeted_query_after_topk_miss(monkeypatch):
+    calls = []
+
+    def fake_get_related_info(**kwargs):
+        calls.append(kwargs)
+        if len(calls) == 1:
+            item_name = "Chi phí khác"
+            value = "10"
+        else:
+            item_name = "Chi phí bán hàng"
+            value = "20"
+        return {
+            "context": f"{item_name}: {value}",
+            "source": "report.md",
+            "documents": [f"{item_name}: {value}"],
+            "metadatas": [
+                {
+                    "heading": TABLE_IS,
+                    "item_name": item_name,
+                    "raw_value": value,
+                    "source": "report.md",
+                }
+            ],
+        }
+
+    monkeypatch.setattr(evidence_node, "get_collection", lambda: object())
+    monkeypatch.setattr(evidence_node, "get_related_info", fake_get_related_info)
+
+    updates = evidence_node.build_evidence_pack(
+        {
+            "worker_plan": {
+                "evidence_plan": [
+                    {"table": TABLE_IS, "query": "chi phí bán hàng"}
+                ],
+            },
+            "dataset_id": "targeted-retry-single-attempt",
+            "user_query": "Chi phí bán hàng là bao nhiêu?",
+        }
+    )
+
+    assert len(calls) == 2
+    assert calls[1]["strict_table"] is True
+    assert calls[1]["cross_table"] is False
+    assert updates["evidence_pack"]["stats"]["targeted_retries_n"] == 1
+    assert updates["evidence_pack"]["stats"]["retrieval_calls_n"] == 2
+    fact = updates["worker_results"][TABLE_IS]["facts"][0]
+    assert fact["item_name"] == "Chi phí bán hàng"
+    assert fact["value"] == "20"
+    assert any(
+        log["event"] == "evidence_tool:targeted_retry_done"
+        and log["retrieval_status"] == "matched"
+        for log in updates["trace"]
+    )
+
+
+def test_build_evidence_uses_operand_scoped_intent_for_ratio_plan(monkeypatch):
+    calls = []
+
+    def fake_get_related_info(**kwargs):
+        calls.append(kwargs)
+        query = kwargs["query"]
+        item_name = (
+            "Tổng cộng tài sản"
+            if query == "tổng tài sản"
+            else "Hàng tồn kho"
+        )
+        return {
+            "context": f"{item_name}: 100",
+            "source": "report.md",
+            "documents": [f"{item_name}: 100"],
+            "metadatas": [
+                {
+                    "heading": TABLE_BS,
+                    "item_name": item_name,
+                    "raw_value": "100",
+                    "source": "report.md",
+                }
+            ],
+        }
+
+    query = "Tỷ trọng hàng tồn kho trên tổng tài sản?"
+    worker_plan = keyworder_runner._finalize_router_targets(
+        keyworder_runner._sanitize_router_plan_payload(
+            {"evidence_plan": [{"table": TABLE_BS, "query": query}]}
+        ),
+        {"difficulty_level": "medium"},
+        user_query=query,
+    )
+    monkeypatch.setattr(evidence_node, "get_collection", lambda: object())
+    monkeypatch.setattr(evidence_node, "get_related_info", fake_get_related_info)
+
+    updates = evidence_node.build_evidence_pack(
+        {
+            "worker_plan": worker_plan,
+            "dataset_id": "test-ratio-operand-scoped-intent",
+            "user_query": query,
+        }
+    )
+
+    assert [(call["query"], call["intent"]) for call in calls] == [
+        ("hàng tồn kho", "hàng tồn kho"),
+        ("tổng tài sản", "tổng tài sản"),
+    ]
+    facts = updates["worker_results"][TABLE_BS]["facts"]
+    assert {
+        (fact["item_name"], fact["operand_role"])
+        for fact in facts
+    } == {
+        ("Hàng tồn kho", "numerator"),
+        ("Tổng cộng tài sản", "denominator"),
+    }
 
 
 def test_analysis_input_results_fallback_respects_fact_needby():
@@ -1277,6 +1983,254 @@ def test_twelve_note_facts_reach_worker_pack_and_analysis_llm(monkeypatch):
     assert llm_facts[0]["source"] == "report.md#page=42"
 
 
+def test_grounded_cap_can_complete_atoms_from_a_sibling_query():
+    premise = "sự kiện cổ phần hóa và đăng ký công ty cổ phần"
+    selected = evidence_node._select_grounded_premise_facts(
+        [
+            {
+                "fact_id": "registration",
+                "value": (
+                    "Ngày 20/11/2003: Công ty đăng ký trở thành một "
+                    "công ty cổ phần."
+                ),
+                "evidence_query": premise,
+                "source": "report.md#page=12",
+            },
+            {
+                "fact_id": "full-timeline",
+                "value": (
+                    "Ngày 01/10/2003: Công ty được cổ phần hoá. "
+                    "Ngày 20/11/2003: Công ty đăng ký trở thành một "
+                    "công ty cổ phần."
+                ),
+                "evidence_query": "quá trình hình thành và phát triển",
+                "source": "report.md#page=12",
+            },
+        ],
+        premises=[premise],
+        limit=2,
+    )
+
+    assert [fact["fact_id"] for fact in selected] == [
+        "registration",
+        "full-timeline",
+    ]
+
+
+def test_grounded_cap_does_not_treat_listing_policy_as_listing_event():
+    premise = "sự kiện cấp phép và niêm yết cổ phiếu"
+    selected = evidence_node._select_grounded_premise_facts(
+        [
+            {
+                "fact_id": "valuation-policy",
+                "item_name": premise,
+                "value": (
+                    "Đối với chứng khoán niêm yết, giá đóng cửa được dùng "
+                    "để xác định giá trị hợp lý."
+                ),
+                "evidence_query": premise,
+                "source": "report.md#page=18",
+            },
+            {
+                "fact_id": "listing-event",
+                "value": (
+                    "Ngày 19/1/2006: Cổ phiếu của Công ty được cấp phép và "
+                    "niêm yết trên Sở Giao dịch Chứng khoán."
+                ),
+                "evidence_query": "lịch sử doanh nghiệp",
+                "source": "report.md#page=12",
+            },
+        ],
+        premises=[premise],
+        limit=1,
+    )
+
+    assert [fact["fact_id"] for fact in selected] == ["listing-event"]
+
+
+def test_extractive_table_cap_keeps_original_rank_order():
+    facts = [
+        {
+            "fact_id": f"fact-{index}",
+            "item_name": f"Dòng {index}",
+            "value": str(index),
+        }
+        for index in range(15)
+    ]
+
+    limited = evidence_node._limit_note_facts_for_llm(
+        {TABLE_NOTE: {"table": TABLE_NOTE, "facts": facts}},
+        state={
+            "planner_plan": {
+                "response_mode": "extractive",
+                "premise_requirements": [
+                    "sự kiện cấp phép và niêm yết cổ phiếu"
+                ],
+            }
+        },
+        worker_plan={"response_mode": "extractive"},
+    )
+
+    assert [
+        fact["fact_id"]
+        for fact in limited[TABLE_NOTE]["facts"]
+    ] == [f"fact-{index}" for index in range(12)]
+
+
+def test_grounded_evidence_cap_reserves_actual_fact_for_each_premise(
+    monkeypatch,
+):
+    premises = [
+        "trạng thái doanh nghiệp nhà nước trước chuyển đổi",
+        "sự kiện cổ phần hóa và đăng ký công ty cổ phần",
+        "sự kiện cấp phép và niêm yết cổ phiếu",
+    ]
+    narrative_query = (
+        "Ý nghĩa của việc Công ty chuyển đổi từ doanh nghiệp nhà nước sang "
+        "công ty cổ phần niêm yết đối với quản trị doanh nghiệp là gì?"
+    )
+    retrieval_intents = []
+
+    def fake_get_related_info(*, query, table, **_kwargs):
+        retrieval_intents.append(
+            (
+                query,
+                str(_kwargs.get("intent", "") or ""),
+                _kwargs.get("structured_slots"),
+            )
+        )
+        if "doanh nghiệp nhà nước" in query:
+            event_value = (
+                "Ngày 29/4/1993: Công ty được thành lập theo loại hình "
+                "Doanh nghiệp Nhà Nước."
+            )
+            event_id = f"{table}-state-owned"
+        elif "cổ phần hóa" in query:
+            # Keep the source spelling that previously failed atomization.
+            event_value = (
+                "Ngày 01/10/2003: Công ty được cổ phần hoá từ Doanh nghiệp "
+                "Nhà Nước. Ngày 20/11/2003: Công ty đăng ký trở thành một "
+                "công ty cổ phần."
+            )
+            event_id = f"{table}-corporatization"
+        else:
+            event_value = (
+                "Ngày 19/1/2006: Cổ phiếu của Công ty được cấp phép và "
+                "niêm yết trên Sở Giao dịch Chứng khoán."
+            )
+            event_id = f"{table}-listing"
+
+        rows = [
+            {
+                "heading": table,
+                "item_name": "Lịch sử hình thành và phát triển",
+                "raw_value": event_value,
+                "fact_id": event_id,
+                "source": "report.md#page=12",
+            },
+            *[
+                {
+                    "heading": table,
+                    "item_name": f"Dòng nhiễu {index}",
+                    "raw_value": (
+                        f"{event_value} Chi tiết tham chiếu {index}."
+                    ),
+                    "fact_id": f"{table}-{event_id}-noise-{index}",
+                    "source": "report.md#page=40",
+                }
+                for index in range(11)
+            ],
+        ]
+        return {
+            "context": "\n".join(
+                f"{row['item_name']}: {row['raw_value']}"
+                for row in rows
+            ),
+            "source": "report.md",
+            "documents": [
+                f"{row['item_name']}: {row['raw_value']}"
+                for row in rows
+            ],
+            "metadatas": rows,
+        }
+
+    monkeypatch.setattr(evidence_node, "get_collection", lambda: object())
+    monkeypatch.setattr(
+        evidence_node,
+        "get_related_info",
+        fake_get_related_info,
+    )
+
+    # Listing deliberately runs first and consumes a full per-query result
+    # window. A positional table cap would therefore discard the later two
+    # premise payloads.
+    evidence_plan = [
+        {"table": table, "query": premise, "needby": []}
+        for table in (TABLE_NOTE, TABLE_REPORT_SECTION)
+        for premise in (premises[2], premises[0], premises[1])
+    ]
+    state = {
+        "dataset_id": "grounded-premise-cap-contract",
+        "user_query": narrative_query,
+        "planner_plan": {
+            "difficulty_level": "medium",
+            "response_mode": "grounded_interpretation",
+            "premise_requirements": premises,
+        },
+        "worker_plan": {
+            "difficulty_level": "medium",
+            "response_mode": "grounded_interpretation",
+            "premise_requirements": premises,
+            "evidence_plan": evidence_plan,
+            "analysis_plan": [],
+        },
+    }
+
+    updates = evidence_node.build_evidence_pack(state)
+    worker_results = updates["worker_results"]
+
+    assert set(worker_results) == {TABLE_NOTE, TABLE_REPORT_SECTION}
+    assert updates["evidence_pack"]["stats"]["targeted_retries_n"] == 0
+    assert all(
+        entry["requirement_state"]["after_retry"] == "matched"
+        for entry in updates["evidence_ledger"]["entries"]
+    )
+    assert len(worker_results[TABLE_NOTE]["facts"]) == 12
+    assert len(worker_results[TABLE_REPORT_SECTION]["facts"]) == 10
+    for table in (TABLE_NOTE, TABLE_REPORT_SECTION):
+        fact_ids = {
+            fact.get("fact_id")
+            for fact in worker_results[table]["facts"]
+        }
+        assert {
+            f"{table}-state-owned",
+            f"{table}-corporatization",
+            f"{table}-listing",
+        }.issubset(fact_ids)
+
+        preview_values = " ".join(
+            str(preview.get("value", "") or "")
+            for item in updates["evidence_pack"]["items"]
+            if item.get("table") == table
+            for preview in item.get("facts_preview", [])
+        )
+        assert "Doanh nghiệp Nhà Nước" in preview_values
+        assert "cổ phần hoá" in preview_values
+        assert "niêm yết" in preview_values
+
+    bindings, missing = synth_runner._grounded_premise_bindings(
+        state,
+        worker_results,
+    )
+    assert missing == []
+    assert set(bindings) == set(premises)
+    assert all(
+        intent == query and structured_slots is False
+        for query, intent, structured_slots in retrieval_intents
+        if query in premises
+    )
+
+
 def test_analysis_dispatch_merges_same_table_payloads_before_note_cap():
     facts = [
         {
@@ -1352,9 +2306,10 @@ def test_result_to_facts_marks_mismatched_main_report_row_as_not_found():
             "time_hint": "",
             "value": "",
             "source": "report.md",
-            "table": TABLE_IS,
-            "status": "not_found_after_search",
-            "message": (
+                "table": TABLE_IS,
+                "status": "not_found_after_search",
+                "evidence_state": "unmatched_topk",
+                "message": (
                 "Không tìm thấy dòng chi phí bán hàng trong dữ liệu hiện có. "
                 f"Có thể khoản này không phát sinh/không được trình bày riêng trong {TABLE_IS}, "
                 "nhưng cần xác nhận từ báo cáo gốc."
@@ -1606,12 +2561,10 @@ def test_evidence_dispatch_plan_accepts_current_router_output_shape():
             "query": "lợi nhuận sau thuế thu nhập doanh nghiệp",
         }
     ]
-    assert payload["analysis_plan"] == [
-        {
-            "agent": "agent_synth",
-            "objective": "Trả lời trực tiếp cho easy/medium.",
-        }
-    ]
+    # ``agent_synth`` is not an analysis agent, so the typed envelope drops it
+    # instead of carrying a plan entry no analysis node could ever run.  The
+    # router profile already requires an empty analysis_plan for easy/medium.
+    assert payload["analysis_plan"] == []
 
 
 def test_keyworder_repairs_current_router_output_with_legacy_target_fields(monkeypatch):
