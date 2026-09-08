@@ -205,7 +205,7 @@ def test_analysis_evidence_check_counts_tool_result_facts_as_satisfied():
     assert missing == ["các khoản phải trả ngắn hạn"]
 
 
-def test_analysis_evidence_check_does_not_requery_not_found_fact():
+def test_analysis_evidence_check_retries_non_exhaustive_topk_miss():
     target = {
         "agent": "agent_efficiency",
         "evidence_queries": [
@@ -239,7 +239,19 @@ def test_analysis_evidence_check_does_not_requery_not_found_fact():
         "agent_efficiency",
     )
 
-    assert missing == []
+    assert missing == ["chi phí bán hàng"]
+
+    state["analysis_input_results"][TABLE_IS]["facts"][0].update(
+        evidence_state="exhaustive_absent",
+        search_exhaustive=True,
+    )
+    assert (
+        agent_runner._missing_requirements_after_evidence_check(
+            state,
+            "agent_efficiency",
+        )
+        == []
+    )
 
 
 def test_analysis_uses_deterministic_tool_call_for_statement_requirement(monkeypatch):
@@ -261,7 +273,6 @@ def test_analysis_uses_deterministic_tool_call_for_statement_requirement(monkeyp
         "tool_observations": [],
         "tool_results": [],
         "tool_call_counts": {},
-        "web_summary": "",
         "followup_rounds": 0,
     }
 
@@ -326,7 +337,6 @@ def test_analysis_moves_to_next_missing_requirement_after_cache_hit(monkeypatch)
             }
         ],
         "tool_call_counts": {"agent_efficiency": {"round": 0, "count": 1}},
-        "web_summary": "",
         "followup_rounds": 0,
     }
 
@@ -480,7 +490,6 @@ def test_analysis_agent_can_answer_in_tool_choice_mode_when_input_facts_are_suff
         "worker_results": {},
         "tool_observations": [],
         "tool_call_counts": {},
-        "web_summary": "",
         "followup_rounds": 0,
     }
 
@@ -545,7 +554,6 @@ def test_analysis_agent_calls_report_tool_when_input_fact_is_ambiguous(monkeypat
         "worker_results": {},
         "tool_observations": [],
         "tool_call_counts": {},
-        "web_summary": "",
         "followup_rounds": 0,
     }
 
@@ -577,7 +585,6 @@ def test_analysis_agent_synthesizes_report_tool_call_when_objective_is_pending(m
         "worker_results": {},
         "tool_observations": [],
         "tool_call_counts": {},
-        "web_summary": "",
         "followup_rounds": 0,
     }
 
@@ -602,7 +609,7 @@ def test_analysis_agent_synthesizes_report_tool_call_when_objective_is_pending(m
     )
 
 
-def test_analysis_agent_falls_back_to_nonempty_answer_when_model_returns_empty(monkeypatch):
+def test_analysis_agent_does_not_invent_prose_when_model_returns_empty(monkeypatch):
     target = {
         "agent": "agent_profitability",
         "requirements": ["đánh giá khả năng sinh lời năm 2024"],
@@ -617,7 +624,6 @@ def test_analysis_agent_falls_back_to_nonempty_answer_when_model_returns_empty(m
         "worker_results": {},
         "tool_observations": [],
         "tool_call_counts": {},
-        "web_summary": "",
         "followup_rounds": 0,
     }
 
@@ -630,5 +636,5 @@ def test_analysis_agent_falls_back_to_nonempty_answer_when_model_returns_empty(m
     updates = agent_runner.call_analysis_agent(state, "agent_profitability")
     item = updates["worker_messages"][0]
 
-    assert item["parsed_output"]["answer"]
+    assert item["parsed_output"]["answer"] == ""
     assert item["parsed_output"]["requirements"] == []

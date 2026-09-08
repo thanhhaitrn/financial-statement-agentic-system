@@ -16,10 +16,20 @@ dependencies = [
   "langchain-core>=1.3,<2.0",
   "langchain-ollama>=1.0,<2.0",
   "langgraph>=1.1,<2.0",
-  "qdrant-client>=1.17,<2.0",
+  # Cloud collection currently runs Qdrant 1.19; stay within one minor version
+  # so qdrant-client's compatibility contract does not warn on every query.
+  "qdrant-client>=1.18,<2.0",
 ]
 
 [project.optional-dependencies]
+web = [
+  "fastapi>=0.115,<1.0",
+  "llama-cloud>=2.15,<3.0",
+  "pypdf>=5.0,<7.0",
+  "python-multipart>=0.0.18,<1.0",
+  "uvicorn>=0.34,<1.0",
+]
+smoke = ["reportlab>=4.0,<6.0"]
 eval = [
   "ragas>=0.3.4,<0.4",
   "datasets>=4.8,<5.0",
@@ -27,6 +37,8 @@ eval = [
 ]
 dev = [
   "pytest>=7.4,<9.0",
+  # scripts/ab_viewer.py — local viewer for routing A/B run directories
+  "streamlit>=1.37,<2.0",
   "ruff>=0.9,<1.0",
   "mypy>=1.11,<2.0",
   "detect-secrets>=1.5,<2.0",
@@ -38,12 +50,14 @@ agentfinx-batch = "dataset_batch_runner:main"
 agentfinx-predict = "dataset_batch_result:main"
 agentfinx-ragas = "ragas_eval_runner:main"
 agentfinx-recall = "eval_retrieval_recall:main"
+agentfinx-refresh-symbols = "scripts.refresh_symbol_catalog:main"
 
 [tool.setuptools]
 package-dir = {agentfinx = "src/agentfinx"}
 packages = [
   "agentfinx",
   "agents",
+  "acquisition",
   "config",
   "dataset_catalog",
   "evaluation",
@@ -55,6 +69,7 @@ packages = [
   "scripts",
   "tools",
   "vectorstore",
+  "web_evidence",
 ]
 py-modules = [
   "common",
@@ -64,6 +79,7 @@ py-modules = [
   "ragas_eval_runner",
   "eval_retrieval_recall",
   "analyze_batch_metrics",
+  "analyze_prediction_errors",
   "output_formatter",
   "run_rotate",
 ]

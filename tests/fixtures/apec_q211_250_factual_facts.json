@@ -1,5 +1,5 @@
 {
-  "schema_version": 1,
+  "schema_version": 2,
   "dataset_id": "apec",
   "seed_file": "dau_tu_APEC_ragas_seed.json",
   "seed_range": "q211-250",
@@ -30,7 +30,7 @@
       "id": 214,
       "question": "Số dư lợi nhuận giữ lại cuối năm hiện tại là bao nhiêu VND?",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Lợi nhuận sau thuế chưa phân phối", "period": "cuối kỳ", "value": "43.404.961.299", "unit": "VND", "reference": "V.19a"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Lợi nhuận sau thuế chưa phân phối", "period": "cuối kỳ", "value": "43.404.961.299", "unit": "VND", "reference": "V.19a", "reference_aliases": ["BẢNG CÂN ĐỐI KẾ TOÁN"]}
       ]
     },
     {
@@ -73,7 +73,7 @@
       "id": 228,
       "question": "Doanh thu hoạt động tài chính năm hiện tại là bao nhiêu VND?",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Doanh thu hoạt động tài chính", "period": "năm hiện tại", "value": "17.648.145.868", "unit": "VND", "reference": "V.4"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Doanh thu hoạt động tài chính", "period": "năm hiện tại", "value": "17.648.145.868", "unit": "VND", "reference": "V.4", "reference_aliases": ["VI.4"]}
       ]
     },
     {
@@ -95,15 +95,15 @@
       "id": 236,
       "question": "Chi phí bán hàng năm hiện tại là bao nhiêu VND?",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí bán hàng", "period": "năm hiện tại", "value": "24.634.908.426", "unit": "VND", "reference": "V.6"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí bán hàng", "period": "năm hiện tại", "value": "24.634.908.426", "unit": "VND", "reference": "V.6", "reference_aliases": ["VI.6"]}
       ]
     },
     {
       "id": 237,
       "question": "So sánh chi phí lãi vay năm hiện tại với năm trước.",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí lãi vay", "period": "năm hiện tại", "value": "26.984.670.021", "unit": "VND", "reference": "V.5"},
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí lãi vay", "period": "năm trước", "value": "38.076.798.251", "unit": "VND", "reference": "V.5"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí lãi vay", "period": "năm hiện tại", "value": "26.984.670.021", "unit": "VND", "reference": "V.5", "reference_aliases": ["VI.5", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"]},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí lãi vay", "period": "năm trước", "value": "38.076.798.251", "unit": "VND", "reference": "V.5", "reference_aliases": ["VI.5", "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"]}
       ]
     },
     {
@@ -118,22 +118,22 @@
       "id": 243,
       "question": "Tổng thu nhập khác năm hiện tại là bao nhiêu VND?",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm hiện tại", "value": "5.930.566.560", "unit": "VND", "reference": "V.8"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm hiện tại", "value": "5.930.566.560", "unit": "VND", "reference": "V.8", "reference_aliases": ["VI.8"]}
       ]
     },
     {
       "id": 244,
       "question": "Tổng chi phí khác năm hiện tại là bao nhiêu VND?",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí khác", "period": "năm hiện tại", "value": "2.817.625.199", "unit": "VND", "reference": "V.9"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Chi phí khác", "period": "năm hiện tại", "value": "2.817.625.199", "unit": "VND", "reference": "V.9", "reference_aliases": ["VI.9"]}
       ]
     },
     {
       "id": 245,
       "question": "So sánh thu nhập khác năm hiện tại và năm trước.",
       "expected_facts": [
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm hiện tại", "value": "5.930.566.560", "unit": "VND", "reference": "V.8"},
-        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm trước", "value": "4.296.727.076", "unit": "VND", "reference": "V.8"}
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm hiện tại", "value": "5.930.566.560", "unit": "VND", "reference": "V.8", "reference_aliases": ["VI.8"]},
+        {"entity": "Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương", "metric": "Thu nhập khác", "period": "năm trước", "value": "4.296.727.076", "unit": "VND", "reference": "V.8", "reference_aliases": ["VI.8"]}
       ]
     }
   ]

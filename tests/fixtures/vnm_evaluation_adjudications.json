@@ -1,0 +1,37 @@
+{
+  "schema_version": 1,
+  "dataset_id": "suavietnam",
+  "description": "Reviewed seed-design exclusions; evaluator data only, never product routing logic.",
+  "records": [
+    {
+      "id": 14,
+      "disposition": "exclude_product_error_baseline",
+      "reason": "reviewed false-label / seed-design case"
+    },
+    {
+      "id": 70,
+      "disposition": "exclude_product_error_baseline",
+      "reason": "reviewed false-label / seed-design case"
+    },
+    {
+      "id": 88,
+      "disposition": "exclude_product_error_baseline",
+      "reason": "reviewed false-label / seed-design case"
+    },
+    {
+      "id": 111,
+      "disposition": "exclude_product_error_baseline",
+      "reason": "reviewed false-label / seed-design case"
+    },
+    {
+      "id": 171,
+      "disposition": "exclude_product_error_baseline",
+      "reason": "reviewed false-label / seed-design case"
+    },
+    {
+      "id": 192,
+      "disposition": "exclude_product_error_baseline",
+      "reason": "reviewed false-label / seed-design case"
+    }
+  ]
+}

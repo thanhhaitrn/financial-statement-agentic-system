@@ -1,0 +1,14 @@
+[
+  {
+    "name": "ocr_bullet_useful_life_schedule",
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 6. Tài sản cố định hữu hình\n\n#### (b) Khấu hao\n\nKhấu hao được tính theo phương pháp đường thẳng dựa trên thời gian hữu dụng ước tính của tài sản cố định hữu hình. Thời gian hữu dụng ước tính như sau:\n\n| \\* | nhà cửa và vật kiến trúc | 5 – 50 năm |\n| -- | ------------------------ | ---------- |\n| \\* | máy móc và thiết bị | 2 – 15 năm |\n| \\* | phương tiện vận chuyển | 4 – 10 năm |\n| \\* | thiết bị văn phòng | 2 – 10 năm |\n",
+    "expected_entities": [
+      "nhà cửa và vật kiến trúc",
+      "máy móc và thiết bị",
+      "phương tiện vận chuyển",
+      "thiết bị văn phòng"
+    ],
+    "selected_entity": "máy móc và thiết bị",
+    "selected_raw_value": "2 – 15 năm"
+  }
+]

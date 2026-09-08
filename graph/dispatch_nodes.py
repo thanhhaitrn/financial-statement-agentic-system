@@ -3,27 +3,15 @@
 
 import re
 
-from agents.agent_registry import is_analysis_agent
+from agents.agent_registry import ANALYSIS_TABLE_ALLOWLIST, is_analysis_agent
 from graph.logger import make_log
 from schemas.requirements import normalize_requirements_keep_order
-from schemas.table_names import (
-    TABLE_BS,
-    TABLE_CF,
-    TABLE_IS,
-    TABLE_NOTE,
-    TABLE_REPORT_SECTION,
-    normalize_table_heading,
-)
+from schemas.table_names import TABLE_NOTE, normalize_table_heading
 from tools.evidence import dedupe_facts
 from common import dedupe_keep_order as _dedupe_keep_order
 
 
-ANALYSIS_TABLE_ALLOWLIST = {
-    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE, TABLE_REPORT_SECTION},
-    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE, TABLE_REPORT_SECTION},
-}
+
 ROUTE_METADATA_FIELDS = (
     "time_hint",
     "period",
@@ -179,6 +167,8 @@ def _fact_needby_values(fact: dict) -> list[str]:
 
 def _fact_visible_to_agent(fact: dict, agent: str) -> bool:
     needby = _fact_needby_values(fact)
+    if fact.get("source_kind") == "web" or fact.get("content_type") == "web_fact" or fact.get("source_url"):
+        return agent in needby
     return not needby or agent in needby
 
 
@@ -292,7 +282,10 @@ def _limit_facts_for_analysis_prompt(
     # Import lazily because graph.evidence imports this module to prepare the
     # analysis dispatch after retrieval. The evidence module is the canonical
     # owner of NOTE=12, schedule NOTE=24, main=10/16 and report-section=10.
-    from graph.evidence import _llm_facts_limit_for_table
+    from graph.evidence import (
+        _llm_facts_limit_for_table,
+        _select_route_balanced_facts,
+    )
 
     runtime_state = state or {}
     limit = _llm_facts_limit_for_table(
@@ -300,11 +293,12 @@ def _limit_facts_for_analysis_prompt(
         runtime_state.get("worker_plan", {}) or {},
         table,
     )
-    return [
+    candidates = [
         fact
         for fact in facts or []
         if isinstance(fact, dict)
-    ][:limit]
+    ]
+    return _select_route_balanced_facts(candidates, limit=limit)
 
 
 def _merge_analysis_input_payload(
@@ -577,6 +571,12 @@ def prepare_followup_dispatch_state(state: dict) -> dict:
     ]
     followup_plan = {
         "difficulty_level": "hard" if followup_analysis_axes else "medium",
+        "response_mode": str(
+            planner_plan.get("response_mode", "extractive") or "extractive"
+        ).strip(),
+        "premise_requirements": list(
+            planner_plan.get("premise_requirements", []) or []
+        ),
         "analysis_axes": analysis_axes,
         "followup_mode": not bool(followup_analysis_axes),
         "followup_requirements": [] if followup_analysis_axes else followup_requirements,
@@ -624,6 +624,17 @@ def prepare_analysis_dispatch_state(state: dict) -> dict:
         if target.get("agent") and is_analysis_agent(target["agent"])
     ]
     expected = sorted({target["agent"] for target in analysis_targets})
+    # Agents the reconciled router plan promised, in plan order. Anything here
+    # without a dispatch target would silently lose its aspect in the answer, so
+    # the gap is traced rather than left to be noticed in the final text.
+    planned_agents = _dedupe_keep_order(
+        [
+            str(item.get("agent", "") or "").strip()
+            for item in (worker_plan.get("analysis_plan", []) or [])
+            if isinstance(item, dict) and str(item.get("agent", "") or "").strip()
+        ]
+    )
+    missing_agents = [agent for agent in planned_agents if agent not in set(expected)]
     prepared_targets = []
     planner_metadata = _route_metadata(state.get("planner_plan", {}) or {})
 
@@ -651,6 +662,9 @@ def prepare_analysis_dispatch_state(state: dict) -> dict:
                 state,
                 "analysis_dispatch:prepare",
                 expected=expected,
+                planned_agents=planned_agents,
+                dispatched_agents=expected,
+                missing_agents=missing_agents,
                 targets_n=len(prepared_targets),
                 targets=[
                     {

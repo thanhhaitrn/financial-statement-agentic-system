@@ -1,0 +1,47 @@
+[
+  {
+    "name": "vnm_subsidiary_headquarters_and_activity",
+    "source_format": "VNM_Baocaotaichinh_2025_Kiemtoan_Congtyme.md:526-532",
+    "fiscal_year": "2025",
+    "expected_fact_count": 3,
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### (b) Các công ty liên doanh, liên kết\n\n| Tên | Trụ sở | Hoạt động chính | Lợi ích kinh tế<br/>31/12/2025 | Lợi ích kinh tế<br/>1/1/2025 |\n| --- | --- | --- | ---: | ---: |\n| **Các công ty liên doanh, liên kết sở hữu trực tiếp** |  |  |  |  |\n| Del Monte - Vinamilk Dairy Philippines, Inc. | Tòa nhà JY Campos Centre, Đại lộ 9, Góc phố 30, Thành phố Bonifacio Global, Thành phố Taguig, Nước Cộng Hòa Philippines | Nhập khẩu và kinh doanh sữa và các sản phẩm từ sữa | - | 50,00% |\n",
+    "row_label": "Del Monte - Vinamilk Dairy Philippines, Inc.",
+    "expected_cells": [
+      {
+        "column_label": "Trụ sở",
+        "value_contains": "Thành phố Taguig",
+        "value_kind": "entity"
+      },
+      {
+        "column_label": "Hoạt động chính",
+        "value_contains": "Nhập khẩu và kinh doanh sữa",
+        "value_kind": "text"
+      },
+      {
+        "column_label": "Lợi ích kinh tế 1/1/2025",
+        "value_contains": "50,00%",
+        "value_kind": "percent"
+      }
+    ]
+  },
+  {
+    "name": "apec_subsidiary_address_and_activity",
+    "source_format": "dau_tu_APEC.md:472-478",
+    "fiscal_year": "2024",
+    "expected_fact_count": 5,
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 5. Cấu trúc Công ty\n\n| Tên công ty | Địa chỉ trụ sở chính | Hoạt động kinh doanh chính | Tỷ lệ vốn góp | Tỷ lệ lợi ích | Tỷ lệ quyền biểu quyết |\n| --- | --- | --- | ---: | ---: | ---: |\n| Công ty Cổ phần Apec Land Huế | 30 Lê Lợi, phường Phú Nhuận, thành phố Huế, tỉnh Thừa Thiên Huế | Đầu tư, kinh doanh bất động sản | 99,99% | 99,99% | 99,99% |\n",
+    "row_label": "Công ty Cổ phần Apec Land Huế",
+    "expected_cells": [
+      {
+        "column_label": "Địa chỉ trụ sở chính",
+        "value_contains": "30 Lê Lợi",
+        "value_kind": "entity"
+      },
+      {
+        "column_label": "Hoạt động kinh doanh chính",
+        "value_contains": "Đầu tư, kinh doanh bất động sản",
+        "value_kind": "text"
+      }
+    ]
+  }
+]

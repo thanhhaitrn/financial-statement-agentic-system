@@ -6,13 +6,18 @@ import pytest
 
 from eval_retrieval_recall import (
     evaluate_factual_recall,
+    fact_matches,
+    facts_from_mappings,
     git_worktree_provenance,
     load_factual_contract_records,
     matched_official_gate_records,
     parse_args,
     prepare_official_gate_records,
+    retrieval_queries_for_question,
+    score_factual_record,
     select_contract_records,
 )
+from evaluation.financial_text import normalize_period
 
 
 FACT = {
@@ -46,6 +51,26 @@ def _record(record_id: int, question: str = "Doanh thu là bao nhiêu?") -> dict
         "question": question,
         "expected_facts": [dict(FACT)],
     }
+
+
+def test_retrieval_gate_executes_declared_ratio_operand_queries():
+    question = (
+        "Tỷ lệ dự phòng giảm giá chứng khoán kinh doanh trên "
+        "tổng chi phí tài chính là bao nhiêu phần trăm?"
+    )
+
+    queries = retrieval_queries_for_question(question)
+
+    assert queries[0] == question
+    assert len(queries) == 3
+    assert any("dự phòng giảm giá chứng khoán kinh doanh" in query for query in queries[1:])
+    assert any("chi phí tài chính" in query for query in queries[1:])
+
+
+def test_retrieval_gate_does_not_invent_legs_for_plain_lookup():
+    question = "Tổng chi phí tài chính là bao nhiêu?"
+
+    assert retrieval_queries_for_question(question) == [question]
 
 
 def test_cli_defaults_to_contract_only_without_untracked_predictions_report():
@@ -199,6 +224,170 @@ def test_contract_rejects_missing_fact_fields_and_dataset_mismatch(tmp_path: Pat
         load_factual_contract_records(valid_contract, expected_dataset_id="other")
 
 
+@pytest.mark.parametrize(
+    "aliases",
+    [
+        "VI.1",
+        [],
+        ["", "VI.1"],
+        ["VI.1", "vi 1"],
+        ["V.1"],
+    ],
+)
+def test_contract_reference_aliases_fail_closed(
+    tmp_path: Path,
+    aliases,
+):
+    record = _record(211)
+    record["expected_facts"][0]["reference_aliases"] = aliases
+    contract = _write_contract(tmp_path / "facts.json", [record])
+
+    with pytest.raises(ValueError, match="reference_aliases"):
+        load_factual_contract_records(contract)
+
+
+def test_reference_aliases_are_reviewed_per_fact_and_never_globally_collapsed():
+    expected = dict(FACT)
+    actual = {
+        **FACT,
+        "reference": "VI.1",
+    }
+
+    assert not fact_matches(expected, actual)
+    assert fact_matches(
+        {**expected, "reference_aliases": ["VI.1"]},
+        actual,
+    )
+    assert not fact_matches(
+        {**expected, "reference_aliases": ["VI.2"]},
+        actual,
+    )
+    # A malformed direct caller cannot turn a string into a permissive alias
+    # iterable; official contracts reject this shape at load time as well.
+    assert not fact_matches(
+        {**expected, "reference_aliases": "VI.1"},
+        actual,
+    )
+
+
+def _annual_flow_fact(
+    *,
+    value: str,
+    label: str,
+    time_hint: str,
+    period_role: str,
+    reference: str = "VI.8",
+) -> dict:
+    return {
+        "company": "Công ty APEC",
+        "item_name": f"Thu nhập khác | {label}",
+        "metric_label": "Thu nhập khác",
+        "time_hint": time_hint,
+        "period_label": label,
+        "column_label": label,
+        "period_role": period_role,
+        "fiscal_year": "2024",
+        "value": value,
+        "unit": "VND",
+        "reference": reference,
+    }
+
+
+def test_typed_cumulative_period_candidates_use_fiscal_year_for_both_legs():
+    current = _annual_flow_fact(
+        value="5.930.566.560",
+        label="Lũy kế đến quý IV năm 2024",
+        time_hint="cuối",
+        period_role="current",
+    )
+    previous = _annual_flow_fact(
+        value="4.296.727.076",
+        label="Lũy kế đến quý IV năm 2023",
+        time_hint="đầu",
+        period_role="previous",
+    )
+    actual_facts = facts_from_mappings([current, previous])
+    record = {
+        "id": 245,
+        "question": "So sánh thu nhập khác năm hiện tại và năm trước.",
+        "expected_facts": [
+            {
+                "entity": "Công ty APEC",
+                "metric": "Thu nhập khác",
+                "period": "năm hiện tại",
+                "value": "5.930.566.560",
+                "unit": "VND",
+                "reference": "V.8",
+                "reference_aliases": ["VI.8"],
+            },
+            {
+                "entity": "Công ty APEC",
+                "metric": "Thu nhập khác",
+                "period": "năm trước",
+                "value": "4.296.727.076",
+                "unit": "VND",
+                "reference": "V.8",
+                "reference_aliases": ["VI.8"],
+            },
+        ],
+    }
+
+    row = score_factual_record(record, actual_facts=actual_facts)
+
+    assert row["matched_n"] == 2
+    assert row["recall"] == 1.0
+
+
+def test_roman_quarter_is_parsed_but_not_promoted_to_full_year():
+    quarterly = _annual_flow_fact(
+        value="3.544.792.512",
+        label="Quý IV năm 2024",
+        time_hint="cuối",
+        period_role="current",
+    )
+    actual = facts_from_mappings([quarterly])
+    expected_current_year = {
+        "entity": "Công ty APEC",
+        "metric": "Thu nhập khác",
+        "period": "năm hiện tại",
+        "value": "3.544.792.512",
+        "unit": "VND",
+        "reference": "VI.8",
+    }
+
+    assert normalize_period("Quý IV năm 2024") == "2024-q4"
+    assert any("2024-q4" in fact["_raw_periods"] for fact in actual)
+    assert not any(fact_matches(expected_current_year, fact) for fact in actual)
+
+
+def test_bare_current_period_role_does_not_relabel_balance_sheet_ending():
+    balance = {
+        "company": "Công ty APEC",
+        "item_name": "Lợi nhuận sau thuế chưa phân phối | Số cuối năm",
+        "time_hint": "cuối",
+        "period_label": "Số cuối năm",
+        "column_label": "Số cuối năm",
+        "period_role": "current",
+        "fiscal_year": "2024",
+        "value": "43.404.961.299",
+        "unit": "VND",
+        "reference": "BẢNG CÂN ĐỐI KẾ TOÁN",
+    }
+    actual = facts_from_mappings([balance])
+    expected = {
+        "entity": "Công ty APEC",
+        "metric": "Lợi nhuận sau thuế chưa phân phối",
+        "period": "cuối kỳ",
+        "value": "43.404.961.299",
+        "unit": "VND",
+        "reference": "V.19a",
+        "reference_aliases": ["BẢNG CÂN ĐỐI KẾ TOÁN"],
+    }
+
+    assert any(fact_matches(expected, fact) for fact in actual)
+    assert not any("current_year" in fact["_raw_periods"] for fact in actual)
+
+
 def test_worktree_provenance_distinguishes_dirty_code_from_head(tmp_path: Path):
     subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
     source = tmp_path / "gate.py"
@@ -229,3 +418,52 @@ def test_worktree_provenance_distinguishes_dirty_code_from_head(tmp_path: Path):
     assert dirty["git_revision"] == clean["git_revision"]
     assert dirty["worktree_diff_sha256"] != clean["worktree_diff_sha256"]
     assert dirty["code_sha256"] != clean["code_sha256"]
+
+
+def test_worktree_provenance_hashes_untracked_source_but_ignores_runtime_outputs(
+    tmp_path: Path,
+):
+    subprocess.run(["git", "init", "-q"], cwd=tmp_path, check=True)
+    baseline = tmp_path / "baseline.py"
+    baseline.write_text("ENABLED = True\n", encoding="utf-8")
+    subprocess.run(["git", "add", "baseline.py"], cwd=tmp_path, check=True)
+    subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=AgentFinX Test",
+            "-c",
+            "user.email=agentfinx-test@example.invalid",
+            "commit",
+            "-q",
+            "-m",
+            "initial",
+        ],
+        cwd=tmp_path,
+        check=True,
+    )
+
+    clean = git_worktree_provenance(tmp_path)
+    runtime_dir = tmp_path / "ragas_runs"
+    runtime_dir.mkdir()
+    (runtime_dir / "checkpoint.json").write_text(
+        '{"run_complete": false}',
+        encoding="utf-8",
+    )
+    with_runtime_output = git_worktree_provenance(tmp_path)
+
+    assert with_runtime_output["repository_dirty"] is True
+    assert with_runtime_output["worktree_dirty"] is False
+    assert with_runtime_output["code_sha256"] == clean["code_sha256"]
+    assert with_runtime_output["excluded_untracked_files_n"] == 1
+
+    behavior = tmp_path / "new_behavior.py"
+    behavior.write_text("THRESHOLD = 0.96\n", encoding="utf-8")
+    first_behavior = git_worktree_provenance(tmp_path)
+    behavior.write_text("THRESHOLD = 0.97\n", encoding="utf-8")
+    second_behavior = git_worktree_provenance(tmp_path)
+
+    assert first_behavior["worktree_dirty"] is True
+    assert first_behavior["relevant_untracked_files_n"] == 1
+    assert first_behavior["code_sha256"] != clean["code_sha256"]
+    assert second_behavior["code_sha256"] != first_behavior["code_sha256"]

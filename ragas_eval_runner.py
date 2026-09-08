@@ -43,6 +43,7 @@ from eval_retrieval_recall import (
     matched_official_gate_records,
 )
 from evaluation.contracts import REPORT_SCHEMA_VERSION
+from evaluation.run_spec import UNSPECIFIED, EvaluationRunSpec, get_run_spec, profile_names
 
 
 REPO_ROOT = Path(__file__).resolve().parent
@@ -726,9 +727,10 @@ def build_latency_contract(
     judge_duration_ms: int,
     judge_metrics_n: int = 0,
     clean_environment_attested: bool = False,
+    run_spec: EvaluationRunSpec = UNSPECIFIED,
 ) -> dict[str, Any]:
     sample_ids = [item.get("id") for item in predictions]
-    matches_apec_cohort = sample_ids == list(range(181, 251))
+    cohort_report = run_spec.cohort_report(sample_ids)
     durations = [
         float(item["runtime"])
         for item in predictions
@@ -774,17 +776,15 @@ def build_latency_contract(
     valid = not invalid_reasons
     return {
         "valid": valid,
+        # A latency baseline is only publishable against a cohort the run
+        # declared; an undeclared cohort can never be "the" benchmark.
         "baseline_eligible": (
             valid
-            and matches_apec_cohort
+            and bool(cohort_report["matches"])
             and len(retrieval_local) == len(predictions)
             and len(model_generation) == len(predictions)
         ),
-        "benchmark_cohort": {
-            "name": "apec_q181_250",
-            "expected_samples_n": 70,
-            "matches": matches_apec_cohort,
-        },
+        "benchmark_cohort": cohort_report,
         "invalid_reasons": invalid_reasons,
         "contamination_samples": contamination[:3],
         "warmup": "not_included_in_report_contract",
@@ -861,6 +861,7 @@ def apply_evaluation_contract(
     clean_environment_attested: bool | None = None,
     source_prediction_complete: bool | None = None,
     source_prediction_error: str = "",
+    run_spec: EvaluationRunSpec = UNSPECIFIED,
 ) -> dict:
     output = dict(report)
     metadata = dict(output.get("metadata", {}) or {})
@@ -891,6 +892,7 @@ def apply_evaluation_contract(
         judge_duration_ms=judge_duration_ms,
         judge_metrics_n=judge_metrics_n,
         clean_environment_attested=clean_environment_attested,
+        run_spec=run_spec,
     )
 
     output["schema_version"] = EVAL_REPORT_SCHEMA_VERSION
@@ -986,6 +988,15 @@ def parse_args(argv: list[str] | None = None):
         default="",
         help="Output JSON path. Defaults to overwriting --predictions-file.",
     )
+    parser.add_argument(
+        "--profile",
+        default="",
+        help=(
+            "Evaluation profile declaring the benchmark cohort and thresholds. "
+            "Required to claim a latency baseline. Declared profiles: "
+            + ", ".join(profile_names())
+        ),
+    )
     parser.add_argument("--batch-size", type=int, default=None, help="Optional RAGAs evaluation batch size.")
     parser.add_argument(
         "--metric-sleep-seconds",
@@ -1015,6 +1026,7 @@ def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
     input_path = Path(args.predictions_file)
     output_path = Path(args.output or args.predictions_file)
+    run_spec = get_run_spec(args.profile)
 
     report = load_report(input_path)
     source_prediction_complete, source_prediction_error = _source_prediction_status(report)
@@ -1067,6 +1079,7 @@ def main(argv: list[str] | None = None) -> int:
             clean_environment_attested=clean_latency_attested,
             source_prediction_complete=source_prediction_complete,
             source_prediction_error=source_prediction_error,
+            run_spec=run_spec,
         )
         atomic_write_report_pair(checkpoint_report, output_path)
 
@@ -1121,6 +1134,7 @@ def main(argv: list[str] | None = None) -> int:
         clean_environment_attested=clean_latency_attested,
         source_prediction_complete=source_prediction_complete,
         source_prediction_error=source_prediction_error,
+        run_spec=run_spec,
     )
     gate_status = scored_report["summary"]["quality_gate"]["status"]
     if gate_status == "fail":

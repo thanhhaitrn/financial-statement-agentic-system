@@ -1,0 +1,169 @@
+{
+  "schema_version": 1,
+  "description": "Reviewed evaluator examples spanning common VNM/APEC answer shapes; names are fixtures, not product routing rules.",
+  "hard_error_gate": {
+    "min_precision": 0.95,
+    "min_recall": 0.95
+  },
+  "cases": [
+    {
+      "name": "vnm_audit_report_identifier_and_date",
+      "source_family": "VNM",
+      "question": "Báo cáo kiểm toán độc lập có số và ngày nào?",
+      "ground_truth": "Báo cáo số 149/2025/BCKT-AASC, ngày 28/03/2025.",
+      "gold_atoms": [
+        {
+          "kind": "identifier",
+          "value": "149/2025/BCKT-AASC"
+        },
+        {
+          "kind": "date",
+          "value": "28/03/2025"
+        }
+      ],
+      "correct_answer": "Số báo cáo là 149/2025/BCKT-AASC, ký ngày 28-03-2025.",
+      "wrong_answer": "Số báo cáo là 150/2025/BCKT-AASC, ký ngày 27-03-2025.",
+      "wrong_label": "WRONG_OVERLAP"
+    },
+    {
+      "name": "apec_factory_count",
+      "source_family": "APEC",
+      "question": "Doanh nghiệp có bao nhiêu nhà máy?",
+      "ground_truth": "Doanh nghiệp có 3 nhà máy.",
+      "gold_atoms": [
+        {
+          "kind": "count",
+          "value": 3,
+          "unit": "nhà máy"
+        }
+      ],
+      "correct_answer": "Doanh nghiệp đang vận hành 3 nhà máy.",
+      "wrong_answer": "Doanh nghiệp đang vận hành 2 nhà máy.",
+      "wrong_label": "WRONG_NUMBER"
+    },
+    {
+      "name": "vnm_financial_amount_across_units",
+      "source_family": "VNM",
+      "question": "Dòng tiền thuần trong năm là bao nhiêu?",
+      "ground_truth": "Dòng tiền thuần là 521.000 triệu đồng.",
+      "gold_atoms": [
+        {
+          "kind": "amount",
+          "value": "521000",
+          "unit": "triệu đồng"
+        }
+      ],
+      "correct_answer": "Dòng tiền thuần trong năm là 521 tỷ đồng.",
+      "wrong_answer": "Dòng tiền thuần trong năm là 510 tỷ đồng.",
+      "wrong_label": "WRONG_NUMBER"
+    },
+    {
+      "name": "apec_percentage",
+      "source_family": "APEC",
+      "question": "Tỷ lệ hao mòn là bao nhiêu?",
+      "ground_truth": "Tỷ lệ hao mòn là 30,5%.",
+      "gold_atoms": [
+        {
+          "kind": "percent",
+          "value": "30.5"
+        }
+      ],
+      "correct_answer": "Tỷ lệ hao mòn được tính là 30,5 phần trăm.",
+      "wrong_answer": "Tỷ lệ hao mòn được tính là 25%.",
+      "wrong_label": "WRONG_NUMBER"
+    },
+    {
+      "name": "vnm_multiple",
+      "source_family": "VNM",
+      "question": "Giá trị năm nay bằng bao nhiêu lần năm trước?",
+      "ground_truth": "Giá trị năm nay bằng 1,25 lần năm trước.",
+      "gold_atoms": [
+        {
+          "kind": "multiple",
+          "value": "1.25"
+        }
+      ],
+      "correct_answer": "Giá trị năm nay gấp 1,25 lần năm trước.",
+      "wrong_answer": "Giá trị năm nay gấp 0,8 lần năm trước.",
+      "wrong_label": "WRONG_NUMBER"
+    },
+    {
+      "name": "apec_auditor_entity",
+      "source_family": "APEC",
+      "question": "Đơn vị kiểm toán là tổ chức nào?",
+      "ground_truth": "Đơn vị kiểm toán là Công ty TNHH KPMG Việt Nam.",
+      "gold_atoms": [
+        {
+          "kind": "entity",
+          "value": "Công ty TNHH KPMG Việt Nam",
+          "aliases": [
+            "KPMG Việt Nam"
+          ]
+        }
+      ],
+      "correct_answer": "Đơn vị thực hiện kiểm toán là KPMG Việt Nam.",
+      "wrong_answer": "Đơn vị thực hiện kiểm toán là Deloitte Việt Nam.",
+      "wrong_label": "WRONG_OVERLAP"
+    },
+    {
+      "name": "vnm_zero_balance",
+      "source_family": "VNM",
+      "question": "Khoản phải thu còn số dư cuối năm không?",
+      "ground_truth": "Khoản phải thu không còn số dư cuối năm.",
+      "gold_atoms": [
+        {
+          "kind": "amount",
+          "value": 0,
+          "unit": "VND"
+        }
+      ],
+      "correct_answer": "Cuối năm, khoản phải thu không còn số dư.",
+      "wrong_answer": "Cuối năm, khoản phải thu còn số dư 10 triệu đồng.",
+      "wrong_label": "WRONG_NUMBER"
+    },
+    {
+      "name": "apec_ratio_operand_roles",
+      "source_family": "APEC",
+      "question": "Giá trị thứ nhất bằng bao nhiêu lần giá trị thứ hai?",
+      "ground_truth": "Tử số là 100 triệu đồng, mẫu số là 20 triệu đồng và kết quả là 5 lần.",
+      "gold_atoms": [
+        {
+          "kind": "amount",
+          "value": 100,
+          "unit": "triệu đồng",
+          "operand_role": "numerator"
+        },
+        {
+          "kind": "amount",
+          "value": 20,
+          "unit": "triệu đồng",
+          "role": "denominator"
+        },
+        {
+          "kind": "multiple",
+          "value": 5,
+          "role": "derived_result"
+        }
+      ],
+      "correct_answer": "Tử số là 100 triệu đồng; mẫu số là 20 triệu đồng; kết quả tính được là 5 lần.",
+      "wrong_answer": "Tử số là 20 triệu đồng; mẫu số là 100 triệu đồng; kết quả tính được là 5 lần.",
+      "wrong_label": "WRONG_NUMBER"
+    },
+    {
+      "name": "vnm_provider_follow_up_limit",
+      "source_family": "VNM",
+      "question": "Doanh thu thuần là bao nhiêu?",
+      "ground_truth": "Doanh thu thuần là 100 triệu đồng.",
+      "gold_atoms": [
+        {
+          "kind": "amount",
+          "value": 100,
+          "unit": "triệu đồng"
+        }
+      ],
+      "correct_answer": "Doanh thu thuần là 100 triệu đồng.",
+      "wrong_answer": "Giới hạn dữ liệu: hệ thống đã đạt giới hạn follow-up cho phiên này.",
+      "wrong_label": "ERROR"
+    }
+  ]
+}

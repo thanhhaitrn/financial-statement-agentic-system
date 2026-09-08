@@ -2,7 +2,9 @@ from common import dedupe_keep_order as _dedupe_keep_order
 """LangGraph branch predicates that decide the next workflow node."""
 # Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
 
-DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
+from config.runtime_policy import DEFAULT_POLICY, active_policy
+
+DEFAULT_MAX_TOOL_CALLS_PER_ROUND = DEFAULT_POLICY.execution.max_tool_calls_per_round
 
 
 def _current_round(state: dict) -> int:
@@ -119,7 +121,10 @@ def synth_route(state: dict) -> str:
     rounds = state.get("followup_rounds", 0)
     followups = state.get("followup_requests", []) or []
 
-    if d.get("status") == "need_more" and 0 < int(rounds or 0) <= 5 and followups:
+    # Same ceiling Synth enforces when it decides to ask for more: a looser edge
+    # here just routes rounds that Synth will refuse to act on.
+    max_rounds = active_policy().execution.max_followup_rounds
+    if d.get("status") == "need_more" and 0 < int(rounds or 0) <= max_rounds and followups:
         return "followup"
 
     return "end"

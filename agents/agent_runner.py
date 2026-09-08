@@ -5,7 +5,8 @@ import json
 import time
 
 from tools.langchain_tools import get_langchain_tools_for_agent, get_tools_list
-from agents.agent_registry import is_analysis_agent
+from agents.agent_registry import ANALYSIS_ALLOWED_KEYWORD_TABLES, is_analysis_agent
+from config.runtime_policy import DEFAULT_POLICY
 from agents.prompts import PROMPT_TEMPLATE
 from agents.profiles import AGENT_PROFILES
 from config.allowed_keywords import build_allowed_keywords_payload
@@ -17,13 +18,14 @@ from schemas.agent_outputs import (
     parse_analysis_response,
     parse_analysis_response_payload,
 )
+from schemas.financial_validation import canonical_profitability_metrics
 from schemas.requirements import (
-    FACT_STATUS_NOT_FOUND,
+    REQUIREMENT_EXHAUSTIVE_ABSENT,
+    REQUIREMENT_MATCHED,
     extract_financial_statement_keywords,
     normalize_fact_status,
     normalize_requirement_text,
-    requirement_name_matches_fact,
-    requirement_matches_fact,
+    requirement_evidence_state,
 )
 from schemas.table_names import (
     TABLE_BS,
@@ -35,16 +37,21 @@ from schemas.table_names import (
 )
 from tools.tool_calls import invalid_tool_calls, response_tool_calls, synthetic_tool_call
 from tools.evidence import merge_worker_fact_payload, scoped_tool_name_for_query, scoped_tool_name_for_table
+from tools.query_routing import route_candidates
 from common import dedupe_keep_order as _dedupe_keep_order
 
 
-DEFAULT_MAX_ANALYSIS_TOOL_CALLS_PER_ROUND = 2
-ANALYSIS_ALLOWED_KEYWORD_TABLES = {
-    "agent_profitability": {TABLE_BS, TABLE_IS, TABLE_NOTE},
-    "agent_liquidity_solvency": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
-    "agent_cashflow_analysis": {TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE},
-    "agent_efficiency": {TABLE_BS, TABLE_IS, TABLE_NOTE},
-}
+DEFAULT_MAX_ANALYSIS_TOOL_CALLS_PER_ROUND = DEFAULT_POLICY.execution.max_tool_calls_per_round
+
+
+
+def _trace_details(state: dict, **data) -> dict:
+    """Expose verbose analysis payloads only when debug tracing is enabled."""
+
+    if not bool((state or {}).get("debug_trace", False)):
+        return {}
+    return data
+
 
 def extract_text(resp):
     if isinstance(resp, str):
@@ -192,14 +199,24 @@ def _assigned_requirements_for_agent(state: dict, agent_name: str) -> list[str]:
         ]
 
     dispatch_target = state.get("dispatch_target")
-    if isinstance(dispatch_target, dict) and str(dispatch_target.get("agent", "")).strip() == agent_name:
+    if isinstance(dispatch_target, dict) and dispatch_target:
+        if str(dispatch_target.get("agent", "")).strip() != agent_name:
+            # A Send payload belongs to exactly one analysis worker.  Falling
+            # back to the shared worker plan here makes another worker inherit
+            # every query in the run when branch state is merged.
+            return []
+        explicit_requirements = [
+            str(item).strip()
+            for item in (dispatch_target.get("requirements", []) or [])
+            if str(item).strip()
+        ]
+        # requirements is the active retrieval contract when present;
+        # evidence_queries is supporting input, not an additional global to-do
+        # list.  Legacy targets without requirements still use their own
+        # evidence queries as the contract.
         return _dedupe_keep_order(
-            [
-                str(item).strip()
-                for item in (dispatch_target.get("requirements", []) or [])
-                if str(item).strip()
-            ]
-            + evidence_queries_to_requirements(dispatch_target)
+            explicit_requirements
+            or evidence_queries_to_requirements(dispatch_target)
         )
 
     worker_plan = state.get("worker_plan", {}) or {}
@@ -207,26 +224,26 @@ def _assigned_requirements_for_agent(state: dict, agent_name: str) -> list[str]:
     for target in (worker_plan.get("targets", []) or []):
         if str(target.get("agent", "")).strip() != agent_name:
             continue
+        target_requirements = [
+            str(item).strip()
+            for item in (target.get("requirements", []) or [])
+            if str(item).strip()
+        ]
         requirements.extend(
-            [
-                str(item).strip()
-                for item in (target.get("requirements", []) or [])
-                if str(item).strip()
-            ]
+            target_requirements or evidence_queries_to_requirements(target)
         )
-        requirements.extend(evidence_queries_to_requirements(target))
 
     for target in (worker_plan.get("analysis_plan", []) or []):
         if str(target.get("agent", "")).strip() != agent_name:
             continue
+        target_requirements = [
+            str(item).strip()
+            for item in (target.get("requirements", []) or [])
+            if str(item).strip()
+        ]
         requirements.extend(
-            [
-                str(item).strip()
-                for item in (target.get("requirements", []) or [])
-                if str(item).strip()
-            ]
+            target_requirements or evidence_queries_to_requirements(target)
         )
-        requirements.extend(evidence_queries_to_requirements(target))
 
     seen = set()
     normalized = []
@@ -279,11 +296,18 @@ def _next_requirement_item(state: dict, agent_name: str) -> str:
 def _dispatch_target_for_agent(state: dict, agent_name: str) -> dict:
     agent = str(agent_name or "").strip()
     dispatch_target = state.get("dispatch_target")
-    if (
-        isinstance(dispatch_target, dict)
-        and str(dispatch_target.get("agent", "") or "").strip() == agent
-    ):
-        return dispatch_target
+    if isinstance(dispatch_target, dict) and dispatch_target:
+        if str(dispatch_target.get("agent", "") or "").strip() == agent:
+            return dispatch_target
+        # An explicit current target is authoritative.  Do not recover a stale
+        # target for another worker from shared messages or the global plan.
+        return {}
+
+    for target in state.get("analysis_dispatch_targets", []) or []:
+        if not isinstance(target, dict):
+            continue
+        if str(target.get("agent", "") or "").strip() == agent:
+            return target
 
     current_round = int((state or {}).get("followup_rounds", 0) or 0)
     for item in reversed(state.get("worker_messages", []) or []):
@@ -305,7 +329,38 @@ def _dispatch_target_for_agent(state: dict, agent_name: str) -> dict:
         ):
             return message_target
 
+    worker_plan = state.get("worker_plan", {}) or {}
+    for section in ("analysis_plan", "targets"):
+        for target in worker_plan.get(section, []) or []:
+            if not isinstance(target, dict):
+                continue
+            if str(target.get("agent", "") or "").strip() == agent:
+                return target
+
     return {}
+
+
+def _evidence_queries_for_agent(state: dict, agent_name: str) -> list[dict]:
+    """Return evidence queries from one analysis dispatch target only."""
+
+    target = _dispatch_target_for_agent(state, agent_name)
+    if target:
+        return [
+            dict(item)
+            for item in (target.get("evidence_queries", []) or [])
+            if isinstance(item, dict)
+        ]
+
+    # Keep compatibility for old single-agent states that predate
+    # dispatch_target.  Never use this fallback when an explicit target for a
+    # different agent is present.
+    if isinstance(state.get("dispatch_target"), dict) and state.get("dispatch_target"):
+        return []
+    return [
+        dict(item)
+        for item in (state.get("evidence_queries", []) or [])
+        if isinstance(item, dict)
+    ]
 
 
 def _scoped_analysis_input_results(state: dict, agent_name: str) -> dict:
@@ -315,6 +370,12 @@ def _scoped_analysis_input_results(state: dict, agent_name: str) -> dict:
         if isinstance(dispatch_target, dict)
         else None
     )
+    if isinstance(dispatch_target, dict) and "analysis_input_results" in dispatch_target:
+        if isinstance(target_results, dict):
+            # An explicit empty scope is meaningful and must not fall through
+            # to another worker's global analysis_input_results.
+            return target_results
+
     if isinstance(target_results, dict) and target_results:
         return target_results
 
@@ -384,12 +445,41 @@ def _compact_analysis_fact_for_prompt(fact: dict) -> dict:
     payload = {}
     for key in (
         "content_type",
+        "source_kind",
+        "source_url",
+        "publisher",
+        "published_at",
+        "retrieved_at",
+        "content_hash",
+        "table",
+        "fact_id",
+        "item_code",
         "item_name",
+        "row_label",
+        "column_label",
+        "metric_label",
+        "entity_label",
+        "scope_label",
         "time_hint",
+        "period",
+        "period_label",
+        "period_role",
+        "reporting_basis",
         "value",
         "unit",
         "value_type",
+        "aggregation_level",
+        "section_key",
         "source",
+        "source_page",
+        "source_table",
+        "source_item",
+        "evidence_role",
+        "linked_parent_fact_id",
+        "linked_parent_item",
+        "linked_parent_value",
+        "linked_parent_period_label",
+        "linked_parent_aggregation_level",
         "evidence_query",
         "evidence_queries",
         "message",
@@ -435,9 +525,140 @@ def _compact_analysis_results_for_prompt(results: dict) -> dict:
 
 
 def _analysis_input_results_payload_for_prompt(state: dict, agent_name: str = "") -> dict:
-    return _compact_analysis_results_for_prompt(
+    payload = _compact_analysis_results_for_prompt(
         _analysis_input_results_with_tool_facts(state, agent_name)
     )
+    canonical_metrics = _canonical_metrics_for_analysis_agent(state, agent_name)
+    if canonical_metrics:
+        payload["canonical_financial_metrics"] = canonical_metrics
+    return payload
+
+
+def _canonical_metrics_for_analysis_agent(state: dict, agent_name: str) -> dict:
+    """Return only the exact calculation ledger owned by one specialist."""
+
+    calculation = canonical_profitability_metrics(
+        state.get("worker_results", {}) or {}
+    )
+    if calculation.get("status") != "complete":
+        return {}
+
+    relevant = {
+        "agent_profitability": {
+            "inputs": {
+                "net_profit",
+                "net_profit_previous",
+                "net_revenue",
+                "net_revenue_previous",
+                "gross_profit_current",
+                "gross_profit_previous",
+                "operating_profit_current",
+                "operating_profit_previous",
+                "total_assets_opening",
+                "total_assets_current",
+                "equity_opening",
+                "equity_current",
+            },
+            "metrics": {
+                "net_margin",
+                "gross_margin",
+                "operating_margin",
+                "roa",
+                "roe",
+            },
+            "comparatives": {
+                "net_margin_previous",
+                "net_margin_change",
+                "net_profit_growth",
+                "net_revenue_growth",
+                "gross_margin_previous",
+                "gross_margin_change",
+                "operating_margin_previous",
+                "operating_margin_change",
+            },
+            "denominators": {"average_total_assets", "average_equity"},
+        },
+        "agent_cashflow_analysis": {
+            "inputs": {
+                "cfo",
+                "cfo_previous",
+                "net_profit",
+                "net_profit_previous",
+            },
+            "metrics": {"cfo_to_net_profit"},
+            "comparatives": {
+                "cfo_to_net_profit_previous",
+                "cfo_to_net_profit_change",
+                "cfo_growth",
+                "cfo_change_amount",
+                "net_profit_growth",
+            },
+            "denominators": set(),
+        },
+        "agent_liquidity_solvency": {
+            "inputs": {
+                "current_assets",
+                "current_liabilities",
+                "inventory",
+                "cash",
+                "total_liabilities",
+                "equity_current",
+            },
+            "metrics": {
+                "current_ratio",
+                "quick_ratio",
+                "cash_ratio",
+                "debt_to_equity",
+            },
+            "comparatives": set(),
+            "denominators": set(),
+        },
+        "agent_efficiency": {
+            "inputs": {
+                "net_revenue",
+                "net_revenue_previous",
+                "total_assets_opening",
+                "total_assets_current",
+            },
+            "metrics": {"asset_turnover"},
+            "comparatives": {
+                "net_revenue_growth",
+            },
+            "denominators": {"average_total_assets"},
+        },
+    }.get(agent_name)
+    if not relevant:
+        return {}
+
+    def selected(group: str, allowed: set[str]) -> dict:
+        source = calculation.get(group, {}) or {}
+        return {
+            key: value
+            for key, value in source.items()
+            if key in allowed and isinstance(value, dict)
+        }
+
+    output = {
+        "status": "complete",
+        "scope": calculation.get("scope", ""),
+        "period": calculation.get("period", ""),
+        "amount_unit": calculation.get("amount_unit", ""),
+        "inputs": selected("inputs", relevant["inputs"]),
+        "metrics": selected("metrics", relevant["metrics"]),
+        "comparatives": selected(
+            "comparatives",
+            relevant["comparatives"],
+        ),
+        "derived_denominators": selected(
+            "derived_denominators",
+            relevant["denominators"],
+        ),
+    }
+    return {
+        key: value
+        for key, value in output.items()
+        if value not in (None, "", {})
+    }
 
 
 def _compact_evidence_queries_for_prompt(items: list[dict]) -> list[dict]:
@@ -466,9 +687,7 @@ def _analysis_plan_payload_for_prompt(state: dict, agent_name: str) -> dict:
     if not isinstance(worker_plan, dict):
         worker_plan = {}
 
-    dispatch_target = state.get("dispatch_target")
-    if not isinstance(dispatch_target, dict):
-        dispatch_target = {}
+    dispatch_target = _dispatch_target_for_agent(state, agent_name)
 
     objective = str(dispatch_target.get("objective", "") or "").strip()
     if not objective:
@@ -481,8 +700,7 @@ def _analysis_plan_payload_for_prompt(state: dict, agent_name: str) -> dict:
             break
 
     evidence_queries = _compact_evidence_queries_for_prompt(
-        list(dispatch_target.get("evidence_queries", []) or [])
-        or list(state.get("evidence_queries", []) or [])
+        _evidence_queries_for_agent(state, agent_name)
     )
     requirements = _dedupe_keep_order(
         str(item).strip()
@@ -631,21 +849,18 @@ def _requirement_satisfied_by_evidence(
     if not requirement_text:
         return True
 
-    expected_table = normalize_table_heading(_table_for_requirement(state, requirement_text))
-    for fact in facts or []:
-        if not isinstance(fact, dict):
-            continue
-        fact_table = normalize_table_heading(str(fact.get("table", "") or "").strip())
-        if expected_table and fact_table and fact_table != expected_table:
-            continue
-        if requirement_matches_fact(requirement_text, fact, table=expected_table or fact_table):
-            return True
-        if (
-            normalize_fact_status(fact.get("status")) == FACT_STATUS_NOT_FOUND
-            and requirement_name_matches_fact(requirement_text, fact, table=expected_table or fact_table)
-        ):
-            return True
-    return False
+    expected_table = normalize_table_heading(
+        _table_for_requirement(state, requirement_text, agent_name=agent_name)
+    )
+    evidence_state = requirement_evidence_state(
+        requirement_text,
+        facts,
+        table=expected_table,
+    )
+    return evidence_state in {
+        REQUIREMENT_MATCHED,
+        REQUIREMENT_EXHAUSTIVE_ABSENT,
+    }
 
 
 def _missing_requirements_after_evidence_check(state: dict, agent_name: str) -> list[str]:
@@ -697,7 +912,9 @@ def _requirement_attempted_by_tool(state: dict, agent_name: str, requirement: st
     if not requirement_text:
         return True
 
-    expected_table = normalize_table_heading(_table_for_requirement(state, requirement_text))
+    expected_table = normalize_table_heading(
+        _table_for_requirement(state, requirement_text, agent_name=agent_name)
+    )
     normalized_requirement = normalize_requirement_text(requirement_text, table=expected_table)
     for table, query in _attempted_tool_queries_for_agent(state, agent_name):
         query_table = normalize_table_heading(table)
@@ -880,7 +1097,7 @@ def _force_analysis_tool_call_instruction(base_instruction: str, requirement: st
 
 def _analysis_input_results(state: dict, agent_name: str = "") -> dict:
     scoped = _scoped_analysis_input_results(state, agent_name)
-    if scoped:
+    if scoped or _has_explicit_analysis_input_scope(state, agent_name):
         return scoped
 
     explicit = state.get("analysis_input_results")
@@ -891,6 +1108,13 @@ def _analysis_input_results(state: dict, agent_name: str = "") -> dict:
     for source_agent, payload in (state.get("worker_results", {}) or {}).items():
         if is_analysis_agent(source_agent):
             continue
+        if source_agent == "WEB" and isinstance(payload, dict):
+            from graph.dispatch_nodes import _fact_visible_to_agent
+            facts = [fact for fact in payload.get("facts", [])
+                     if _fact_visible_to_agent({**fact, "source_kind": "web"}, agent_name)]
+            if not facts:
+                continue
+            payload = {**payload, "facts": facts}
         results[source_agent] = payload
     return results
 
@@ -973,44 +1197,96 @@ def _looks_like_statement_line_item(value: str) -> bool:
     return len(text.split()) <= 12
 
 
-def _table_for_requirement(state: dict, requirement: str) -> str:
+def _table_for_requirement(
+    state: dict,
+    requirement: str,
+    *,
+    agent_name: str = "",
+) -> str:
     requirement_text = str(requirement or "").strip()
     if not requirement_text:
         return ""
 
-    candidates = []
-    explicit = state.get("evidence_queries")
-    if isinstance(explicit, list):
-        candidates.extend(explicit)
+    scoped_agent = str(agent_name or "").strip()
+    if not scoped_agent:
+        raw_target = state.get("dispatch_target")
+        if isinstance(raw_target, dict):
+            scoped_agent = str(raw_target.get("agent", "") or "").strip()
 
-    dispatch_target = state.get("dispatch_target")
-    if isinstance(dispatch_target, dict):
-        candidates.extend(dispatch_target.get("evidence_queries", []) or [])
-
-    worker_plan = state.get("worker_plan", {}) or {}
-    agent_name = str((dispatch_target or {}).get("agent", "") or "").strip() if isinstance(dispatch_target, dict) else ""
-    for item in (worker_plan.get("analysis_plan", []) or []):
+    candidates = _evidence_queries_for_agent(state, scoped_agent)
+    prepared = []
+    for position, item in enumerate(candidates):
         if not isinstance(item, dict):
             continue
-        if agent_name and str(item.get("agent", "") or "").strip() != agent_name:
-            continue
-        candidates.extend(item.get("evidence_queries", []) or [])
-
-    for item in candidates:
-        if not isinstance(item, dict):
-            continue
-        table = str(item.get("table", "") or "").strip()
+        table = normalize_table_heading(str(item.get("table", "") or "").strip())
         query = str(item.get("query", "") or "").strip()
         if not table or not query:
             continue
-        normalized_requirement = normalize_requirement_text(requirement_text, table=table)
+        prepared.append((position, table, query))
+
+    semantic_routes = route_candidates(requirement_text, agent_name=scoped_agent)
+    # A high-confidence semantic family is authoritative even if an upstream
+    # payload mislabeled the table.  In particular, both "trong kỳ" and "trong
+    # năm" cash-flow captions must not degrade to the balance-sheet keyword
+    # "tiền".
+    if semantic_routes and semantic_routes[0].confidence >= 0.95:
+        return normalize_table_heading(semantic_routes[0].table)
+
+    # Otherwise an exact dispatch query is authoritative.  Check raw wording
+    # before alias normalization because table-local normalization may collapse
+    # a longer requirement to an overly broad keyword.
+    collapsed_requirement = " ".join(requirement_text.casefold().split())
+    exact = [
+        (position, table)
+        for position, table, query in prepared
+        if " ".join(query.casefold().split()) == collapsed_requirement
+    ]
+    if exact:
+        routed_tables = [
+            normalize_table_heading(candidate.table)
+            for candidate in route_candidates(
+                requirement_text,
+                agent_name=scoped_agent,
+            )
+        ]
+        exact.sort(
+            key=lambda item: (
+                routed_tables.index(item[1]) if item[1] in routed_tables else len(routed_tables),
+                item[0],
+            )
+        )
+        return exact[0][1]
+
+    normalized_matches = []
+    for position, table, query in prepared:
+        normalized_requirement = normalize_requirement_text(
+            requirement_text,
+            table=table,
+        )
         normalized_query = normalize_requirement_text(query, table=table)
         if normalized_requirement and normalized_query and normalized_requirement == normalized_query:
-            return table
+            normalized_matches.append((position, table, len(normalized_query.split())))
         if normalized_requirement and normalized_query and (
             normalized_requirement in normalized_query or normalized_query in normalized_requirement
         ):
-            return table
+            normalized_matches.append((position, table, min(len(normalized_requirement), len(normalized_query))))
+
+    if normalized_matches:
+        route_rank = {
+            normalize_table_heading(route.table): index
+            for index, route in enumerate(semantic_routes)
+        }
+        normalized_matches.sort(
+            key=lambda item: (
+                route_rank.get(item[1], len(route_rank)),
+                -item[2],
+                item[0],
+            )
+        )
+        return normalized_matches[0][1]
+
+    if semantic_routes:
+        return normalize_table_heading(semantic_routes[0].table)
 
     return ""
 
@@ -1030,14 +1306,24 @@ def _statement_query_from_requirement(value: str, *, table: str = "") -> str:
     return ""
 
 
-def _analysis_report_query_from_output(state: dict, parsed_output, fallback_requirement: str = "") -> tuple[str, str]:
+def _analysis_report_query_from_output(
+    state: dict,
+    parsed_output,
+    fallback_requirement: str = "",
+    *,
+    agent_name: str = "",
+) -> tuple[str, str]:
     for requirement in _analysis_output_requirements(parsed_output):
-        table = _table_for_requirement(state, requirement)
+        table = _table_for_requirement(state, requirement, agent_name=agent_name)
         query = _statement_query_from_requirement(requirement, table=table)
         if query:
             return query, table
 
-    table = _table_for_requirement(state, fallback_requirement)
+    table = _table_for_requirement(
+        state,
+        fallback_requirement,
+        agent_name=agent_name,
+    )
     query = _statement_query_from_requirement(fallback_requirement, table=table)
     return query, table
 
@@ -1049,24 +1335,16 @@ def _analysis_allowed_keyword_tables(state: dict, agent_name: str, requirement: 
             tables.add(table)
 
     for candidate in (requirement,):
-        table = normalize_table_heading(_table_for_requirement(state, candidate))
+        table = normalize_table_heading(
+            _table_for_requirement(state, candidate, agent_name=agent_name)
+        )
         if table and table != TABLE_NOTE:
             tables.add(table)
 
-    for item in (state.get("evidence_queries", []) or []):
-        if isinstance(item, dict):
-            table = normalize_table_heading(str(item.get("table", "") or "").strip())
-            if table and table != TABLE_NOTE:
-                tables.add(table)
-
-    dispatch_target = state.get("dispatch_target")
-    if isinstance(dispatch_target, dict):
-        for item in dispatch_target.get("evidence_queries", []) or []:
-            if not isinstance(item, dict):
-                continue
-            table = normalize_table_heading(str(item.get("table", "") or "").strip())
-            if table and table != TABLE_NOTE:
-                tables.add(table)
+    for item in _evidence_queries_for_agent(state, agent_name):
+        table = normalize_table_heading(str(item.get("table", "") or "").strip())
+        if table and table != TABLE_NOTE:
+            tables.add(table)
 
     # Report sections are retrieved and validated in the evidence stage.  They
     # are not exposed as a default analysis-agent tool surface.
@@ -1083,7 +1361,7 @@ def _deterministic_tool_call_for_missing_requirement(
     agent_name: str,
     requirement: str,
 ) -> dict:
-    table = _table_for_requirement(state, requirement)
+    table = _table_for_requirement(state, requirement, agent_name=agent_name)
     raw_query = " ".join(str(requirement or "").strip().split())
     normalized_table = normalize_table_heading(table)
     if normalized_table == TABLE_REPORT_SECTION:
@@ -1122,39 +1400,14 @@ def _analysis_output_requests_more_data(parsed_output) -> bool:
     return bool(_analysis_output_requirements(parsed_output))
 
 
-def _analysis_fallback_output(state: dict, agent_name: str, parsed_output) -> dict:
-    normalized = _normalize_analysis_output(parsed_output)
-    if str(normalized.get("answer", "") or "").strip():
-        return normalized
+def _analysis_output_or_empty(parsed_output) -> dict:
+    """Normalize model output without inventing analysis prose."""
 
-    requirements = _analysis_output_requirements(normalized)
-    if requirements:
-        return {
-            "answer": "Chưa đủ dữ liệu để kết luận. Cần bổ sung: " + "; ".join(requirements) + ".",
-            "requirements": requirements,
-        }
-
-    assigned = _assigned_requirements_for_agent(state, agent_name)
-    if assigned:
-        objective = "; ".join(assigned[:2])
-        return {
-            "answer": (
-                "Chưa tạo được kết luận phân tích hợp lệ từ dữ liệu hiện có cho mục tiêu: "
-                f"{objective}. Cần kiểm tra lại dữ liệu đầu vào hoặc truy xuất thêm bằng chứng liên quan."
-            ),
-            "requirements": [],
-        }
-
-    if _analysis_input_facts(state, agent_name):
-        return {
-            "answer": "Đã có dữ liệu đầu vào nhưng chưa tạo được kết luận phân tích hợp lệ.",
-            "requirements": [],
-        }
-
-    return {
-        "answer": "Chưa đủ dữ liệu để kết luận phân tích.",
-        "requirements": [],
-    }
+    if hasattr(parsed_output, "model_dump"):
+        parsed_output = parsed_output.model_dump()
+    if not isinstance(parsed_output, dict):
+        parsed_output = {}
+    return _normalize_analysis_output(parsed_output)
 
 
 def call_analysis_agent(state: dict, agent_name: str) -> dict:
@@ -1170,7 +1423,6 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
         "evidence_pack_json": json.dumps(_evidence_pack_payload_for_prompt(state, agent_name), ensure_ascii=False),
         "worker_results_json": json.dumps(_analysis_input_results_payload_for_prompt(state, agent_name), ensure_ascii=False),
         "allowed_keywords_json": _allowed_keywords_payload_for_analysis(state, agent_name),
-        "web_summary": state.get("web_summary", ""),
         "last_agent_response": "",
         "tool_observations": _tool_obs_for_agent(state, agent_name),
         "tools_list": get_tools_list(agent_name),
@@ -1205,12 +1457,15 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
             agent=agent_name,
             assigned_requirements_n=assigned_requirements_n,
             missing_requirements_n=len(missing_requirements),
-            missing_requirements=missing_requirements[:4],
             evidence_facts_n=evidence_facts_n,
             tool_count=tool_count,
             max_tool_calls=max_tool_calls,
             forced_collect=forced_collect,
             will_call_tool=should_call_tool,
+            **_trace_details(
+                state,
+                missing_requirements=missing_requirements[:4],
+            ),
         )
     )
 
@@ -1233,9 +1488,12 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
                     state,
                     "analysis:deterministic_tool_call",
                     agent=agent_name,
-                    requirement=next_requirement,
                     tool=str(call.get("name", "") or "").strip(),
-                    query=str((call.get("args", {}) or {}).get("query", "") or "").strip(),
+                    **_trace_details(
+                        state,
+                        requirement=next_requirement,
+                        query=str((call.get("args", {}) or {}).get("query", "") or "").strip(),
+                    ),
                 )
             )
         else:
@@ -1251,7 +1509,12 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
             _parsed_kind(parsed_output) != "tool_calls"
             and _analysis_output_requests_more_data(parsed_output)
         ):
-            tool_query, tool_table = _analysis_report_query_from_output(state, parsed_output, next_requirement)
+            tool_query, tool_table = _analysis_report_query_from_output(
+                state,
+                parsed_output,
+                next_requirement,
+                agent_name=agent_name,
+            )
             if tool_query:
                 tool_name = scoped_tool_name_for_table(tool_table) or scoped_tool_name_for_query(tool_query, agent_name=agent_name)
                 tool_call = synthetic_tool_call(
@@ -1273,7 +1536,7 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
                 if synthetic_log:
                     trace.append(synthetic_log)
         elif _parsed_kind(parsed_output) != "tool_calls":
-            parsed_output = _analysis_fallback_output(state, agent_name, parsed_output)
+            parsed_output = _analysis_output_or_empty(parsed_output)
             response_text = _serialize_payload(parsed_output)
 
         if _parsed_kind(parsed_output) == "tool_calls" and _has_nonempty_tool_context(state, agent_name):
@@ -1312,7 +1575,7 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
             )
         payload["system_instruction"] = _force_analysis_answer_instruction(profile["system_instruction"])
         parsed_output, response_text, parse_error, fallback_mode, usage = _run_analysis_once(payload)
-        parsed_output = _analysis_fallback_output(state, agent_name, parsed_output)
+        parsed_output = _analysis_output_or_empty(parsed_output)
         response_text = _serialize_payload(parsed_output)
 
     if fallback_mode and fallback_mode not in {"native_tool_call", "deterministic_tool_call"}:
@@ -1356,18 +1619,21 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
         done_summary = {
             "result_kind": "tool_calls",
             "tool": str(call.get("name", "") or "").strip(),
-            "query": str(call_args.get("query", "") or "").strip(),
             "tool_calls_n": len(calls),
+            **_trace_details(
+                state,
+                query=str(call_args.get("query", "") or "").strip(),
+            ),
         }
     else:
-        normalized = _analysis_fallback_output(state, agent_name, parsed_output)
+        normalized = _analysis_output_or_empty(parsed_output)
         parsed_output = normalized
         response_text = _serialize_payload(parsed_output)
         done_summary = {
             "result_kind": "answer",
             "requirements_n": len(parsed_output.get("requirements", []) or []),
             "answer_len": len(str(parsed_output.get("answer", "") or "")),
-            "result": parsed_output,
+            **_trace_details(state, result=parsed_output),
         }
 
     trace.append(
@@ -1375,6 +1641,7 @@ def call_analysis_agent(state: dict, agent_name: str) -> dict:
             state,
             "analysis:done",
             agent=agent_name,
+            status="ok",
             **done_summary,
             duration_ms=int((time.perf_counter() - started_at) * 1000),
             **usage,

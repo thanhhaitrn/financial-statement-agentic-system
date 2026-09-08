@@ -143,7 +143,7 @@ def test_prepare_followup_dispatch_preserves_route_metadata():
     assert followup["source"] == "report.md"
 
 
-def test_format_final_answer_includes_not_found_after_search_messages():
+def test_format_final_answer_does_not_append_worker_not_found_diagnostics():
     message = (
         "Không tìm thấy dòng chi phí bán hàng trong dữ liệu hiện có. "
         f"Có thể khoản này không phát sinh/không được trình bày riêng trong {TABLE_IS}, "
@@ -171,4 +171,5 @@ def test_format_final_answer_includes_not_found_after_search_messages():
         }
     )
 
-    assert message in formatted
+    assert message not in formatted
+    assert formatted == "Chưa đủ dữ liệu để kết luận."

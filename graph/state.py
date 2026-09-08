@@ -1,9 +1,11 @@
 """Typed state and dependency contracts shared by LangGraph nodes."""
 # Code note: Graph modules mutate LangGraph state; comments here highlight routing and collection boundaries.
 
-from dataclasses import dataclass
-from typing import TypedDict, Any, Annotated
 import operator
+from dataclasses import dataclass, field
+from typing import Annotated, Any, TypedDict
+
+from config.runtime_policy import DEFAULT_POLICY, RuntimePolicy
 
 
 def merge_dicts(left: dict[str, Any], right: dict[str, Any]) -> dict[str, Any]:
@@ -27,6 +29,10 @@ class WorkflowServices:
     collection: Any = None
     index_fingerprint: str = ""
     model_fingerprint: str = ""
+    web_provider: Any = None
+    # Execution limits for this run. Activated per node call so two graphs built
+    # with different policies cannot read each other's caps.
+    policy: RuntimePolicy = field(default_factory=lambda: DEFAULT_POLICY)
 
 class GraphState(TypedDict, total=False):
     # input
@@ -37,6 +43,10 @@ class GraphState(TypedDict, total=False):
     index_fingerprint: str
     collection_generation: str
     model_fingerprint: str
+    dataset_company: str
+    dataset_ticker: str
+    owner_id: str
+    force_web_refresh: bool
 
     # branch-specific input injected by Send(...)
     worker_query: str
@@ -50,6 +60,7 @@ class GraphState(TypedDict, total=False):
     planner_plan: dict
     worker_plan: dict
     evidence_pack: dict
+    evidence_ledger: dict
     ragas_facts_by_table: dict
     expected_workers: list[str]
     dispatch_phase: str
@@ -58,7 +69,6 @@ class GraphState(TypedDict, total=False):
     analysis_dispatch_targets: list[dict]
     pending_analysis_targets: list[dict]
     missing_components: list[str]
-    web_summary: str
     synth_decision: dict
     final_answer: str
 

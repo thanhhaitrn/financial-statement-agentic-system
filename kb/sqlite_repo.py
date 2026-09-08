@@ -5,13 +5,49 @@ from __future__ import annotations
 
 import hashlib
 import json
+import re
 import sqlite3
+import unicodedata
 from pathlib import Path
 from typing import Any
 
 
-SQLITE_SCHEMA_VERSION = 2
+SQLITE_SCHEMA_VERSION = 6
 _KB_MANIFEST_TABLE = "kb_manifest"
+
+TYPED_FACT_METADATA_FIELDS = (
+    "row_label",
+    "column_label",
+    "value_kind",
+    "parsed_value",
+    "period_label",
+    "period_role",
+    "aggregation_level",
+    "section_path",
+    "block_id",
+    "source_page",
+    "metric_label",
+    "entity_label",
+    "scope_label",
+    "counterparty",
+    "transaction_type",
+    "movement_type",
+    "geography",
+    "policy_topic",
+    "section_key",
+)
+_ALLOWED_VALUE_KINDS = {
+    "amount",
+    "count",
+    "percent",
+    "multiple",
+    "date",
+    "identifier",
+    "entity",
+    "text",
+}
+_ALLOWED_PERIOD_ROLES = {"", "current", "previous"}
+_ALLOWED_AGGREGATION_LEVELS = {"component", "total"}
 
 
 _FINANCIAL_FACT_COLUMNS = {
@@ -31,6 +67,30 @@ _FINANCIAL_FACT_COLUMNS = {
     "period": "TEXT",
     "value_type": "TEXT",
     "unit": "TEXT",
+    # Canonical typed-cell metadata shared by SQLite and vector payloads.
+    "row_label": "TEXT",
+    "column_label": "TEXT",
+    "value_kind": "TEXT",
+    "parsed_value": "TEXT",
+    "period_label": "TEXT",
+    "period_role": "TEXT",
+    "aggregation_level": "TEXT",
+    "section_path": "TEXT",
+    "block_id": "TEXT",
+    "source_page": "TEXT",
+    # Semantic axes consumed by exact slot retrieval. Empty means the parser
+    # could not bind that axis confidently; raw row/column labels stay intact.
+    "metric_label": "TEXT",
+    "entity_label": "TEXT",
+    "scope_label": "TEXT",
+    "counterparty": "TEXT",
+    "transaction_type": "TEXT",
+    "movement_type": "TEXT",
+    "geography": "TEXT",
+    "policy_topic": "TEXT",
+    # Canonical primary-statement section identity (for example
+    # ``tong_tai_san`` or ``no_phai_tra``). Empty outside recognized sections.
+    "section_key": "TEXT",
     # Deterministic identity used as the Qdrant source id. Existing databases
     # receive the column through the same additive migration as slot fields.
     "fact_id": "TEXT",
@@ -89,12 +149,25 @@ def _create_manifest_table(conn) -> None:
             manifest_id INTEGER PRIMARY KEY CHECK (manifest_id = 1),
             source_path TEXT NOT NULL,
             source_sha256 TEXT NOT NULL,
+            metadata_sha256 TEXT NOT NULL DEFAULT '',
             parser_version TEXT NOT NULL,
             schema_version INTEGER NOT NULL,
             facts_count INTEGER NOT NULL,
             facts_sha256 TEXT NOT NULL
         )
     """)
+    manifest_columns = {
+        str(row[1])
+        for row in conn.execute(f"PRAGMA table_info({_KB_MANIFEST_TABLE})")
+    }
+    if "metadata_sha256" not in manifest_columns:
+        conn.execute(
+            f"ALTER TABLE {_KB_MANIFEST_TABLE} "
+            "ADD COLUMN metadata_sha256 TEXT NOT NULL DEFAULT ''"
+        )
+    for field in ("converter_identity", "converter_provider_version"):
+        if field not in manifest_columns:
+            conn.execute(f"ALTER TABLE {_KB_MANIFEST_TABLE} ADD COLUMN {field} TEXT NOT NULL DEFAULT ''")
 
 def init_db(db_path: str, reset: bool = False):
     if str(db_path) != ":memory:":
@@ -122,6 +195,25 @@ def init_db(db_path: str, reset: bool = False):
         period TEXT,
         value_type TEXT,
         unit TEXT,
+        row_label TEXT,
+        column_label TEXT,
+        value_kind TEXT,
+        parsed_value TEXT,
+        period_label TEXT,
+        period_role TEXT,
+        aggregation_level TEXT,
+        section_path TEXT,
+        block_id TEXT,
+        source_page TEXT,
+        metric_label TEXT,
+        entity_label TEXT,
+        scope_label TEXT,
+        counterparty TEXT,
+        transaction_type TEXT,
+        movement_type TEXT,
+        geography TEXT,
+        policy_topic TEXT,
+        section_key TEXT,
         fact_id TEXT
         )
         """)
@@ -146,6 +238,24 @@ def init_db(db_path: str, reset: bool = False):
         "CREATE INDEX IF NOT EXISTS idx_financial_facts_fact_id "
         "ON financial_facts (fact_id)"
     )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_financial_facts_semantic_slots "
+        "ON financial_facts "
+        "(heading, metric_label, entity_label, scope_label, period_role, value_type)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_financial_facts_semantic_dimensions "
+        "ON financial_facts "
+        "(transaction_type, movement_type, policy_topic, geography, counterparty)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_financial_facts_section_key "
+        "ON financial_facts (heading, section_key, period_role)"
+    )
+    cur.execute(
+        "CREATE INDEX IF NOT EXISTS idx_financial_facts_block_id "
+        "ON financial_facts (block_id)"
+    )
     conn.commit()
     return conn
 
@@ -155,6 +265,13 @@ def open_db_readonly(db_path: str):
 
     resolved = Path(db_path).resolve(strict=True)
     return sqlite3.connect(f"{resolved.as_uri()}?mode=ro", uri=True)
+
+
+def _canonical_aggregation(value) -> str:
+    normalized = str(value or "").strip().lower()
+    if not normalized:
+        return "component"
+    return normalized
 
 
 def _normalize_fact_row(row):
@@ -177,32 +294,91 @@ def _normalize_fact_row(row):
             row.get("period", ""),
             row.get("value_type", ""),
             row.get("unit", ""),
+            row.get("row_label", ""),
+            row.get("column_label", ""),
+            row.get("value_kind", ""),
+            row.get("parsed_value", ""),
+            row.get("period_label", ""),
+            row.get("period_role", ""),
+            _canonical_aggregation(row.get("aggregation_level", "")),
+            row.get("section_path", ""),
+            row.get("block_id", ""),
+            row.get("source_page", ""),
+            row.get("metric_label", ""),
+            row.get("entity_label", ""),
+            row.get("scope_label", ""),
+            row.get("counterparty", ""),
+            row.get("transaction_type", ""),
+            row.get("movement_type", ""),
+            row.get("geography", ""),
+            row.get("policy_topic", ""),
+            row.get("section_key", ""),
         )
 
     values = tuple(row)
+    typed_padding = (
+        "",  # row_label
+        "",  # column_label
+        "",  # value_kind
+        "",  # parsed_value
+        "",  # period_label
+        "",  # period_role
+        "component",
+        "",  # section_path
+        "",  # block_id
+        "",  # source_page
+        "",  # metric_label
+        "",  # entity_label
+        "",  # scope_label
+        "",  # counterparty
+        "",  # transaction_type
+        "",  # movement_type
+        "",  # geography
+        "",  # policy_topic
+        "",  # section_key
+    )
     if len(values) == 8:
         company, heading, item_code, item_name, value, raw_value, normalized_value, source = values
         return (
             company, "", heading, item_code, "", "", item_name,
-            value, raw_value, normalized_value, source, "", "", "",
+            value, raw_value, normalized_value, source, "", "", "", *typed_padding,
         )
     if len(values) == 9:
         company, fiscal_year, heading, item_code, item_name, value, raw_value, normalized_value, source = values
         return (
             company, fiscal_year, heading, item_code, "", "", item_name,
-            value, raw_value, normalized_value, source, "", "", "",
+            value, raw_value, normalized_value, source, "", "", "", *typed_padding,
         )
     if len(values) == 10:
         company, fiscal_year, heading, item_code, subheading, item_name, value, raw_value, normalized_value, source = values
         return (
             company, fiscal_year, heading, item_code, "", subheading, item_name,
-            value, raw_value, normalized_value, source, "", "", "",
+            value, raw_value, normalized_value, source, "", "", "", *typed_padding,
         )
     if len(values) == 11:
-        return (*values, "", "", "")
+        return (*values, "", "", "", *typed_padding)
     if len(values) == 14:
-        return values
-    raise ValueError(f"financial_facts row must have 8, 9, 10, 11, or 14 values, got {len(values)}")
+        return (*values, *typed_padding)
+    if len(values) == 24:
+        normalized = [*values, "", "", "", "", "", "", "", "", ""]
+        normalized[20] = _canonical_aggregation(normalized[20])
+        return tuple(normalized)
+    if len(values) == 27:
+        normalized = [*values, "", "", "", "", "", ""]
+        normalized[20] = _canonical_aggregation(normalized[20])
+        return tuple(normalized)
+    if len(values) == 32:
+        normalized = [*values, ""]
+        normalized[20] = _canonical_aggregation(normalized[20])
+        return tuple(normalized)
+    if len(values) == 33:
+        normalized = list(values)
+        normalized[20] = _canonical_aggregation(normalized[20])
+        return tuple(normalized)
+    raise ValueError(
+        "financial_facts row must have 8, 9, 10, 11, 14, 24, 27, 32, or 33 values, "
+        f"got {len(values)}"
+    )
 
 
 def normalize_financial_fact_rows(rows) -> list[tuple]:
@@ -219,6 +395,58 @@ def normalize_financial_fact_rows(rows) -> list[tuple]:
             raise ValueError(
                 "invalid financial fact at index "
                 f"{index}: heading, item_name, raw/normalized value and source are required"
+            )
+        # Legacy rows are padded with aggregation_level="component" for query
+        # compatibility; that default alone does not turn them into canonical
+        # typed facts.
+        typed_values = [
+            str(row[position] or "").strip()
+            for position in (*range(14, 20), *range(21, 33))
+        ]
+        if not any(typed_values):
+            continue
+        required_typed = {
+            "row_label": row[14],
+            "column_label": row[15],
+            "value_kind": row[16],
+            "parsed_value": row[17],
+            "aggregation_level": row[20],
+            "section_path": row[21],
+            "block_id": row[22],
+        }
+        missing_typed = sorted(
+            name
+            for name, value in required_typed.items()
+            if not str(value or "").strip()
+        )
+        if missing_typed:
+            raise ValueError(
+                f"invalid typed metadata at index {index}: "
+                f"missing {', '.join(missing_typed)}"
+            )
+        value_kind = str(row[16] or "").strip().lower()
+        if value_kind not in _ALLOWED_VALUE_KINDS:
+            raise ValueError(
+                f"invalid typed metadata at index {index}: "
+                f"unsupported value_kind={value_kind!r}"
+            )
+        period_role = str(row[19] or "").strip().lower()
+        if period_role not in _ALLOWED_PERIOD_ROLES:
+            raise ValueError(
+                f"invalid typed metadata at index {index}: "
+                f"unsupported period_role={period_role!r}"
+            )
+        aggregation = str(row[20] or "").strip().lower()
+        if aggregation not in _ALLOWED_AGGREGATION_LEVELS:
+            raise ValueError(
+                f"invalid typed metadata at index {index}: "
+                f"unsupported aggregation_level={aggregation!r}"
+            )
+        source_page = str(row[23] or "").strip()
+        if source_page and not source_page.isdigit():
+            raise ValueError(
+                f"invalid typed metadata at index {index}: "
+                f"source_page must be a positive integer, got {source_page!r}"
             )
     return normalized_rows
 
@@ -245,11 +473,38 @@ def sqlite_facts_sha256(conn) -> str:
     rows = conn.execute("""
         SELECT company, fiscal_year, heading, item_code, note_ref, subheading,
                item_name, value, raw_value, normalized_value, source, period,
-               value_type, unit
+               value_type, unit, row_label, column_label, value_kind,
+               parsed_value, period_label, period_role, aggregation_level,
+               section_path, block_id, source_page, metric_label, entity_label,
+               scope_label, counterparty, transaction_type, movement_type,
+               geography, policy_topic, section_key
         FROM financial_facts
         ORDER BY rowid
     """).fetchall()
     return facts_sha256(rows)
+
+
+def sqlite_has_valid_typed_metadata(conn) -> bool:
+    """Re-run the canonical row contract against persisted SQLite values."""
+
+    if not sqlite_has_fact_columns(conn):
+        return False
+    rows = conn.execute("""
+        SELECT company, fiscal_year, heading, item_code, note_ref, subheading,
+               item_name, value, raw_value, normalized_value, source, period,
+               value_type, unit, row_label, column_label, value_kind,
+               parsed_value, period_label, period_role, aggregation_level,
+               section_path, block_id, source_page, metric_label, entity_label,
+               scope_label, counterparty, transaction_type, movement_type,
+               geography, policy_topic, section_key
+        FROM financial_facts
+        ORDER BY rowid
+    """).fetchall()
+    try:
+        normalize_financial_fact_rows(rows)
+    except ValueError:
+        return False
+    return True
 
 
 def insert_financial_facts(conn, rows):
@@ -292,9 +547,28 @@ def insert_financial_facts(conn, rows):
             period,
             value_type,
             unit,
+            row_label,
+            column_label,
+            value_kind,
+            parsed_value,
+            period_label,
+            period_role,
+            aggregation_level,
+            section_path,
+            block_id,
+            source_page,
+            metric_label,
+            entity_label,
+            scope_label,
+            counterparty,
+            transaction_type,
+            movement_type,
+            geography,
+            policy_topic,
+            section_key,
             fact_id
         )
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     """, rows_with_ids)
 
     conn.commit()
@@ -336,26 +610,35 @@ def write_kb_manifest(conn, manifest: dict[str, Any]) -> None:
             manifest_id,
             source_path,
             source_sha256,
+            metadata_sha256,
             parser_version,
             schema_version,
             facts_count,
-            facts_sha256
-        ) VALUES (1, ?, ?, ?, ?, ?, ?)
+            facts_sha256,
+            converter_identity,
+            converter_provider_version
+        ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?)
         ON CONFLICT(manifest_id) DO UPDATE SET
             source_path = excluded.source_path,
             source_sha256 = excluded.source_sha256,
+            metadata_sha256 = excluded.metadata_sha256,
             parser_version = excluded.parser_version,
             schema_version = excluded.schema_version,
             facts_count = excluded.facts_count,
-            facts_sha256 = excluded.facts_sha256
+            facts_sha256 = excluded.facts_sha256,
+            converter_identity = excluded.converter_identity,
+            converter_provider_version = excluded.converter_provider_version
         """,
         (
             str(manifest["source_path"]),
             str(manifest["source_sha256"]),
+            str(manifest.get("metadata_sha256", "")),
             str(manifest["parser_version"]),
             int(manifest["schema_version"]),
             int(manifest["facts_count"]),
             str(manifest["facts_sha256"]),
+            str(manifest.get("converter_identity", "")),
+            str(manifest.get("converter_provider_version", "")),
         ),
     )
     conn.commit()
@@ -365,7 +648,7 @@ def read_kb_manifest(conn) -> dict[str, Any]:
     try:
         row = conn.execute(
             f"""
-            SELECT source_path, source_sha256, parser_version, schema_version,
+            SELECT source_path, source_sha256, metadata_sha256, parser_version, schema_version,
                    facts_count, facts_sha256
             FROM {_KB_MANIFEST_TABLE}
             WHERE manifest_id = 1
@@ -375,19 +658,37 @@ def read_kb_manifest(conn) -> dict[str, Any]:
         return {}
     if row is None:
         return {}
-    return {
+    result = {
         "source_path": str(row[0]),
         "source_sha256": str(row[1]),
-        "parser_version": str(row[2]),
-        "schema_version": int(row[3]),
-        "facts_count": int(row[4]),
-        "facts_sha256": str(row[5]),
+        "metadata_sha256": str(row[2]),
+        "parser_version": str(row[3]),
+        "schema_version": int(row[4]),
+        "facts_count": int(row[5]),
+        "facts_sha256": str(row[6]),
     }
+    try:
+        converter = conn.execute(
+            f"SELECT converter_identity, converter_provider_version FROM {_KB_MANIFEST_TABLE} WHERE manifest_id = 1"
+        ).fetchone()
+    except sqlite3.OperationalError:
+        converter = None  # Pre-converter Markdown-only databases remain valid.
+    if converter and converter[0]:
+        result.update(converter_identity=str(converter[0]), converter_provider_version=str(converter[1]))
+    return result
 
 
 def kb_manifest_matches(conn, expected: dict[str, Any]) -> bool:
     actual = read_kb_manifest(conn)
-    for field in ("source_path", "source_sha256", "parser_version", "schema_version"):
+    for field in (
+        "source_path",
+        "source_sha256",
+        "metadata_sha256",
+        "parser_version",
+        "schema_version",
+        "converter_identity",
+        "converter_provider_version",
+    ):
         if str(actual.get(field, "")) != str(expected.get(field, "")):
             return False
     return (
@@ -404,8 +705,15 @@ def validate_kb_database(conn, expected_manifest: dict[str, Any]) -> None:
         raise ValueError(f"SQLite integrity check failed: {quick_check}")
     if not sqlite_has_fact_columns(conn):
         raise ValueError("SQLite financial_facts schema is incomplete")
-    if not sqlite_has_populated_fact_values(conn) or not sqlite_has_stable_fact_ids(conn):
-        raise ValueError("SQLite facts contain empty values or unstable ids")
+    if (
+        not sqlite_has_populated_fact_values(conn)
+        or not sqlite_has_stable_fact_ids(conn)
+        or not sqlite_has_valid_typed_metadata(conn)
+    ):
+        raise ValueError(
+            "SQLite facts contain empty values, invalid typed metadata, "
+            "or unstable ids"
+        )
     if sqlite_count_facts(conn) != int(expected_manifest.get("facts_count", -1)):
         raise ValueError("SQLite fact count does not match the ingestion manifest")
     if sqlite_facts_sha256(conn) != str(expected_manifest.get("facts_sha256", "")):
@@ -417,6 +725,160 @@ def validate_kb_database(conn, expected_manifest: dict[str, Any]) -> None:
 # Note-schedule title like "5. Phải thu về cho vay ngắn hạn" / "17a. Phải trả
 # ngắn hạn khác", optionally with an em-dash section suffix ("— Nguyên giá").
 _NOTE_TITLE_RE = None
+
+_SLOT_LEXICON_FOOTNOTE_RE = re.compile(
+    r"\s*\((?:[ivxlcdm]+|[a-zđ]|\d+)\)\s*$",
+    flags=re.IGNORECASE,
+)
+_SLOT_LEXICON_ENUMERATOR_RE = re.compile(
+    r"^\s*(?:\([a-zđ]\)|\d{1,3}[a-zđ]?[.)])\s+",
+    flags=re.IGNORECASE,
+)
+_SLOT_LEXICON_RANGE_RE = re.compile(
+    r"^\d+(?:[.,]\d+)?\s*(?:-|–|—|đến|to)\s*"
+    r"\d+(?:[.,]\d+)?(?:\s*(?:năm|tháng|ngày|%))?$",
+    flags=re.IGNORECASE,
+)
+_SLOT_LEXICON_DATE_RE = re.compile(
+    r"^(?:(?:19|20)\d{2}|\d{1,2}[/-]\d{1,2}[/-](?:19|20)\d{2})$"
+)
+_SLOT_LEXICON_GENERIC_METRICS = {
+    "chi tieu",
+    "cong",
+    "dien giai",
+    "don vi tinh",
+    "gia tri",
+    "khoan muc",
+    "ma so",
+    "nam nay",
+    "nam truoc",
+    "noi dung",
+    "so du",
+    "thuyet minh",
+    "tong",
+    "tong cong",
+}
+_SLOT_LEXICON_GENERIC_ENTITIES = {
+    "ban tai san co dinh",
+    "chi phi khac",
+    "co tuc",
+    "co tuc duoc chia",
+    "cong",
+    "gop von",
+    "ho tro ban hang",
+    "hoan tra",
+    "khac",
+    "loi nhuan duoc chia",
+    "mua hang hoa",
+    "mua tai san co dinh",
+    "nam nay",
+    "nam truoc",
+    "phan bo trong nam",
+    "thu nhap khac",
+    "tong",
+    "tong cong",
+    "vay them",
+}
+
+
+def _slot_lexicon_normalized_key(value: Any) -> str:
+    text = str(value or "").replace("đ", "d").replace("Đ", "D")
+    text = unicodedata.normalize("NFKD", text)
+    text = "".join(char for char in text if not unicodedata.combining(char))
+    return " ".join(re.findall(r"[a-z0-9]+", text.lower()))
+
+
+def _clean_slot_lexicon_phrase(value: Any, *, axis: str) -> str:
+    """Return one bounded canonical phrase, or empty for parser/noise artifacts."""
+
+    phrase = " ".join(str(value or "").replace("\xa0", " ").split())
+    phrase = phrase.strip(" \t\r\n|*_`#;:,")
+    phrase = _SLOT_LEXICON_ENUMERATOR_RE.sub("", phrase)
+    phrase = _SLOT_LEXICON_FOOTNOTE_RE.sub("", phrase).strip(" -–—")
+    key = _slot_lexicon_normalized_key(phrase)
+    tokens = key.split()
+
+    if (
+        not key
+        or len(key) < 3
+        or len(tokens) > 24
+        or len(phrase) > 180
+        or not any(char.isalpha() for char in phrase)
+        or "|" in phrase
+        or _SLOT_LEXICON_RANGE_RE.fullmatch(phrase)
+        or _SLOT_LEXICON_DATE_RE.fullmatch(phrase)
+        or key in {"trang", "page", "vnd", "vnd vnd", "empty", "null", "none"}
+        or key.endswith("vnd")
+        or re.fullmatch(r"\d+(?:\s+\d+)*", key)
+        or re.match(r"^\(\s*\d+\s*=", phrase)
+    ):
+        return ""
+
+    generic = (
+        _SLOT_LEXICON_GENERIC_METRICS
+        if axis == "metric"
+        else _SLOT_LEXICON_GENERIC_ENTITIES
+    )
+    if key in generic:
+        return ""
+    return phrase.lower()
+
+
+def derive_query_slot_lexicon(conn) -> dict[str, tuple[str, ...]]:
+    """Derive dataset-scoped metric/entity phrases from canonical typed facts.
+
+    The lexicon is intentionally narrower than raw row text: only typed
+    ``metric_label``, ``entity_label``, and ``counterparty`` axes participate.
+    This avoids teaching query parsing page headers, values, or row blobs while
+    still covering report-specific metrics, asset classes, and legal names.
+    """
+
+    required_columns = {"metric_label", "entity_label", "counterparty"}
+    if not sqlite_has_fact_columns(conn, required_columns):
+        return {"metric": (), "entity": ()}
+
+    by_axis: dict[str, dict[str, str]] = {"metric": {}, "entity": {}}
+    column_axes = (
+        ("metric_label", "metric"),
+        ("entity_label", "entity"),
+        ("counterparty", "entity"),
+    )
+    for column, axis in column_axes:
+        rows = conn.execute(
+            f"""
+            SELECT DISTINCT {column}
+            FROM financial_facts
+            WHERE TRIM(COALESCE({column}, '')) != ''
+            ORDER BY {column}
+            """
+        ).fetchall()
+        for (raw_value,) in rows:
+            phrase = _clean_slot_lexicon_phrase(raw_value, axis=axis)
+            normalized = _slot_lexicon_normalized_key(phrase)
+            if not normalized:
+                continue
+            previous = by_axis[axis].get(normalized)
+            if previous is None or (phrase.casefold(), phrase) < (
+                previous.casefold(),
+                previous,
+            ):
+                by_axis[axis][normalized] = phrase
+
+    return {
+        axis: tuple(
+            phrase
+            for _normalized, phrase in sorted(
+                phrases.items(),
+                key=lambda item: (
+                    -len(item[0].split()),
+                    -len(item[0]),
+                    item[0],
+                    item[1],
+                ),
+            )
+        )
+        for axis, phrases in by_axis.items()
+    }
 
 
 def derive_keyword_augmentation(conn) -> dict:

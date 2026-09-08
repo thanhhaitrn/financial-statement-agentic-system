@@ -1,0 +1,65 @@
+[
+  {
+    "name": "vnm_blank_total_schedule",
+    "source_format": "VNM_Baocaotaichinh_2025_Kiemtoan_Congtyme.md:1450-1457",
+    "fiscal_year": "2025",
+    "expected_numeric_fact_count": 15,
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 16. Vay ngắn hạn\n\n|  | Loại tiền tệ | 1/1/2025<br/>VND | Vay thêm<br/>VND | Hoàn trả<br/>VND | 31/12/2025<br/>VND |\n| --- | --- | ---: | ---: | ---: | ---: |\n| Ngân hàng A | VND | 7.520.000.000.000 | 18.110.000.000.000 | (21.039.000.000.000) | 4.591.000.000.000 |\n| Ngân hàng B | VND | 800.000.000.000 | 1.650.000.000.000 | (1.200.000.000.000) | 1.250.000.000.000 |\n| Ngân hàng C | VND |  | 4.740.000.000.000 | (1.740.000.000.000) | 3.000.000.000.000 |\n|  |  | 8.320.000.000.000 | 24.500.000.000.000 | (23.979.000.000.000) | 8.841.000.000.000 |\n",
+    "expected": {
+      "parsed_value": "24500000000000",
+      "row_label": "Tổng Vay ngắn hạn",
+      "column_contains": "Vay thêm",
+      "value_kind": "amount",
+      "aggregation_level": "total",
+      "period_role": ""
+    }
+  },
+  {
+    "name": "apec_header_and_divider_matrix",
+    "source_format": "dau_tu_APEC.md:1045-1059",
+    "fiscal_year": "2024",
+    "expected_numeric_fact_count": 8,
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n## 9. Tài sản cố định hữu hình\n\n| Nguyên giá | Nhà cửa, vật kiến trúc | Cộng |\n| --- | ---: | ---: |\n| Số đầu năm | 196.560.414.828 | 202.406.369.251 |\n| Số cuối kỳ | 18.238.988.174 | 24.034.952.927 |\n| Giá trị hao mòn |  |  |\n| Số đầu năm | 10.320.799.076 | 12.494.119.719 |\n| Số cuối kỳ | (6.217.026.740) | 7.708.754.109 |\n",
+    "expected": {
+      "parsed_value": "24034952927",
+      "row_label": "Số cuối kỳ",
+      "column_contains": "Cộng",
+      "value_kind": "amount",
+      "value_type": "nguyên giá",
+      "aggregation_level": "total",
+      "period_role": "current"
+    }
+  },
+  {
+    "name": "cnc_blank_header_matrix",
+    "source_format": "CNC_Baocaotaichinh_2024_Kiemtoan.md:763-782",
+    "fiscal_year": "2024",
+    "expected_numeric_fact_count": 9,
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n### 9. TÀI SẢN CỐ ĐỊNH HỮU HÌNH\n\n|  | Nhà cửa, vật kiến trúc | Máy móc, thiết bị | Tổng cộng |\n| --- | ---: | ---: | ---: |\n| **Nguyên giá:** |  |  |  |\n| Số đầu năm | 61.825.891.069 | 156.159.638.352 | 244.509.058.104 |\n| Số cuối năm | 70.672.184.363 | 157.038.527.847 | 264.483.619.990 |\n| **Giá trị khấu hao lũy kế:** |  |  |  |\n| Số cuối năm | 39.674.581.495 | 95.600.834.088 | 157.366.078.743 |\n",
+    "expected": {
+      "parsed_value": "264483619990",
+      "row_label": "Số cuối năm",
+      "column_contains": "Tổng cộng",
+      "value_kind": "amount",
+      "value_type": "nguyên giá",
+      "aggregation_level": "total",
+      "period_role": "current"
+    }
+  },
+  {
+    "name": "ger_uppercase_matrix",
+    "source_format": "GER_Baocaotaichinh_2025_Kiemtoan.md:910-930",
+    "fiscal_year": "2025",
+    "expected_numeric_fact_count": 12,
+    "markdown": "# THUYẾT MINH BÁO CÁO TÀI CHÍNH\n\n## 4.10. Tình hình tăng giảm tài sản cố định hữu hình\n\n|  | Nhà cửa, vật kiến trúc<br/>VND | Máy móc, thiết bị<br/>VND | Tổng<br/>VND |\n| --- | ---: | ---: | ---: |\n| **NGUYÊN GIÁ** |  |  |  |\n| Số đầu năm | 8.897.263.766 | 13.606.100.912 | 26.771.869.634 |\n| Số cuối năm | 8.897.263.766 | 13.606.100.912 | 26.771.869.634 |\n| **GIÁ TRỊ HAO MÒN LŨY KẾ** |  |  |  |\n| Số đầu năm | 7.350.895.623 | 12.318.007.656 | 23.937.408.235 |\n| Số cuối năm | 7.632.509.703 | 12.641.065.656 | 24.542.080.315 |\n",
+    "expected": {
+      "parsed_value": "23937408235",
+      "row_label": "Số đầu năm",
+      "column_contains": "Tổng",
+      "value_kind": "amount",
+      "value_type": "hao mòn",
+      "aggregation_level": "total",
+      "period_role": "previous"
+    }
+  }
+]

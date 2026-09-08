@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import copy
 import csv
 import importlib.util
 import io
@@ -113,6 +114,46 @@ def _normalize_contexts(value: Any) -> list[str]:
     ]
 
 
+def gold_atom_contract_for_record(record: dict[str, Any]) -> dict[str, list[dict]]:
+    """Copy an optional reviewed evaluator contract into a prediction artifact.
+
+    ``expected_atoms`` is accepted as a legacy seed alias, but persisted reports
+    always use the canonical ``gold_atoms`` key consumed by
+    ``analyze_prediction_errors``.  Malformed contract containers fail before
+    an expensive batch run instead of being silently discarded.
+    """
+
+    if not isinstance(record, dict):
+        return {}
+    present = [
+        key for key in ("gold_atoms", "expected_atoms")
+        if key in record
+    ]
+    if not present:
+        return {}
+
+    normalized: dict[str, list[dict]] = {}
+    for key in present:
+        raw_atoms = record.get(key)
+        if not isinstance(raw_atoms, list):
+            raise ValueError(f"{key} must be a list")
+        if not raw_atoms:
+            raise ValueError(f"{key} must not be empty")
+        if any(not isinstance(atom, dict) for atom in raw_atoms):
+            raise ValueError(f"every {key} entry must be an object")
+        normalized[key] = copy.deepcopy(raw_atoms)
+
+    if (
+        "gold_atoms" in normalized
+        and "expected_atoms" in normalized
+        and normalized["gold_atoms"] != normalized["expected_atoms"]
+    ):
+        raise ValueError("gold_atoms and expected_atoms contracts disagree")
+
+    atoms = normalized.get("gold_atoms", normalized.get("expected_atoms", []))
+    return {"gold_atoms": atoms}
+
+
 def load_seed_records(path: str | Path) -> list[dict]:
     seed_path = Path(path)
     if not seed_path.exists():
@@ -148,6 +189,12 @@ def load_seed_records(path: str | Path) -> list[dict]:
             errors.append(f"record {_record_id(item, index)}: missing {', '.join(missing)}")
             continue
 
+        try:
+            gold_contract = gold_atom_contract_for_record(item)
+        except ValueError as exc:
+            errors.append(f"record {_record_id(item, index)}: {exc}")
+            continue
+
         records.append(
             {
                 "id": _record_id(item, index),
@@ -156,6 +203,7 @@ def load_seed_records(path: str | Path) -> list[dict]:
                 "question": question,
                 "ground_truth": ground_truth,
                 "seed_contexts": contexts,
+                **gold_contract,
             }
         )
 
@@ -174,6 +222,8 @@ def select_records(records: list[dict], *, limit: int | None = DEFAULT_SMOKE_LIM
     records = list(records or [])
     if offset < 0:
         raise ValueError("--offset must be non-negative.")
+    if full and offset:
+        raise ValueError("--full requires --offset 0; use smoke/shard mode for subsets.")
     if offset:
         records = records[offset:]
     if full:
@@ -235,18 +285,33 @@ def _fact_context_text(fact: dict) -> str:
     # deterministic factual contract uses them to disambiguate otherwise
     # identical figures.
     labels = (
+        ("fact_id", "Fact ID"),
+        ("entity", "Entity"),
         ("company", "Entity"),
         ("table", "Table"),
+        ("section_path", "Section"),
+        ("block_id", "Block"),
         ("subheading", "Subheading"),
+        ("metric", "Metric"),
+        ("row_label", "Row"),
         ("item_name", "Item"),
+        ("column_label", "Column"),
+        ("period_label", "Period"),
+        ("period", "Period"),
         ("time_hint", "Period"),
+        ("period_role", "Period role"),
+        ("value_kind", "Value kind"),
         ("value", "Value"),
+        ("parsed_value", "Parsed value"),
+        ("raw_value", "Raw value"),
         ("unit", "Unit"),
         ("value_type", "Value type"),
+        ("aggregation_level", "Aggregation"),
         ("note_ref", "Note ref"),
         ("note_number", "Note number"),
         ("note_title", "Note title"),
         ("reference", "Reference"),
+        ("source_page", "Source page"),
         ("source", "Source"),
     )
     parts = []
@@ -266,36 +331,248 @@ def _facts_from_payload(payload: Any) -> list[dict]:
     return [fact for fact in facts if isinstance(fact, dict)]
 
 
+def _facts_from_tree(payload: Any) -> list[dict]:
+    """Collect fact lists from known evidence trees without accepting row blobs."""
+
+    facts: list[dict] = []
+    if isinstance(payload, dict):
+        facts.extend(_facts_from_payload(payload))
+        for key, value in payload.items():
+            if key == "facts":
+                continue
+            if isinstance(value, (dict, list)):
+                facts.extend(_facts_from_tree(value))
+    elif isinstance(payload, list):
+        for value in payload:
+            if isinstance(value, (dict, list)):
+                facts.extend(_facts_from_tree(value))
+    return facts
+
+
 def extract_retrieved_contexts(final_state: dict) -> list[str]:
+    if not isinstance(final_state, dict):
+        return []
     contexts = []
-    ragas_facts_by_table = final_state.get("ragas_facts_by_table", {}) if isinstance(final_state, dict) else {}
-    for payload in (ragas_facts_by_table or {}).values():
-        for fact in _facts_from_payload(payload):
+    evidence_pack = final_state.get("evidence_pack", {}) or {}
+    evidence_facts = (
+        evidence_pack.get("facts_by_table", {})
+        if isinstance(evidence_pack, dict)
+        else {}
+    )
+    sources = (
+        final_state.get("ragas_facts_by_table", {}) or {},
+        evidence_facts,
+        final_state.get("analysis_input_results", {}) or {},
+        final_state.get("worker_results", {}) or {},
+        final_state.get("tool_results", []) or [],
+    )
+    for source in sources:
+        for fact in _facts_from_tree(source):
             text = _fact_context_text(fact)
             if text:
                 contexts.append(text)
-
-    if contexts:
-        return _dedupe_keep_order(contexts)
-
-    evidence_pack = final_state.get("evidence_pack", {}) if isinstance(final_state, dict) else {}
-    facts_by_table = evidence_pack.get("facts_by_table", {}) if isinstance(evidence_pack, dict) else {}
-
-    for payload in (facts_by_table or {}).values():
-        for fact in _facts_from_payload(payload):
-            text = _fact_context_text(fact)
-            if text:
-                contexts.append(text)
-
-    if not contexts:
-        worker_results = final_state.get("worker_results", {}) if isinstance(final_state, dict) else {}
-        for payload in (worker_results or {}).values():
-            for fact in _facts_from_payload(payload):
-                text = _fact_context_text(fact)
-                if text:
-                    contexts.append(text)
-
     return _dedupe_keep_order(contexts)
+
+
+def extract_evidence_ledger(final_state: dict) -> dict[str, Any]:
+    """Return retrieval transitions and calculation provenance verbatim."""
+
+    if not isinstance(final_state, dict):
+        return {"schema_version": 1, "entries": []}
+    raw = final_state.get("evidence_ledger")
+    if raw is None:
+        raw = final_state.get("calculation_evidence_ledger")
+    if not raw:
+        return {"schema_version": 1, "entries": []}
+    if not isinstance(raw, dict):
+        return {"schema_version": 1, "entries": []}
+    entries = raw.get("entries", [])
+    if not isinstance(entries, list):
+        entries = []
+    return {
+        "schema_version": int(raw.get("schema_version", 1) or 1),
+        "entries": [
+            dict(entry)
+            for entry in entries
+            if isinstance(entry, dict)
+        ],
+    }
+
+
+def evidence_ledger_contract_errors(ledger: dict[str, Any]) -> list[str]:
+    """Validate retrieval audit entries and strict calculation provenance."""
+
+    entries = ledger.get("entries", []) if isinstance(ledger, dict) else []
+    if not entries:
+        return []
+    errors = []
+    if ledger.get("schema_version") != 1:
+        errors.append("evidence_ledger: unsupported schema_version")
+    for entry_index, entry in enumerate(entries):
+        if not isinstance(entry, dict):
+            errors.append(f"evidence_ledger: entry {entry_index} is not an object")
+            continue
+        kind = str(entry.get("kind", "") or "").strip()
+        if kind == "retrieval_requirement":
+            errors.extend(
+                _retrieval_ledger_contract_errors(entry, entry_index)
+            )
+            continue
+        if kind not in {"", "derived_calculation"}:
+            errors.append(
+                f"evidence_ledger: entry {entry_index} unsupported kind {kind!r}"
+            )
+            continue
+        if not str(entry.get("operation", "") or "").strip():
+            errors.append(f"evidence_ledger: entry {entry_index} missing operation")
+        if entry.get("result") in ("", None):
+            errors.append(f"evidence_ledger: entry {entry_index} missing result")
+        operands = entry.get("operands", [])
+        if not isinstance(operands, list) or not operands:
+            errors.append(f"evidence_ledger: entry {entry_index} missing operands")
+            continue
+        for operand_index, operand in enumerate(operands):
+            if not isinstance(operand, dict):
+                errors.append(
+                    f"evidence_ledger: entry {entry_index} operand "
+                    f"{operand_index} is not an object"
+                )
+                continue
+            missing = [
+                field
+                for field in ("role", "fact_id", "source")
+                if not str(operand.get(field, "") or "").strip()
+            ]
+            if missing:
+                errors.append(
+                    f"evidence_ledger: entry {entry_index} operand "
+                    f"{operand_index} missing {','.join(missing)}"
+                )
+    return errors
+
+
+def _retrieval_ledger_contract_errors(
+    entry: dict[str, Any],
+    entry_index: int,
+) -> list[str]:
+    prefix = f"evidence_ledger: entry {entry_index}"
+    errors = []
+    for field in ("requirement", "table"):
+        if not str(entry.get(field, "") or "").strip():
+            errors.append(f"{prefix} missing {field}")
+
+    parsed_slots = entry.get("parsed_query_slots")
+    if not isinstance(parsed_slots, dict):
+        errors.append(f"{prefix} parsed_query_slots must be an object")
+
+    routes = entry.get("route_candidates")
+    if not isinstance(routes, list) or not routes:
+        errors.append(f"{prefix} missing route_candidates")
+    else:
+        for route_index, route in enumerate(routes):
+            if not isinstance(route, dict):
+                errors.append(
+                    f"{prefix} route {route_index} is not an object"
+                )
+                continue
+            missing = [
+                field
+                for field in ("rank", "table", "confidence", "reason")
+                if route.get(field) in ("", None)
+            ]
+            if missing:
+                errors.append(
+                    f"{prefix} route {route_index} missing {','.join(missing)}"
+                )
+
+    transition = entry.get("requirement_state")
+    if not isinstance(transition, dict):
+        errors.append(f"{prefix} requirement_state must be an object")
+    else:
+        missing = [
+            field
+            for field in ("before_retry", "after_retry")
+            if not str(transition.get(field, "") or "").strip()
+        ]
+        if missing:
+            errors.append(
+                f"{prefix} requirement_state missing {','.join(missing)}"
+            )
+
+    retry = entry.get("targeted_retry")
+    if not isinstance(retry, dict):
+        errors.append(f"{prefix} targeted_retry must be an object")
+    else:
+        performed = retry.get("performed")
+        if not isinstance(performed, bool):
+            errors.append(f"{prefix} targeted_retry.performed must be boolean")
+        elif performed and not str(retry.get("query", "") or "").strip():
+            errors.append(
+                f"{prefix} targeted_retry.query required when performed"
+            )
+
+    selected_facts = entry.get("selected_facts")
+    if not isinstance(selected_facts, list):
+        errors.append(f"{prefix} selected_facts must be a list")
+    else:
+        for fact_index, fact in enumerate(selected_facts):
+            if not isinstance(fact, dict):
+                errors.append(
+                    f"{prefix} selected fact {fact_index} is not an object"
+                )
+                continue
+            if not str(fact.get("fact_id", "") or "").strip():
+                errors.append(
+                    f"{prefix} selected fact {fact_index} missing fact_id"
+                )
+            rank = fact.get("rank")
+            if (
+                not isinstance(rank, int)
+                or isinstance(rank, bool)
+                or rank <= 0
+            ):
+                errors.append(
+                    f"{prefix} selected fact {fact_index} has invalid rank"
+                )
+            rerank_score = fact.get("rerank_score")
+            if (
+                not isinstance(rerank_score, (int, float))
+                or isinstance(rerank_score, bool)
+                or not math.isfinite(float(rerank_score))
+            ):
+                errors.append(
+                    f"{prefix} selected fact {fact_index} missing finite "
+                    "rerank_score"
+                )
+            for score_field in (
+                "similarity_score",
+                "retrieval_score",
+                "score",
+                "distance",
+            ):
+                score_value = fact.get(score_field)
+                if score_value in ("", None):
+                    continue
+                if (
+                    not isinstance(score_value, (int, float))
+                    or isinstance(score_value, bool)
+                    or not math.isfinite(float(score_value))
+                ):
+                    errors.append(
+                        f"{prefix} selected fact {fact_index} has invalid "
+                        f"{score_field}"
+                    )
+            for provenance_field in (
+                "score_query",
+                "score_intent",
+                "retrieval_origin",
+            ):
+                if not str(fact.get(provenance_field, "") or "").strip():
+                    errors.append(
+                        f"{prefix} selected fact {fact_index} missing "
+                        f"{provenance_field}"
+                    )
+    return errors
 
 
 def _runtime_from_summary(run_summary: dict) -> int | None:
@@ -321,11 +598,13 @@ def _prediction_from_error(record: dict, exc: Exception) -> dict:
         "answer": "",
         "ground_truth": record.get("ground_truth", ""),
         "retrieved_contexts": [],
+        "evidence_ledger": {"schema_version": 1, "entries": []},
         "seed_contexts": record.get("seed_contexts", []),
         "errors": [f"runtime_error ({type(exc).__name__}): {exc}"],
         "runtime": None,
         "tokens": 0,
         "synth_status": "error",
+        **gold_atom_contract_for_record(record),
     }
 
 
@@ -503,6 +782,13 @@ def run_predictions(
             contexts = extract_retrieved_contexts(final_state)
             if not contexts:
                 errors = _dedupe_keep_order([*errors, "no_retrieved_contexts"])
+            evidence_ledger = extract_evidence_ledger(final_state)
+            errors = _dedupe_keep_order(
+                [
+                    *errors,
+                    *evidence_ledger_contract_errors(evidence_ledger),
+                ]
+            )
 
             synth_decision = final_state.get("synth_decision", {}) or {}
             prediction_runtime = _runtime_from_summary(run_summary)
@@ -514,6 +800,7 @@ def run_predictions(
                 "answer": _extract_answer(final_state),
                 "ground_truth": record.get("ground_truth", ""),
                 "retrieved_contexts": contexts,
+                "evidence_ledger": evidence_ledger,
                 "seed_contexts": record.get("seed_contexts", []),
                 "errors": errors,
                 "runtime": prediction_runtime,
@@ -523,6 +810,7 @@ def run_predictions(
                 ),
                 "tokens": _total_tokens_from_summary(run_summary),
                 "synth_status": str(synth_decision.get("status", "") or "").strip(),
+                **gold_atom_contract_for_record(record),
             }
             predictions.append(prediction)
         except SessionLimitError:
@@ -736,7 +1024,7 @@ def validate_resume_report(
         mismatches.append("dataset/index generation")
     stored_fingerprints = stored_identity.get("fingerprints", {}) or {}
     expected_fingerprints = expected_identity.get("fingerprints", {}) or {}
-    for name in ("query", "embedding", "prompt", "model", "config"):
+    for name in ("code", "query", "embedding", "prompt", "model", "config"):
         if stored_fingerprints.get(name) != expected_fingerprints.get(name):
             mismatches.append(name)
     details = ", ".join(mismatches or ["run identity"])
@@ -757,6 +1045,56 @@ def _retrieval_embedding_model() -> str:
         return os.getenv("OLLAMA_EMBEDDING_MODEL", "bge-m3")
 
 
+def _run_identity_guard_violations(
+    frozen_identity: dict[str, Any],
+    observed_identity: dict[str, Any],
+) -> list[str]:
+    """Return stable labels for output-affecting identity drift.
+
+    The frozen identity is also integrity checked before it is trusted as the
+    provenance stamped onto a checkpoint.  Comparing the individual
+    fingerprints makes a failed run actionable (for example ``code`` versus
+    ``config``) while the final run-fingerprint comparison remains a fail-safe
+    for future identity fields.
+    """
+
+    violations: list[str] = []
+    unsigned_frozen = dict(frozen_identity or {})
+    frozen_fingerprint = str(
+        unsigned_frozen.pop("run_fingerprint", "") or ""
+    ).strip()
+    if (
+        not frozen_fingerprint
+        or stable_json_fingerprint(unsigned_frozen) != frozen_fingerprint
+    ):
+        violations.append("frozen_identity_integrity")
+
+    for field, label in (
+        ("seed_sha256", "seed"),
+        ("selection", "selection"),
+        ("dataset", "dataset/index generation"),
+    ):
+        if frozen_identity.get(field) != observed_identity.get(field):
+            violations.append(label)
+
+    frozen_fingerprints = frozen_identity.get("fingerprints", {}) or {}
+    observed_fingerprints = observed_identity.get("fingerprints", {}) or {}
+    for name in sorted(
+        set(frozen_fingerprints) | set(observed_fingerprints)
+    ):
+        if frozen_fingerprints.get(name) != observed_fingerprints.get(name):
+            violations.append(name)
+
+    if (
+        frozen_fingerprint
+        and frozen_fingerprint
+        != str(observed_identity.get("run_fingerprint", "") or "").strip()
+        and not violations
+    ):
+        violations.append("run_identity")
+    return _dedupe_keep_order(violations)
+
+
 def build_report(
     *,
     seed_file: str,
@@ -773,6 +1111,8 @@ def build_report(
     debug_trace: bool = False,
     source_report: dict | None = None,
     resume_repaired: bool = False,
+    frozen_run_identity: dict[str, Any] | None = None,
+    identity_guard_violations: list[str] | None = None,
 ) -> dict:
     seed_path = Path(seed_file)
     seed_checksum = sha256_file(seed_path) if seed_path.is_file() else ""
@@ -790,12 +1130,21 @@ def build_report(
     )
     if not isinstance(source_metadata, dict):
         source_metadata = {}
+    source_eval_error = str(source_metadata.get("eval_error", "") or "").strip()
     source_latency_valid = source_metadata.get("latency_valid")
     source_latency_reasons = _dedupe_keep_order(
         source_metadata.get("latency_invalid_reasons", []) or []
     )
     if source_latency_valid is False and not source_latency_reasons:
         source_latency_reasons = ["source_report_latency_invalid"]
+    source_provider_limit = provider_limit_reason(source_eval_error)
+    if source_provider_limit:
+        source_latency_reasons = _dedupe_keep_order(
+            [
+                *source_latency_reasons,
+                f"source_eval_error:{source_provider_limit}",
+            ]
+        )
     # Resumed timings include samples from the source report, so any prior
     # provider/quota contamination remains attached to the whole latency run.
     latency_invalid_reasons = _dedupe_keep_order(
@@ -804,7 +1153,7 @@ def build_report(
     model = os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud")
     embedding_model = _retrieval_embedding_model()
     identity_records = selected_records if selected_records is not None else predictions
-    run_identity = build_run_identity(
+    observed_run_identity = build_run_identity(
         seed_file=seed_file,
         dataset_meta=dataset_meta,
         selected_records=identity_records,
@@ -814,6 +1163,25 @@ def build_report(
         debug_trace=debug_trace,
         skip_eval=skip_eval,
     )
+    identity_guard_enabled = frozen_run_identity is not None
+    if identity_guard_enabled:
+        if not isinstance(frozen_run_identity, dict):
+            raise SeedValidationError("frozen_run_identity must be an object.")
+        run_identity = copy.deepcopy(frozen_run_identity)
+        current_identity_violations = _run_identity_guard_violations(
+            run_identity,
+            observed_run_identity,
+        )
+    else:
+        run_identity = observed_run_identity
+        current_identity_violations = []
+    accumulated_identity_violations = _dedupe_keep_order(
+        [
+            *(identity_guard_violations or []),
+            *current_identity_violations,
+        ]
+    )
+    identity_stable = not accumulated_identity_violations
     selection_contract = run_identity["selection"]
     selection_complete = True
     if selected_records is not None:
@@ -830,13 +1198,35 @@ def build_report(
     )
     effective_eval_error = str(eval_error or "").strip()
     if not effective_eval_error and preserve_source_incomplete:
-        effective_eval_error = str(source_metadata.get("eval_error", "") or "").strip()
+        effective_eval_error = source_eval_error
+    full_selection_valid = (
+        not full
+        or selection_contract.get("is_full_seed_selection") is True
+    )
+    if not full_selection_valid and not effective_eval_error:
+        effective_eval_error = "full_selection_not_seed_complete"
+    if not identity_stable and not effective_eval_error:
+        effective_eval_error = (
+            "run_identity_changed: "
+            + ", ".join(accumulated_identity_violations)
+        )
     latency_valid = not latency_invalid_reasons
     effective_run_complete = (
         bool(run_complete)
         and selection_complete
+        and full_selection_valid
         and not preserve_source_incomplete
         and latency_valid
+        and identity_stable
+        and not effective_eval_error
+    )
+    one_shot = not bool(source_report)
+    clean_full_run = bool(
+        effective_run_complete
+        and full
+        and full_selection_valid
+        and one_shot
+        and identity_guard_enabled
     )
     return {
         "schema_version": REPORT_SCHEMA_VERSION,
@@ -845,11 +1235,39 @@ def build_report(
             "dataset": dataset_meta,
             "seed_file": str(seed_file),
             "seed_sha256": seed_checksum,
-            "git_revision": git_revision(),
+            "git_revision": str(
+                run_identity.get("code_provenance", {}).get(
+                    "git_revision",
+                    "",
+                )
+                or git_revision()
+            ),
+            "code_fingerprint_kind": str(
+                run_identity.get("code_provenance", {}).get("scheme", "")
+                or ""
+            ),
+            "code_sha256": str(
+                run_identity.get("fingerprints", {}).get("code", "")
+                or ""
+            ),
+            "worktree_dirty": run_identity.get(
+                "code_provenance",
+                {},
+            ).get("worktree_dirty"),
             "dataset_fingerprint": stable_json_fingerprint(dataset_meta),
             "run_fingerprint": run_identity["run_fingerprint"],
             "run_identity": run_identity,
             "fingerprints": dict(run_identity["fingerprints"]),
+            "run_identity_guard": {
+                "enabled": identity_guard_enabled,
+                "frozen_before_predictions": identity_guard_enabled,
+                "verified_at_report_write": identity_guard_enabled,
+                "stable": identity_stable,
+                "violations": accumulated_identity_violations,
+                "observed_run_fingerprint": str(
+                    observed_run_identity.get("run_fingerprint", "") or ""
+                ),
+            },
             "context_source": "retrieval",
             "selection": "full" if full else "smoke",
             "limit": None if full else limit,
@@ -859,6 +1277,16 @@ def build_report(
             "skip_eval": bool(skip_eval),
             "run_complete": effective_run_complete,
             "run_status": "complete" if effective_run_complete else "incomplete",
+            "clean_full_run": clean_full_run,
+            "execution_contract": {
+                "one_shot": one_shot,
+                "resumed": bool(source_report),
+                "resume_repaired": bool(resume_repaired),
+                "full_seed_selection": full_selection_valid if full else False,
+                "run_identity_frozen": identity_guard_enabled,
+                "run_identity_stable": identity_stable,
+                "clean_full_run": clean_full_run,
+            },
             "eval_error": effective_eval_error,
             "latency_valid": latency_valid,
             "latency_invalid_reasons": latency_invalid_reasons,
@@ -871,7 +1299,7 @@ def build_report(
                 "run_complete": source_run_complete,
                 "latency_valid": source_latency_valid,
                 "latency_invalid_reasons": source_latency_reasons,
-                "eval_error": str(source_metadata.get("eval_error", "") or "").strip(),
+                "eval_error": source_eval_error,
                 "repaired": bool(resume_repaired),
             },
         },
@@ -1006,6 +1434,28 @@ def main(argv: list[str] | None = None) -> int:
         for record in selected_records
         if prediction_key(record) not in completed_keys
     ]
+    # Build/validate the retrieval generation before freezing the run identity.
+    # This happens before execute_query is called for the first prediction, so
+    # every checkpoint and the final report can be verified against one
+    # immutable code/config/model/index contract.
+    if pending_records and prepared_runtime is None:
+        prepared_runtime = prepare_dataset_runtime(args.dataset_id)
+    identity_dataset_meta = (
+        prepared_runtime[3]
+        if prepared_runtime is not None
+        else dataset_meta_from_report(existing_report)
+    )
+    frozen_run_identity = build_run_identity(
+        seed_file=args.seed_file,
+        dataset_meta=identity_dataset_meta,
+        selected_records=selected_records,
+        full=args.full,
+        limit=args.limit,
+        offset=args.offset,
+        debug_trace=args.debug_trace,
+        skip_eval=True,
+    )
+    identity_guard_violations: list[str] = []
 
     def write_checkpoint(dataset_meta: dict, current_predictions: list[dict]) -> None:
         merged_predictions = merge_predictions_for_records(
@@ -1026,7 +1476,12 @@ def main(argv: list[str] | None = None) -> int:
             selected_records=selected_records,
             debug_trace=args.debug_trace,
             source_report=existing_report,
+            frozen_run_identity=frozen_run_identity,
+            identity_guard_violations=identity_guard_violations,
         )
+        identity_guard_violations[:] = report["metadata"][
+            "run_identity_guard"
+        ]["violations"]
         write_json_report(report, args.output)
         write_csv_report(report, args.output)
 
@@ -1063,7 +1518,11 @@ def main(argv: list[str] | None = None) -> int:
     )
     selected_keys = {prediction_key(record) for record in selected_records}
     completed_keys = set(predictions_by_key(predictions, completed_only=True))
-    resume_repaired = bool(pending_records) and selected_keys.issubset(completed_keys)
+    resume_repaired = (
+        bool(existing_report)
+        and bool(pending_records)
+        and selected_keys.issubset(completed_keys)
+    )
     report = build_report(
         seed_file=args.seed_file,
         dataset_meta=dataset_meta,
@@ -1079,6 +1538,8 @@ def main(argv: list[str] | None = None) -> int:
         debug_trace=args.debug_trace,
         source_report=existing_report,
         resume_repaired=resume_repaired and not bool(stop_error),
+        frozen_run_identity=frozen_run_identity,
+        identity_guard_violations=identity_guard_violations,
     )
     json_path = write_json_report(report, args.output)
     csv_path = write_csv_report(report, json_path)

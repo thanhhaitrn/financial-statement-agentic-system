@@ -15,7 +15,7 @@ Sau khi cài (`pip install -e .`), lệnh hợp nhất `agentfinx <command>` rou
 | `agentfinx recall …` | `agentfinx-recall` | `eval_retrieval_recall.py` | Hard gate deterministic factual recall |
 | `agentfinx analyze …` | — | `analyze_batch_metrics.py` | Báo cáo metric theo bucket + latency baseline |
 
-Output trình bày chỉ in kết quả synth đúng một lần với header `=== FINAL ANSWER ===` (thân câu trả lời có tiền tố `ANSWER:`). Kết quả trung gian của worker không được lặp lại trong final answer.
+Output trình bày kết quả Synth đúng một lần dưới dạng Markdown sạch, không có các nhãn vận chuyển `=== FINAL ANSWER ===` hoặc `ANSWER:`. Kết quả trung gian của worker không được lặp lại trong final answer.
 
 ## Cấu Trúc
 
@@ -56,6 +56,7 @@ Yêu cầu Python 3.11 trở lên (khuyến nghị 3.12) trong virtual environme
 python -m venv .venv
 source .venv/bin/activate
 python -m pip install -e .                 # runtime core
+python -m pip install -e '.[web]'          # Vietstock/CafeF/PDF/LlamaParse API
 ```
 
 Các dependency không thuộc runtime core tách thành optional groups:
@@ -67,6 +68,116 @@ python -m pip install -e '.[eval,dev]'     # cả hai (dùng cho CI/dev)
 ```
 
 Core install **không** kéo theo các dependency nặng của evaluation (RAGAS/datasets) — chúng chỉ có trong extra `eval`.
+
+## Web evidence và nhập báo cáo PDF
+
+Web không phải analysis agent thứ năm. Planner chỉ định `need_web` và
+`web_intent`; `VietstockNewsProvider` lấy evidence có URL, nguồn, thời điểm và
+content hash rồi chỉ chuyển các WEB facts tới analysis agent cần chúng. MVP chỉ
+hỗ trợ `company_news`; macro, lãi suất và benchmark ngành trả `unsupported`.
+
+```bash
+WEB_EVIDENCE_ENABLED=1
+WEB_CACHE_TTL_SECONDS=21600
+WEB_MISS_WAIT_SECONDS=10
+```
+
+Cache tin hoạt động theo `fresh → trả ngay`, `stale → trả bản cũ và refresh nền`,
+`miss → chờ tối đa 10 giây`. Provider HTTP không dùng Selenium/browser pool;
+CLI refresh trong executor giới hạn và đóng executor khi kết thúc. Khi triển khai
+API, cần chuyển refresh sang worker queue. WEB facts chỉ tới analysis agent trong
+`needby`, giữ URL/provenance, không đi vào phép tính hoặc grounding BCTC. Không còn
+kênh `web_summary`. Catalog
+mã–công ty–sàn được cập nhật bởi job hằng ngày:
+
+```bash
+agentfinx-refresh-symbols
+```
+
+Luồng PDF có hai đầu vào: upload trực tiếp, hoặc CafeF discovery rồi người dùng
+xác nhận một `confirmed_candidate_id` opaque. API không nhận URL tùy ý. Download
+kiểm tra allowlist redirect/host, MIME, `%PDF-`, SHA-256, giới hạn 25 MB và 200
+trang. Job đi qua `queued → downloading → parsing → validating → building →
+ready|failed`; chỉ job `ready` mới có `dataset_id`.
+
+### CLI trước, API sau
+
+```bash
+# Chỉ tìm và lưu candidate; chưa tải báo cáo.
+agentfinx reports discover --ticker VNM --year 2025 --session-id demo
+
+# Chạy sau khi đã xem và chọn candidate từ kết quả discovery.
+agentfinx reports import --confirmed-candidate-id CANDIDATE_ID --session-id demo --allow-cloud-parse
+
+# Hoặc chọn trực tiếp file PDF. Không có flag thì chỉ cho phép local/cache.
+agentfinx reports import --pdf /path/report.pdf --ticker VNM --year 2025 --allow-cloud-parse
+agentfinx reports status JOB_ID
+agentfinx reports budget
+agentfinx ask --dataset-id DATASET_ID --query "Doanh thu thuần năm 2025 là bao nhiêu?"
+```
+
+Import CLI chạy đồng bộ và tái sử dụng acquisition service, không có pipeline
+thứ hai. Giữ cùng `--owner-id`/`--session-id` khi xác nhận candidate hoặc xem job.
+Namespace owner mặc định lấy từ UID của máy; đây **không phải** authentication cho
+HTTP. Key tồn tại trong env không tự cấp quyền upload: cần `--allow-cloud-parse`.
+CLI tạo idempotency key ổn định; dùng `--idempotency-key` mới để chủ động thử lại
+một job failed sau khi xử lý nguyên nhân (không tự retry job chưa rõ billing).
+
+```bash
+LLAMA_CLOUD_API_KEY=<secret-manager-injected-key>
+LLAMAPARSE_TIER=cost_effective
+LLAMAPARSE_VERSION=2026-08-19
+```
+
+Các alias key tương thích: `LLAMAPARSE_API_KEY`, `LLAMA_PARSE_API_KEY`,
+`LLAMA_API_KEY`. Không in key trong CLI/log. Cài SDK bằng `pip install -e '.[web]'`;
+runtime không tự chạy pip. `LLAMAPARSE_VERSION=latest` bị từ chối: phải dùng version
+cố định để artifact cache và provenance có thể tái lập.
+
+Lớp text tốt được kiểm tra cục bộ trước. Trang có bảng, reading order/OCR kém
+mới gửi LlamaParse; mặc định Cost-effective, và chỉ các trang không qua quality
+gate mới retry Agentic. Cache converter dùng SHA + tier/config + contract version;
+upload riêng tư gửi `disable_cache=true`, còn báo cáo công khai có thể dùng cache
+provider. Không có Azure/Google/model fallback.
+
+Markdown dùng marker `--- Page N` zero-based theo parser hiện tại; facts xuất
+`source_page` one-based. Dataset `file_path` và SHA trong KB manifest trỏ tới
+Markdown; đường dẫn/SHA PDF gốc và converter/provider version được lưu riêng.
+Thay Markdown hoặc converter version sẽ rebuild, không tái sử dụng KB cũ.
+Cache hit cục bộ ghi nhận **0 credits mới**. Adapter đọc `job.usage.credits` của
+Parse v2, retry polling theo ID đã lưu, không tạo parse job mới cho mỗi lỗi poll.
+
+Quota check + reserve + enqueue được thực hiện trong một SQLite transaction;
+claim job và parse slots dùng chung giữa các process cùng database. Khi provider
+đã nhận job nhưng chưa xác minh được trạng thái/chi phí, job có
+`billing_pending=true`: giữ reservation và slot để tránh vượt ngân sách. Không
+xóa reservation/slot hoặc gửi lại PDF trước khi reconcile job ID trong cache.
+Worker recovery tự động, queue bền vững và triển khai đa máy vẫn thuộc phase API.
+
+Các endpoint acquisition là `POST /report-discoveries`, `POST /report-imports`
+và `GET /report-imports/{job_id}`; `POST /report-uploads` cấp `upload_id` opaque.
+API hiện là integration surface, chưa phải dịch vụ production. `create_app()`
+nhận FastAPI owner dependency, `session_authorizer(owner_id, session_id)` và worker
+dispatcher; discovery/import fail closed khi thiếu session authorization, import
+trả 503 khi thiếu dispatcher. `ReportAcquisitionService.dataset_attacher` là callback
+duy nhất nối dataset vào chat session và chỉ được gọi sau trạng thái `ready`.
+Không dùng header owner do client tự khai làm quyền truy cập. Dataset, candidate,
+job và file đều được namespace theo owner.
+
+Live smoke chỉ dùng PDF tổng hợp, không gửi báo cáo riêng tư:
+
+```bash
+python -m pip install -e '.[web,smoke]'
+python scripts/smoke_llamaparse.py --work-dir /tmp/agentfinx-parse-smoke \
+  --font /path/to/unicode-font.ttf --create-only
+# Xem PDF trước, rồi cho phép gửi một trang lên provider (3 credits; tối đa 13 khi retry).
+python scripts/smoke_llamaparse.py --work-dir /tmp/agentfinx-parse-smoke \
+  --font /path/to/unicode-font.ttf --allow-cloud-parse
+```
+
+Smoke xác minh Parse → Markdown → SQLite/provenance, không gọi analysis model,
+không build Qdrant và không thay dataset registry. Nó không thay thế golden corpus
+20–30 trang BCTC thực hoặc benchmark end-to-end `WRONG_REFUSAL ≤ 21`.
 
 ## Biến Môi Trường
 
@@ -190,10 +301,19 @@ Seed chuẩn của bộ APEC là [`dau_tu_APEC_ragas_seed.json`](dau_tu_APEC_rag
 agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
   --limit 10 --output ragas_runs/apec_smoke_predictions.json
 
-# full seed (thêm --resume để tiếp tục khi bị gián đoạn)
+# full seed để phát triển; --resume làm run không còn là clean benchmark
 agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
   --full --resume --output ragas_runs/apec_full_predictions.json
+
+# benchmark độ chính xác chính thức: một lần chạy đầy đủ, không resume/repair/shard
+agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
+  --full --output ragas_runs/apec_clean_full_predictions.json
 ```
+
+Artifact chỉ được coi là clean benchmark khi `run_complete=true`,
+`clean_full_run=true`, không có prediction/provider error và toàn bộ câu dùng
+cùng code/KB/index fingerprint. Shard hoặc run có `--resume` vẫn hữu ích để
+triage, nhưng không dùng để chốt mức cải thiện.
 
 ### Chấm RAGAS (diagnostic)
 
@@ -203,6 +323,54 @@ agentfinx score --predictions-file ragas_runs/apec_full_predictions.json \
 ```
 
 Metrics: `faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`. RAGAS chỉ mang tính diagnostic — báo mean/distribution/missing metrics theo bucket factual và analytical. **Không** có gate dựa trên chênh lệch RAGAS mean `0.03` (judge free-tier nhiễu ~±0.1, dưới ngưỡng đó). Dùng `agentfinx analyze` để tách bucket và tính factual-recall xác định.
+
+### Chạy song song nhiều key (tăng tốc)
+
+Mỗi `OLLAMA_API_KEY` có quota độc lập, nên có thể **chia seed thành N shard chạy song song**, mỗi shard một key — nhanh gần N lần so với một key tuần tự (200 câu ~100 phút với 1 key → ~15–20 phút với 8 key).
+
+**Điều kiện:**
+- Qdrant phải **dùng chung** (`QDRANT_URL` cloud hoặc file bền), **không** `:memory:` — nếu `:memory:` mỗi process sẽ build lại collection riêng (embedding lại toàn bộ ×N).
+- Dataset đã build sẵn (chạy một câu bất kỳ trước để `ensure_built` tạo KB + index).
+- N key còn quota.
+- Mỗi shard ghi ra **file riêng** — nhiều process ghi chung một JSON sẽ hỏng file.
+
+**Chia 200 câu thành 8 shard (offset/limit), mỗi shard một key, predict rồi score:**
+
+```bash
+KEYS=(key1 key2 key3 key4 key5 key6 key7 key8)   # 8 key có quota
+for i in $(seq 0 7); do
+  off=$((i*25)); out="ragas_runs/vnm_shard_${i}.json"
+  (
+    OLLAMA_API_KEY="${KEYS[$i]}" agentfinx predict --dataset-id suavietnam \
+      --seed-file VNM_ragas_seed.json --offset "$off" --limit 25 --resume --output "$out"
+    OLLAMA_API_KEY="${KEYS[$i]}" agentfinx score --predictions-file "$out"
+  ) &
+done
+wait
+```
+
+**Gộp các shard lại thành một report:**
+
+```bash
+python3 - <<'PY'
+import json, glob
+preds, scores, meta = {}, {}, None
+for f in sorted(glob.glob("ragas_runs/vnm_shard_*.json")):
+    d = json.load(open(f, encoding="utf-8"))
+    meta = meta or {k: v for k, v in d.items() if k not in ("predictions", "scores", "summary")}
+    for p in d.get("predictions", []): preds[p["id"]] = p
+    for s in d.get("scores", []): scores[s["id"]] = s
+out = dict(meta or {})
+out["predictions"] = [preds[k] for k in sorted(preds)]
+out["scores"] = [scores[k] for k in sorted(scores)]
+json.dump(out, open("ragas_runs/vnm_predictions.json", "w"), ensure_ascii=False, indent=2)
+print(f"merged: {len(out['predictions'])} predictions, {len(out['scores'])} scores")
+PY
+
+python3 analyze_batch_metrics.py ragas_runs/vnm_predictions.json
+```
+
+Sharding này chỉ để **tăng throughput khi sinh dataset**; **không** dùng cho clean latency baseline (baseline cần các run tuần tự trong cùng một môi trường kiểm soát — xem mục dưới). Nếu một key hết limit giữa chừng, chạy lại đúng lệnh shard đó với `--resume` (hoặc đổi key) — nó tiếp tục từ chỗ dở.
 
 ### Hard gate deterministic factual recall
 
@@ -248,7 +416,11 @@ Một run có provider limit/quota backoff/prediction error hoặc thiếu clean
 agentfinx ask --dataset-id apec --query "Tổng tài sản cuối kỳ là bao nhiêu?" --debug-trace
 ```
 
-Trace gồm event planner/router/evidence/synth và `run:done` với runtime/token summary. Khi bật `--debug-trace`, một số event tool có thêm preview context để điều tra retrieval.
+Trace mặc định chỉ gồm metadata vận hành của planner/router/evidence/analysis/synth và
+`run:done`: trạng thái, số lượng, cache ID rút gọn, thời gian và token. Query, facts,
+kết quả agent, raw value và đường dẫn nguồn không được ghi vào trace mặc định; mỗi
+event được giới hạn 4 KiB. Bật `--debug-trace` để xem payload chi tiết khi điều tra
+retrieval (tối đa 32 KiB/event); credential và secret luôn bị che ở mọi chế độ.
 
 ## Runtime Contracts
 

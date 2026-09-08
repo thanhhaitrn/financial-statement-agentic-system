@@ -9,7 +9,12 @@ from json import JSONDecodeError
 from pathlib import Path
 
 from dataset_catalog.registry import describe_dataset, load_registry
-from dataset_batch_result import build_runtime_fingerprints, dataset_identity_payload
+from dataset_batch_result import (
+    build_runtime_fingerprints,
+    dataset_identity_payload,
+    evidence_ledger_contract_errors,
+    extract_evidence_ledger,
+)
 from evaluation.contracts import (
     REPORT_SCHEMA_VERSION,
     atomic_write_text,
@@ -256,6 +261,13 @@ def serialize_run_result(
     answer = str(synth_decision.get("answer", "") or "").strip()
     run_summary = extract_run_summary(final_state)
     runtime = _runtime_from_summary(run_summary)
+    evidence_ledger = extract_evidence_ledger(final_state)
+    errors = _dedupe_keep_order(
+        [
+            *collect_pipeline_errors(final_state),
+            *evidence_ledger_contract_errors(evidence_ledger),
+        ]
+    )
     result = {
         "query": query,
         "references": str(reference or "").strip(),
@@ -264,7 +276,8 @@ def serialize_run_result(
         "synth_status": str(synth_decision.get("status", "") or "").strip(),
         "answer": answer,
         "missing": synth_decision.get("missing", []) or [],
-        "errors": collect_pipeline_errors(final_state),
+        "errors": errors,
+        "evidence_ledger": evidence_ledger,
         "runtime": runtime,
         "total_tokens": _total_tokens_from_summary(run_summary),
         "run_summary": run_summary,
@@ -294,6 +307,7 @@ def _runtime_error_result(
         "answer": "",
         "missing": [],
         "errors": [f"runtime_error ({type(exc).__name__}): {exc}"],
+        "evidence_ledger": {"schema_version": 1, "entries": []},
         "runtime": None,
         "total_tokens": 0,
         "run_summary": {
@@ -462,7 +476,9 @@ def build_batch_run_identity(
         "identity_version": 1,
         "selection": selection,
         "datasets": datasets,
+        "code_provenance": dict(runtime["code_provenance"]),
         "fingerprints": {
+            "code": runtime["code"],
             "selection": stable_json_fingerprint(selection),
             "query": stable_json_fingerprint(
                 {
@@ -550,6 +566,18 @@ def build_report(
         "run_identity": run_identity,
         "run_fingerprint": run_identity["run_fingerprint"],
         "fingerprints": run_identity["fingerprints"],
+        "code_fingerprint_kind": str(
+            run_identity.get("code_provenance", {}).get("scheme", "")
+            or ""
+        ),
+        "code_sha256": str(
+            run_identity.get("fingerprints", {}).get("code", "")
+            or ""
+        ),
+        "worktree_dirty": run_identity.get(
+            "code_provenance",
+            {},
+        ).get("worktree_dirty"),
         "run_complete": run_complete,
         "run_status": "complete" if run_complete else "incomplete",
         "latency_valid": not provider_limit_reasons,
@@ -646,6 +674,11 @@ def build_query_reports(report: dict) -> list[dict]:
                 "datasets_with_setup_error": datasets_with_setup_error,
                 "run_fingerprint": report.get("run_fingerprint", ""),
                 "fingerprints": dict(report.get("fingerprints", {}) or {}),
+                "code_fingerprint_kind": str(
+                    report.get("code_fingerprint_kind", "") or ""
+                ),
+                "code_sha256": str(report.get("code_sha256", "") or ""),
+                "worktree_dirty": report.get("worktree_dirty"),
                 "run_complete": query_complete,
                 "run_status": "complete" if query_complete else "incomplete",
                 "latency_valid": not provider_reasons,
@@ -887,6 +920,11 @@ def build_output_document(report: dict, *, existing_output: dict | None = None, 
         "run_identity": dict(report.get("run_identity", {}) or {}),
         "run_fingerprint": str(report.get("run_fingerprint", "") or ""),
         "fingerprints": dict(report.get("fingerprints", {}) or {}),
+        "code_fingerprint_kind": str(
+            report.get("code_fingerprint_kind", "") or ""
+        ),
+        "code_sha256": str(report.get("code_sha256", "") or ""),
+        "worktree_dirty": report.get("worktree_dirty"),
         "run_complete": bool(report.get("run_complete", False)),
         "run_status": str(report.get("run_status", "incomplete") or "incomplete"),
         "latency_valid": bool(report.get("latency_valid", False)),

@@ -22,7 +22,6 @@ def test_prompt_template_omits_empty_sections():
         "plan_json": "{}",
         "worker_results_json": "{}",
         "allowed_keywords_json": "{}",
-        "web_summary": "",
         "last_agent_response": "",
         "tool_observations": "",
         "system_instruction": "Chỉ trả JSON.",
@@ -53,7 +52,6 @@ def test_prompt_template_keeps_nonempty_sections():
         "plan_json": '{"difficulty_level":"easy"}',
         "worker_results_json": "{}",
         "allowed_keywords_json": '{"BẢNG CÂN ĐỐI KẾ TOÁN":["tổng cộng tài sản"]}',
-        "web_summary": "",
         "last_agent_response": "",
         "tool_observations": "[get_balance_sheet_info] Tổng cộng tài sản: 100",
         "system_instruction": "Chỉ trả JSON.",
@@ -79,9 +77,8 @@ def test_prompt_template_keeps_runtime_data_human_and_untrusted():
         "worker_query": "WORKER_QUERY_SENTINEL",
         "plan_json": '{"value":"PLAN_SENTINEL"}',
         "evidence_pack_json": '{"value":"EVIDENCE_SENTINEL"}',
-        "worker_results_json": '{"value":"WORKER_RESULTS_SENTINEL"}',
+        "worker_results_json": '{"value":"WORKER_RESULTS_SENTINEL", "WEB":{"facts":[{"value":"WEB_SENTINEL"}]}}',
         "allowed_keywords_json": '{"value":"KEYWORDS_SENTINEL"}',
-        "web_summary": "WEB_SENTINEL",
         "last_agent_response": "PREVIOUS_RESPONSE_SENTINEL",
         "tool_observations": "TOOL_OBSERVATION_SENTINEL",
         "system_instruction": "TRUSTED_SYSTEM_SENTINEL",
@@ -131,11 +128,15 @@ def test_synth_profile_uses_analysis_outputs_without_data_followups():
     instruction = AGENT_PROFILES["agent_synth"]["system_instruction"]
 
     assert "worker_results_json chỉ gồm analysis_outputs" in instruction
-    assert "preliminary / based on available analysis outputs" in instruction
+    assert "Nếu analysis_outputs đã đủ trả lời câu hỏi chính" in instruction
     assert "KHÔNG được yêu cầu thêm dữ liệu chỉ để tính thêm chỉ số phụ" in instruction
     assert "không dùng followups để bổ sung dữ liệu/line-item/note" in instruction
     assert 'status="answer"' in instruction
     assert "followups=[]" in instruction
+    assert "Tóm tắt đánh giá CHỈ chứa nhận định" in instruction
+    assert "không ghi KPI, số tiền, tỷ lệ, công thức hoặc nguồn" in instruction
+    assert "Được nhắc năm/quý" in instruction
+    assert 'KHÔNG dùng câu dẫn khuôn mẫu như "Dựa trên số liệu hiện có"' in instruction
 
 
 def test_router_profile_has_followup_routing_rules_for_notes_and_main_reports():
@@ -210,6 +211,9 @@ def test_synth_profile_groups_followups_by_retrieval_agents_before_router():
     assert "followups" in instruction
     assert "analysis_outputs" in instruction
     assert "requirements" in instruction
+    assert "roll-forward cần opening+additions+reductions+closing" in instruction
+    assert "materiality cần company total" in instruction
+    assert "`vay ≠ cho vay`" in instruction
 
 
 def test_synth_profile_requires_aspect_based_answer_format():
@@ -221,5 +225,82 @@ def test_synth_profile_requires_aspect_based_answer_format():
     assert "**3. Dòng tiền**" in instruction
     assert "**4. Hiệu quả hoạt động**" in instruction
     assert "*Nhận xét*:" in instruction
-    assert "**Kết luận tổng thể**" in instruction
+    # Summary-first (BLUF): key conclusions lead, no fixed bottom conclusion section.
+    assert "**Tóm tắt đánh giá**" in instruction
+    assert "**Điểm cần theo dõi**" in instruction
+    assert "Diễn giải kết quả" in instruction  # medium/calculation layout
     assert "Không dùng các header dạng \"=== Agent Profitability ===\"" in instruction
+    assert "không thêm hậu tố trong ngoặc" in instruction
+    assert "canonical_financial_metrics" in instruction
+    assert "Theo Thuyết minh [note_ref]" in instruction
+    assert "CFO + CFI + CFF" in instruction
+
+
+def test_synth_profile_summary_first_and_no_fixed_conclusion():
+    instruction = AGENT_PROFILES["agent_synth"]["system_instruction"]
+
+    # BLUF placed before aspects; the old mandatory bottom "Kết luận tổng thể" is gone.
+    assert instruction.index("**Tóm tắt đánh giá**") < instruction.index("**1. Khả năng sinh lời**")
+    assert "KHÔNG dùng mục \"**Kết luận tổng thể**\" cố định" in instruction
+    assert "KHÔNG tạo mục \"Giới hạn bằng chứng\" cố định" in instruction
+
+
+def test_planner_response_mode_invariants():
+    from agents.planner_runner import _enforce_response_mode_invariants
+
+    # Financial hard/axes win over a contradictory grounded mode.
+    profitability_axis = {
+        "axis": "agent_profitability",
+        "objective": "Đánh giá khả năng sinh lời.",
+    }
+    plan, notes = _enforce_response_mode_invariants(
+        {
+            "response_mode": "grounded_interpretation",
+            "difficulty_level": "hard",
+            "analysis_axes": [profitability_axis],
+            "premise_requirements": ["cổ phần hóa"],
+        }
+    )
+    assert plan["response_mode"] == "extractive"
+    assert plan["difficulty_level"] == "hard"
+    assert plan["analysis_axes"] == [profitability_axis]
+    assert plan["premise_requirements"] == []
+    assert "axes_or_hard->extractive" in notes
+
+    # Axes also upgrade a contradictory medium plan so Router can dispatch them.
+    plan, notes = _enforce_response_mode_invariants(
+        {
+            "response_mode": "grounded_interpretation",
+            "difficulty_level": "medium",
+            "analysis_axes": [profitability_axis],
+            "premise_requirements": ["artifact from wrong mode"],
+        }
+    )
+    assert plan["response_mode"] == "extractive"
+    assert plan["difficulty_level"] == "hard"
+    assert plan["analysis_axes"] == [profitability_axis]
+    assert plan["premise_requirements"] == []
+    assert "analysis_axes->hard" in notes
+
+    # grounded without premise data -> conservative extractive/easy fallback
+    plan, _ = _enforce_response_mode_invariants(
+        {"response_mode": "grounded_interpretation", "premise_requirements": []}
+    )
+    assert plan["response_mode"] == "extractive"
+    assert plan["difficulty_level"] == "easy"
+
+    # financial-analysis axes / hard -> extractive, premise artifacts cleared
+    plan, _ = _enforce_response_mode_invariants(
+        {
+            "difficulty_level": "hard",
+            "analysis_axes": [
+                {
+                    "axis": "agent_liquidity_solvency",
+                    "objective": "Đánh giá thanh khoản.",
+                }
+            ],
+            "premise_requirements": ["leak"],
+        }
+    )
+    assert plan["response_mode"] == "extractive"
+    assert plan["premise_requirements"] == []

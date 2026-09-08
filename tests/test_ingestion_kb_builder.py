@@ -117,6 +117,64 @@ Báo cáo này phải được đọc cùng với Bản thuyết minh Báo cáo 
         )
         self.assertEqual(by_name["Mệnh giá cổ phiếu"][13], "VND")
 
+    def test_primary_statement_continuation_ignores_read_with_notes_footer(self):
+        md_text = """
+# BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+
+| CHỈ TIÊU | Mã số | Quý IV năm 2024 | Lũy kế đến quý IV năm 2024 |
+|---|---:|---:|---:|
+| Tổng lợi nhuận kế toán trước thuế | 50 | 13.133.968.702 | (9.805.992.079) |
+
+Báo cáo này phải được đọc cùng với Bản thuyết minh Báo cáo tài chính
+-----------Page 7
+# CÔNG TY CỔ PHẦN APEC
+BÁO CÁO TÀI CHÍNH
+QUÝ IV/2024
+
+| CHỈ TIÊU | Mã số | Quý IV năm 2024 | Lũy kế đến quý IV năm 2024 |
+|---|---:|---:|---:|
+| Lợi nhuận sau thuế thu nhập doanh nghiệp | 60 | 12.090.244.768 | (10.849.716.013) |
+"""
+
+        rows = build_fact_rows(
+            attach_context(md_text),
+            company="APEC",
+            source="fixture.md",
+            fiscal_year=2024,
+        )
+        pat_rows = [row for row in rows if row[3] == "60"]
+
+        self.assertEqual(len(pat_rows), 2)
+        self.assertTrue(
+            all(
+                row[2] == "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH"
+                for row in pat_rows
+            )
+        )
+
+    def test_note_reference_keeps_roman_statement_chapter(self):
+        md_text = """
+# BẢN THUYẾT MINH BÁO CÁO TÀI CHÍNH
+
+## VI. THÔNG TIN BỔ SUNG CHO BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH
+
+### 1. Doanh thu bán hàng và cung cấp dịch vụ
+
+| Chỉ tiêu | Năm nay |
+|---|---:|
+| Doanh thu bất động sản | 100 |
+"""
+
+        rows = build_fact_rows(
+            attach_context(md_text),
+            company="APEC",
+            source="fixture.md",
+            fiscal_year=2024,
+        )
+
+        self.assertEqual(rows[0][2], TABLE_NOTE)
+        self.assertEqual(rows[0][4], "VI.1")
+
 
 if __name__ == "__main__":
     unittest.main()

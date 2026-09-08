@@ -9,7 +9,6 @@ from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field, field_validator
 
-
 _DATASET_ID_RE = re.compile(
     r"^[A-Za-z0-9](?:[A-Za-z0-9._-]{0,126}[A-Za-z0-9])?$"
 )
@@ -31,6 +30,7 @@ def validate_dataset_id(value: object) -> str:
 
 class DatasetRecord(BaseModel):
     dataset_id: str
+    owner_id: str = ""
     company: str
     ticker: str = ""
     industry: str = ""
@@ -40,6 +40,12 @@ class DatasetRecord(BaseModel):
     scope: str = "unknown"
     audit_status: str = "unknown"
     file_path: str
+    source_origin: str = "local"
+    source_sha256: str = ""
+    source_converter_identity: str = ""
+    source_converter_version: str = ""
+    source_pdf_path: str = ""
+    managed_source: bool = False
     sqlite_db_path: str
     vector_collection_name: str
     manifest_path: str
@@ -100,6 +106,7 @@ class DatasetRecord(BaseModel):
 
     @field_validator(
         "dataset_id",
+        "owner_id",
         "company",
         "ticker",
         "industry",
@@ -107,6 +114,11 @@ class DatasetRecord(BaseModel):
         "scope",
         "audit_status",
         "file_path",
+        "source_origin",
+        "source_sha256",
+        "source_converter_identity",
+        "source_converter_version",
+        "source_pdf_path",
         "sqlite_db_path",
         "vector_collection_name",
         "manifest_path",

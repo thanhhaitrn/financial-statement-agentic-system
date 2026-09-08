@@ -1,0 +1,58 @@
+[
+  {
+    "name": "inline_management_roster",
+    "text": "- Ông Nguyễn Hạnh Phúc: Chủ tịch - Bà Mai Kiều Liên: Tổng Giám đốc - Bà Bùi Thị Hương: Giám đốc Điều hành – Đối Ngoại - Truyền Thông và Hành chính Tổng hợp",
+    "expected": [
+      {
+        "entity_label": "Nguyễn Hạnh Phúc",
+        "metric_label": "Chủ tịch"
+      },
+      {
+        "entity_label": "Mai Kiều Liên",
+        "metric_label": "Tổng Giám đốc"
+      },
+      {
+        "entity_label": "Bùi Thị Hương",
+        "metric_label": "Giám đốc Điều hành – Đối Ngoại - Truyền Thông và Hành chính Tổng hợp"
+      }
+    ]
+  },
+  {
+    "name": "dated_prose_role_and_appointment",
+    "text": "Ngày 15/03/2025, Hội đồng quản trị bổ nhiệm Bà Nguyễn Thị Lan làm Tổng Giám đốc. Ông Trần Văn Bình giữ chức Phó Tổng Giám đốc từ ngày 01/04/2025.",
+    "expected": [
+      {
+        "entity_label": "Nguyễn Thị Lan",
+        "metric_label": "Tổng Giám đốc"
+      },
+      {
+        "entity_label": "Trần Văn Bình",
+        "metric_label": "Phó Tổng Giám đốc"
+      }
+    ]
+  },
+  {
+    "name": "pipe_separated_roster",
+    "text": "Ông Nguyễn Văn An | Kiểm toán viên | Bổ nhiệm ngày 01/01/2025; Bà Trần Thị Bình | Kế toán trưởng |",
+    "expected": [
+      {
+        "entity_label": "Nguyễn Văn An",
+        "metric_label": "Kiểm toán viên"
+      },
+      {
+        "entity_label": "Trần Thị Bình",
+        "metric_label": "Kế toán trưởng"
+      }
+    ]
+  },
+  {
+    "name": "role_before_delegated_signing_clause",
+    "text": "Ông Đinh Trọng Thể - Phó Tổng Giám đốc được Ông Nguyễn Cao Sơn ủy quyền ký báo cáo tài chính.",
+    "expected": [
+      {
+        "entity_label": "Đinh Trọng Thể",
+        "metric_label": "Phó Tổng Giám đốc"
+      }
+    ]
+  }
+]

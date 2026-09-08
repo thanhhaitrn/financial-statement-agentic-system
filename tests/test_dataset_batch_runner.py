@@ -108,6 +108,31 @@ def test_serialize_run_result_can_include_trace():
                 "total_tokens": 150,
             },
         ],
+        "evidence_ledger": {
+            "schema_version": 1,
+            "entries": [
+                {
+                    "kind": "derived_calculation",
+                    "operation": "ratio",
+                    "result": "6.46",
+                    "result_unit": "percent",
+                    "operands": [
+                        {
+                            "role": "numerator",
+                            "fact_id": "profit",
+                            "value": "6.46",
+                            "source": "report.md",
+                        },
+                        {
+                            "role": "denominator",
+                            "fact_id": "equity",
+                            "value": "100",
+                            "source": "report.md",
+                        },
+                    ],
+                }
+            ],
+        },
     }
 
     result = batch_runner.serialize_run_result(
@@ -124,9 +149,11 @@ def test_serialize_run_result_can_include_trace():
     assert result["references"] == ""
     assert result["runtime"] == 1234
     assert result["total_tokens"] == 150
-    assert result["formatted_answer"] == "=== FINAL ANSWER ===\nANSWER: ROE khoảng 6,46%."
+    assert result["formatted_answer"] == "ROE khoảng 6,46%."
     assert result["run_summary"]["event"] == "run:done"
     assert result["trace"] == final_state["trace"]
+    assert result["evidence_ledger"] == final_state["evidence_ledger"]
+    assert result["errors"] == []
 
 
 def test_build_output_document_appends_different_queries_to_one_file():

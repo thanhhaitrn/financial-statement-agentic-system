@@ -1,11 +1,15 @@
 """Validate, prepare, execute, and record tool calls requested by worker agents."""
 # Code note: Tool modules bridge agent requests to retrieval helpers; comments here mark guardrails around external calls.
 
+import hashlib
 import json
 import time
+from concurrent.futures import Future
 from contextvars import ContextVar
+from threading import Lock
 from typing import Any, Optional, Tuple
 
+from config.runtime_policy import DEFAULT_POLICY
 from tools.langchain_tools import TOOLS_MAPPING_2_FUNCTIONS, get_tool_names_for_agent
 from tools.tool_calls import normalize_tool_call
 from graph.logger import make_debug_log, make_log
@@ -28,10 +32,13 @@ _COLLECTION_CONTEXT: ContextVar[Any] = ContextVar(
     "agentfinx_collection",
     default=None,
 )
-TOOL_CONTEXT_PREVIEW_LIMIT = 1200
+TOOL_CONTEXT_PREVIEW_LIMIT = DEFAULT_POLICY.observability.tool_context_preview_limit
 TOOL_RESULT_FACTS_LIMIT = 5
-DEFAULT_MAX_TOOL_CALLS_PER_ROUND = 2
+DEFAULT_MAX_TOOL_CALLS_PER_ROUND = DEFAULT_POLICY.execution.max_tool_calls_per_round
 _INTERNAL_TOOL_ARG_KEYS = {"collection"}
+_CACHE_KEY_BASE_ARG_KEYS = {"collection", "table", "query", "intent"}
+_INFLIGHT_CACHE_LOCK = Lock()
+_INFLIGHT_CACHE_CALLS: dict[str, Future[dict]] = {}
 
 
 def set_collection(collection):
@@ -40,7 +47,11 @@ def set_collection(collection):
     Kept as a compatibility shim for existing CLIs.  Context-local storage
     prevents concurrent dataset runs from overwriting one process-global handle.
     """
-    _COLLECTION_CONTEXT.set(collection)
+    return _COLLECTION_CONTEXT.set(collection)
+
+
+def reset_collection(token):
+    _COLLECTION_CONTEXT.reset(token)
 
 
 def get_collection():
@@ -52,6 +63,29 @@ SCOPED_TOOL_NAMES = set(SCOPED_TOOL_TO_TABLE.keys())
 
 def _safe_json_dumps(value: Any) -> str:
     return json.dumps(value, ensure_ascii=False, sort_keys=True, default=str)
+
+
+def _trace_details(state: dict, **data: Any) -> dict:
+    """Expose potentially verbose trace fields only in explicit debug mode."""
+
+    if not bool((state or {}).get("debug_trace", False)):
+        return {}
+    return data
+
+
+def _short_trace_id(value: Any, *, length: int = 12) -> str:
+    """Return a stable correlation id without logging the underlying payload."""
+
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()[:length]
+
+
+def _cache_trace_fields(state: dict, cache_key: str) -> dict:
+    fields = {"cache_id": _short_trace_id(cache_key)}
+    fields.update(_trace_details(state, cache_key=cache_key))
+    return fields
 
 
 def _public_tool_args(args: dict) -> dict:
@@ -68,6 +102,8 @@ def _coerce_tool_context(value: Any) -> str:
 
 
 def _build_tool_context_debug_fields(state: dict, context: str) -> dict:
+    if not bool((state or {}).get("debug_trace", False)):
+        return {}
     preview = context[:TOOL_CONTEXT_PREVIEW_LIMIT] if context else "<EMPTY_CONTEXT>"
     return {
         "context_preview": preview,
@@ -77,6 +113,7 @@ def _build_tool_context_debug_fields(state: dict, context: str) -> dict:
 
 def _get_allowed_tools(agent_name: str) -> set:
     return get_tool_names_for_agent(agent_name)
+
 
 def _latest_agent_response_for(state: dict, agent_name: str) -> str:
     items = state.get("worker_messages", []) or []
@@ -355,11 +392,24 @@ def _expected_scoped_tool_for_query(state: dict, query: str) -> tuple[str, str]:
 
 
 def _cache_key_for_prepared_args(state: dict, tool_name: str, prepared_args: dict) -> str:
+    # Keep the historical "table" mode for ordinary scoped calls so they can
+    # still reuse evidence-stage entries.  Any additional retrieval arguments
+    # are part of the mode, because flags such as strict_table/cross_table and
+    # explicit retrieval modes can materially change the returned evidence.
+    cache_variant_args = {
+        key: value
+        for key, value in prepared_args.items()
+        if key not in _CACHE_KEY_BASE_ARG_KEYS
+    }
+    cache_mode = "table"
+    if cache_variant_args:
+        cache_mode = f"table:{_safe_json_dumps(cache_variant_args)}"
+
     return evidence_cache_key(
         dataset_id=str((state or {}).get("dataset_id", "") or ""),
         table=str(prepared_args.get("table", "") or ""),
         query=str(prepared_args.get("query", "") or ""),
-        mode="table",
+        mode=cache_mode,
         intent=str(prepared_args.get("intent", "") or ""),
         generation=str(
             (state or {}).get("index_fingerprint", "")
@@ -367,6 +417,37 @@ def _cache_key_for_prepared_args(state: dict, tool_name: str, prepared_args: dic
             or ""
         ),
     )
+
+
+def _claim_inflight_cache_call(cache_key: str) -> tuple[bool, Future[dict]]:
+    """Return whether this caller owns the backend call for ``cache_key``."""
+
+    with _INFLIGHT_CACHE_LOCK:
+        existing = _INFLIGHT_CACHE_CALLS.get(cache_key)
+        if existing is not None:
+            return False, existing
+        future: Future[dict] = Future()
+        _INFLIGHT_CACHE_CALLS[cache_key] = future
+        return True, future
+
+
+def _finish_inflight_cache_call(
+    cache_key: str,
+    future: Future[dict],
+    *,
+    cache_item: Optional[dict] = None,
+    error: Optional[BaseException] = None,
+) -> None:
+    """Resolve waiters and remove exactly the flight owned by ``future``."""
+
+    if not future.done():
+        if error is not None:
+            future.set_exception(error)
+        else:
+            future.set_result(dict(cache_item or {}))
+    with _INFLIGHT_CACHE_LOCK:
+        if _INFLIGHT_CACHE_CALLS.get(cache_key) is future:
+            _INFLIGHT_CACHE_CALLS.pop(cache_key, None)
 
 
 def _cache_hit_update(
@@ -415,8 +496,13 @@ def _cache_hit_update(
                 agent=agent_name,
                 tool=tool_name,
                 table=prepared_args.get("table", ""),
-                query=prepared_args.get("query", ""),
-                cache_key=cache_key,
+                status="hit",
+                facts_n=len(cache_payload.get("facts", []) or []),
+                **_cache_trace_fields(state, cache_key),
+                **_trace_details(
+                    state,
+                    query=prepared_args.get("query", ""),
+                ),
             )
         ],
     }
@@ -508,7 +594,10 @@ def _call_tool_for_agent_once(
                     state,
                     "tool:skip_no_tool_call",
                     agent=agent_name,
-                    preview=response_text[:120],
+                    **_trace_details(
+                        state,
+                        response_preview=response_text[:120],
+                    ),
                 )
             ],
         }
@@ -530,8 +619,11 @@ def _call_tool_for_agent_once(
                     state,
                     "tool:skip_no_tool_call",
                     agent=agent_name,
-                    preview=response_text[:120],
                     reason=parse_error,
+                    **_trace_details(
+                        state,
+                        response_preview=response_text[:120],
+                    ),
                 )
             ],
         }
@@ -546,7 +638,10 @@ def _call_tool_for_agent_once(
             round=current_round,
             count=count,
             max_calls=max_calls,
-            args_preview=_safe_json_dumps(_public_tool_args(args))[:200],
+            **_trace_details(
+                state,
+                args_preview=_safe_json_dumps(_public_tool_args(args))[:200],
+            ),
         )
     ]
 
@@ -564,7 +659,10 @@ def _call_tool_for_agent_once(
                     original_tool=tool_name,
                     corrected_tool=expected_tool,
                     table=expected_table,
-                    query=str(args.get("query", "") or ""),
+                    **_trace_details(
+                        state,
+                        query=str(args.get("query", "") or ""),
+                    ),
                 )
             )
             tool_name = expected_tool
@@ -659,8 +757,11 @@ def _call_tool_for_agent_once(
                 agent=agent_name,
                 tool=tool_name,
                 table=prepared_args.get("table", ""),
-                query=prepared_args.get("query", ""),
-                args_preview=_safe_json_dumps(_public_tool_args(prepared_args))[:200],
+                **_trace_details(
+                    state,
+                    query=prepared_args.get("query", ""),
+                    args_preview=_safe_json_dumps(_public_tool_args(prepared_args))[:200],
+                ),
             )
         )
         return {
@@ -676,6 +777,7 @@ def _call_tool_for_agent_once(
             "trace": trace_logs,
         }
 
+    cache_flight: Optional[Future[dict]] = None
     if tool_name in SCOPED_TOOL_NAMES:
         cache_key = _cache_key_for_prepared_args(state, tool_name, prepared_args)
         cache_item = (state.get("evidence_cache", {}) or {}).get(cache_key) or get_runtime_cache_item(cache_key)
@@ -691,6 +793,105 @@ def _call_tool_for_agent_once(
             )
             update["trace"] = trace_logs + list(update.get("trace", []) or [])
             return update
+
+        owns_cache_flight, cache_flight = _claim_inflight_cache_call(cache_key)
+        if not owns_cache_flight:
+            wait_started_at = time.perf_counter()
+            trace_logs.append(
+                make_log(
+                    state,
+                    "tool:cache_coalesced_wait",
+                    agent=agent_name,
+                    tool=tool_name,
+                    table=prepared_args.get("table", ""),
+                    status="waiting",
+                    **_cache_trace_fields(state, cache_key),
+                    **_trace_details(
+                        state,
+                        query=prepared_args.get("query", ""),
+                    ),
+                )
+            )
+            try:
+                cache_item = cache_flight.result()
+            except Exception as e:
+                trace_logs.append(
+                    make_log(
+                        state,
+                        "tool:cache_coalesced_error",
+                        agent=agent_name,
+                        tool=tool_name,
+                        status="error",
+                        **_cache_trace_fields(state, cache_key),
+                        duration_ms=int((time.perf_counter() - wait_started_at) * 1000),
+                        error_type=type(e).__name__,
+                        error=str(e)[:250],
+                    )
+                )
+                return {
+                    "tool_observations": [
+                        _tool_observation_entry(
+                            agent_name,
+                            f"[Tool error: coalesced {tool_name} failed: {type(e).__name__}: {str(e)[:200]}]",
+                            current_round,
+                        )
+                    ],
+                    "tool_call_counts": _round_count_update(state, agent_name, count + 1),
+                    "force_collect_agents": _force_collect_update(state, agent_name),
+                    "trace": trace_logs,
+                }
+
+            trace_logs.append(
+                make_log(
+                    state,
+                    "tool:cache_coalesced",
+                    agent=agent_name,
+                    tool=tool_name,
+                    table=prepared_args.get("table", ""),
+                    status="coalesced",
+                    **_cache_trace_fields(state, cache_key),
+                    **_trace_details(
+                        state,
+                        query=prepared_args.get("query", ""),
+                    ),
+                    duration_ms=int((time.perf_counter() - wait_started_at) * 1000),
+                )
+            )
+            update = _cache_hit_update(
+                state,
+                agent_name,
+                tool_name,
+                prepared_args,
+                cache_key,
+                cache_item,
+                count,
+            )
+            update["trace"] = trace_logs + list(update.get("trace", []) or [])
+            return update
+
+        # A caller can observe a miss, pause, and only claim leadership after a
+        # previous flight has stored its result and left the registry.  Recheck
+        # the process cache before issuing the backend request in that race.
+        cache_item = get_runtime_cache_item(cache_key)
+        if isinstance(cache_item, dict) and cache_item:
+            _finish_inflight_cache_call(
+                cache_key,
+                cache_flight,
+                cache_item=cache_item,
+            )
+            cache_flight = None
+            update = _cache_hit_update(
+                state,
+                agent_name,
+                tool_name,
+                prepared_args,
+                cache_key,
+                cache_item,
+                count,
+            )
+            update["trace"] = trace_logs + list(update.get("trace", []) or [])
+            return update
+
         trace_logs.append(
             make_log(
                 state,
@@ -698,8 +899,12 @@ def _call_tool_for_agent_once(
                 agent=agent_name,
                 tool=tool_name,
                 table=prepared_args.get("table", ""),
-                query=prepared_args.get("query", ""),
-                cache_key=cache_key,
+                status="miss",
+                **_cache_trace_fields(state, cache_key),
+                **_trace_details(
+                    state,
+                    query=prepared_args.get("query", ""),
+                ),
             )
         )
     else:
@@ -713,16 +918,66 @@ def _call_tool_for_agent_once(
             tool=tool_name,
             tool_call_id=tool_call_id,
             table=prepared_args.get("table", ""),
-            query=prepared_args.get("query", ""),
+            **_trace_details(
+                state,
+                query=prepared_args.get("query", ""),
+            ),
         )
     )
 
     started_at = time.perf_counter()
+    evidence_cache_update = {}
     try:
         raw_results = tool_func(**prepared_args)
         results = _normalize_tool_result(raw_results)
         duration_ms = int((time.perf_counter() - started_at) * 1000)
+
+        ctx = _coerce_tool_context(results.get("context"))
+        if cache_key:
+            facts = result_to_facts(
+                results,
+                table=str(prepared_args.get("table", "") or ""),
+                query=str(prepared_args.get("query", "") or ""),
+            )
+            evidence_cache_update[cache_key] = cache_item_from_result(
+                results,
+                table=str(prepared_args.get("table", "") or ""),
+                query=str(prepared_args.get("query", "") or ""),
+                tool=tool_name,
+                facts=facts,
+            )
+            set_runtime_cache_item(cache_key, evidence_cache_update[cache_key])
+            trace_logs.append(
+                make_log(
+                    state,
+                    "tool:cache_store",
+                    agent=agent_name,
+                    tool=tool_name,
+                    table=prepared_args.get("table", ""),
+                    status="stored",
+                    **_cache_trace_fields(state, cache_key),
+                    **_trace_details(
+                        state,
+                        query=prepared_args.get("query", ""),
+                    ),
+                    facts_n=len(facts),
+                )
+            )
+            if cache_flight is not None:
+                _finish_inflight_cache_call(
+                    cache_key,
+                    cache_flight,
+                    cache_item=evidence_cache_update[cache_key],
+                )
+                cache_flight = None
     except Exception as e:
+        if cache_flight is not None:
+            _finish_inflight_cache_call(
+                cache_key,
+                cache_flight,
+                error=e,
+            )
+            cache_flight = None
         trace_logs.append(
             make_log(
                 state,
@@ -748,35 +1003,6 @@ def _call_tool_for_agent_once(
             "trace": trace_logs,
         }
 
-    ctx = _coerce_tool_context(results.get("context"))
-    src = results.get("source", "")
-    evidence_cache_update = {}
-    if cache_key:
-        facts = result_to_facts(
-            results,
-            table=str(prepared_args.get("table", "") or ""),
-            query=str(prepared_args.get("query", "") or ""),
-        )
-        evidence_cache_update[cache_key] = cache_item_from_result(
-            results,
-            table=str(prepared_args.get("table", "") or ""),
-            query=str(prepared_args.get("query", "") or ""),
-            tool=tool_name,
-            facts=facts,
-        )
-        set_runtime_cache_item(cache_key, evidence_cache_update[cache_key])
-        trace_logs.append(
-            make_log(
-                state,
-                "tool:cache_store",
-                agent=agent_name,
-                tool=tool_name,
-                table=prepared_args.get("table", ""),
-                query=prepared_args.get("query", ""),
-                cache_key=cache_key,
-                facts_n=len(facts),
-            )
-        )
     context_debug_fields = _build_tool_context_debug_fields(state, ctx)
     tool_result_payload = evidence_cache_update.get(cache_key) if cache_key else results
     if not isinstance(tool_result_payload, dict) or not tool_result_payload:
@@ -791,10 +1017,17 @@ def _call_tool_for_agent_once(
             tool=tool_name,
             tool_call_id=tool_call_id,
             table=prepared_args.get("table", ""),
-            query=prepared_args.get("query", ""),
+            status="ok",
             duration_ms=duration_ms,
             context_len=len(ctx),
+            facts_n=len(tool_result_payload.get("facts", []) or [])
+            if isinstance(tool_result_payload.get("facts"), list)
+            else 0,
             empty=(len(ctx) == 0),
+            **_trace_details(
+                state,
+                query=prepared_args.get("query", ""),
+            ),
             **context_debug_fields,
         )
     )

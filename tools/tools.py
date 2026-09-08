@@ -5,6 +5,7 @@ import json
 import logging
 import os
 import re
+from itertools import product
 
 from config.allowed_keywords import normalize_keyword_synonyms
 from schemas.table_names import (
@@ -20,9 +21,17 @@ from vectorstore.lexical_index import get_lexical_index
 from ingestion.period_normalize import (
     canonical_period,
     canonical_value_type,
-    is_comparison_query,
-    query_value_types,
+    query_section_total_key,
     section_total_key,
+)
+from tools.query_routing import (
+    coverage_legs_for_fact,
+    fact_matches_required_slots,
+    fact_period_labels,
+    fact_period_role,
+    fact_sibling_group_key,
+    fact_slot_score,
+    parse_query_slots,
 )
 from vectorstore.llm_reranker import llm_rerank_enabled, llm_rerank_order
 
@@ -36,9 +45,6 @@ _TOKEN_RE = re.compile(r"\w+", flags=re.UNICODE)
 _FIGURE_RE = re.compile(r"\d[\d.,]*\d")
 # How many cross-table lexical hits to fold in as a routing safety net.
 _CROSS_TABLE_TOP_N = 25
-# Scale on the -30 opposite-period penalty for comparison-phrased queries
-# (0 = no penalty, 1 = legacy full penalty).
-_PERIOD_PENALTY_COMPARISON = float(os.getenv("PERIOD_PENALTY_COMPARISON", "0.5"))
 # How many top heuristic candidates to hand the optional LLM listwise reranker.
 # Bounds prompt size/cost so it never scales with the full candidate pool.
 _LLM_RERANK_CANDIDATES = int(os.getenv("LLM_RERANK_CANDIDATES", "20"))
@@ -97,26 +103,6 @@ _CLOSING_BALANCE_MARKERS = (
     "tại thời điểm",
     "tai thoi diem",
 )
-_POLICY_QUERY_TOKENS = {
-    "chinh",
-    "chính",
-    "sach",
-    "sách",
-    "phuong",
-    "phương",
-    "phap",
-    "pháp",
-    "hach",
-    "hạch",
-    "toan",
-    "toán",
-    "du",
-    "dự",
-    "phong",
-    "phòng",
-}
-
-
 def neural_rerank_enabled() -> bool:
     """Compatibility hook for the removed heavyweight experimental reranker."""
     return False
@@ -140,9 +126,27 @@ def _text_tokens(value):
 def _extract_docs_and_metas(results):
     documents = results.get("documents", [[]])
     metadatas = results.get("metadatas", [[]])
+    distances = results.get("distances", [[]])
+    similarities = results.get("similarities", [[]])
     docs = documents[0] if documents else []
-    metas = metadatas[0] if metadatas else []
-    return docs, metas
+    raw_metas = metadatas[0] if metadatas else []
+    distance_values = distances[0] if distances else []
+    similarity_values = similarities[0] if similarities else []
+    metas = []
+    for index, raw_meta in enumerate(raw_metas):
+        meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
+        if (
+            index < len(distance_values)
+            and distance_values[index] is not None
+        ):
+            meta["distance"] = float(distance_values[index])
+        if (
+            index < len(similarity_values)
+            and similarity_values[index] is not None
+        ):
+            meta["similarity_score"] = float(similarity_values[index])
+        metas.append(meta)
+    return list(docs), metas
 
 
 def _extract_flat_docs_and_metas(results):
@@ -172,19 +176,35 @@ def _match_key(doc, meta):
 
 def _merge_docs_and_metas(primary_docs, primary_metas, extra_docs, extra_metas):
     docs = list(primary_docs or [])
-    metas = list(primary_metas or [])
-    seen = {
-        _match_key(doc, meta)
-        for doc, meta in zip(docs, metas)
+    metas = [
+        dict(meta) if isinstance(meta, dict) else {}
+        for meta in (primary_metas or [])
+    ]
+    key_to_index = {
+        _match_key(doc, meta): index
+        for index, (doc, meta) in enumerate(zip(docs, metas))
     }
 
     for doc, meta in zip(extra_docs or [], extra_metas or []):
         key = _match_key(doc, meta)
-        if key in seen:
+        if key in key_to_index:
+            existing = metas[key_to_index[key]]
+            if isinstance(meta, dict):
+                for field in (
+                    "distance",
+                    "similarity_score",
+                    "retrieval_score",
+                ):
+                    value = meta.get(field)
+                    if (
+                        value not in ("", None)
+                        and existing.get(field) in ("", None)
+                    ):
+                        existing[field] = value
             continue
         docs.append(doc)
-        metas.append(meta)
-        seen.add(key)
+        metas.append(dict(meta) if isinstance(meta, dict) else {})
+        key_to_index[key] = len(docs) - 1
 
     return docs, metas
 
@@ -198,6 +218,13 @@ def _join_sources(metas):
         if source and source not in sources:
             sources.append(source)
     return ", ".join(sources) if sources else ""
+
+
+def _collection_generation(collection):
+    generation = getattr(collection, "generation", "")
+    if callable(generation):
+        generation = generation()
+    return str(generation or "").strip()
 
 
 def _item_match_score(query, meta, doc, intent=None):
@@ -224,7 +251,8 @@ def _item_match_score(query, meta, doc, intent=None):
     row_tokens = _text_tokens(row_label)
     doc_tokens = _text_tokens(doc)
 
-    score = 0.0
+    query_slots = parse_query_slots(slot_query)
+    score = fact_slot_score(query_slots, meta, doc)
 
     # Directional lending-income phrases are easily confused with borrowing
     # interest expense because both contain "lãi" and "vay".  Preserve the
@@ -261,8 +289,8 @@ def _item_match_score(query, meta, doc, intent=None):
         score += (row_overlap / max(len(row_tokens), 1)) * 15.0
 
     # The keyworder's query can be a wrong near-synonym of what the user asked
-    # ("chi phí phải trả" for "chi phí xây dựng cơ bản dở dang"; note-16 totals
-    # for "phải trả CTCP Tập đoàn Apec"). Score coverage of the full-question
+    # ("chi phí phải trả" for "chi phí xây dựng cơ bản dở dang"; an aggregate
+    # liability schedule for a named counterparty). Score coverage of the full-question
     # tokens too, so the row matching the QUESTION can outrank rows that only
     # match the derived query; when the keyworder was right the two coincide
     # and nothing changes.
@@ -307,60 +335,25 @@ def _item_match_score(query, meta, doc, intent=None):
             marker in query_norm for marker in _CLOSING_BALANCE_MARKERS
         )
         score += 14.0 if query_is_aggregate else 0.0
-    elif (
-        item_code == "note_text"
-        and item_norm.startswith("thuyết minh 2.")
-        and not (query_tokens & _POLICY_QUERY_TOKENS)
+    fact_meta = meta if isinstance(meta, dict) else {}
+    if (
+        getattr(query_slots, "policy_topic", "")
+        and str(fact_meta.get("policy_topic", "") or "").strip()
+        and fact_matches_required_slots(query_slots, fact_meta, doc)
     ):
-        score -= 10.0
-    elif item_code == "note_text" and item_norm.startswith("thuyết minh 2."):
+        # Policy sections are numbered differently across filings.  Reward a
+        # policy fact only when the query and fact agree through their typed
+        # topic/entity/scope contract; never infer policy relevance from a note
+        # number or a company-specific layout.
         score += 20.0
 
-    # Slot disambiguation: when the query targets a specific period (cuối/đầu) or
-    # value type (nguyên giá / giá trị còn lại / hao mòn), reward the row whose
-    # slot matches and penalize the siblings that only differ by that slot — the
-    # near-duplicates the figure heuristic cannot separate (the query cites no
-    # figure). Prefer the metadata field; fall back to parsing item_name/subheading
-    # so it works pre-reindex and for facts without the field.
-    # The metadata fields are already canonical ("cuối"/"đầu", "nguyên giá"…); use
-    # them directly. Only fall back to parsing item_name when the field is absent
-    # (pre-reindex / non-table facts) — re-canonicalizing a bare "cuối" would fail
-    # since canonical_period now requires a period unit.
-    fact_meta = meta if isinstance(meta, dict) else {}
-    q_period = canonical_period(slot_query)
-    if q_period:
-        fact_period = str(fact_meta.get("period", "") or "").strip() or canonical_period(item_name)
-        if fact_period:
-            if fact_period == q_period:
-                score += 35.0
-            else:
-                # A single-period-phrased comparison ("không còn số dư CUỐI kỳ")
-                # still needs the opposite-period row as the other leg of the
-                # change — soften the penalty there (canonical_period already
-                # returns "" when both periods are named).
-                penalty_scale = (
-                    _PERIOD_PENALTY_COMPARISON if is_comparison_query(slot_query) else 1.0
-                )
-                score -= 30.0 * penalty_scale
-
-    # Only disambiguate value type when the query names exactly ONE — a question
-    # comparing several ("thay đổi nguyên giá VÀ hao mòn") needs all of them.
-    q_value_types = query_value_types(slot_query)
-    fact_value_type = str(fact_meta.get("value_type", "") or "").strip() or canonical_value_type(item_name)
-    if len(q_value_types) == 1:
-        q_value_type = next(iter(q_value_types))
-        if fact_value_type:
-            if fact_value_type == q_value_type:
-                score += 35.0
-                # H2: reward rows matching BOTH the value type AND the asked line
-                # item, so "Đầu tư vào Công ty con | Dự phòng" beats "Dự phòng
-                # chứng khoán" / "Dự phòng phải thu" which share only the type.
-                slot_tokens = _text_tokens(slot_query)
-                if slot_tokens and item_tokens and len(slot_tokens & item_tokens) / len(slot_tokens) >= 0.4:
-                    score += 25.0
-            else:
-                score -= 30.0
-    elif not q_value_types and ("giá trị" in slot_norm or "gia tri" in slot_norm):
+    # A bare "giá trị [tài sản]" (no explicit typed slot) means net book value —
+    # retain this domain convention on top of the centralized typed-slot score.
+    fact_value_type = (
+        str(fact_meta.get("value_type", "") or "").strip()
+        or canonical_value_type(item_name)
+    )
+    if not query_slots.value_type and ("giá trị" in slot_norm or "gia tri" in slot_norm):
         # Bare "giá trị [tài sản]" (no explicit value type) means net book value —
         # the balance-sheet line (value_type empty), not the nguyên giá / hao mòn
         # breakdown rows, whose richer "Tài sản … — Nguyên giá" subheading otherwise
@@ -370,8 +363,12 @@ def _item_match_score(query, meta, doc, intent=None):
 
     # Section-total alias: "tổng tài sản ngắn hạn" ↔ the BS line "A - TÀI SẢN NGẮN
     # HẠN" (and B-/TỔNG CỘNG …). Lift the real total above its component rows.
-    q_section = section_total_key(slot_query)
-    if q_section and section_total_key(item_name) == q_section:
+    q_section = (
+        str(getattr(query_slots, "section_key", "") or "").strip()
+        or query_section_total_key(slot_query)
+    )
+    fact_section = str(fact_meta.get("section_key", "") or "").strip()
+    if q_section and (fact_section or section_total_key(item_name)) == q_section:
         score += 50.0
 
     return score
@@ -390,11 +387,11 @@ def _is_value_lookup_query(query) -> bool:
 
 def _is_note_detail_query(query):
     """True when the question asks for investment detail that lives ONLY in the
-    notes (bảng 2a/2c): dự phòng / giá gốc / giá trị hợp lý of an investment.
+    notes: dự phòng / giá gốc / giá trị hợp lý of an investment.
 
     The balance sheet carries only the net total, so on these questions the gold
-    row (e.g. note 2c "Đầu tư vào Công ty con | Dự phòng") is absent from the
-    BS-routed pool. H1 folds a note-table lexical query into the candidate pool.
+    per-entity row is absent from the BS-routed pool. H1 folds a note-table
+    lexical query into the candidate pool.
     Markers keep their diacritics because _normalize_text lowercases but does not
     strip Vietnamese accents.
 
@@ -420,6 +417,12 @@ _NOTE_REF_EXPAND_MAX = 2
 # Widened rerank cut for list/superlative questions so a whole note schedule (the
 # largest per-entity ones run ~20 rows) survives instead of being sliced to top-K.
 _SCHEDULE_LIMIT = int(os.getenv("SCHEDULE_LIMIT", "24"))
+# Exact metadata lookup is bounded independently from dense top-k.  It is used
+# only when the question supplies typed slots, and never widens the final cut.
+_STRUCTURED_SLOT_SCAN_LIMIT = 64
+# A block is the smallest ingestion-owned schedule scope.  Sibling completion
+# scans only that block and still returns at most the caller's existing limit.
+_BLOCK_SIBLING_SCAN_LIMIT = 64
 
 # List / superlative / per-entity phrasings whose answer needs EVERY row of a note
 # schedule (rank/compare across projects, companies, loans…), not a top-K slice.
@@ -431,12 +434,14 @@ _SCHEDULE_MARKERS = (
 
 
 def needs_full_schedule(query):
-    """True when the question ranks/lists across a note schedule's per-entity rows,
-    or asks for note-only investment detail — the cases that need the full schedule
-    (pulled via note_ref, and kept whole through the evidence-pack fact caps)
-    rather than a similarity top-K."""
+    """True only when the answer genuinely ranges over a closed schedule.
+
+    Exact note-detail and two-slot comparison questions are served by structured
+    matching plus requested siblings.  A shared ``note_ref`` alone must never
+    widen retrieval to every row in that note.
+    """
     norm = _normalize_text(str(query or ""))
-    return _is_note_detail_query(query) or any(m in norm for m in _SCHEDULE_MARKERS)
+    return any(m in norm for m in _SCHEDULE_MARKERS)
 
 
 # Internal alias kept for the retrieval call sites below.
@@ -459,9 +464,321 @@ def _note_schedule_docs(collection, note_ref):
         return [], []
 
 
+def _candidate_period(meta, doc=""):
+    if isinstance(meta, dict):
+        period = str(meta.get("period", "") or "").strip()
+        if period:
+            return period
+        item_name = str(meta.get("item_name", "") or "")
+    else:
+        item_name = ""
+    return canonical_period(f"{item_name} {doc}")
+
+
+def _candidate_value_type(meta, doc=""):
+    if isinstance(meta, dict):
+        value_type = str(meta.get("value_type", "") or "").strip()
+        if value_type:
+            return value_type
+        item_name = str(meta.get("item_name", "") or "")
+    else:
+        item_name = ""
+    return canonical_value_type(f"{item_name} {doc}")
+
+
+def _candidate_period_role(meta, doc=""):
+    return fact_period_role(meta if isinstance(meta, dict) else {}, doc)
+
+
+def _candidate_period_labels(meta, doc=""):
+    return set(fact_period_labels(meta if isinstance(meta, dict) else {}, doc))
+
+
+def _coverage_legs_for_fact(slots, meta, doc=""):
+    """Compatibility wrapper for the shared retrieval/lifecycle classifier."""
+
+    return set(coverage_legs_for_fact(slots, meta, doc))
+
+
+def _needs_block_sibling_completion(slots):
+    return bool(
+        slots.period == "both"
+        or slots.period_role == "both"
+        or len(slots.period_labels) > 1
+        or len(slots.value_type) > 1
+        or (slots.coverage_template and slots.required_legs)
+    )
+
+
+def _block_sibling_docs(collection, anchor_meta):
+    """Read one parser-owned schedule block, never an entire note reference."""
+
+    meta = anchor_meta if isinstance(anchor_meta, dict) else {}
+    block_id = str(meta.get("block_id", "") or "").strip()
+    if not block_id or not callable(getattr(collection, "get", None)):
+        return [], []
+    try:
+        result = collection.get(
+            where={"block_id": block_id},
+            include=["documents", "metadatas"],
+        )
+        docs, metas = _extract_flat_docs_and_metas(result)
+    except Exception as exc:
+        logger.warning("block sibling retrieval failed block_id=%s: %s", block_id, exc)
+        return [], []
+
+    company = str(meta.get("company", "") or "").strip()
+    source = str(meta.get("source", "") or "").strip()
+    kept = []
+    for doc, sibling_meta in zip(docs, metas):
+        sibling_meta = sibling_meta if isinstance(sibling_meta, dict) else {}
+        if str(sibling_meta.get("block_id", "") or "").strip() != block_id:
+            continue
+        sibling_company = str(sibling_meta.get("company", "") or "").strip()
+        if company and sibling_company and sibling_company != company:
+            continue
+        sibling_source = str(sibling_meta.get("source", "") or "").strip()
+        if source and sibling_source and sibling_source != source:
+            continue
+        kept.append((doc, sibling_meta))
+        if len(kept) >= _BLOCK_SIBLING_SCAN_LIMIT:
+            break
+    return (
+        [doc for doc, _meta in kept],
+        [sibling_meta for _doc, sibling_meta in kept],
+    )
+
+
+def _complete_required_block_siblings(collection, docs, metas, *, slots):
+    if not docs or not _needs_block_sibling_completion(slots):
+        return docs, metas
+    anchor_index = next(
+        (
+            index
+            for index, (doc, meta) in enumerate(zip(docs, metas))
+            if str((meta or {}).get("block_id", "") or "").strip()
+            and fact_matches_required_slots(slots, meta, doc)
+        ),
+        None,
+    )
+    if anchor_index is None:
+        anchor_index = next(
+            (
+                index
+                for index, meta in enumerate(metas)
+                if str((meta or {}).get("block_id", "") or "").strip()
+            ),
+            None,
+        )
+    if anchor_index is None:
+        return docs, metas
+    sibling_docs, sibling_metas = _block_sibling_docs(
+        collection, metas[anchor_index]
+    )
+    return _merge_docs_and_metas(
+        docs,
+        metas,
+        sibling_docs,
+        sibling_metas,
+    )
+
+
+def _inject_required_siblings(ranked, docs, metas, *, slots, limit):
+    """Keep the exact logical-row sibling(s) required by typed query slots.
+
+    The operation is bounded by ``limit``: it replaces the lowest ranked tail
+    rather than widening the fact cut or loading an entire note schedule.
+    """
+
+    chosen = list(ranked[:limit])
+    if not chosen:
+        return chosen
+
+    anchor = chosen[0]
+    required = [anchor]
+    closed_leg_candidates: dict[str, set[int]] = {}
+    coverage_block_candidates: list[int] = []
+
+    if slots.period == "both":
+        anchor_key = fact_sibling_group_key(metas[anchor])
+        present_periods = {
+            _candidate_period(metas[index], docs[index])
+            for index in chosen
+            if fact_sibling_group_key(metas[index]) == anchor_key
+        }
+        for desired_period in ("cuối", "đầu"):
+            if desired_period in present_periods:
+                continue
+            sibling = next(
+                (
+                    index
+                    for index in ranked
+                    if fact_sibling_group_key(metas[index]) == anchor_key
+                    and _candidate_period(metas[index], docs[index]) == desired_period
+                ),
+                None,
+            )
+            if sibling is not None:
+                required.append(sibling)
+                present_periods.add(desired_period)
+
+    if slots.period_role == "both":
+        anchor_key = fact_sibling_group_key(metas[anchor])
+        present_roles = {
+            _candidate_period_role(metas[index], docs[index])
+            for index in chosen
+            if fact_sibling_group_key(metas[index]) == anchor_key
+        }
+        for desired_role in ("current", "previous"):
+            if desired_role in present_roles:
+                continue
+            sibling = next(
+                (
+                    index
+                    for index in ranked
+                    if fact_sibling_group_key(metas[index]) == anchor_key
+                    and _candidate_period_role(
+                        metas[index], docs[index]
+                    ) == desired_role
+                ),
+                None,
+            )
+            if sibling is not None:
+                required.append(sibling)
+                present_roles.add(desired_role)
+
+    if len(slots.period_labels) > 1:
+        anchor_key = fact_sibling_group_key(metas[anchor])
+        present_labels = set()
+        for index in chosen:
+            if fact_sibling_group_key(metas[index]) == anchor_key:
+                present_labels.update(
+                    _candidate_period_labels(metas[index], docs[index])
+                )
+        for desired_label in slots.period_labels:
+            if desired_label in present_labels:
+                continue
+            sibling = next(
+                (
+                    index
+                    for index in ranked
+                    if fact_sibling_group_key(metas[index]) == anchor_key
+                    and desired_label
+                    in _candidate_period_labels(metas[index], docs[index])
+                ),
+                None,
+            )
+            if sibling is not None:
+                required.append(sibling)
+                present_labels.update(
+                    _candidate_period_labels(
+                        metas[sibling], docs[sibling]
+                    )
+                )
+
+    if len(slots.value_type) > 1:
+        anchor_key = fact_sibling_group_key(metas[anchor], ignore_value_type=True)
+        present_types = {
+            _candidate_value_type(metas[index], docs[index])
+            for index in chosen
+            if fact_sibling_group_key(metas[index], ignore_value_type=True) == anchor_key
+        }
+        for desired_type in slots.value_type:
+            if desired_type in present_types:
+                continue
+            sibling = next(
+                (
+                    index
+                    for index in ranked
+                    if fact_sibling_group_key(
+                        metas[index], ignore_value_type=True
+                    )
+                    == anchor_key
+                    and _candidate_value_type(metas[index], docs[index]) == desired_type
+                ),
+                None,
+            )
+            if sibling is not None:
+                required.append(sibling)
+                present_types.add(desired_type)
+
+    anchor_block = str((metas[anchor] or {}).get("block_id", "") or "").strip()
+    if slots.coverage_template and slots.required_legs and anchor_block:
+        coverage_block_candidates = [
+            index
+            for index in ranked
+            if str((metas[index] or {}).get("block_id", "") or "").strip()
+            == anchor_block
+        ]
+        for desired_leg in slots.required_legs:
+            leg_candidates = [
+                index
+                for index in coverage_block_candidates
+                if desired_leg
+                in _coverage_legs_for_fact(slots, metas[index], docs[index])
+            ]
+            # Component/category legs represent a closed set: retain all rows
+            # available in this one block, while the normal result limit remains
+            # the hard upper bound.
+            if desired_leg in {"components_closed", "transaction_categories"}:
+                required.extend(leg_candidates)
+                closed_leg_candidates[desired_leg] = set(leg_candidates)
+            elif leg_candidates:
+                required.append(leg_candidates[0])
+
+    required = list(dict.fromkeys(required))
+
+    for sibling in required[1:]:
+        if sibling in chosen:
+            continue
+        if len(chosen) < limit:
+            chosen.append(sibling)
+            continue
+        replace_at = next(
+            (
+                index
+                for index in range(len(chosen) - 1, 0, -1)
+                if chosen[index] not in required
+            ),
+            None,
+        )
+        if replace_at is not None:
+            chosen[replace_at] = sibling
+
+    required_tail = [index for index in required[1:] if index in chosen]
+    ordered = [anchor, *required_tail, *[
+        index for index in chosen if index != anchor and index not in required_tail
+    ]]
+
+    # A component/category leg means the complete set from one parser-owned
+    # block, not merely one convenient component.  Mark it complete only when
+    # the bounded block scan itself was not truncated and every candidate from
+    # that closed set survived the final result limit.  Requirement lifecycle
+    # code consumes this marker; absence remains fail-closed.
+    complete_closed_legs = [
+        leg
+        for leg, candidates in closed_leg_candidates.items()
+        if (
+            candidates
+            and len(coverage_block_candidates) < _BLOCK_SIBLING_SCAN_LIMIT
+            and candidates.issubset(set(ordered))
+        )
+    ]
+    if complete_closed_legs:
+        for index in ordered:
+            if not isinstance(metas[index], dict):
+                metas[index] = {}
+            metas[index]["coverage_complete_legs"] = complete_closed_legs
+
+    return ordered
+
+
 def _rerank_matches(query, docs, metas, limit=5, intent=None):
     docs = list(docs or [])
-    metas = list(metas or [])
+    metas = [
+        dict(meta) if isinstance(meta, dict) else {}
+        for meta in (metas or [])
+    ]
     if len(docs) != len(metas):
         raise ValueError(
             f"retrieval documents/metadatas length mismatch: {len(docs)} != {len(metas)}"
@@ -499,6 +816,19 @@ def _rerank_matches(query, docs, metas, limit=5, intent=None):
 
     ranked = sorted(range(n), key=lambda i: (-scores[i], i))
 
+    # Structured candidates satisfying every explicit slot take precedence over
+    # fuzzy near-neighbours.  If none is complete, retain the normal score order
+    # so older/sparse facts still benefit from the retrieval fallback.
+    query_slots = parse_query_slots(intent or query)
+    exact_slot_matches = [
+        index
+        for index in ranked
+        if fact_matches_required_slots(query_slots, metas[index], docs[index])
+    ]
+    if exact_slot_matches:
+        exact_set = set(exact_slot_matches)
+        ranked = exact_slot_matches + [index for index in ranked if index not in exact_set]
+
     # Union recall guard: when the reranker ran, force the heuristic's top picks
     # into the final cut even if the reranker demoted them, taking the reserved
     # slots from the lowest blended docs. Protects exact-figure recall.
@@ -511,22 +841,416 @@ def _rerank_matches(query, docs, metas, limit=5, intent=None):
             forced = kept + [i for i in missing if i not in kept]
             ranked = forced + [i for i in ranked if i not in forced]
 
-    chosen = ranked[:limit]
-    return [docs[i] for i in chosen], [metas[i] for i in chosen]
+    chosen = _inject_required_siblings(
+        ranked,
+        docs,
+        metas,
+        slots=query_slots,
+        limit=limit,
+    )
+    chosen_metas = []
+    for index in chosen:
+        meta = dict(metas[index])
+        # Persist the deterministic production score.  The optional LLM blend
+        # may affect ordering, but it is not a calibrated retrieval score and
+        # therefore must not be exposed as one.
+        meta["rerank_score"] = float(heuristic[index])
+        chosen_metas.append(meta)
+    return [docs[i] for i in chosen], chosen_metas
 
 
-def get_related_info(query: str, table: str, collection, strict_table: bool = False, limit: int = 5, cross_table: bool = True, intent: str = ""):
+def _stamp_score_provenance(
+    metas,
+    *,
+    score_query: str,
+    score_intent: str,
+    retrieval_origin: str,
+):
+    """Bind each persisted rerank score to the query and retrieval pass used."""
+
+    stamped = []
+    for raw_meta in metas or []:
+        meta = dict(raw_meta) if isinstance(raw_meta, dict) else {}
+        if meta.get("rerank_score") not in ("", None):
+            meta["score_query"] = str(score_query or "").strip()
+            meta["score_intent"] = str(score_intent or "").strip()
+            meta["retrieval_origin"] = str(retrieval_origin or "").strip()
+        stamped.append(meta)
+    return stamped
+
+
+def _is_toc_row(doc: str) -> bool:
+    """A mục lục (table-of-contents) row carries only a section name + page range
+    (e.g. ``NỘI DUNG: BÁO CÁO KIỂM TOÁN ĐỘC LẬP | TRANG: 4 – 5``): it holds no
+    fact, yet because its text repeats section headings it outranks the real
+    front-section fact rows for heading-like queries ("số báo cáo kiểm toán"),
+    starving the answer-bearing row of a retrieval slot. Both markers are
+    required so related-party note columns ("Nội dung giao dịch", no ``TRANG:``)
+    are not affected."""
+    text = str(doc or "")
+    return "NỘI DUNG:" in text and "TRANG:" in text
+
+
+def _drop_toc_rows(docs: list[str], metas: list[dict]) -> tuple[list[str], list[dict]]:
+    kept = [(doc, meta) for doc, meta in zip(docs, metas) if not _is_toc_row(doc)]
+    if not kept or len(kept) == len(docs):
+        return docs, metas
+    return [doc for doc, _ in kept], [meta for _, meta in kept]
+
+
+def _structured_slot_filters(slots, requested_table):
+    """Build bounded exact metadata filters; never issue a heading-only scan."""
+
+    periods = []
+    if slots.period in {"cuối", "đầu"}:
+        periods = [slots.period]
+    elif slots.period == "both":
+        periods = ["cuối", "đầu"]
+
+    period_roles = []
+    if slots.period_role in {"current", "previous"}:
+        period_roles = [slots.period_role]
+    elif slots.period_role == "both":
+        period_roles = ["current", "previous"]
+
+    value_types = list(slots.value_type)
+    aggregation = (
+        slots.aggregation
+        if slots.aggregation in {"total", "component"}
+        else ""
+    )
+    metric = str(getattr(slots, "metric", "") or "").strip()
+    section_key = ""
+    if requested_table == TABLE_BS:
+        section_key = str(getattr(slots, "section_key", "") or "").strip()
+    semantic_filters = {
+        field: str(getattr(slots, field, "") or "").strip()
+        for field in (
+            "transaction_type",
+            "movement_type",
+        )
+        if str(getattr(slots, field, "") or "").strip()
+    }
+    policy_topic = str(getattr(slots, "policy_topic", "") or "").strip()
+    policy_topics = [policy_topic] if policy_topic else [""]
+    if policy_topic in {
+        "depreciation_period",
+        "depreciation_method",
+        "amortization_period",
+        "amortization_method",
+    }:
+        # "Không khấu hao/phân bổ" is a valid terminal answer to a method or
+        # useful-life question and must survive the exact payload prefilter.
+        policy_topics.append("non_depreciation")
+    if (
+        not periods
+        and not period_roles
+        and not value_types
+        and not aggregation
+        and not section_key
+        and not semantic_filters
+        and not policy_topic
+    ):
+        return []
+    # Metric/entity is checked exactly in Python after Qdrant applies the typed
+    # payload filter. A canonical semantic enum is independently selective;
+    # without either, a period-only/aggregation-only scan would still be broad.
+    if (
+        not slots.metric
+        and not slots.entity
+        and not semantic_filters
+        and not policy_topic
+    ):
+        return []
+
+    period_values = periods or [""]
+    period_role_values = period_roles or [""]
+    value_type_values = value_types or [""]
+    filters = []
+    for period, period_role, value_type, candidate_policy_topic in product(
+        period_values,
+        period_role_values,
+        value_type_values,
+        policy_topics,
+    ):
+        where = {"heading": requested_table}
+        if period:
+            where["period"] = period
+        if period_role:
+            where["period_role"] = period_role
+        if value_type:
+            where["value_type"] = value_type
+        if aggregation and not section_key:
+            where["aggregation_level"] = aggregation
+        if section_key:
+            where["section_key"] = section_key
+        if candidate_policy_topic:
+            where["policy_topic"] = candidate_policy_topic
+        where.update(semantic_filters)
+        filters.append(where)
+    return filters
+
+
+def _metadata_matches_where(meta, where):
+    if not isinstance(meta, dict):
+        return False
+    return all(str(meta.get(key, "") or "") == str(value) for key, value in where.items())
+
+
+def _structured_slot_candidates(collection, slots, requested_table):
+    filters = _structured_slot_filters(slots, requested_table)
+    if not filters or not callable(getattr(collection, "get", None)):
+        return [], []
+
+    docs = []
+    metas = []
+    for where in filters:
+        result = collection.get(
+            where=where,
+            include=["documents", "metadatas"],
+        )
+        candidate_docs, candidate_metas = _extract_flat_docs_and_metas(result)
+        for doc, meta in zip(candidate_docs, candidate_metas):
+            if not _metadata_matches_where(meta, where):
+                continue
+            if not fact_matches_required_slots(slots, meta, doc):
+                continue
+            docs, metas = _merge_docs_and_metas(docs, metas, [doc], [meta])
+            if len(docs) >= _STRUCTURED_SLOT_SCAN_LIMIT:
+                return docs, metas
+    return docs, metas
+
+
+_GENERIC_STRUCTURED_METRICS = {
+    "doanh thu",
+    "chi phí",
+    "lợi nhuận",
+    "tài sản",
+    "nợ",
+    "vay",
+    "tiền",
+    "thuế",
+    "dự phòng",
+}
+
+
+def _structured_metric_discriminant_satisfied(slots, metas):
+    """Reject a structured early-return when its metric is only a broad prefix.
+
+    Metadata probes are recall shortcuts, not proof that the user's complete
+    semantic target was found.  A generic metric such as ``doanh thu`` may
+    select dozens of schedules; unless another typed dimension disambiguates
+    it, require at least one fact whose canonical metric is exactly that label
+    and otherwise continue into dense/lexical retrieval.
+    """
+
+    metric = _normalize_text(getattr(slots, "metric", ""))
+    if not metric or metric not in _GENERIC_STRUCTURED_METRICS:
+        return True
+    has_independent_discriminant = bool(
+        getattr(slots, "entity", "")
+        or getattr(slots, "scope_label", "")
+        or getattr(slots, "counterparty", "")
+        or getattr(slots, "transaction_type", "")
+        or getattr(slots, "movement_type", "")
+        or getattr(slots, "geography", "")
+        or getattr(slots, "policy_topic", "")
+        or getattr(slots, "value_type", ())
+    )
+    if has_independent_discriminant:
+        return True
+    for meta in metas:
+        meta = meta if isinstance(meta, dict) else {}
+        actual = _normalize_text(
+            meta.get("metric_label", "")
+            or str(meta.get("row_label", "") or "").split("|", 1)[0]
+            or str(meta.get("item_name", "") or "").split("|", 1)[0]
+        )
+        if actual == metric:
+            return True
+    return False
+
+
+def _structured_slots_satisfied(slots, docs, metas):
+    if not docs:
+        return False
+    # A full ratio/share question spans two independently routed semantic
+    # operands.  A single-table structured probe is not operand-aware, so it
+    # must never return early after finding only the metric selected as the
+    # query's headline slot.  The evidence plan executes each explicit leg
+    # separately; direct callers fall through to the dense/lexical path.
+    if slots.operation in {"ratio", "share"} and getattr(slots, "operands", ()):
+        return False
+    required_periods = {"cuối", "đầu"} if slots.period == "both" else set()
+    required_period_roles = (
+        {"current", "previous"}
+        if slots.period_role == "both"
+        else set()
+    )
+    required_period_labels = (
+        set(slots.period_labels)
+        if len(slots.period_labels) > 1
+        else set()
+    )
+    required_types = set(slots.value_type) if len(slots.value_type) > 1 else set()
+    if not _structured_metric_discriminant_satisfied(slots, metas):
+        return False
+    if (
+        not required_periods
+        and not required_period_roles
+        and not required_period_labels
+        and not required_types
+    ):
+        return True
+
+    groups = {}
+    ignore_value_type = bool(required_types)
+    for doc, meta in zip(docs, metas):
+        key = fact_sibling_group_key(meta, ignore_value_type=ignore_value_type)
+        group = groups.setdefault(
+            key,
+            {
+                "periods": set(),
+                "period_roles": set(),
+                "period_labels": set(),
+                "types": set(),
+                "pairs": set(),
+            },
+        )
+        period = _candidate_period(meta, doc)
+        period_role = _candidate_period_role(meta, doc)
+        period_labels = _candidate_period_labels(meta, doc)
+        value_type = _candidate_value_type(meta, doc)
+        if period:
+            group["periods"].add(period)
+        if period_role:
+            group["period_roles"].add(period_role)
+        group["period_labels"].update(period_labels)
+        if value_type:
+            group["types"].add(value_type)
+        if period or value_type:
+            group["pairs"].add((period, value_type))
+
+    for group in groups.values():
+        if not required_periods.issubset(group["periods"]):
+            continue
+        if not required_period_roles.issubset(group["period_roles"]):
+            continue
+        if not required_period_labels.issubset(group["period_labels"]):
+            continue
+        if not required_types.issubset(group["types"]):
+            continue
+        if required_periods and required_types:
+            expected = {
+                (period, value_type)
+                for period in required_periods
+                for value_type in required_types
+            }
+            if not expected.issubset(group["pairs"]):
+                continue
+        return True
+    return False
+
+
+def get_related_info(
+    query: str,
+    table: str,
+    collection,
+    strict_table: bool = False,
+    limit: int = 5,
+    cross_table: bool = True,
+    intent: str = "",
+    structured_slots: bool = True,
+):
     raw_query = str(query or "").strip()
     canonical_query = normalize_keyword_synonyms(raw_query) or raw_query
     raw_intent = str(intent or raw_query).strip()
     canonical_intent = normalize_keyword_synonyms(raw_intent) or raw_intent
     requested_table = normalize_table_heading(table)
+    index_generation = _collection_generation(collection)
     # Value-lookup questions have many near-duplicate rows (same line item across
     # periods/value-types); widen the final cut so the right slot is not dropped.
     # Detect on the original question (`intent`) since the keyworder strips
     # "bao nhiêu/giá trị" from the keyword `query`.
     if _is_value_lookup_query(canonical_intent) and limit < _VALUE_LOOKUP_LIMIT:
         limit = _VALUE_LOOKUP_LIMIT
+    # Typed semantic dimensions normally come from the user's/operand's surface
+    # wording. Lexical synonym expansion can introduce words with a different
+    # typed meaning (for example expanding ``doanh thu thuần`` to the primary
+    # statement label adds ``bán hàng`` and fabricates transaction_type=sale).
+    # A broad analytical intent, however, may name no typed metric at all while
+    # the evidence route supplies a deterministic metric + period contract. In
+    # that case bind structured retrieval to the raw scoped query; otherwise
+    # every core profitability pair falls through to fallible dense top-k.
+    intent_slots = parse_query_slots(raw_intent or raw_query)
+    scoped_query_slots = parse_query_slots(raw_query)
+    query_slots = (
+        scoped_query_slots
+        if scoped_query_slots.metric and not intent_slots.metric
+        else intent_slots
+    )
+
+    structured_docs = []
+    structured_metas = []
+    if structured_slots:
+        try:
+            structured_docs, structured_metas = _structured_slot_candidates(
+                collection,
+                query_slots,
+                requested_table,
+            )
+        except Exception as exc:
+            logger.warning(
+                "structured slot retrieval failed table=%s query=%r: %s",
+                requested_table,
+                canonical_query,
+                exc,
+            )
+        structured_docs, structured_metas = _drop_toc_rows(
+            structured_docs,
+            structured_metas,
+        )
+    if structured_slots and _structured_slots_satisfied(
+        query_slots,
+        structured_docs,
+        structured_metas,
+    ):
+        structured_docs, structured_metas = _rerank_matches(
+            canonical_query,
+            structured_docs,
+            structured_metas,
+            limit=limit,
+            intent=canonical_intent,
+        )
+        structured_docs, structured_metas = _complete_required_block_siblings(
+            collection,
+            structured_docs,
+            structured_metas,
+            slots=query_slots,
+        )
+        structured_docs, structured_metas = _rerank_matches(
+            canonical_query,
+            structured_docs,
+            structured_metas,
+            limit=limit,
+            intent=canonical_intent,
+        )
+        structured_metas = _stamp_score_provenance(
+            structured_metas,
+            score_query=canonical_query,
+            score_intent=canonical_intent,
+            retrieval_origin="structured_slots",
+        )
+        return {
+            "context": "\n".join(structured_docs),
+            "source": _join_sources(structured_metas),
+            "documents": structured_docs,
+            "metadatas": structured_metas,
+            "canonical_query": canonical_query,
+            "retrieval_mode": "structured_slots",
+            "index_generation": index_generation,
+        }
+
     primary_n_results = 100 if strict_table else 50
     results = collection.query(
         query_embeddings=[embed_query_text(canonical_query)],
@@ -535,6 +1259,12 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
     )
 
     docs, metas = _extract_docs_and_metas(results)
+    docs, metas = _merge_docs_and_metas(
+        structured_docs,
+        structured_metas,
+        docs,
+        metas,
+    )
     # Strict scope means no cross-table fallback, not "load the whole table".
     # Dense + lexical candidates remain bounded; exact note_ref schedules are
     # expanded separately below when the query explicitly requires a list.
@@ -572,6 +1302,10 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
             canonical_query,
             exc,
         )
+
+    # Mục lục rows are navigation noise that outranks real front-section facts;
+    # drop them from the pool before ranking so the answer-bearing row survives.
+    docs, metas = _drop_toc_rows(docs, metas)
 
     # note_ref linkage: on list / superlative / per-entity / note-detail questions,
     # pull the FULL note schedule referenced by any candidate (a primary line's
@@ -616,6 +1350,25 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
         limit=effective_limit,
         intent=canonical_intent,
     )
+    docs, metas = _complete_required_block_siblings(
+        collection,
+        docs,
+        metas,
+        slots=query_slots,
+    )
+    docs, metas = _rerank_matches(
+        canonical_query,
+        docs,
+        metas,
+        limit=effective_limit,
+        intent=canonical_intent,
+    )
+    metas = _stamp_score_provenance(
+        metas,
+        score_query=canonical_query,
+        score_intent=canonical_intent,
+        retrieval_origin="hybrid",
+    )
 
     context = "\n".join(docs)
     return {
@@ -624,6 +1377,7 @@ def get_related_info(query: str, table: str, collection, strict_table: bool = Fa
         "documents": docs,
         "metadatas": metas,
         "canonical_query": canonical_query,
+        "index_generation": index_generation,
     }
 
 

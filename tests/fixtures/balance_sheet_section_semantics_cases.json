@@ -1,0 +1,47 @@
+[
+  {
+    "name": "vnm_contaminated_continuation_header",
+    "markdown": "# BÁO CÁO TÌNH HÌNH TÀI CHÍNH\n\n### TÀI SẢN\n\n| **Tài sản dài hạn** | Mã số<br/>**Tài sản dài hạn** | 31/12/2025VND<br/>**Tài sản dài hạn** | 1/1/2025VND<br/>**Tài sản dài hạn** |\n| --- | --- | ---: | ---: |\n| **(200 = 210 + 220)** | 200 | 60 | 55 |\n| Tài sản ngắn hạn khác | 150 | 5 | 4 |\n| **TỔNG TÀI SẢN (270 = 100 + 200)** | 270 | 100 | 90 |\n",
+    "expected": {
+      "200": ["ts_dai_han", "Tổng tài sản dài hạn"],
+      "270": ["tong_tai_san", "Tổng tài sản"]
+    },
+    "component_codes": ["150"],
+    "clean_columns": ["31/12/2025 VND", "1/1/2025 VND"]
+  },
+  {
+    "name": "apec_standard_asset_labels",
+    "markdown": "# BẢNG CÂN ĐỐI KẾ TOÁN\n\n### TÀI SẢN\n\n| Chỉ tiêu | Mã số | 31/12/2024 | 1/1/2024 |\n| --- | --- | ---: | ---: |\n| A - TÀI SẢN NGẮN HẠN | 100 | 40 | 35 |\n| B - TÀI SẢN DÀI HẠN | 200 | 60 | 55 |\n| TỔNG CỘNG TÀI SẢN | 270 | 100 | 90 |\n",
+    "expected": {
+      "100": ["ts_ngan_han", "Tổng tài sản ngắn hạn"],
+      "200": ["ts_dai_han", "Tổng tài sản dài hạn"],
+      "270": ["tong_tai_san", "Tổng tài sản"]
+    },
+    "component_codes": [],
+    "clean_columns": ["31/12/2024", "1/1/2024"]
+  },
+  {
+    "name": "ger_code_first_liability_equity_labels",
+    "markdown": "# BÁO CÁO TÌNH HÌNH TÀI CHÍNH\n\n### NGUỒN VỐN\n\n| Mã số | Chỉ tiêu | 31/12/2025 | 1/1/2025 |\n| --- | --- | ---: | ---: |\n| 300 | C. NỢ PHẢI TRẢ | 30 | 28 |\n| 310 | I. Nợ ngắn hạn | 20 | 19 |\n| 330 | II. Nợ dài hạn | 10 | 9 |\n| 400 | D. VỐN CHỦ SỞ HỮU | 70 | 62 |\n| 410 | Vốn chủ sở hữu | 70 | 62 |\n| 440 | TỔNG CỘNG NGUỒN VỐN | 100 | 90 |\n",
+    "expected": {
+      "300": ["no_phai_tra", "Tổng nợ phải trả"],
+      "310": ["no_ngan_han", "Tổng nợ ngắn hạn"],
+      "330": ["no_dai_han", "Tổng nợ dài hạn"],
+      "400": ["von_chu", "Tổng vốn chủ sở hữu"],
+      "440": ["nguon_von", "Tổng nguồn vốn"]
+    },
+    "component_codes": ["410"],
+    "clean_columns": ["31/12/2025", "1/1/2025"]
+  },
+  {
+    "name": "fallback_equity_when_code_400_is_absent",
+    "markdown": "# BẢNG CÂN ĐỐI KẾ TOÁN\n\n### NGUỒN VỐN\n\n| Chỉ tiêu | Mã số | 31/12/2025 | 1/1/2025 |\n| --- | --- | ---: | ---: |\n| Vốn chủ sở hữu | 410 | 70 | 62 |\n| TỔNG CỘNG NGUỒN VỐN | 440 | 70 | 62 |\n",
+    "expected": {
+      "410": ["von_chu", "Tổng vốn chủ sở hữu"],
+      "440": ["nguon_von", "Tổng nguồn vốn"]
+    },
+    "fallback_codes": ["410"],
+    "component_codes": [],
+    "clean_columns": ["31/12/2025", "1/1/2025"]
+  }
+]

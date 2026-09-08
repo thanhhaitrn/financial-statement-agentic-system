@@ -28,7 +28,6 @@ import hashlib
 import json
 import os
 import re
-import subprocess
 from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Iterable
@@ -36,6 +35,7 @@ from typing import Any, Iterable
 from evaluation.contracts import (
     REPORT_SCHEMA_VERSION,
     atomic_write_json as _atomic_write_json,
+    git_worktree_provenance,
     sha256_file,
     stable_json_fingerprint,
 )
@@ -53,9 +53,11 @@ from evaluation.financial_text import (
 )
 
 
+from evaluation.run_spec import APEC_Q181_250
+
 FACT_FIELDS = ("entity", "metric", "period", "value", "unit", "reference")
 FACTUAL_RECALL_THRESHOLD = 0.95
-DEFAULT_FACTS_CONTRACT = "tests/fixtures/apec_q211_250_factual_facts.json"
+DEFAULT_FACTS_CONTRACT = APEC_Q181_250.facts_contract
 OFFICIAL_CONTRACT_MARKER = "_official_factual_contract"
 ANALYTICAL_MARKERS = (
     "đánh giá",
@@ -82,6 +84,8 @@ _LABEL_RE = re.compile(
     r"(?im)^(?P<label>Entity|Metric|Period|Value|Unit|Reference|Table|Subheading|Item|"
     r"Note ref|Note number|Note title)\s*:\s*"
 )
+_CUMULATIVE_PERIOD_RE = re.compile(r"\b(?:luy ke|tu dau nam)\b")
+_YEAR_TOKEN_RE = re.compile(r"\b(20\d{2})\b")
 
 
 def _parse_labeled_context(text: str) -> dict[str, str]:
@@ -151,6 +155,9 @@ def facts_from_mappings(facts: Iterable[Any]) -> list[dict[str, Any]]:
                 "subheading",
                 "period",
                 "time_hint",
+                "period_label",
+                "column_label",
+                "period_role",
                 "value",
                 "unit",
                 "reference",
@@ -161,7 +168,7 @@ def facts_from_mappings(facts: Iterable[Any]) -> list[dict[str, Any]]:
         )
         normalized["_raw"] = normalize_text(raw)
         normalized["_raw_values"] = sorted(_values_in_text(raw))
-        normalized["_raw_periods"] = sorted(_periods_in_text(raw))
+        normalized["_raw_periods"] = sorted(_period_candidates_from_mapping(fact, raw))
         normalized["_raw_unit"] = _infer_unit(raw)
         normalized["_raw_references"] = sorted(_references_in_text(raw))
         raw_values = normalized.get("_raw_values", []) or []
@@ -203,10 +210,72 @@ def _periods_in_text(text: Any) -> set[str]:
     return {period for period in periods if period}
 
 
+def _period_candidates_from_mapping(
+    fact: dict[str, Any],
+    raw: Any,
+) -> set[str]:
+    """Return all reviewed period interpretations carried by a typed fact.
+
+    ``time_hint`` is intentionally retained as one candidate, rather than the
+    only period.  In quarterly statement tables it is commonly the lossy
+    positional value ``cuối``/``đầu`` even when the typed column label says
+    ``Lũy kế ... năm 2024/2023``.  A bare ``period_role=current`` is not enough
+    to infer ``current_year`` because balance-sheet facts use the same role for
+    point-in-time ending balances.
+    """
+
+    periods = set(_periods_in_text(raw))
+    for field in ("period", "time_hint", "period_label", "column_label"):
+        value = fact.get(field)
+        if value in ("", None):
+            continue
+        normalized = normalize_period(value)
+        if normalized:
+            periods.add(normalized)
+        periods.update(_periods_in_text(value))
+
+    label = normalize_text(
+        " ".join(
+            str(fact.get(field, "") or "")
+            for field in ("item_name", "period_label", "column_label")
+        )
+    )
+    if not _CUMULATIVE_PERIOD_RE.search(label):
+        return {period for period in periods if period}
+
+    fiscal_year_match = _YEAR_TOKEN_RE.search(
+        normalize_text(fact.get("fiscal_year", ""))
+    )
+    if fiscal_year_match is None:
+        return {period for period in periods if period}
+    fiscal_year = int(fiscal_year_match.group(1))
+    label_years = {int(year) for year in _YEAR_TOKEN_RE.findall(label)}
+    if fiscal_year in label_years:
+        periods.add("current_year")
+    if fiscal_year - 1 in label_years:
+        periods.add("prior_year")
+    return {period for period in periods if period}
+
+
 def _references_in_text(text: Any) -> set[str]:
     plain = normalize_text(text)
     refs = re.findall(r"\b(?:thuyet minh|note|ref)\s*(?:so)?\s*([a-z]?\s*\d+[a-z]?)\b", plain)
     return {normalize_reference(ref) for ref in refs}
+
+
+def _normalized_reference_aliases(fact: dict[str, Any]) -> set[str]:
+    """Normalize only explicitly reviewed aliases; malformed input adds none."""
+
+    aliases = fact.get("reference_aliases", [])
+    if not isinstance(aliases, list):
+        return set()
+    return {
+        normalized
+        for alias in aliases
+        if isinstance(alias, str)
+        for normalized in (normalize_reference(alias),)
+        if normalized
+    }
 
 
 def _text_field_matches(expected: str, actual: str, raw: str) -> bool:
@@ -245,10 +314,14 @@ def fact_matches(expected: dict[str, Any], actual: dict[str, Any]) -> bool:
         if expected_unit not in actual_units:
             return False
 
-    expected_reference = expected_fact["reference"]
-    if expected_reference:
+    expected_references = _normalized_reference_aliases(expected)
+    if expected_fact["reference"]:
+        expected_references.add(expected_fact["reference"])
+    if expected_references:
         actual_references = set(actual.get("_raw_references", []) or [])
-        if actual_fact["reference"] != expected_reference and expected_reference not in actual_references:
+        if actual_fact["reference"]:
+            actual_references.add(actual_fact["reference"])
+        if expected_references.isdisjoint(actual_references):
             return False
     return any(expected_fact[field] for field in FACT_FIELDS)
 
@@ -256,6 +329,30 @@ def fact_matches(expected: dict[str, Any], actual: dict[str, Any]) -> bool:
 def is_analytical(question: str) -> bool:
     question_text = str(question or "").casefold()
     return any(marker in question_text for marker in ANALYTICAL_MARKERS)
+
+
+def retrieval_queries_for_question(question: str) -> list[str]:
+    """Return the full query plus parser-declared calculation operand legs.
+
+    Production retrieves explicit numerator/denominator legs separately before
+    binding them.  The deterministic recall gate must exercise that same
+    retrieval shape instead of under-testing ratios with only the unsplit
+    question.  The full query remains first to retain shared-scope context, and
+    no query is derived from the gold contract.
+    """
+
+    from tools.query_routing import parse_query_slots
+
+    raw = str(question or "").strip()
+    if not raw:
+        return []
+    queries = [raw]
+    slots = parse_query_slots(raw)
+    for operand in getattr(slots, "operands", ()) or ():
+        candidate = str(getattr(operand, "query", "") or "").strip()
+        if candidate and candidate not in queries:
+            queries.append(candidate)
+    return queries
 
 
 def _explicit_expected_facts(record: dict[str, Any]) -> list[dict[str, Any]]:
@@ -378,7 +475,36 @@ def load_factual_contract_records(
                     f"contract record {record_id} fact {fact_index} must define all fields: "
                     f"{', '.join(FACT_FIELDS)}"
                 )
-            reviewed_facts.append(dict(fact))
+            reviewed_fact = dict(fact)
+            if "reference_aliases" in reviewed_fact:
+                aliases = reviewed_fact["reference_aliases"]
+                if (
+                    not isinstance(aliases, list)
+                    or not aliases
+                    or any(
+                        not isinstance(alias, str)
+                        or not normalize_reference(alias)
+                        for alias in aliases
+                    )
+                ):
+                    raise ValueError(
+                        f"contract record {record_id} fact {fact_index} "
+                        "reference_aliases must be a non-empty list of references"
+                    )
+                normalized_aliases = [normalize_reference(alias) for alias in aliases]
+                canonical_reference = normalize_reference(reviewed_fact["reference"])
+                if (
+                    len(set(normalized_aliases)) != len(normalized_aliases)
+                    or canonical_reference in normalized_aliases
+                ):
+                    raise ValueError(
+                        f"contract record {record_id} fact {fact_index} "
+                        "reference_aliases must be unique and distinct from reference"
+                    )
+                reviewed_fact["reference_aliases"] = [
+                    alias.strip() for alias in aliases
+                ]
+            reviewed_facts.append(reviewed_fact)
 
         record = dict(raw_record)
         record.update(
@@ -595,7 +721,9 @@ def attach_expected_facts_from_seed(
     report_path: str | Path,
 ) -> list[dict[str, Any]]:
     metadata = report.get("metadata", {}) if isinstance(report, dict) else {}
-    seed_file = str(metadata.get("seed_file", "") or "dau_tu_APEC_ragas_seed.json")
+    # The report names its own seed; the profile is only the last resort so a
+    # report from another dataset is never silently scored against APEC seeds.
+    seed_file = str(metadata.get("seed_file", "") or APEC_Q181_250.seed_file)
     seed_path = Path(seed_file)
     if not seed_path.is_absolute():
         repository_candidate = Path(__file__).resolve().parent / seed_path
@@ -686,6 +814,9 @@ def score_factual_record(
             None,
         )
         normalized_expected = normalize_fact(expected_fact)
+        reference_aliases = sorted(_normalized_reference_aliases(expected_fact))
+        if reference_aliases:
+            normalized_expected["reference_aliases"] = reference_aliases
         if match_index is None:
             missing.append(normalized_expected)
         else:
@@ -760,87 +891,15 @@ def atomic_write_json(payload: dict[str, Any], output_path: str | Path) -> Path:
 
 
 def facts_fingerprint(facts: Iterable[dict[str, Any]]) -> str:
-    normalized = [normalize_fact(fact) for fact in facts]
+    normalized = []
+    for fact in facts:
+        item = normalize_fact(fact)
+        reference_aliases = sorted(_normalized_reference_aliases(fact))
+        if reference_aliases:
+            item["reference_aliases"] = reference_aliases
+        normalized.append(item)
     encoded = json.dumps(normalized, ensure_ascii=False, sort_keys=True, separators=(",", ":")).encode()
     return hashlib.sha256(encoded).hexdigest()
-
-
-def git_worktree_provenance(repository: str | Path | None = None) -> dict[str, Any]:
-    """Fingerprint HEAD plus tracked and untracked worktree content.
-
-    ``git_revision`` alone is insufficient when a benchmark is run before its
-    code is committed.  This hash never serializes diff contents into the
-    report; it records only deterministic digests.
-    """
-
-    root = Path(repository or Path(__file__).resolve().parent).resolve()
-
-    def run_git(*arguments: str) -> bytes:
-        return subprocess.run(
-            ["git", *arguments],
-            cwd=root,
-            check=True,
-            capture_output=True,
-            timeout=30,
-        ).stdout
-
-    try:
-        revision = run_git("rev-parse", "HEAD").decode("utf-8", errors="replace").strip()
-        status = run_git("status", "--porcelain=v1", "-z", "--untracked-files=all")
-        tracked_diff = run_git("diff", "--binary", "HEAD", "--", ".")
-        untracked_output = run_git("ls-files", "--others", "--exclude-standard", "-z")
-    except (OSError, subprocess.SubprocessError) as exc:
-        return {
-            "worktree_dirty": None,
-            "git_revision": "",
-            "worktree_diff_sha256": None,
-            "code_sha256": None,
-            "untracked_files_n": None,
-            "error": f"{type(exc).__name__}: {exc}",
-        }
-
-    untracked_paths = sorted(
-        os.fsdecode(raw_path)
-        for raw_path in untracked_output.split(b"\0")
-        if raw_path
-    )
-    diff_digest = hashlib.sha256()
-    diff_digest.update(b"agentfinx-worktree-diff-v1\0")
-    diff_digest.update(tracked_diff)
-    for relative_name in untracked_paths:
-        diff_digest.update(b"\0untracked\0")
-        diff_digest.update(relative_name.encode("utf-8", errors="surrogateescape"))
-        candidate = root / relative_name
-        try:
-            if candidate.is_symlink():
-                diff_digest.update(b"\0symlink\0")
-                diff_digest.update(os.readlink(candidate).encode("utf-8", errors="surrogateescape"))
-            elif candidate.is_file():
-                diff_digest.update(b"\0file\0")
-                with candidate.open("rb") as handle:
-                    for chunk in iter(lambda: handle.read(1024 * 1024), b""):
-                        diff_digest.update(chunk)
-            else:
-                diff_digest.update(b"\0missing-or-non-file\0")
-        except OSError as exc:
-            diff_digest.update(f"\0read-error:{type(exc).__name__}\0".encode("ascii"))
-
-    worktree_diff_sha256 = diff_digest.hexdigest()
-    code_sha256 = stable_json_fingerprint(
-        {
-            "scheme": "git-head-plus-worktree-diff-v1",
-            "git_revision": revision,
-            "worktree_diff_sha256": worktree_diff_sha256,
-        }
-    )
-    return {
-        "worktree_dirty": bool(status),
-        "git_revision": revision,
-        "worktree_diff_sha256": worktree_diff_sha256,
-        "code_sha256": code_sha256,
-        "untracked_files_n": len(untracked_paths),
-        "error": "",
-    }
 
 
 def parse_args(argv=None):
@@ -853,7 +912,7 @@ def parse_args(argv=None):
             "it cannot add identities or expected facts to the official gate."
         ),
     )
-    parser.add_argument("--dataset-id", default="apec")
+    parser.add_argument("--dataset-id", default=APEC_Q181_250.dataset_id)
     parser.add_argument(
         "--facts-contract",
         default=DEFAULT_FACTS_CONTRACT,
@@ -896,7 +955,7 @@ def main(argv=None) -> int:
     from test import ensure_built
     from config.allowed_keywords import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE
     import graph.evidence as graph_evidence
-    from tools.evidence import result_to_facts
+    from tools.evidence import dedupe_facts, result_to_facts
     from tools.tools import get_related_info
 
     dataset = get_dataset(args.dataset_id)
@@ -912,26 +971,34 @@ def main(argv=None) -> int:
 
         state = {"user_query": question}
         surviving_facts = []
-        for table in tables:
-            facts_limit = graph_evidence._facts_limit_for_table(state, {}, table)
-            retrieval_limit = (
-                max(graph_evidence.NOTE_REF_FACTS_SCAN_LIMIT, facts_limit)
-                if table == TABLE_NOTE
-                else facts_limit
-            )
-            raw_result = get_related_info(
-                query=question,
-                table=table,
-                collection=collection,
-                strict_table=(table == TABLE_NOTE),
-                limit=retrieval_limit,
-                intent=question,
-            )
-            facts = result_to_facts(raw_result, table=table, query=question, limit=retrieval_limit)
-            facts = graph_evidence._limit_evidence_facts_for_table(
-                table, facts, state=state, worker_plan={}
-            )
-            surviving_facts.extend(facts)
+        retrieval_queries = retrieval_queries_for_question(question)
+        for retrieval_query in retrieval_queries:
+            for table in tables:
+                facts_limit = graph_evidence._facts_limit_for_table(state, {}, table)
+                retrieval_limit = (
+                    max(graph_evidence.NOTE_REF_FACTS_SCAN_LIMIT, facts_limit)
+                    if table == TABLE_NOTE
+                    else facts_limit
+                )
+                raw_result = get_related_info(
+                    query=retrieval_query,
+                    table=table,
+                    collection=collection,
+                    strict_table=(table == TABLE_NOTE),
+                    limit=retrieval_limit,
+                    intent=retrieval_query,
+                )
+                facts = result_to_facts(
+                    raw_result,
+                    table=table,
+                    query=retrieval_query,
+                    limit=retrieval_limit,
+                )
+                facts = graph_evidence._limit_evidence_facts_for_table(
+                    table, facts, state=state, worker_plan={}
+                )
+                surviving_facts.extend(facts)
+        surviving_facts = dedupe_facts(surviving_facts)
 
         actual_facts = facts_from_mappings(surviving_facts)
         row = score_factual_record(record, actual_facts=actual_facts)
@@ -942,6 +1009,7 @@ def main(argv=None) -> int:
         row.update(
             {
                 "facts_n": len(surviving_facts),
+                "retrieval_queries": retrieval_queries,
                 "retrieved_facts": [
                     {
                         key: fact.get(key, "")
