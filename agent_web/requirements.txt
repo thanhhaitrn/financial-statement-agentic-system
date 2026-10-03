@@ -1,0 +1,8 @@
+requests>=2.31
+pydantic>=2.6
+anthropic>=0.40
+httpx>=0.27
+python-dotenv>=1.0
+pytest>=8.0
+pytest-asyncio>=0.23
+selenium>=4.20  # tuỳ chọn: chỉ cần khi dùng VietstockSearchProvider/Fetcher thật
