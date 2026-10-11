@@ -18,12 +18,7 @@ from schemas.requirements import (
 
 
 def _configure_registry_paths(monkeypatch, tmp_path: Path) -> None:
-    monkeypatch.setattr(registry, "ROOT_DIR", tmp_path)
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
-    monkeypatch.setattr(registry, "REGISTRY_PATH", registry.DATASETS_DIR / "registry.json")
-    monkeypatch.setattr(registry, "MANIFESTS_DIR", registry.DATASETS_DIR / "manifests")
-    monkeypatch.setattr(registry, "RAW_TABLES_DIR", registry.DATASETS_DIR / "raw_tables")
-    monkeypatch.setattr(registry, "SQLITE_DIR", registry.DATASETS_DIR / "sqlite")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
 
 
 def _record_payload(**overrides):
@@ -87,7 +82,7 @@ def test_save_dataset_rejects_noncanonical_managed_path(monkeypatch, tmp_path):
         update={"manifest_path": str(tmp_path / "other-manifest.json")}
     )
 
-    with pytest.raises(ValueError, match="manifest_path must stay within"):
+    with pytest.raises(ValueError, match="manifest_path must be the managed path"):
         registry.save_dataset(unsafe)
 
 

@@ -14,7 +14,7 @@ from vectorstore import qdrant_store
 
 @pytest.fixture
 def isolated_store(monkeypatch, tmp_path):
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
     return tmp_path
 
 
@@ -301,12 +301,7 @@ REPO_ROOT = __import__("pathlib").Path(__file__).resolve().parents[1]
 
 
 def _configure_registry_paths(monkeypatch, tmp_path):
-    monkeypatch.setattr(registry, "ROOT_DIR", tmp_path)
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
-    monkeypatch.setattr(registry, "REGISTRY_PATH", registry.DATASETS_DIR / "registry.json")
-    monkeypatch.setattr(registry, "MANIFESTS_DIR", registry.DATASETS_DIR / "manifests")
-    monkeypatch.setattr(registry, "RAW_TABLES_DIR", registry.DATASETS_DIR / "raw_tables")
-    monkeypatch.setattr(registry, "SQLITE_DIR", registry.DATASETS_DIR / "sqlite")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
 
 
 def _save(company, owner=""):
@@ -375,29 +370,23 @@ def test_two_processes_saving_datasets_lose_no_registry_records(tmp_path):
 
     child = (
         "import sys\n"
-        "from pathlib import Path\n"
         "from dataset_catalog import registry\n"
-        "root, prefix = Path(sys.argv[1]), sys.argv[2]\n"
-        "registry.ROOT_DIR = root\n"
-        "registry.DATASETS_DIR = root / 'dataset_store'\n"
-        "registry.REGISTRY_PATH = registry.DATASETS_DIR / 'registry.json'\n"
-        "registry.MANIFESTS_DIR = registry.DATASETS_DIR / 'manifests'\n"
-        "registry.RAW_TABLES_DIR = registry.DATASETS_DIR / 'raw_tables'\n"
-        "registry.SQLITE_DIR = registry.DATASETS_DIR / 'sqlite'\n"
+        "prefix = sys.argv[1]\n"
         "for i in range(15):\n"
         "    registry.save_dataset(registry.build_dataset_record(\n"
         "        file_path='data/document.md', company=f'{prefix} {i}', fiscal_year=2024))\n"
     )
-    env = dict(os.environ, PYTHONPATH=os.pathsep.join([str(REPO_ROOT), str(REPO_ROOT / "src")]))
+    env = dict(os.environ, FINX_HOME=str(tmp_path),
+               PYTHONPATH=os.pathsep.join([str(REPO_ROOT), str(REPO_ROOT / "src")]))
     procs = [
-        subprocess.Popen([sys.executable, "-c", child, str(tmp_path), prefix], cwd=REPO_ROOT, env=env)
+        subprocess.Popen([sys.executable, "-c", child, prefix], cwd=REPO_ROOT, env=env)
         for prefix in ("alpha", "beta")
     ]
     assert [proc.wait(timeout=120) for proc in procs] == [0, 0]
 
     import json
 
-    saved = json.loads((tmp_path / "dataset_store" / "registry.json").read_text(encoding="utf-8"))
+    saved = json.loads((tmp_path / "storage" / "datasets" / "registry.json").read_text(encoding="utf-8"))
     assert len(saved["records"]) == 30
 
 

@@ -109,6 +109,8 @@ _UNTRACKED_RUNTIME_PREFIXES = (
     "htmlcov/",
     "node_modules/",
     "ragas_runs/",
+    "storage/",
+    "artifacts/",
     "dataset_store/manifests/",
     "dataset_store/raw_tables/",
     "dataset_store/registry_backups/",

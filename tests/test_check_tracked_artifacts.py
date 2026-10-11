@@ -43,3 +43,18 @@ def test_web_manifests_are_not_hidden_by_the_json_ignore_rule():
     for path in ("web/package.json", "web/package-lock.json", "web/tsconfig.json"):
         result = subprocess.run(["git", "check-ignore", "-q", path], cwd=root)
         assert result.returncode == 1, f"{path} is git-ignored"
+
+
+def test_storage_and_artifacts_keep_only_their_gitignore():
+    blocked = dict(check.find_violations([
+        "storage/datasets/registry.json",
+        "storage/reports/report.md",
+        "artifacts/eval/apec_predictions.json",
+        "storage/.gitignore",
+        "artifacts/.gitignore",
+    ]))
+    assert set(blocked) == {
+        "storage/datasets/registry.json",
+        "storage/reports/report.md",
+        "artifacts/eval/apec_predictions.json",
+    }

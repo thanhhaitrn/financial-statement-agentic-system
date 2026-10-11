@@ -2,13 +2,12 @@
 
 import atexit
 from collections import OrderedDict
-from pathlib import Path
 from threading import Lock
 
 from acquisition.quota import AcquisitionQuota
 from acquisition.store import AcquisitionStore
 from config.runtime_policy import RuntimePolicy
-from dataset_catalog.registry import DATASETS_DIR
+from config import paths
 from web_evidence.cache import WebEvidenceCache
 from web_evidence.vietstock import VietstockHttpFetcher, VietstockNewsProvider
 
@@ -44,9 +43,9 @@ def build_default_web_provider(policy: RuntimePolicy):
 
 
 def _create_web_provider(policy: RuntimePolicy):
-    cache_path = Path(DATASETS_DIR) / "web" / "evidence.db"
+    cache_path = paths.news_cache_path()
     quota = AcquisitionQuota(
-        AcquisitionStore(Path(DATASETS_DIR) / "acquisition" / "acquisition.db"),
+        AcquisitionStore(paths.acquisition_dir() / "acquisition.db"),
         policy.acquisition,
     )
     return VietstockNewsProvider(

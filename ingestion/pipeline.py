@@ -10,6 +10,7 @@ import tempfile
 import unicodedata
 from pathlib import Path
 
+from config import paths
 from ingestion.kb_builder import build_fact_rows
 from ingestion.frontmatter_parser import build_frontmatter_rows
 from ingestion.note_parser import (
@@ -361,7 +362,7 @@ def _manifest_identity(
 ) -> dict:
     ingestion_version = str(dataset.ingestion_version or "v1").strip() or "v1"
     return {
-        "source_path": str(source_path),
+        "source_path": paths.to_stored(source_path),  # provenance only
         "source_sha256": hashlib.sha256(source_bytes).hexdigest(),
         "metadata_sha256": str(resolved_metadata["metadata_sha256"]),
         "parser_version": f"{PARSER_CONTRACT_VERSION}:{ingestion_version}",

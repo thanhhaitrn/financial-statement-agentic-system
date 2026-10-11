@@ -26,7 +26,8 @@ common.py               Tiện ích dùng chung (dedupe_keep_order, prediction_k
 config/                 Cấu hình mặc định và keyword whitelist
 data/                   Báo cáo Markdown đầu vào
 dataset_catalog/        Registry API cho dataset
-dataset_store/          Registry, manifest, SQLite/raw-table sinh ra khi build
+storage/                Dữ liệu runtime: tài khoản, báo cáo đã build, import, cache tin (không track)
+artifacts/              Kết quả chạy: báo cáo đánh giá, log (không track)
 evaluation/             Contract report v2 + fingerprint (contracts, run_identity),
                         RAGAS judge/metric setup (ragas_evaluator),
                         chuẩn hóa số/kỳ cho gate (financial_text)
@@ -372,7 +373,7 @@ Khi dataset chưa build hoặc ingestion version thay đổi, CLI tự tạo/c�
 4. Interactive và có nhiều match: yêu cầu chọn.
 5. Không filter: dùng dataset mặc định trong `config/settings.py`.
 
-Registry nằm ở `dataset_store/registry.json`.
+Registry nằm ở `storage/datasets/registry.json` (đường dẫn lưu tương đối với `FINX_HOME`).
 
 ## Xóa Dataset
 
@@ -421,15 +422,15 @@ Seed chuẩn của bộ APEC là [`dau_tu_APEC_ragas_seed.json`](dau_tu_APEC_rag
 ```bash
 # smoke run 10 câu
 agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
-  --limit 10 --output ragas_runs/apec_smoke_predictions.json
+  --limit 10 --output artifacts/eval/apec_smoke_predictions.json
 
 # full seed để phát triển; --resume làm run không còn là clean benchmark
 agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
-  --full --resume --output ragas_runs/apec_full_predictions.json
+  --full --resume --output artifacts/eval/apec_full_predictions.json
 
 # benchmark độ chính xác chính thức: một lần chạy đầy đủ, không resume/repair/shard
 agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
-  --full --output ragas_runs/apec_clean_full_predictions.json
+  --full --output artifacts/eval/apec_clean_full_predictions.json
 ```
 
 Artifact chỉ được coi là clean benchmark khi `run_complete=true`,
@@ -440,8 +441,8 @@ triage, nhưng không dùng để chốt mức cải thiện.
 ### Chấm RAGAS (diagnostic)
 
 ```bash
-agentfinx score --predictions-file ragas_runs/apec_full_predictions.json \
-  --output ragas_runs/apec_full_scored.json          # thêm --force để chấm lại toàn bộ
+agentfinx score --predictions-file artifacts/eval/apec_full_predictions.json \
+  --output artifacts/eval/apec_full_scored.json          # thêm --force để chấm lại toàn bộ
 ```
 
 Metrics: `faithfulness`, `answer_relevancy`, `context_precision`, `context_recall`. RAGAS chỉ mang tính diagnostic — báo mean/distribution/missing metrics theo bucket factual và analytical. **Không** có gate dựa trên chênh lệch RAGAS mean `0.03` (judge free-tier nhiễu ~±0.1, dưới ngưỡng đó). Dùng `agentfinx analyze` để tách bucket và tính factual-recall xác định.
@@ -461,7 +462,7 @@ Mỗi `OLLAMA_API_KEY` có quota độc lập, nên có thể **chia seed thành
 ```bash
 KEYS=(key1 key2 key3 key4 key5 key6 key7 key8)   # 8 key có quota
 for i in $(seq 0 7); do
-  off=$((i*25)); out="ragas_runs/vnm_shard_${i}.json"
+  off=$((i*25)); out="artifacts/eval/vnm_shard_${i}.json"
   (
     OLLAMA_API_KEY="${KEYS[$i]}" agentfinx predict --dataset-id suavietnam \
       --seed-file VNM_ragas_seed.json --offset "$off" --limit 25 --resume --output "$out"
@@ -477,7 +478,7 @@ wait
 python3 - <<'PY'
 import json, glob
 preds, scores, meta = {}, {}, None
-for f in sorted(glob.glob("ragas_runs/vnm_shard_*.json")):
+for f in sorted(glob.glob("artifacts/eval/vnm_shard_*.json")):
     d = json.load(open(f, encoding="utf-8"))
     meta = meta or {k: v for k, v in d.items() if k not in ("predictions", "scores", "summary")}
     for p in d.get("predictions", []): preds[p["id"]] = p
@@ -485,11 +486,11 @@ for f in sorted(glob.glob("ragas_runs/vnm_shard_*.json")):
 out = dict(meta or {})
 out["predictions"] = [preds[k] for k in sorted(preds)]
 out["scores"] = [scores[k] for k in sorted(scores)]
-json.dump(out, open("ragas_runs/vnm_predictions.json", "w"), ensure_ascii=False, indent=2)
+json.dump(out, open("artifacts/eval/vnm_predictions.json", "w"), ensure_ascii=False, indent=2)
 print(f"merged: {len(out['predictions'])} predictions, {len(out['scores'])} scores")
 PY
 
-python3 analyze_batch_metrics.py ragas_runs/vnm_predictions.json
+python3 analyze_batch_metrics.py artifacts/eval/vnm_predictions.json
 ```
 
 Sharding này chỉ để **tăng throughput khi sinh dataset**; **không** dùng cho clean latency baseline (baseline cần các run tuần tự trong cùng một môi trường kiểm soát — xem mục dưới). Nếu một key hết limit giữa chừng, chạy lại đúng lệnh shard đó với `--resume` (hoặc đổi key) — nó tiếp tục từ chỗ dở.
@@ -503,7 +504,7 @@ deterministic_factual_recall >= 0.95
 ```
 
 ```bash
-agentfinx recall --dataset-id apec --json-out ragas_runs/apec_factual_recall.json
+agentfinx recall --dataset-id apec --json-out artifacts/eval/apec_factual_recall.json
 ```
 
 `--predictions-file` là tùy chọn để enrich report; file này không thêm identity hay đổi denominator/expected facts của contract. Một expected fact chỉ match khi sáu field cùng xuất hiện trong một fact/context sau normalization; hệ thống không ghép giá trị từ nhiều dòng độc lập để tạo false positive. Process trả exit code khác 0 khi recall dưới `0.95`.
@@ -514,20 +515,20 @@ Latency sản phẩm chỉ tính prediction, không gồm startup/index build, w
 
 ```bash
 agentfinx predict --dataset-id apec --seed-file dau_tu_APEC_ragas_seed.json \
-  --offset 180 --limit 70 --output ragas_runs/apec_q181_250_run1.json
+  --offset 180 --limit 70 --output artifacts/eval/apec_q181_250_run1.json
 # ... run2, run3 tương tự
 ```
 
 Chỉ attest sau khi xác nhận không có Ollama `session_limit`/`usage_limit`/HTTP 429/quota backoff:
 
 ```bash
-agentfinx score --predictions-file ragas_runs/apec_q181_250_run1.json \
+agentfinx score --predictions-file artifacts/eval/apec_q181_250_run1.json \
   --attest-clean-latency-run
 
 agentfinx analyze \
-  ragas_runs/apec_q181_250_run1.json \
-  ragas_runs/apec_q181_250_run2.json \
-  ragas_runs/apec_q181_250_run3.json
+  artifacts/eval/apec_q181_250_run1.json \
+  artifacts/eval/apec_q181_250_run2.json \
+  artifacts/eval/apec_q181_250_run3.json
 ```
 
 Một run có provider limit/quota backoff/prediction error hoặc thiếu clean-environment attestation thì cả run đó bị đánh dấu latency-invalid (không loại riêng sample chậm). Baseline chỉ thiết lập khi có ≥ 3 run sạch, dùng median của p50/p95 và mean token. Các số cũ nhiễu Ollama limit không phải baseline.
@@ -568,7 +569,7 @@ Unit test đã mock phần LLM và không gọi API thật. CI (`.github/workflo
 
 ## Ghi Chú Vận Hành
 
-- `dataset_store/`, `ragas_runs/`, `batch_test_results.json` là output sinh ra khi chạy.
+- `storage/`, `artifacts/`, `batch_test_results.json` là output sinh ra khi chạy.
 - `data/` chứa source Markdown đầu vào; không xóa khi chỉ muốn reset dataset đã build.
 - Pipeline CLI nằm ở `finx_pipeline.py` (`agentfinx ask`). `test.py` chỉ còn là lối vào tương thích cho `python test.py …`: module tên `test` trùng package chuẩn của Python và bị package đó che khi chạy qua lệnh `agentfinx` đã cài, nên code thư viện luôn import `finx_pipeline`.
 - `dataset_batch_runner.py` (batch answer) và `dataset_batch_result.py` (prediction/context cho RAGAS) là hai nhiệm vụ khác nhau.

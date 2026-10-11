@@ -1,4 +1,10 @@
-"""``agentfinx serve`` and ``agentfinx worker --queue chat|import``."""
+"""``agentfinx serve``, ``agentfinx worker --queue chat|import``, ``agentfinx invites``
+and ``agentfinx db init``.
+
+None of them creates the account database on its own: a missing database
+means the wrong storage, not a new install, so they stop instead of quietly
+starting an empty one. A new install runs ``agentfinx db init`` once.
+"""
 # Code note: Web modules expose the pipeline to browsers; comments call out security boundaries.
 
 from __future__ import annotations
@@ -45,6 +51,53 @@ def _configure_logging() -> None:
         logging.getLogger(noisy).setLevel(logging.WARNING)
 
 
+def _require_database(db_path, prog: str) -> bool:
+    """The account database must already exist; say which one is used."""
+
+    import sqlite3
+    from pathlib import Path
+
+    path = Path(db_path)
+    if not path.is_file():
+        print(
+            f"{prog}: no web database at {path}. A new install creates it once with "
+            "`agentfinx db init`; data still in dataset_store/ moves with `agentfinx storage migrate`.",
+            file=sys.stderr,
+        )
+        return False
+    conn = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
+    try:
+        accounts = conn.execute("SELECT COUNT(*) FROM users").fetchone()[0]
+    except sqlite3.Error:
+        accounts = 0
+    finally:
+        conn.close()
+    logging.getLogger("agentfinx.web").info("web database %s (%d accounts)", path, accounts)
+    return True
+
+
+def db_main(argv: Optional[list[str]] = None) -> int:
+    parser = argparse.ArgumentParser(prog="agentfinx db", description="The web app's account and chat database.")
+    commands = parser.add_subparsers(dest="command", required=True)
+    commands.add_parser("init", help="Create the database for a new install (never overwrites one).")
+    parser.parse_args(argv)
+
+    from webapp import db as webdb
+    from webapp.settings import resolve_db_path
+
+    try:
+        path = resolve_db_path(_prepare_environment())
+    except RuntimeError as exc:
+        print(f"agentfinx db: {exc}", file=sys.stderr)
+        return 2
+    if path.exists():
+        print(f"agentfinx db: {path} already exists; nothing to do")
+        return 0
+    version = webdb.WebDB(path).migrate()
+    print(f"created {path} (schema v{version})")
+    return 0
+
+
 def serve_main(argv: Optional[list[str]] = None) -> int:
     parser = argparse.ArgumentParser(prog="agentfinx serve", description="Run the local web API.")
     parser.add_argument("--host", default=None, help="Bind address (default 127.0.0.1).")
@@ -60,6 +113,8 @@ def serve_main(argv: Optional[list[str]] = None) -> int:
         ensure_multiprocess_qdrant_backend()
     except (WebConfigError, RuntimeError) as exc:
         print(f"agentfinx serve: {exc}", file=sys.stderr)
+        return 2
+    if not _require_database(settings.db_path, "agentfinx serve"):
         return 2
     if not _is_loopback(settings.host):
         print(
@@ -105,6 +160,8 @@ def worker_main(argv: Optional[list[str]] = None) -> int:
     except (WebConfigError, RuntimeError) as exc:
         print(f"agentfinx worker: {exc}", file=sys.stderr)
         return 2
+    if not _require_database(settings.db_path, "agentfinx worker"):
+        return 2
 
     stop = threading.Event()
 
@@ -149,8 +206,10 @@ def invites_main(argv: Optional[list[str]] = None) -> int:
 
     try:
         settings = load_settings(_prepare_environment())
-    except WebConfigError as exc:
+    except (WebConfigError, RuntimeError) as exc:
         print(f"agentfinx invites: {exc}", file=sys.stderr)
+        return 2
+    if not _require_database(settings.db_path, "agentfinx invites"):
         return 2
     database = webdb.WebDB(settings.db_path)
     database.migrate()

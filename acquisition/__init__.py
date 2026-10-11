@@ -14,10 +14,10 @@ from config.runtime_policy import DEFAULT_POLICY, RuntimePolicy
 def build_default_acquisition_quota(
     policy: RuntimePolicy = DEFAULT_POLICY,
 ) -> AcquisitionQuota:
-    from dataset_catalog.registry import DATASETS_DIR
+    from config import paths
 
     return AcquisitionQuota(
-        AcquisitionStore(Path(DATASETS_DIR) / "acquisition" / "acquisition.db"),
+        AcquisitionStore(paths.acquisition_dir() / "acquisition.db"),
         policy.acquisition,
     )
 
@@ -30,9 +30,10 @@ def build_default_acquisition_service(
 ) -> ReportAcquisitionService:
     """Wire the production providers without importing optional SDKs eagerly."""
 
-    from dataset_catalog.registry import DATASETS_DIR, SOURCES_DIR
+    from config import paths
+    from dataset_catalog.registry import sources_dir
 
-    root = Path(DATASETS_DIR) / "acquisition"
+    root = paths.acquisition_dir()
     validator = PdfArtifactValidator(
         max_file_bytes=policy.acquisition.max_file_bytes,
         max_pdf_pages=policy.acquisition.max_pdf_pages,
@@ -64,8 +65,8 @@ def build_default_acquisition_service(
         policy=policy.acquisition,
         artifact_dir=root / "artifacts",
         # Managed sources must stay below the registry's ownership boundary.
-        converted_dir=Path(SOURCES_DIR) / "imports",
-        symbol_catalog_path=Path(DATASETS_DIR) / "web" / "cafef_symbols.json",
+        converted_dir=sources_dir() / "imports",
+        symbol_catalog_path=paths.symbol_catalog_path(),
         symbol_alias_path=Path(__file__).resolve().parents[1] / "config" / "company_aliases.json",
     )
 

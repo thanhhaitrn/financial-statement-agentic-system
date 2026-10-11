@@ -5,7 +5,7 @@ diagnostics.  The only quality gate is deterministic factual recall, evaluated
 against normalized entity/metric/period/value/unit/reference facts at >= 0.95.
 
 Usage:
-  python analyze_batch_metrics.py ragas_runs/apec_q181_210_v3.json [more.json ...]
+  agentfinx analyze artifacts/eval/apec_q181_210_v3.json [more.json ...]
 """
 
 from __future__ import annotations

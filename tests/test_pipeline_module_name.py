@@ -21,7 +21,7 @@ import finx_pipeline
 
 ROOT = Path(__file__).resolve().parents[1]
 _IMPORTS_TEST = re.compile(r"^\s*(?:from\s+test\s+import\b|import\s+test\b)", re.MULTILINE)
-_SKIP_DIRS = {".venv", "tests", "ragas_runs", "dataset_store", "build", "dist", "node_modules"}
+_SKIP_DIRS = {".venv", "tests", "ragas_runs", "dataset_store", "storage", "artifacts", "build", "dist", "node_modules"}
 
 
 def test_library_code_never_imports_the_test_module():

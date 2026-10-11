@@ -19,7 +19,7 @@ present in context but absent from the answer (e.g. a refusal despite evidence) 
 synthesis/prompt failure.
 
 Usage:
-  python analyze_prediction_errors.py ragas_runs/vnm_predictions.json [more.json ...]
+  agentfinx triage artifacts/eval/vnm_predictions.json [more.json ...]
       [--gold-contract reviewed_gold_atoms.json]
 """
 
@@ -2122,8 +2122,8 @@ def parse_args(argv: list[str] | None = None):
     parser.add_argument("paths", nargs="*", help="Prediction report JSON files")
     parser.add_argument(
         "--out-dir",
-        default="ragas_runs",
-        help="Directory for the <stem>_error_triage.md/.json reports.",
+        default="",
+        help="Directory for the <stem>_error_triage.md/.json reports (default: artifacts/eval).",
     )
     parser.add_argument(
         "--adjudications",
@@ -2146,8 +2146,10 @@ def parse_args(argv: list[str] | None = None):
 
 def main(argv: list[str] | None = None) -> int:
     args = parse_args(argv)
-    paths = args.paths or ["ragas_runs/vnm_predictions.json"]
-    out_dir = Path(args.out_dir)
+    from config.paths import eval_runs_dir
+
+    paths = args.paths or [str(eval_runs_dir() / "vnm_predictions.json")]
+    out_dir = Path(args.out_dir) if args.out_dir else eval_runs_dir()
     out_dir.mkdir(parents=True, exist_ok=True)
     adjudications = load_adjudications(args.adjudications)
     gold_contract = load_gold_atom_contract(args.gold_contract)

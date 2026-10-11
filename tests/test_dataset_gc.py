@@ -41,12 +41,7 @@ class _FakeQdrant:
 
 @pytest.fixture
 def dataset(monkeypatch, tmp_path):
-    monkeypatch.setattr(registry, "ROOT_DIR", tmp_path)
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
-    monkeypatch.setattr(registry, "REGISTRY_PATH", registry.DATASETS_DIR / "registry.json")
-    monkeypatch.setattr(registry, "MANIFESTS_DIR", registry.DATASETS_DIR / "manifests")
-    monkeypatch.setattr(registry, "RAW_TABLES_DIR", registry.DATASETS_DIR / "raw_tables")
-    monkeypatch.setattr(registry, "SQLITE_DIR", registry.DATASETS_DIR / "sqlite")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
     return registry.save_dataset(
         registry.build_dataset_record(file_path="data/document.md", company="Acme", fiscal_year=2025)
     )

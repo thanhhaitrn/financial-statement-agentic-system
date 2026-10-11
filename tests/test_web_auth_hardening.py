@@ -264,6 +264,9 @@ def test_open_mode_hides_taken_emails_and_refuses_undeliverable_domains(tmp_path
 def test_invites_cli_prints_the_code_once_and_stores_only_its_hash(tmp_path, monkeypatch, capsys):
     env = {"FINX_SECRET_KEY": SECRET, "FINX_WEB_DB": str(tmp_path / "web.sqlite3")}
     monkeypatch.setattr(webcli, "_prepare_environment", lambda *args: dict(env))
+    assert webcli.invites_main(["list"]) == 2  # no database yet: never created implicitly
+    assert webcli.db_main(["init"]) == 0
+    capsys.readouterr()
     assert webcli.invites_main(["create", "--email", "Kim@Example.com"]) == 0
     created = capsys.readouterr().out
     code = created.split("code: ", 1)[1].split()[0]

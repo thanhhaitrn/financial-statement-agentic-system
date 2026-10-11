@@ -679,9 +679,10 @@ def read_kb_manifest(conn) -> dict[str, Any]:
 
 
 def kb_manifest_matches(conn, expected: dict[str, Any]) -> bool:
+    # The source is identified by its content, not its location: moving the
+    # storage (or the report file) must not rebuild the facts and the index.
     actual = read_kb_manifest(conn)
     for field in (
-        "source_path",
         "source_sha256",
         "metadata_sha256",
         "parser_version",

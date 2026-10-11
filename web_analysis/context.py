@@ -28,10 +28,10 @@ _TICKER_TOKEN = re.compile(r"\b[A-Z][A-Z0-9]{2}\b")
 def default_symbol_catalog():
     """The CafeF symbol catalog if one was downloaded; ``None`` otherwise."""
 
-    from dataset_catalog import registry
+    from config import paths
     from web_evidence.symbols import SymbolCatalog
 
-    path = Path(registry.DATASETS_DIR) / "web" / "cafef_symbols.json"
+    path = paths.symbol_catalog_path()
     if not path.exists():
         return None
     catalog = SymbolCatalog.load(path, alias_path=ALIAS_PATH)

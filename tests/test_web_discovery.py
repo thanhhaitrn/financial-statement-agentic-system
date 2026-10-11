@@ -85,7 +85,7 @@ class Harness:
 
 @pytest.fixture
 def harness(monkeypatch, tmp_path):
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
     return lambda **kwargs: Harness(tmp_path, **kwargs)
 
 

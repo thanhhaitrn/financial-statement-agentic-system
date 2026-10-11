@@ -15,6 +15,8 @@ routes a subcommand to the matching module, instead of the previous hollow
     agentfinx serve   ...   -> webapp.cli.serve_main   (local web API + frontend)
     agentfinx worker  ...   -> webapp.cli.worker_main  (--queue chat|import)
     agentfinx invites ...   -> webapp.cli.invites_main (sign-up invites)
+    agentfinx db init       -> webapp.cli.db_main      (account database, new installs)
+    agentfinx storage ...   -> dataset_catalog.storage_migration.main (status, migrate)
     agentfinx datasets gc   -> dataset_catalog.gc.main (superseded Qdrant builds)
 """
 
@@ -37,6 +39,8 @@ _COMMANDS: dict[str, tuple[str, bool]] = {
     "serve": ("webapp.cli:serve_main", True),
     "worker": ("webapp.cli:worker_main", True),
     "invites": ("webapp.cli:invites_main", True),
+    "db": ("webapp.cli:db_main", True),
+    "storage": ("dataset_catalog.storage_migration", True),
     "datasets": ("dataset_catalog.gc", True),
 }
 

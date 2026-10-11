@@ -41,7 +41,8 @@ from evaluation.run_identity import (
 
 DEFAULT_DATASET_ID = "apec"
 DEFAULT_SEED_FILE = "dau_tu_APEC_ragas_seed.json"
-DEFAULT_OUTPUT = "ragas_runs/apec_predictions.json"
+# Under artifacts/eval/ (config.paths), resolved when the command runs.
+DEFAULT_OUTPUT_NAME = "apec_predictions.json"
 DEFAULT_SMOKE_LIMIT = 10
 CONTEXT_SEPARATOR = "\n---\n"
 METRIC_NAMES = (
@@ -1399,7 +1400,8 @@ def parse_args(argv: list[str] | None = None):
     )
     parser.add_argument("--dataset-id", default=DEFAULT_DATASET_ID, help="Registered dataset id to run.")
     parser.add_argument("--seed-file", default=DEFAULT_SEED_FILE, help="RAGAs seed JSON file.")
-    parser.add_argument("--output", default=DEFAULT_OUTPUT, help="Output JSON path.")
+    parser.add_argument("--output", default="",
+                        help=f"Output JSON path (default: artifacts/eval/{DEFAULT_OUTPUT_NAME}).")
     parser.add_argument("--limit", type=int, default=DEFAULT_SMOKE_LIMIT, help="Smoke run size. Ignored with --full.")
     parser.add_argument("--offset", type=int, default=0, help="Skip the first N seed records (e.g. --offset 10 --limit 20 runs records 11-30).")
     parser.add_argument("--full", action="store_true", help="Run all seed records.")
@@ -1418,7 +1420,12 @@ def parse_args(argv: list[str] | None = None):
             "recorded as a failed prediction, never forced back to QA."
         ),
     )
-    return parser.parse_args(argv)
+    args = parser.parse_args(argv)
+    if not args.output:
+        from config import paths
+
+        args.output = str(paths.eval_runs_dir() / DEFAULT_OUTPUT_NAME)
+    return args
 
 
 def main(argv: list[str] | None = None) -> int:

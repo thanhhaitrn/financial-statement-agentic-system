@@ -20,7 +20,7 @@ def _dataset():
 
 
 def _run(monkeypatch, tmp_path, *, web_entry):
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
     planned, executed = [], []
     monkeypatch.setattr(runner, "describe_dataset", lambda _dataset: "dataset")
     monkeypatch.setattr(runner, "ensure_built",

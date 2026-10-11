@@ -57,10 +57,15 @@ class WebSettings:
 
 
 def default_db_path() -> Path:
-    # Lives under dataset_store/, which is git-ignored runtime storage.
-    from dataset_catalog import registry
+    # storage/web/, the git-ignored runtime storage (config.paths).
+    from config import paths
 
-    return Path(registry.DATASETS_DIR) / "web" / "finx_web.sqlite3"
+    return paths.default_web_db_path()
+
+
+def resolve_db_path(env: Mapping[str, str]) -> Path:
+    db_raw = str(env.get("FINX_WEB_DB", "") or "").strip()
+    return Path(db_raw).expanduser() if db_raw else default_db_path()
 
 
 def _flag(value: Optional[str]) -> bool:
@@ -92,8 +97,7 @@ def load_settings(environ: Optional[Mapping[str, str]] = None) -> WebSettings:
         if host in {"127.0.0.1", "localhost"}:
             origins |= {f"http://127.0.0.1:{port}", f"http://localhost:{port}"}
 
-    db_raw = str(env.get("FINX_WEB_DB", "") or "").strip()
-    db_path = Path(db_raw).expanduser() if db_raw else default_db_path()
+    db_path = resolve_db_path(env)
 
     try:
         shared = shared_dataset_ids_from_env(env)

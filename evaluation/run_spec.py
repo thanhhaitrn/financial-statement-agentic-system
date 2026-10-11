@@ -70,7 +70,7 @@ APEC_Q181_250 = EvaluationRunSpec(
     name="apec_q181_250",
     dataset_id="apec",
     seed_file="dau_tu_APEC_ragas_seed.json",
-    predictions_file="ragas_runs/apec_predictions.json",
+    predictions_file="artifacts/eval/apec_predictions.json",
     facts_contract="tests/fixtures/apec_q211_250_factual_facts.json",
     cohort=BenchmarkCohort(name="apec_q181_250", sample_ids=_id_range(181, 250)),
     thresholds={"factual_recall": 0.95},

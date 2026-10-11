@@ -111,16 +111,16 @@ def owner_namespace(owner_id: str) -> str:
 
 
 def default_upload_dir() -> Path:
-    # Under dataset_store/, which is git-ignored runtime storage.
-    from dataset_catalog import registry
+    # Under storage/, the git-ignored runtime storage (config.paths).
+    from config import paths
 
-    return Path(registry.DATASETS_DIR) / "acquisition" / "web-uploads"
+    return paths.acquisition_dir() / "web-uploads"
 
 
 def default_catalog_path() -> Path:
-    from dataset_catalog import registry
+    from config import paths
 
-    return Path(registry.DATASETS_DIR) / "web" / "cafef_symbols.json"
+    return paths.symbol_catalog_path()
 
 
 class ImportMetadata(BaseModel):

@@ -74,10 +74,10 @@ _HELD = threading.local()
 
 
 def locks_dir() -> Path:
-    # Resolved per call so tests that relocate ``dataset_store`` get their own locks.
-    from dataset_catalog import registry
+    # Resolved per call so tests that point FINX_HOME elsewhere get their own locks.
+    from config import paths
 
-    return Path(registry.DATASETS_DIR) / "locks"
+    return paths.locks_dir()
 
 
 def _held_kinds() -> dict[str, int]:

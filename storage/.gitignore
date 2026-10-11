@@ -1,0 +1,4 @@
+# Runtime data: accounts, conversations, report datasets, imports, news cache.
+# Never tracked. See docs/operations.md.
+*
+!.gitignore

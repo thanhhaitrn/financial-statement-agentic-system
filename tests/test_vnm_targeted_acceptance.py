@@ -10,6 +10,7 @@ from pathlib import Path
 import pytest
 
 from agents import keyworder_runner, planner_runner, synth_runner
+from config.paths import StorageError
 from dataset_catalog.registry import get_dataset
 from ingestion.pipeline import _parse_fact_rows, _resolve_ingestion_metadata
 from kb.sqlite_repo import _FINANCIAL_FACT_COLUMNS
@@ -18,7 +19,14 @@ from schemas.table_names import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE
 
 @pytest.fixture(scope="module")
 def vnm_facts():
-    dataset = get_dataset("suavietnam")
+    # Reads the developer's own storage (the VNM report is not versioned);
+    # skipped where it is not available, e.g. in CI.
+    try:
+        dataset = get_dataset("suavietnam")
+    except StorageError as exc:
+        pytest.skip(f"local storage unavailable: {exc}")
+    if dataset is None or not Path(dataset.file_path).is_file():
+        pytest.skip("the VNM report (dataset suavietnam) is not in local storage")
     markdown = Path(dataset.file_path).read_text(encoding="utf-8")
     _tables, rows = _parse_fact_rows(
         dataset,

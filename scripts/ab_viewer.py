@@ -9,7 +9,7 @@ Run it with::
     streamlit run scripts/ab_viewer.py
 
 The directory layout is discovered, not hardcoded: drop a new run next to the
-existing ones under ``ragas_runs/`` and it appears in the picker.
+existing ones under ``artifacts/eval/`` and it appears in the picker.
 """
 # Code note: Evaluation tooling is read-only; it must never mutate a run's output.
 
@@ -23,8 +23,9 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-ROOT = Path(__file__).resolve().parent.parent
-RUNS_DIR = ROOT / "ragas_runs"
+from config.paths import eval_runs_dir
+
+RUNS_DIR = eval_runs_dir()
 BLOB_RE = re.compile(r"^(?P<config>.+)_q(?P<question>\d+)\.json$")
 
 # Phrases that assert data is unavailable. Counting them is the cheapest proxy
@@ -288,11 +289,11 @@ def main() -> None:
     run_dirs = find_run_dirs()
     with st.sidebar:
         st.header("Thư mục kết quả")
-        options = [str(path.relative_to(ROOT)) for path in run_dirs]
+        options = [str(path.relative_to(RUNS_DIR)) for path in run_dirs]
         choice = st.selectbox("Run", options + ["(nhập đường dẫn khác)"]) if options else None
         if not options or choice == "(nhập đường dẫn khác)":
             choice = st.text_input("Đường dẫn", value=str(RUNS_DIR))
-        directory = (ROOT / choice).resolve()
+        directory = (RUNS_DIR / choice).resolve()
         st.caption(str(directory))
         if st.button("Đọc lại", use_container_width=True):
             load_run.clear()

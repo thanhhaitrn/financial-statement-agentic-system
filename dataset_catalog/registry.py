@@ -12,19 +12,46 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable, List, Optional
 
+from config import paths
 from schemas.datasets import (DatasetRecord, DatasetRegistryEnvelope,
                               DatasetRegistryMigration,
                               DatasetRegistryQuarantineEntry,
                               validate_dataset_id)
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-DATASETS_DIR = ROOT_DIR / "dataset_store"
-REGISTRY_PATH = DATASETS_DIR / "registry.json"
-MANIFESTS_DIR = DATASETS_DIR / "manifests"
-RAW_TABLES_DIR = DATASETS_DIR / "raw_tables"
-SQLITE_DIR = DATASETS_DIR / "sqlite"
-SOURCES_DIR = DATASETS_DIR / "sources"
 REGISTRY_SCHEMA_VERSION = 2
+
+
+# Resolved per call from FINX_HOME (config.paths), never from this file's location.
+def datasets_dir() -> Path:
+    return paths.datasets_dir()
+
+
+def registry_path() -> Path:
+    return datasets_dir() / "registry.json"
+
+
+def manifests_dir() -> Path:
+    return datasets_dir() / "manifests"
+
+
+def raw_tables_dir() -> Path:
+    return datasets_dir() / "raw_tables"
+
+
+def sqlite_dir() -> Path:
+    return datasets_dir() / "sqlite"
+
+
+def sources_dir() -> Path:
+    return datasets_dir() / "sources"
+
+
+_MANAGED_PATHS = {
+    "sqlite_db_path": (sqlite_dir, ".db"),
+    "manifest_path": (manifests_dir, ".json"),
+    "raw_tables_path": (raw_tables_dir, ".json"),
+}
+_STORED_PATH_FIELDS = ("file_path", "source_pdf_path", *_MANAGED_PATHS)
 
 _SLUG_RE = re.compile(r"[^a-z0-9]+")
 _BUILD_INPUT_FIELDS = (
@@ -54,11 +81,8 @@ def _utc_now() -> str:
 
 
 def _ensure_layout() -> None:
-    DATASETS_DIR.mkdir(parents=True, exist_ok=True)
-    MANIFESTS_DIR.mkdir(parents=True, exist_ok=True)
-    RAW_TABLES_DIR.mkdir(parents=True, exist_ok=True)
-    SQLITE_DIR.mkdir(parents=True, exist_ok=True)
-    SOURCES_DIR.mkdir(parents=True, exist_ok=True)
+    for directory in (datasets_dir(), manifests_dir(), raw_tables_dir(), sqlite_dir(), sources_dir()):
+        directory.mkdir(parents=True, exist_ok=True)
 
 
 def _fsync_directory(directory: Path) -> None:
@@ -110,7 +134,7 @@ def _backup_registry(content: bytes, *, source_format: str) -> Path:
     """Keep the exact pre-migration document in a content-addressed backup."""
 
     digest = hashlib.sha256(content).hexdigest()
-    backup_dir = REGISTRY_PATH.parent / "registry_backups"
+    backup_dir = registry_path().parent / "registry_backups"
     backup_path = backup_dir / f"registry-{source_format}-{digest}.backup.json"
     if not backup_path.exists():
         _atomic_write_bytes(backup_path, content)
@@ -136,7 +160,7 @@ def _resolve_confined_path(
         raise ValueError(f"{field_name} must be a non-empty safe path")
     path = Path(raw_path).expanduser()
     if not path.is_absolute():
-        path = ROOT_DIR / path
+        path = paths.home() / path
     resolved = path.resolve(strict=False)
     if not _path_is_within_dir(resolved, allowed_dir):
         raise ValueError(f"{field_name} must stay within {allowed_dir.resolve(strict=False)}")
@@ -152,36 +176,46 @@ def _expected_managed_path(directory: Path, dataset_id: str, suffix: str) -> Pat
 
 
 def _normalize_record_paths(record: DatasetRecord) -> DatasetRecord:
-    """Validate confinement and normalize all persisted paths to absolute form."""
+    """Validate confinement and resolve every path against the current storage.
+
+    In memory a record carries absolute paths. The built artifacts (SQLite,
+    manifest, raw tables) are named after the dataset id, so they are rebuilt
+    from it: a registry written under another FINX_HOME, or in the old
+    absolute form, still opens this storage's files. The stored value must
+    still name this dataset's file in the right kind of directory.
+    """
 
     dataset_key = validate_dataset_id(record.dataset_id)
     source_path = _resolve_confined_path(
         record.file_path,
-        allowed_dir=SOURCES_DIR if record.managed_source else ROOT_DIR,
+        allowed_dir=sources_dir() if record.managed_source else paths.home(),
         field_name="file_path",
     )
-    managed_paths = {
-        "sqlite_db_path": (SQLITE_DIR, ".db"),
-        "manifest_path": (MANIFESTS_DIR, ".json"),
-        "raw_tables_path": (RAW_TABLES_DIR, ".json"),
-    }
 
     payload = record.model_dump(mode="json")
     payload["file_path"] = str(source_path)
-    for field_name, (directory, suffix) in managed_paths.items():
-        actual = _resolve_confined_path(
-            getattr(record, field_name),
-            allowed_dir=directory,
-            field_name=field_name,
-        )
-        expected = _expected_managed_path(directory, dataset_key, suffix)
-        if actual != expected:
+    if record.source_pdf_path:
+        payload["source_pdf_path"] = str(paths.from_stored(record.source_pdf_path))
+    for field_name, (directory, suffix) in _MANAGED_PATHS.items():
+        expected = _expected_managed_path(directory(), dataset_key, suffix)
+        stored = Path(getattr(record, field_name))
+        if (stored.name, stored.parent.name) != (expected.name, expected.parent.name):
             raise ValueError(
                 f"{field_name} must be the managed path for dataset {dataset_key!r}"
             )
-        payload[field_name] = str(actual)
+        payload[field_name] = str(expected)
 
     return DatasetRecord.model_validate(payload)
+
+
+def _stored_record(record: DatasetRecord) -> dict:
+    """The registry and manifest form: paths relative to FINX_HOME, so it can move."""
+
+    payload = record.model_dump(mode="json")
+    for field_name in _STORED_PATH_FIELDS:
+        if payload.get(field_name):
+            payload[field_name] = paths.to_stored(payload[field_name])
+    return payload
 
 
 def slugify(value: str) -> str:
@@ -243,7 +277,7 @@ def build_dataset_record(
     )
     source_path = _resolve_confined_path(
         file_path,
-        allowed_dir=SOURCES_DIR if managed_source else ROOT_DIR,
+        allowed_dir=sources_dir() if managed_source else paths.home(),
         field_name="file_path",
     )
     _ensure_layout()
@@ -266,10 +300,10 @@ def build_dataset_record(
         source_converter_version=source_converter_version,
         source_pdf_path=source_pdf_path,
         managed_source=managed_source,
-        sqlite_db_path=str(_expected_managed_path(SQLITE_DIR, dataset_key, ".db")),
+        sqlite_db_path=str(_expected_managed_path(sqlite_dir(), dataset_key, ".db")),
         vector_collection_name=f"financial_statement__{dataset_key}",
-        manifest_path=str(_expected_managed_path(MANIFESTS_DIR, dataset_key, ".json")),
-        raw_tables_path=str(_expected_managed_path(RAW_TABLES_DIR, dataset_key, ".json")),
+        manifest_path=str(_expected_managed_path(manifests_dir(), dataset_key, ".json")),
+        raw_tables_path=str(_expected_managed_path(raw_tables_dir(), dataset_key, ".json")),
         ingestion_version=ingestion_version,
     )
     return _normalize_record_paths(record)
@@ -377,7 +411,7 @@ def _registry_envelope_payload(
     envelope = DatasetRegistryEnvelope(
         schema_version=REGISTRY_SCHEMA_VERSION,
         updated_at=updated_at or _utc_now(),
-        records=[record.model_dump(mode="json") for record in records],
+        records=[_stored_record(record) for record in records],
         quarantine=quarantine,
         migration=migration,
     )
@@ -393,7 +427,7 @@ def _migration_metadata(
     return DatasetRegistryMigration(
         source_format=source_format,
         source_sha256=hashlib.sha256(source_content).hexdigest(),
-        backup_path=str(backup_path),
+        backup_path=paths.to_stored(backup_path),
         migrated_at=_utc_now(),
     )
 
@@ -417,7 +451,7 @@ def _migrate_registry_document(
             source_format=source_format,
         ),
     )
-    _atomic_write_json(REGISTRY_PATH, payload)
+    _atomic_write_json(registry_path(), payload)
     return records
 
 
@@ -450,10 +484,10 @@ def _load_registry(*, allow_write: bool) -> List[DatasetRecord]:
             raise _RegistryRepairRequired()
 
     _ensure_layout()
-    if not REGISTRY_PATH.exists():
+    if not registry_path().exists():
         return []
 
-    source_content = REGISTRY_PATH.read_bytes()
+    source_content = registry_path().read_bytes()
     try:
         raw = json.loads(source_content.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
@@ -480,7 +514,7 @@ def _load_registry(*, allow_write: bool) -> List[DatasetRecord]:
                 source_format="invalid-document",
             ),
         )
-        _atomic_write_json(REGISTRY_PATH, payload)
+        _atomic_write_json(registry_path(), payload)
         return []
 
     if isinstance(raw, list):
@@ -538,7 +572,7 @@ def _load_registry(*, allow_write: bool) -> List[DatasetRecord]:
                 )
             )
 
-    normalized_records = [record.model_dump(mode="json") for record in records]
+    normalized_records = [_stored_record(record) for record in records]
     normalized_quarantine = [entry.model_dump(mode="json") for entry in quarantine]
     needs_repair = (
         bool(invalid_records)
@@ -555,7 +589,7 @@ def _load_registry(*, allow_write: bool) -> List[DatasetRecord]:
             quarantine=quarantine,
             migration=migration,
         )
-        _atomic_write_json(REGISTRY_PATH, payload)
+        _atomic_write_json(registry_path(), payload)
 
     return records
 
@@ -564,10 +598,10 @@ def _load_registry_envelope_context() -> tuple[
     list[DatasetRegistryQuarantineEntry],
     Optional[DatasetRegistryMigration],
 ]:
-    if not REGISTRY_PATH.exists():
+    if not registry_path().exists():
         return [], None
     load_registry()
-    raw = json.loads(REGISTRY_PATH.read_text(encoding="utf-8"))
+    raw = json.loads(registry_path().read_text(encoding="utf-8"))
     quarantine, _ = _normalize_existing_quarantine(raw.get("quarantine"))
     migration = None
     if raw.get("migration") is not None:
@@ -587,7 +621,7 @@ def save_registry(records: List[DatasetRecord]) -> None:
             quarantine=quarantine,
             migration=migration,
         )
-        _atomic_write_json(REGISTRY_PATH, payload)
+        _atomic_write_json(registry_path(), payload)
 
 
 def save_dataset(record: DatasetRecord) -> DatasetRecord:
@@ -621,7 +655,7 @@ def save_dataset(record: DatasetRecord) -> DatasetRecord:
 
         manifest_path = Path(saved.manifest_path)
         manifest_path.parent.mkdir(parents=True, exist_ok=True)
-        _atomic_write_json(manifest_path, saved.model_dump(mode="json"))
+        _atomic_write_json(manifest_path, _stored_record(saved))
 
     return saved
 
@@ -684,11 +718,11 @@ def delete_dataset(
         records = sorted(existing.values(), key=lambda item: item.dataset_id)
         save_registry(records)
 
-    _remove_managed_file(current.manifest_path, allowed_dir=MANIFESTS_DIR)
-    _remove_managed_file(current.sqlite_db_path, allowed_dir=SQLITE_DIR)
-    _remove_managed_file(current.raw_tables_path, allowed_dir=RAW_TABLES_DIR)
+    _remove_managed_file(current.manifest_path, allowed_dir=manifests_dir())
+    _remove_managed_file(current.sqlite_db_path, allowed_dir=sqlite_dir())
+    _remove_managed_file(current.raw_tables_path, allowed_dir=raw_tables_dir())
     if current.managed_source:
-        _remove_managed_file(current.file_path, allowed_dir=SOURCES_DIR)
+        _remove_managed_file(current.file_path, allowed_dir=sources_dir())
     _delete_vector_collection_if_exists(
         current.vector_collection_name,
         delete_vector_collection_fn=delete_vector_collection_fn,

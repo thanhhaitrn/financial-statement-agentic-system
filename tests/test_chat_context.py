@@ -172,7 +172,7 @@ def test_history_budget_also_bounds_snapshot_payloads():
 
 @pytest.fixture
 def harness(monkeypatch, tmp_path):
-    monkeypatch.setattr(registry, "DATASETS_DIR", tmp_path / "dataset_store")
+    monkeypatch.setenv("FINX_HOME", str(tmp_path))
     database = webdb.WebDB(tmp_path / "web.sqlite3")
     database.migrate()
     with database.transaction() as conn:

@@ -1,0 +1,3 @@
+# Run outputs: evaluation reports, logs. Never tracked; safe to delete.
+*
+!.gitignore

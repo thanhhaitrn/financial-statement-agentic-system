@@ -24,6 +24,9 @@ _BLOCKED: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"(^|/)\.env(\.[^/]+)?$"), "environment file"),
     (re.compile(r"(^|/)(uploads?|user_uploads)/"), "uploaded files"),
     (re.compile(r"(^|/)dataset_store/"), "runtime dataset store"),
+    # storage/ and artifacts/ keep only their own .gitignore in Git.
+    (re.compile(r"^storage/(?!\.gitignore$)"), "runtime storage"),
+    (re.compile(r"^artifacts/(?!\.gitignore$)"), "run output"),
     (re.compile(r"\.pdf$", re.IGNORECASE), "PDF document"),
     (re.compile(r"(^|/)node_modules/"), "Node dependencies"),
     (re.compile(r"(^|/)\.next/"), "Next.js build output"),

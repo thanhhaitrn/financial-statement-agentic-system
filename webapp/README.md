@@ -30,12 +30,19 @@ export FINX_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe
 # và đường dẫn embedded, vì ba process không dùng chung được.
 export QDRANT_URL=...          # và QDRANT_API_KEY nếu là Qdrant Cloud
 
+agentfinx db init                # chỉ lần đầu: tạo database tài khoản
 agentfinx serve                  # http://127.0.0.1:8000
 agentfinx worker --queue chat    # terminal thứ hai
 agentfinx worker --queue import  # terminal thứ ba
 ```
 
 Các biến có thể đặt trong `.env` (được git ignore).
+
+Dữ liệu nằm trong `storage/` dưới `FINX_HOME` (mặc định: thư mục repo; bản cài từ wheel
+phải đặt `FINX_HOME`). `agentfinx storage status` cho biết đang dùng database nào. Máy còn
+dữ liệu ở `dataset_store/` (bố cục cũ) thì app từ chối chạy cho tới khi chuyển:
+`agentfinx storage migrate` (xem trước) rồi `agentfinx storage migrate --apply` (chỉ sao chép
+và kiểm tra, không xóa `dataset_store/`).
 
 ## Giao diện Next.js (`web/`)
 
@@ -97,7 +104,7 @@ dùng chung cho mọi người. Đăng ký mặc định chỉ bằng mã mời 
 | `FINX_SECRET_KEY` | — (bắt buộc, ≥ 32 ký tự) | Ký cookie phiên đăng nhập. |
 | `FINX_HOST` / `FINX_PORT` | `127.0.0.1` / `8000` | Địa chỉ bind. Bind ra ngoài loopback sẽ in cảnh báo. |
 | `FINX_ALLOWED_ORIGINS` | suy ra từ host/port | Origin được phép gửi request thay đổi trạng thái. |
-| `FINX_WEB_DB` | `dataset_store/web/finx_web.sqlite3` | Database web (user, session, lịch sử, chat run). |
+| `FINX_WEB_DB` | `storage/web/finx_web.sqlite3` | Database web (user, session, lịch sử, chat run). |
 | `FINX_SHARED_DATASET_IDS` | rỗng | Dataset mẫu dùng chung, phân tách bằng dấu phẩy. Chỉ áp dụng cho dataset **không có owner**. |
 | `FINX_COOKIE_SECURE` | `0` | Đặt `1` khi chạy sau HTTPS. |
 | `FINX_CHAT_CONTEXT` | `0` trong giai đoạn chờ gate live | Resolver có guard từ lịch sử câu hỏi hiệu lực; `0` là rollback. Chỉ bật sau nghiệm thu bên dưới. |
@@ -191,7 +198,7 @@ LlamaParse cho tới khi người dùng chọn một báo cáo và bấm **Xác 
 **Chuẩn bị danh mục mã CK** (tên công ty, sàn niêm yết):
 
 ```bash
-agentfinx-refresh-symbols      # tạo dataset_store/web/cafef_symbols.json; nên chạy hằng ngày
+agentfinx-refresh-symbols      # tạo storage/catalog/cafef_symbols.json; nên chạy hằng ngày
 ```
 
 Danh mục mới dưới 24 giờ dùng trực tiếp; 24 giờ–7 ngày dùng kèm cảnh báo và worker import
