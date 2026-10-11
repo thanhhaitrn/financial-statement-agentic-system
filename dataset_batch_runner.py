@@ -22,7 +22,7 @@ from evaluation.contracts import (
     stable_json_fingerprint,
 )
 from output_formatter import format_final_answer
-from test import collect_pipeline_errors, ensure_built, execute_query, extract_run_summary
+from finx_pipeline import collect_pipeline_errors, ensure_built, execute_query, extract_run_summary
 from common import dedupe_keep_order as _dedupe_keep_order
 
 def _normalize_reference(value) -> str:
@@ -140,6 +140,15 @@ def parse_args():
         "--debug-trace",
         action="store_true",
         help="Enable debug-only trace logs during batch runs.",
+    )
+    parser.add_argument(
+        "--web-entry",
+        action="store_true",
+        help=(
+            "Answer through the web chat's entry (report discovery on): the web planner "
+            "classifies each question first. A question routed to report discovery is "
+            "recorded as a refusal, never forced back to QA."
+        ),
     )
     return parser.parse_args()
 
@@ -320,7 +329,30 @@ def _runtime_error_result(
     return result
 
 
-def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, include_trace: bool = False) -> dict:
+WEB_ENTRY_MISROUTE = "web_entry:routed_to_report_discovery"
+
+
+def _plan_web_entry(dataset, query: str) -> dict:
+    """The web chat's planner call for one question (same function and policy
+    context as the chat worker)."""
+
+    from agents.planner_runner import run_web_planner
+    from graph.state import WorkflowServices
+    from graph.workflow import run_with_services
+
+    state = {"user_query": query, "dataset_id": dataset.dataset_id, "debug_trace": False,
+             "tool_observations": [], "run_id": "batch", "trace": []}
+    return run_with_services(run_web_planner, WorkflowServices(collection=None), state)
+
+
+def run_dataset_queries(
+    dataset,
+    queries: list,
+    *,
+    debug_trace: bool = False,
+    include_trace: bool = False,
+    web_entry: bool = False,
+) -> dict:
     query_records = _dedupe_query_records(queries)
     dataset_result = {
         "dataset_id": dataset.dataset_id,
@@ -336,7 +368,12 @@ def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, in
     }
 
     try:
-        dataset, conn, collection = ensure_built(dataset)
+        from dataset_catalog.locks import dataset_lock
+
+        # Build under the per-dataset lock shared with the web workers, so a
+        # concurrent import cannot swap this dataset's index mid-build.
+        with dataset_lock(dataset.dataset_id):
+            dataset, conn, collection = ensure_built(dataset)
     except Exception as exc:
         dataset_result["setup_error"] = f"{type(exc).__name__}: {exc}"
         return dataset_result
@@ -386,11 +423,27 @@ def run_dataset_queries(dataset, queries: list, *, debug_trace: bool = False, in
         reference = str(query_record.get("reference", "") or "").strip()
         query_id = query_record.get("id")
         try:
+            planner_updates = None
+            if web_entry:
+                planner_updates = _plan_web_entry(dataset, query)
+                if planner_updates.get("task_kind") == "report_discovery":
+                    # On the web this question would get a candidate card, not an
+                    # answer: it counts against recall and as a refusal.
+                    dataset_result["runs"].append(
+                        _runtime_error_result(
+                            query,
+                            RuntimeError(WEB_ENTRY_MISROUTE),
+                            query_id=query_id,
+                            reference=reference,
+                        )
+                    )
+                    continue
             final_state = execute_query(
                 dataset,
                 collection,
                 query,
                 debug_trace=debug_trace,
+                **({"planner_updates": planner_updates} if planner_updates is not None else {}),
             )
             dataset_result["runs"].append(
                 serialize_run_result(
@@ -440,6 +493,7 @@ def build_batch_run_identity(
     selected_dataset_ids: list[str] | None,
     debug_trace: bool,
     include_trace: bool,
+    web_entry: bool = False,
 ) -> dict:
     records = _dedupe_query_records(query_records)
     actual_dataset_ids = [
@@ -472,6 +526,9 @@ def build_batch_run_identity(
         "runtime_config": runtime["config"],
         "include_trace": bool(include_trace),
     }
+    if web_entry:
+        # Only web-entry runs carry the key, so existing CLI fingerprints hold.
+        config_payload["entry"] = "web"
     identity = {
         "identity_version": 1,
         "selection": selection,
@@ -514,6 +571,7 @@ def build_report(
     debug_trace: bool = False,
     include_trace: bool = False,
     selected_dataset_ids: list[str] | None = None,
+    web_entry: bool = False,
 ) -> dict:
     query_records = _dedupe_query_records(queries)
     results = []
@@ -527,6 +585,7 @@ def build_report(
                 query_records,
                 debug_trace=debug_trace,
                 include_trace=include_trace,
+                web_entry=web_entry,
             )
         )
 
@@ -545,6 +604,7 @@ def build_report(
         selected_dataset_ids=selected_dataset_ids,
         debug_trace=debug_trace,
         include_trace=include_trace,
+        web_entry=web_entry,
     )
     expected_runs = len(results) * len(query_records)
     run_complete = (
@@ -942,7 +1002,7 @@ def main():
     dataset_ids = resolve_dataset_ids(args.dataset_id)
     datasets = resolve_datasets(load_registry(), dataset_ids)
     if not datasets:
-        raise SystemExit("No datasets registered. Use test.py to register a dataset first.")
+        raise SystemExit("No datasets registered. Use `agentfinx ask` to register a dataset first.")
 
     report = build_report(
         datasets,
@@ -950,6 +1010,7 @@ def main():
         debug_trace=args.debug_trace,
         include_trace=args.include_trace,
         selected_dataset_ids=dataset_ids,
+        web_entry=args.web_entry,
     )
 
     output_path = Path(args.output)

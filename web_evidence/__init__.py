@@ -54,11 +54,15 @@ def _create_web_provider(policy: RuntimePolicy):
         fetcher=VietstockHttpFetcher(
             timeout_seconds=policy.web.request_timeout_seconds,
             max_body_bytes=policy.web.max_body_bytes,
+            max_listing_pages=policy.web.max_listing_pages,
+            deadline_seconds=policy.web.refresh_deadline_seconds,
         ),
         cache_ttl_seconds=policy.web.cache_ttl_seconds,
         miss_wait_seconds=policy.web.miss_wait_seconds,
         max_refresh_articles=policy.web.max_refresh_articles,
         refresh_concurrency=policy.web.refresh_concurrency,
+        refresh_deadline_seconds=policy.web.refresh_deadline_seconds,
+        article_fetch_seconds=policy.web.article_fetch_seconds,
         proactive_refresh_admitter=quota.admit_news_refresh,
     )
 

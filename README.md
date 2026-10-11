@@ -8,7 +8,7 @@ Sau khi cài (`pip install -e .`), lệnh hợp nhất `agentfinx <command>` rou
 
 | Lệnh hợp nhất | Console script | Module | Vai trò |
 |---|---|---|---|
-| `agentfinx ask …` | — | `test.py` | Đăng ký/build dataset và hỏi một câu |
+| `agentfinx ask …` | — | `finx_pipeline.py` | Đăng ký/build dataset và hỏi một câu |
 | `agentfinx batch …` | `agentfinx-batch` | `dataset_batch_runner.py` | Chạy nhiều câu hỏi trên một/nhiều dataset |
 | `agentfinx predict …` | `agentfinx-predict` | `dataset_batch_result.py` | Tạo prediction/context cho evaluation |
 | `agentfinx score …` | `agentfinx-ragas` | `ragas_eval_runner.py` | Chấm RAGAS (diagnostic) |
@@ -40,6 +40,8 @@ scripts/                Tiện ích vận hành (run_rotate, diagnostics)
 tests/                  Unit tests (pytest)
 tools/                  Retrieval tools cho agents
 vectorstore/            Qdrant adapter, lexical index, reranker
+webapp/                 FastAPI web app (API, worker) + giao diện cũ webapp/static
+web/                    Giao diện Next.js, proxy /api sang webapp (xem webapp/README.md)
 ```
 
 Các file dữ liệu/evaluation ở root:
@@ -84,6 +86,7 @@ WEB_MISS_WAIT_SECONDS=10
 
 Cache tin hoạt động theo `fresh → trả ngay`, `stale → trả bản cũ và refresh nền`,
 `miss → chờ tối đa 10 giây`. Provider HTTP không dùng Selenium/browser pool;
+`WEB_MAX_BODY_BYTES` mặc định 800 KB vì trang bài Vietstock ~400 KB HTML;
 CLI refresh trong executor giới hạn và đóng executor khi kết thúc. Khi triển khai
 API, cần chuyển refresh sang worker queue. WEB facts chỉ tới analysis agent trong
 `needby`, giữ URL/provenance, không đi vào phép tính hoặc grounding BCTC. Không còn
@@ -94,6 +97,112 @@ mã–công ty–sàn được cập nhật bởi job hằng ngày:
 agentfinx-refresh-symbols
 ```
 
+### Phân tích tin doanh nghiệp (`WEB_ANALYSIS_ENABLED`)
+
+Mặc định tắt; cần thêm `WEB_EVIDENCE_ENABLED=1`. Tắt flag thì hành vi như trước
+(WEB facts tới analysis agent theo `needby`). Khi bật, câu hỏi có `need_web=true`
+và `web_intent=company_news` đi qua:
+
+```text
+                       ┌─ start_web ── (luồng riêng: phân tích tin) ───────────────┐
+Planner → Router → build_evidence ─┤                                                    ├→ join_web → Synth
+                       └─ agent BCTC → tool → … → collect_analysis ─────────────────┘
+(agent_web chạy trước agent BCTC chỉ khi một agent BCTC cần đọc tin — câu hỏi gắn tin với số liệu)
+```
+
+- **Song song:** nhánh tin chạy ngoài các bước đồng bộ của LangGraph (một luồng riêng cho mỗi
+  lần chạy), nên phân tích tin dài không chặn vòng gọi tool của agent BCTC; `join_web` chờ nó
+  ngay trước Synth. Chỉ khi một agent BCTC cần đọc tin thì nhánh tin chạy trước (tuần tự).
+- **Một ngân sách thời gian** cho cả nhánh tin (`WEB_BRANCH_BUDGET_SECONDS`, mặc định 75 giây):
+  thời gian lấy tin được trừ trước, phân tích nhận phần còn lại (tối đa
+  `WEB_ANALYSIS_BUDGET_SECONDS`). Hết ngân sách mà chưa xong thì câu trả lời BCTC vẫn đi, phần tin
+  ghi "đang cập nhật".
+- **Tự bổ sung:** nếu tin đang được thu thập (danh sách chưa đọc xong) hoặc chưa phân tích xong khi
+  trả lời, chat worker hoàn tất phần tin sau đó (giữa các câu hỏi, câu hỏi luôn được ưu tiên) và
+  thêm một tin nhắn "Cập nhật tin tức" vào cuộc trò chuyện; giao diện tự hiện, kể cả khi đã tải
+  lại trang. Sau 10 phút không có tin thì báo và dừng (chỉ khi đó mới gợi ý hỏi lại).
+
+- **Nguồn:** Vietstock, đọc danh sách tin JSON mà chính trang Vietstock dùng
+  (`POST /data/GetNews`, không cần token) rồi từng trang bài; mọi URL và redirect phải
+  thuộc vietstock.vn, có giới hạn dung lượng, timeout từng request và deadline. CafeF vẫn chỉ
+  dùng để tìm/nhập báo cáo.
+- **Thu thập theo ba bước tách bạch:** *đọc danh sách* (refresh nền đọc danh sách tin tới đầu
+  khoảng hỏi, lưu mọi mục vào cache công khai dạng `listing_only`), *lưu bài* (chỉ tải toàn văn
+  các bài được chọn cho câu hỏi, trong `WEB_ARTICLE_FETCH_SECONDS`), *phân tích*. Danh sách chỉ
+  được coi là đọc hết khi đạt số dòng `TotalRow` nguồn báo; "không có tin" chỉ kết luận khi đã
+  đọc hết danh sách của cả khoảng.
+- **Chọn theo chủ đề:** bài được xếp theo mức khớp chủ đề câu hỏi (tiêu đề + tóm tắt), từ trùng
+  tên thương hiệu/công ty không tính; câu hỏi chung chung thì lấy bài mới nhất. Mỗi bài chỉ đưa
+  vào prompt các đoạn khớp chủ đề (kèm đoạn mở đầu), không cắt đầu bài.
+- **Doanh nghiệp:** mã lấy từ metadata của báo cáo đang mở (đã kiểm tra quyền); báo cáo
+  không có mã thì chỉ nhận mã khi tên công ty khớp đúng một mã trong catalog CafeF. Câu hỏi
+  nêu mã/doanh nghiệp khác thì yêu cầu mở báo cáo đó, không dùng mã của báo cáo đang mở.
+- **Thời gian:** chỉ đọc mốc thời gian trong vế câu hỏi nói về tin (năm báo cáo không phải
+  năm tin). Hiểu ngày cụ thể, khoảng "từ … đến …", tháng/quý/năm (có hoặc không ghi năm), "N
+  ngày/tuần/tháng qua", tuần/tháng/quý/năm này–trước, đầu năm/tháng/quý, hôm nay/hôm qua. Không
+  nêu: 30 ngày đến `as_of`; chỉ nêu ngày bắt đầu: đến `as_of`; chỉ nêu ngày kết thúc: 30 ngày đến
+  ngày đó. Khoảng đảo ngược, ở tương lai, hoặc mốc thời gian không đọc được: hỏi lại, không tự
+  lấy 30 ngày. Ngày theo giờ Việt Nam.
+- **Phân tích:** hai lượt model theo lô (chọn bài + gom sự kiện, rồi bằng chứng), mỗi lượt thử
+  lại một lần; tối đa 4 lần gọi và 60 giây, timeout đặt ở HTTP client bằng thời gian còn lại.
+  Trả lời thiếu trường bắt buộc hoặc nhãn ngoài danh sách bị từ chối và gọi lại.
+- **Kiểm tra từng nhận định:** trích dẫn phải khớp nguyên văn (chỉ bỏ qua khác biệt
+  Unicode/khoảng trắng) với bài thuộc đúng sự kiện. Tiêu đề sự kiện và từng câu giải thích phải
+  được trích dẫn chứng minh (mọi con số và tên riêng có trong trích dẫn, phần lớn từ nội dung
+  khớp); không thì tiêu đề lấy theo bài gốc, câu giải thích bị bỏ. Ngày sự kiện chỉ giữ khi bài
+  ghi ngày đó ("ngày nêu trong bài"). Chỉ tiêu liên quan lấy từ trích dẫn. Sự kiện không còn
+  trích dẫn hợp lệ không được nhận định.
+- **Mức xác nhận do code quyết theo nguồn:** `official_disclosure` (tiêu đề "MÃ: …" là tin công
+  bố thông tin của doanh nghiệp), `unconfirmed` (trích dẫn có "tin đồn", "chưa được xác nhận",
+  "nguồn tin", "giấu tên"…), `forecast` ("dự kiến", "kế hoạch", "mục tiêu"…), `attributed_report`
+  ("công bố", "cho biết", "theo báo cáo"…), còn lại `unattributed`; kèm căn cứ cụ thể.
+- **Thứ tự trình bày:** sự kiện gì → khi nào → liên quan chỉ tiêu nào → trích dẫn và nguồn →
+  mức xác nhận → điều còn chưa chắc; sắc thái chỉ là thông tin phụ (điểm tổng hợp có trọng số
+  theo mức xác nhận, rubric `news-sentiment-rubric-2.0`).
+- **Trạng thái:** `ok`, `partial`, `pending` (đang đọc danh sách), `insufficient_evidence`,
+  `needs_clarification`, `unsupported`, `error`. Lỗi model hay lỗi nguồn không bao giờ được
+  báo thành "không có tin".
+- **Ai nhận tin:** Synth luôn nhận **dữ liệu có cấu trúc** (`web_news_analysis`): mỗi sự kiện có
+  `event`, `date_in_article`/`reported_on`, `related_metrics`, `explanation` đã kiểm tra,
+  `evidence` (trích dẫn + nguồn: tiêu đề, tóm tắt của nguồn, ngày), `confirmation` +
+  `confirmation_basis`, `uncertainties`, `sentiment_secondary`; kèm `collection` và
+  `limitations`. Không có URL, không có toàn văn bài. Một agent phân tích chỉ nhận thêm (cùng cấu
+  trúc, dạng web fact) khi router ghi agent đó trong `needby`, agent được giao việc, **và** câu
+  hỏi gắn tin với số liệu ("ảnh hưởng", "tác động", "vì sao"…). Web fact không thành toán hạng
+  hay căn cứ BCTC. Planner yêu cầu `company_news` mà router bỏ sót mục web thì mục đó được thêm lại.
+- **Câu trả lời:** Synth không được dùng số liệu trong tin làm toán hạng hay nguyên nhân, không
+  thêm chi tiết ngoài dữ liệu đã kiểm tra. Phần "Tin tức doanh nghiệp" do code render, nối dưới
+  câu trả lời và lưu cùng lịch sử chat. Lỗi phần web không làm hỏng câu trả lời BCTC.
+- **Cache:** chỉ chứa trường lấy từ nguồn, dùng chung; câu hỏi (`query`, `topic`) và tên công ty
+  do người hỏi cung cấp không được ghi vào cache (file cũ được làm sạch một lần khi mở). Kết quả
+  phân tích theo câu hỏi chỉ nằm trong lần chạy. Follow-up cùng câu hỏi và cùng bài dùng lại kết
+  quả, tối đa 2 lần phân tích cho một câu hỏi.
+- **Kiểm tra với Vietstock thật:** `FINX_LIVE_WEB_SMOKE=1` chạy hai test: đọc toàn văn bài, và
+  lật trang tới khoảng cũ hơn trang đầu, đối chiếu ngày trong danh sách với ngày trên trang bài.
+
+```bash
+WEB_EVIDENCE_ENABLED=1
+WEB_ANALYSIS_ENABLED=1
+FINX_LIVE_WEB_SMOKE=1 python -m pytest tests/test_vietstock_live.py   # kiểm tra Vietstock thật (tùy chọn)
+```
+
+**Phân loại của Planner (`need_web`, `web_intent`)** theo đối tượng và loại dữ liệu người dùng cần:
+tin/sự kiện/công bố của một doanh nghiệp (kể cả khi hỏi tin đó ảnh hưởng chỉ tiêu nào của chính
+doanh nghiệp) là `company_news`; vĩ mô, thị trường chung, giá cổ phiếu, trung bình ngành, chính sách
+chung là `unsupported_external`; trả lời được bằng BCTC là `need_web=false`. Đo bằng (gọi model thật,
+không chạy trong CI):
+
+```bash
+# need_web/web_intent/task_kind, với báo cáo đang mở như lúc chạy thật; 5 lượt mỗi câu, cả hai planner
+python -m scripts.eval_task_routing --questions evaluation/web_intent_contrastive.json --planner both --runs 5
+# bộ cũ: hỏi báo cáo và tìm báo cáo không lẫn nhau
+python -m scripts.eval_task_routing --questions evaluation/task_routing_contrastive.json --runs 3 --dataset-id suavietnam
+```
+
+Lệnh trả mã 1 khi một câu `clear` sai ở bất kỳ lượt nào hoặc một câu hỏi báo cáo bị chuyển sang tìm
+báo cáo. Kết quả 11/10/2026 (model cấu hình trong `.env`): prompt cũ 142/165 lượt đúng, 7/31 ca rõ
+nghĩa không ổn định; prompt mới 165/165, 0 ca không ổn định; bộ cũ 51/51, không câu nào bị chuyển nhầm.
+
 Luồng PDF có hai đầu vào: upload trực tiếp, hoặc CafeF discovery rồi người dùng
 xác nhận một `confirmed_candidate_id` opaque. API không nhận URL tùy ý. Download
 kiểm tra allowlist redirect/host, MIME, `%PDF-`, SHA-256, giới hạn 25 MB và 200
@@ -103,8 +212,9 @@ ready|failed`; chỉ job `ready` mới có `dataset_id`.
 ### CLI trước, API sau
 
 ```bash
-# Chỉ tìm và lưu candidate; chưa tải báo cáo.
-agentfinx reports discover --ticker VNM --year 2025 --session-id demo
+# Chỉ tìm và lưu candidate; chưa tải báo cáo. Không cần sàn: tham số Type của CafeF
+# là loại tài liệu, không phải sàn (--exchange chỉ để hiển thị, không mặc định HOSE).
+agentfinx reports discover --ticker VNM --year 2025 --period annual --session-id demo
 
 # Chạy sau khi đã xem và chọn candidate từ kết quả discovery.
 agentfinx reports import --confirmed-candidate-id CANDIDATE_ID --session-id demo --allow-cloud-parse
@@ -114,7 +224,19 @@ agentfinx reports import --pdf /path/report.pdf --ticker VNM --year 2025 --allow
 agentfinx reports status JOB_ID
 agentfinx reports budget
 agentfinx ask --dataset-id DATASET_ID --query "Doanh thu thuần năm 2025 là bao nhiêu?"
+
+# Admin: đối soát chi phí các job còn pending, chỉ theo mã job đã lưu (không gửi parse mới).
+agentfinx reports reconcile JOB_ID
+agentfinx reports reconcile --all-pending
+
+# Dọn bản build Qdrant cũ của một dataset (mặc định chỉ in kế hoạch).
+agentfinx datasets gc --dataset-id DATASET_ID [--apply]
 ```
+
+Trạng thái xử lý và trạng thái chi phí tách riêng: một job có thể `ready` (hỏi được
+ngay) trong khi chi phí vẫn `pending` vì nhà cung cấp chưa báo usage. Ước tính
+(trang × đơn giá) chỉ dùng để giữ ngân sách, không bao giờ ghi thành chi phí thực.
+Upload qua giao diện web: xem [webapp/README.md](webapp/README.md).
 
 Import CLI chạy đồng bộ và tái sử dụng acquisition service, không có pipeline
 thứ hai. Giữ cùng `--owner-id`/`--session-id` khi xác nhận candidate hoặc xem job.
@@ -242,7 +364,7 @@ Khi dataset chưa build hoặc ingestion version thay đổi, CLI tự tạo/c�
 
 ## Chọn Dataset
 
-`ask`/`test.py` resolve dataset theo thứ tự:
+`ask`/`finx_pipeline.py` resolve dataset theo thứ tự:
 
 1. Có `--file-path`: tạo hoặc cập nhật dataset từ file đó.
 2. Có `--dataset-id`: lấy đúng dataset id.
@@ -448,7 +570,7 @@ Unit test đã mock phần LLM và không gọi API thật. CI (`.github/workflo
 
 - `dataset_store/`, `ragas_runs/`, `batch_test_results.json` là output sinh ra khi chạy.
 - `data/` chứa source Markdown đầu vào; không xóa khi chỉ muốn reset dataset đã build.
-- `test.py` là CLI chính (`agentfinx ask`), không phải unit test.
+- Pipeline CLI nằm ở `finx_pipeline.py` (`agentfinx ask`). `test.py` chỉ còn là lối vào tương thích cho `python test.py …`: module tên `test` trùng package chuẩn của Python và bị package đó che khi chạy qua lệnh `agentfinx` đã cài, nên code thư viện luôn import `finx_pipeline`.
 - `dataset_batch_runner.py` (batch answer) và `dataset_batch_result.py` (prediction/context cho RAGAS) là hai nhiệm vụ khác nhau.
 - KB/SQLite và Qdrant index build ở staging rồi mới activate; build lỗi không phá artifact đang hoạt động.
 - Artifact lớn trong `ragas_runs/`, cache và database sinh ra khi chạy không commit. Chỉ seed, manifest và fixture nhỏ đã review được version-control.

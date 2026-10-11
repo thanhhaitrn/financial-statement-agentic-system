@@ -9,11 +9,13 @@ import os
 import sys
 from pathlib import Path
 
+_ACCOUNT_COMMANDS = ("discover", "import", "status", "budget")
+
 
 def _parser():
     parser = argparse.ArgumentParser(prog="agentfinx reports")
     commands = parser.add_subparsers(dest="command", required=True)
-    for name in ("discover", "import", "status", "budget"):
+    for name in _ACCOUNT_COMMANDS:
         command = commands.add_parser(name)
         command.add_argument("--owner-id", default=f"local-{os.getuid()}",
                              help="Local account namespace; not an HTTP authentication mechanism")
@@ -27,6 +29,10 @@ def _parser():
             command.add_argument("--scope", default="")
             command.add_argument("--audit-status", default="")
             command.add_argument("--report-type", default="financial_statement")
+        if name == "discover":
+            command.add_argument("--period", choices=["any", "annual", "quarter", "half_year"],
+                                 default="any", help="--quarter implies quarter, --half implies half_year")
+            command.add_argument("--half", dest="fiscal_half", type=int, choices=(1, 2))
         if name == "import":
             source = command.add_mutually_exclusive_group(required=True)
             source.add_argument("--pdf", type=Path, help="Explicitly selected local PDF")
@@ -36,6 +42,15 @@ def _parser():
             command.add_argument("--idempotency-key", default="")
         if name == "status":
             command.add_argument("job_id")
+
+    reconcile = commands.add_parser(
+        "reconcile",
+        help="Re-check provider status/usage of imports with unconfirmed billing (admin)",
+    )
+    target = reconcile.add_mutually_exclusive_group(required=True)
+    target.add_argument("job_id", nargs="?", help="One import job to reconcile")
+    target.add_argument("--all-pending", action="store_true",
+                        help="Every import whose billing is still pending")
     return parser
 
 
@@ -49,16 +64,41 @@ def _default_service(*, allow_cloud_parse=False):
     )
 
 
+def _billing_view(job) -> dict:
+    return {
+        "job_id": job.job_id,
+        "status": job.status,
+        "billing_status": job.billing_status,
+        "billing_pending": job.billing_pending,
+        "reserved_credits": job.reserved_credits,
+        "estimated_credits": job.estimated_credits,
+        "confirmed_credits": job.confirmed_credits,
+        "billed_credits": job.billed_credits,
+        "error_code": job.error_code,
+    }
+
+
 def main(argv=None, *, service_factory=None) -> int:
     parser = _parser()
     args = parser.parse_args(argv)
-    if not args.owner_id.strip() or not args.session_id.strip():
+    if args.command in _ACCOUNT_COMMANDS and (
+        not args.owner_id.strip() or not args.session_id.strip()
+    ):
         parser.error("owner-id and session-id must be non-empty")
     from schemas.acquisition import ReportQuery
     factory = service_factory or _default_service
     try:
         service = factory(allow_cloud_parse=getattr(args, "allow_cloud_parse", False))
-        if args.command == "budget":
+        if args.command == "reconcile":
+            # Resolves only submissions whose remote job ID is known; it never
+            # sends a new parse request and never writes a charge of zero.
+            jobs = (
+                service.reconcile_all_pending()
+                if args.all_pending
+                else [service.reconcile_job(args.job_id)]
+            )
+            result = {"jobs": [_billing_view(job) for job in jobs]}
+        elif args.command == "budget":
             result = service.quota.budget_state()
         elif args.command == "status":
             job = service.store.get_job(args.job_id, owner_id=args.owner_id)
@@ -73,10 +113,16 @@ def main(argv=None, *, service_factory=None) -> int:
             if args.command == "discover":
                 if not args.ticker.strip():
                     parser.error("discover requires --ticker")
-                candidates = service.discover(ReportQuery(
-                    owner_id=args.owner_id, session_id=args.session_id, **metadata,
+                # No exchange default: the report endpoint does not need one.
+                outcome = service.discover(ReportQuery(
+                    owner_id=args.owner_id, session_id=args.session_id,
+                    period=args.period, fiscal_half=args.fiscal_half, **metadata,
                 ))
-                result = {"candidates": [item.model_dump(mode="json") for item in candidates],
+                result = {"status": outcome.status,
+                          "catalog_status": outcome.catalog_status,
+                          "warnings": list(outcome.warnings),
+                          "total_matched": outcome.total_matched,
+                          "candidates": [item.model_dump(mode="json") for item in outcome.candidates],
                           "next_step": "Confirm one candidate with reports import --confirmed-candidate-id ID"}
             else:
                 # File validation precedes hashing and any reservation/network.
@@ -89,7 +135,8 @@ def main(argv=None, *, service_factory=None) -> int:
                                        "metadata": metadata, "cloud": args.allow_cloud_parse,
                                        "converter": service.converter.converter_identity}, sort_keys=True)
                 key = args.idempotency_key or hashlib.sha256(identity.encode()).hexdigest()
-                common = dict(owner_id=args.owner_id, session_id=args.session_id, idempotency_key=key)
+                common = dict(owner_id=args.owner_id, session_id=args.session_id,
+                              idempotency_key=key, allow_cloud_parse=args.allow_cloud_parse)
                 if args.pdf:
                     job = service.create_upload_import(upload_path=args.pdf, metadata=metadata, **common)
                 else:
@@ -104,7 +151,8 @@ def main(argv=None, *, service_factory=None) -> int:
         return 0
     except (ValueError, RuntimeError, OSError) as exc:
         from acquisition.service import ReportDiscoveryUnavailable
-        message = ("CafeF discovery unavailable; use reports import --pdf FILE instead."
+        message = ("CafeF could not be searched (not the same as no reports); "
+                   "use reports import --pdf FILE instead."
                    if isinstance(exc, ReportDiscoveryUnavailable) else type(exc).__name__)
         print(json.dumps({"error": getattr(exc, "code", type(exc).__name__), "message": message},
                          ensure_ascii=False), file=sys.stderr)

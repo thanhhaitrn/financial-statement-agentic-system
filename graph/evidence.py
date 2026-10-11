@@ -162,6 +162,28 @@ class _EvidenceChainResult:
     web_refreshes: int = 0
     web_stale: int = 0
     web_errors: int = 0
+    # Company-news analysis mode: the context and full articles for agent_web.
+    web_bundle: dict = field(default_factory=dict)
+
+
+# Article text kept for the news analysis (quotes are checked against it).
+WEB_ARTICLE_TEXT_MAX = 20_000
+
+
+def _news_analysis_context(state: dict):
+    """WebContext for the open report, or None outside analysis mode."""
+
+    from datetime import datetime, timezone
+
+    from web_analysis.context import build_web_context, default_symbol_catalog
+    from web_evidence.dates import parse_published
+
+    as_of = parse_published(state.get("as_of")) or datetime.now(timezone.utc)
+    try:
+        catalog = default_symbol_catalog()
+    except Exception:
+        catalog = None
+    return build_web_context(state, as_of=as_of, catalog=catalog)
 
 
 def _cache_log_id(cache_key: str) -> str:
@@ -1999,7 +2021,27 @@ def _execute_web_evidence_chain(
     ).strip()
     provider_name = str(getattr(web_provider, "provider_identity", "") or "").strip()
     call_started_at = time.perf_counter()
-    if web_provider is None:
+    # With WEB_ANALYSIS_ENABLED, company news is fetched for the open report's
+    # ticker and a news window, and handed to agent_web whole; the report
+    # agents and Synth never see raw article text.
+    analysis_mode = active_policy().web.analysis_active and web_intent == "company_news"
+    news_context = _news_analysis_context(state) if analysis_mode else None
+    batch_meta: dict = {}
+    if news_context is not None and news_context.status != "ready":
+        result = {
+            "tool": "web_search",
+            "table": "",
+            "query": query,
+            "canonical_query": query,
+            "context": "",
+            "source": provider_name,
+            "status": "not_found_after_search",
+            "retrieval_status": "unsupported",
+            "message": news_context.message,
+            "cache_status": "disabled",
+        }
+        chain = _EvidenceChainResult(web_unsupported=1)
+    elif web_provider is None:
         result = {
             "tool": "web_search",
             "table": "",
@@ -2015,24 +2057,51 @@ def _execute_web_evidence_chain(
         chain = _EvidenceChainResult(web_unsupported=1)
     else:
         try:
-            request = WebEvidenceRequest(
-                query=query,
-                intent=web_intent,
-                owner_id=str(state.get("owner_id", "") or ""),
-                ticker=str(
-                    state.get("dataset_ticker", "")
-                    or (state.get("planner_plan", {}) or {}).get("ticker", "")
-                    or ""
-                ),
-                company=str(
-                    state.get("dataset_company", "")
-                    or (state.get("planner_plan", {}) or {}).get("company", "")
-                    or ""
-                ),
-                limit=active_policy().web.max_results,
-                force_refresh=bool(state.get("force_web_refresh", False)),
-            )
+            if news_context is not None:
+                # Ticker and company come only from the open report.
+                request = WebEvidenceRequest(
+                    query=query,
+                    intent=web_intent,
+                    owner_id=str(state.get("owner_id", "") or ""),
+                    ticker=news_context.ticker,
+                    company=news_context.company,
+                    as_of=news_context.as_of,
+                    date_from=news_context.date_from,
+                    date_to=news_context.date_to,
+                    # Ranks articles by what was asked; never stored.
+                    topic=news_context.question,
+                    limit=active_policy().web.analysis_max_articles,
+                    force_refresh=bool(state.get("force_web_refresh", False)),
+                )
+            else:
+                request = WebEvidenceRequest(
+                    query=query,
+                    intent=web_intent,
+                    owner_id=str(state.get("owner_id", "") or ""),
+                    ticker=str(
+                        state.get("dataset_ticker", "")
+                        or (state.get("planner_plan", {}) or {}).get("ticker", "")
+                        or ""
+                    ),
+                    company=str(
+                        state.get("dataset_company", "")
+                        or (state.get("planner_plan", {}) or {}).get("company", "")
+                        or ""
+                    ),
+                    limit=active_policy().web.max_results,
+                    force_refresh=bool(state.get("force_web_refresh", False)),
+                )
             batch = web_provider.search(request)
+            batch_meta = {
+                "status": batch.status,
+                "message": batch.message,
+                "pending": bool(batch.pending),
+                "coverage": dict(batch.coverage or {}),
+                "stats": dict(batch.stats or {}),
+                "cache_status": batch.cache_status,
+                "provider": provider_name,
+                "diagnostics": dict(batch.diagnostics or {}),
+            }
             result = batch.model_dump(mode="python")
             result.update(
                 {
@@ -2066,6 +2135,8 @@ def _execute_web_evidence_chain(
                 "cache_status": "miss",
             }
             chain = _EvidenceChainResult(retrieval_calls=1, web_errors=1)
+            batch_meta = {"status": "error", "message": result["message"], "pending": False,
+                          "coverage": {}, "provider": provider_name}
 
     retrieval_status = str(result.get("retrieval_status", "") or "unsupported")
     event = "evidence_tool:done"
@@ -2092,6 +2163,45 @@ def _execute_web_evidence_chain(
             message=str(result.get("message", "") or ""),
         )
     )
+
+    if news_context is not None:
+        evidence = []
+        for item in result.get("evidence", []) or []:
+            item = dict(item)
+            item["content"] = str(item.get("content", "") or "")[:WEB_ARTICLE_TEXT_MAX]
+            evidence.append(item)
+        if not batch_meta:
+            batch_meta = {"status": "unsupported", "message": str(result.get("message", "") or ""),
+                          "pending": False, "coverage": {}, "provider": provider_name}
+        chain.web_bundle = {
+            "context": news_context.model_dump(mode="json"),
+            "batch": batch_meta,
+            "evidence": evidence,
+            # Analysis agents the router said need the web evidence; whether
+            # they get the checked news is decided after the analysis.
+            "needby": [str(agent) for agent in needby],
+            # Spent of the branch budget before the analysis starts.
+            "fetch_seconds": round(time.perf_counter() - call_started_at, 3),
+        }
+        chain.evidence_items.append(
+            {
+                "key": cache_key,
+                "scope": "web",
+                "table": "",
+                "query": query,
+                "evidence_query": query,
+                "needby": needby,
+                **route_metadata,
+                "facts_n": len(evidence),
+                "source": provider_name,
+                "status": str(result.get("status", "") or "not_found_after_search"),
+                "retrieval_status": retrieval_status,
+                "cache_status": str(result.get("cache_status", "") or ""),
+                "message": str(result.get("message", "") or ""),
+                "consumer": "agent_web",
+            }
+        )
+        return chain
 
     payload = _web_result_to_payload(result, query)
     payload["facts"] = _limit_evidence_facts(payload.get("facts", []))
@@ -2936,6 +3046,7 @@ def build_evidence_pack(state: dict, *, web_provider: Any = None) -> dict:
         trace=trace,
         retrieval_ledger_entries=retrieval_ledger_entries,
     )
+    web_bundle = next((chain.web_bundle for chain in primary_results if chain.web_bundle), {})
     retrieval_calls += primary_counts["retrieval_calls"]
     targeted_retries += primary_counts["targeted_retries"]
     cache_hits += primary_counts["cache_hits"]
@@ -3151,4 +3262,6 @@ def build_evidence_pack(state: dict, *, web_provider: Any = None) -> dict:
         updates["expected_workers"] = []
         updates["analysis_dispatch_targets"] = []
 
+    if web_bundle:
+        updates["web_bundle"] = web_bundle
     return updates

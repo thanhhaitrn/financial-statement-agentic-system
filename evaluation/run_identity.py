@@ -306,6 +306,7 @@ def build_run_identity(
     offset: int = 0,
     debug_trace: bool = False,
     skip_eval: bool = True,
+    web_entry: bool = False,
 ) -> dict[str, Any]:
     seed_path = Path(seed_file)
     seed_checksum = sha256_file(seed_path) if seed_path.is_file() else ""
@@ -348,8 +349,16 @@ def build_run_identity(
             "embedding": runtime["embedding"],
             "prompt": runtime["prompt"],
             "model": runtime["model"],
-            "config": runtime["config"],
+            # Web-entry runs (planner classifies before QA) are a different
+            # workflow; CLI identities are left exactly as before.
+            "config": (
+                stable_json_fingerprint({"runtime": runtime["config"], "entry": "web"})
+                if web_entry
+                else runtime["config"]
+            ),
         },
     }
+    if web_entry:
+        identity["entry"] = "web"
     identity["run_fingerprint"] = stable_json_fingerprint(identity)
     return identity

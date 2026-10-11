@@ -230,7 +230,7 @@ def test_cafef_symbol_parser_handles_embedded_json_and_deduplicates():
     )
 
     assert [(item.ticker, item.exchange) for item in symbols] == [
-        ("VNM", "HSX"),
+        ("VNM", "HOSE"),
         ("FPT", "HNX"),
     ]
 
@@ -244,7 +244,7 @@ def test_symbol_catalog_job_writes_structured_daily_artifact(tmp_path: Path):
     payload = job.refresh(tmp_path / "symbols.json")
 
     assert payload["symbols"] == [
-        {"ticker": "VNM", "company": "Vinamilk", "exchange": "HSX"}
+        {"ticker": "VNM", "company": "Vinamilk", "exchange": "HOSE"}
     ]
     assert len(payload["content_hash"]) == 64
     assert (tmp_path / "symbols.json").exists()
@@ -282,15 +282,18 @@ def test_cache_replaces_revised_url_and_uses_wal(tmp_path):
         assert connection.execute("PRAGMA journal_mode").fetchone()[0] == "wal"
 
 
-def test_short_article_drop_is_observable(monkeypatch):
+def test_short_article_keeps_its_listing_summary_and_is_observable(monkeypatch):
     from web_evidence.vietstock import VietstockHttpFetcher
     fetcher = VietstockHttpFetcher()
-    def get(url):
-        if url.endswith("tin-tuc-su-kien.htm"):
-            return '<a class="stock-news__title" href="https://vietstock.vn/news.htm">Tin tức</a>', url
-        return '<article><p>Short</p></article>', url
-    monkeypatch.setattr(fetcher, "_get", get)
-    assert fetcher("VNM", 3) == []
+    rows = [{"StockCode": "VNM", "Title": "Tin tức", "Head": "Tóm tắt trong danh sách tin",
+             "PublishTime": "/Date(1790000000000)/", "URL": "/2026/09/tin-tuc-1.htm"}]
+    # No network: both the JSON listing and the article page are stubbed.
+    monkeypatch.setattr(fetcher, "_listing_page", lambda _ticker, page, _deadline: rows if page == 1 else [])
+    monkeypatch.setattr(fetcher, "_get", lambda url, _deadline=None: ("<article><p>Short</p></article>", url))
+    [item] = fetcher("VNM", 3)["items"]
+    assert item["content_status"] == "summary_only"
+    assert item["content"] == "Tóm tắt trong danh sách tin"
+    assert item["source_url"] == "https://vietstock.vn/2026/09/tin-tuc-1.htm"
     assert fetcher.diagnostics["article_dropped_short"] == 1
 
 

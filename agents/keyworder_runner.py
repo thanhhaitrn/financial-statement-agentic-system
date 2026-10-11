@@ -38,6 +38,7 @@ from config.allowed_keywords import (
     TABLE_REPORT_SECTION,
     build_allowed_keywords_payload,
     iter_keyword_table_pairs,
+    keyword_vocabulary_version,
     normalize_keyword_synonyms,
 )
 from graph.logger import make_debug_log, make_log
@@ -185,12 +186,14 @@ def _candidate_route_specs() -> list[dict]:
     keywords registered by ensure_built via set_dynamic_keywords are visible to
     the followup router.
     """
-    pairs = iter_keyword_table_pairs()
-    cache_key = len(pairs)
+    # Keyed by the vocabulary version, not its size: two datasets with the same
+    # number of keywords must never share route specs after a dataset switch.
+    cache_key = keyword_vocabulary_version()
     cached = _ROUTE_CANDIDATES_CACHE.get("specs")
     if cached is not None and _ROUTE_CANDIDATES_CACHE.get("key") == cache_key:
         return cached
 
+    pairs = iter_keyword_table_pairs()
     candidates = []
     for keyword, table in pairs:
         candidates.append(
@@ -2828,6 +2831,34 @@ def _fallback_router_payload_from_planner(planner_plan: dict, user_query: str = 
     }
 
 
+def _ensure_company_news_target(worker_plan: dict, planner_plan: dict, user_query: str) -> dict:
+    """WEB_ANALYSIS_ENABLED: the planner's request for company news is not
+    lost when the router model leaves the web item out of its plan.
+
+    With the flag off, or in a follow-up round, the plan is returned as is.
+    """
+
+    from config.runtime_policy import active_policy
+
+    if not active_policy().web.analysis_active or _is_followup_mode(planner_plan):
+        return worker_plan
+    if not bool(planner_plan.get("need_web", False)):
+        return worker_plan
+    if str(planner_plan.get("web_intent", "") or "").strip() != "company_news":
+        return worker_plan
+    query = str(user_query or "").strip()
+    plan = list((worker_plan or {}).get("evidence_plan", []) or [])
+    if not query or any(not str(item.get("table", "") or "").strip() for item in plan):
+        return worker_plan
+    plan.append({
+        "table": "",
+        "query": query,
+        "needby": _planner_axis_agents(planner_plan),
+        "web_intent": "company_news",
+    })
+    return {**worker_plan, "evidence_plan": plan}
+
+
 def _analysis_coverage_log(
     state: dict,
     planner_plan: dict,
@@ -3139,6 +3170,9 @@ def run_router(state: dict) -> dict:
                 planner_plan,
                 pending_analysis_targets=state.get("pending_analysis_targets", []) or [],
             )
+        worker_plan = _ensure_company_news_target(
+            worker_plan, planner_plan, state.get("user_query", "")
+        )
 
         if bool(planner_plan.get("need_web", False)) and any(
             not str(item.get("table", "") or "").strip()
@@ -3211,6 +3245,9 @@ def run_router(state: dict) -> dict:
                 planner_plan,
                 pending_analysis_targets=state.get("pending_analysis_targets", []) or [],
             )
+        worker_plan = _ensure_company_news_target(
+            worker_plan, planner_plan, state.get("user_query", "")
+        )
 
         if bool(planner_plan.get("need_web", False)) and any(
             not str(item.get("table", "") or "").strip()

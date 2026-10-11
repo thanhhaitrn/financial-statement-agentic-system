@@ -6,12 +6,16 @@ dispatcher gives the installed ``agentfinx`` command a single front door that
 routes a subcommand to the matching module, instead of the previous hollow
 ``from test import main`` facade.
 
-    agentfinx ask     ...   -> test.main            (build dataset / answer a query)
+    agentfinx ask     ...   -> finx_pipeline.main            (build dataset / answer a query)
     agentfinx batch   ...   -> dataset_batch_runner.main
     agentfinx predict ...   -> dataset_batch_result.main
     agentfinx score   ...   -> ragas_eval_runner.main
     agentfinx recall  ...   -> eval_retrieval_recall.main
     agentfinx analyze ...   -> analyze_batch_metrics.main
+    agentfinx serve   ...   -> webapp.cli.serve_main   (local web API + frontend)
+    agentfinx worker  ...   -> webapp.cli.worker_main  (--queue chat|import)
+    agentfinx invites ...   -> webapp.cli.invites_main (sign-up invites)
+    agentfinx datasets gc   -> dataset_catalog.gc.main (superseded Qdrant builds)
 """
 
 from __future__ import annotations
@@ -19,24 +23,30 @@ from __future__ import annotations
 import sys
 from typing import Callable
 
-# Subcommand -> (module name, accepts an argv list).  argv-aware mains get the
-# remaining args directly; the older no-argv mains read ``sys.argv``, so we
-# hand them a rebuilt ``sys.argv`` instead.
+# Subcommand -> (module[:function], accepts an argv list).  argv-aware mains
+# get the remaining args directly; the older no-argv mains read ``sys.argv``,
+# so we hand them a rebuilt ``sys.argv`` instead.
 _COMMANDS: dict[str, tuple[str, bool]] = {
-    "ask": ("test", False),
+    "ask": ("finx_pipeline", False),
     "batch": ("dataset_batch_runner", False),
     "predict": ("dataset_batch_result", True),
     "score": ("ragas_eval_runner", True),
     "recall": ("eval_retrieval_recall", True),
     "analyze": ("analyze_batch_metrics", True),
     "reports": ("acquisition.cli", True),
+    "serve": ("webapp.cli:serve_main", True),
+    "worker": ("webapp.cli:worker_main", True),
+    "invites": ("webapp.cli:invites_main", True),
+    "datasets": ("dataset_catalog.gc", True),
 }
 
 
-def _load_main(module_name: str) -> Callable[..., object]:
+def _load_main(target: str) -> Callable[..., object]:
     from importlib import import_module
+
+    module_name, _, attribute = target.partition(":")
     module = import_module(module_name)
-    return getattr(module, "main")
+    return getattr(module, attribute or "main")
 
 
 def _usage() -> str:

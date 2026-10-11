@@ -82,10 +82,17 @@ class AcquisitionQuota:
             "validating",
             "building",
         }
-        active = (self.store.count_jobs(owner_id, statuses=active_statuses)
-                  + self.store.count_unreconciled_jobs(owner_id))
-        if active >= self.policy.per_owner_concurrency:
+        processing = self.store.count_jobs(owner_id, statuses=active_statuses)
+        if processing >= self.policy.per_owner_concurrency:
             raise QuotaExceeded("owner_concurrency", "An import is already active for this account")
+        # One job that is both still processing and billing-pending counts once.
+        blocking = self.store.count_blocking_jobs(owner_id, statuses=active_statuses)
+        if blocking >= self.policy.per_owner_concurrency:
+            raise QuotaExceeded(
+                "import_billing_pending",
+                "An import is already active for this account: a previous import's "
+                "parsing cost is still being confirmed",
+            )
 
     @staticmethod
     def estimate_import_credits(page_count: int) -> int:

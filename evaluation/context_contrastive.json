@@ -1,0 +1,35 @@
+[
+  {
+    "id": "equity-opening-growth",
+    "history": [{"run_id": "equity-close", "effective_question": "Vốn chủ sở hữu của công ty vào cuối năm là bao nhiêu?"}],
+    "steps": [
+      {"question": "vào đầu năm thì sao", "expected": "resolved", "must_include": ["Vốn chủ sở hữu", "đầu năm"], "must_not_include": ["Tổng tài sản"]},
+      {"question": "Từ đầu năm đến cuối năm tăng bao nhiêu?", "expected": "resolved", "must_include": ["Vốn chủ sở hữu", "đầu năm", "cuối năm", "tăng bao nhiêu"], "must_not_include": ["Tổng tài sản"]}
+    ]
+  },
+  {
+    "id": "explicit-metric-change",
+    "history": [{"run_id": "prior", "effective_question": "Vốn chủ sở hữu cuối năm là bao nhiêu?"}],
+    "steps": [{"question": "Còn doanh thu thì sao?", "expected": "resolved", "must_include": ["doanh thu", "cuối năm"], "must_not_include": ["Vốn chủ sở hữu"]}]
+  },
+  {
+    "id": "ambiguous-focus",
+    "history": [{"run_id": "prior", "effective_question": "So sánh ROA và ROE năm 2025 của công ty."}],
+    "steps": [{"question": "Chỉ tiêu đó tăng hay giảm?", "expected": "needs_clarification"}]
+  },
+  {
+    "id": "qa-to-discovery",
+    "history": [{"run_id": "prior", "effective_question": "Vốn chủ sở hữu cuối năm của công ty là bao nhiêu?"}],
+    "steps": [{"question": "Tìm báo cáo tài chính VNM năm 2025", "expected": "standalone"}]
+  },
+  {
+    "id": "independent-definition",
+    "history": [{"run_id": "prior", "effective_question": "Doanh thu thuần đầu năm 2024 là bao nhiêu?"}],
+    "steps": [{"question": "ROE được định nghĩa như thế nào?", "expected": "standalone"}]
+  },
+  {
+    "id": "relative-period",
+    "history": [{"run_id": "prior", "effective_question": "Doanh thu thuần năm 2025 là bao nhiêu?"}],
+    "steps": [{"question": "Còn năm trước thì sao?", "expected": "resolved", "must_include": ["Doanh thu thuần", "năm trước"], "must_not_include": ["2024"]}]
+  }
+]

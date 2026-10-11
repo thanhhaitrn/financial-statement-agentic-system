@@ -134,12 +134,12 @@ def create_app(
         owner_id = require_owner(authenticated_owner)
         require_session(owner_id, request.session_id)
         try:
-            candidates = acquisition_service.discover(
+            outcome = acquisition_service.discover(
                 ReportQuery(owner_id=owner_id, **request.model_dump())
             )
         except ReportDiscoveryUnavailable as exc:
-            raise HTTPException(status_code=503, detail=str(exc)) from exc
-        return {"candidates": [item.model_dump(mode="json") for item in candidates]}
+            raise HTTPException(status_code=503, detail=exc.code) from exc
+        return {"candidates": [item.model_dump(mode="json") for item in outcome.candidates]}
 
     @app.post("/report-imports")
     def create_import(

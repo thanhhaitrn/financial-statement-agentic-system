@@ -11,7 +11,7 @@ from acquisition.download import (PdfArtifactValidator, PdfValidationError,
                                   SecurePdfDownloader)
 from acquisition.llamaparse import LlamaParseDocumentConverter, LlamaParseError
 from acquisition.quota import AcquisitionQuota, QuotaExceeded
-from acquisition.service import ReportAcquisitionService
+from acquisition.service import IdempotencyConflict, ReportAcquisitionService
 from acquisition.store import AcquisitionStore, CandidateAccessError
 from config.runtime_policy import AcquisitionPolicy
 from schemas.acquisition import (ConvertedDocument, ConvertedPage,
@@ -38,6 +38,9 @@ def test_cafef_discovery_normalizes_independent_dimensions():
             {
                 "Name": "BCTC hợp nhất Quý 2 năm 2025 đã soát xét",
                 "Link": "https://cafef1.mediacdn.vn/reports/vnm-q2-2025.pdf",
+                "Year": 2025,
+                "Quarter": 2,
+                "Time": "Q2/2025",
             },
             {"Name": "invalid", "Link": "https://example.com/file.pdf"},
         ],
@@ -55,9 +58,9 @@ def test_cafef_discovery_normalizes_independent_dimensions():
             scope="consolidated",
             audit_status="reviewed",
         )
-    )
+    ).candidates
 
-    assert len(reports) == 1
+    assert len(reports) == 1 and reports[0]["period_verified"]
     assert reports[0]["fiscal_quarter"] == 2
     assert reports[0]["scope"] == "consolidated"
     assert reports[0]["audit_status"] == "reviewed"
@@ -175,8 +178,15 @@ class _FakeParsing:
         return response
 
 
-def _parse_result(pages, *, version="2026-08-01"):
-    return SimpleNamespace(
+_REPORTED = object()
+
+
+def _parse_result(pages, *, version="2026-08-01", credits=_REPORTED):
+    """A Parse v2 result. Like the real API it reports ``job.usage.credits``
+    (cost-effective rate by default); ``credits=None`` models a provider that
+    has not reported usage yet."""
+
+    result = SimpleNamespace(
         markdown=SimpleNamespace(
             pages=[
                 SimpleNamespace(page_number=number, markdown=markdown)
@@ -188,6 +198,11 @@ def _parse_result(pages, *, version="2026-08-01"):
             usage=SimpleNamespace(num_pages_billed=len(pages)),
         ),
     )
+    if credits is _REPORTED:
+        credits = len(pages) * 3
+    if credits is not None:
+        result.job = SimpleNamespace(usage=SimpleNamespace(credits=credits))
+    return result
 
 
 def test_llamaparse_uses_cost_effective_private_mode_and_local_cache(tmp_path: Path):
@@ -285,7 +300,9 @@ def test_llamaparse_retries_only_bad_pages_with_agentic(tmp_path: Path):
                     (2, "x"),
                 ]
             ),
-            _parse_result([(2, "# Trang sửa\n\nNội dung bảng đã được khôi phục đầy đủ.")]),
+            _parse_result(
+                [(2, "# Trang sửa\n\nNội dung bảng đã được khôi phục đầy đủ.")], credits=10
+            ),
         ]
     )
     converter = LlamaParseDocumentConverter(
@@ -305,7 +322,9 @@ def test_llamaparse_retries_only_bad_pages_with_agentic(tmp_path: Path):
     assert parsing.calls[1]["page_ranges"] == {"target_pages": "2"}
     assert "--- Page 1" in result.markdown
     assert result.billed_pages == 3
-    assert result.billed_credits == 16
+    # Cost-effective and Agentic are separate provider charges, both confirmed.
+    assert result.billed_credits == 16 and result.confirmed_credits == "16"
+    assert result.estimated_credits == 2 * 3 + 1 * 10
     assert result.targeted_retry_pages == [2]
 
 
@@ -471,9 +490,15 @@ def test_explicit_cloud_consent_is_required_even_with_api_key(tmp_path, monkeypa
 
 
 def test_zero_provider_usage_is_not_replaced_by_fallback():
+    from decimal import Decimal
     result = {"metadata": {"usage": {"num_pages_billed": 0}}, "job": {"usage": {"credits": 0}}}
     assert LlamaParseDocumentConverter._billed_pages(result, fallback=200) == 0
-    assert LlamaParseDocumentConverter._billed_credits(result, fallback=600) == 0
+    assert LlamaParseDocumentConverter._provider_credits(result) == Decimal(0)
+    # Missing usage is unknown — never an estimate, never zero.
+    assert LlamaParseDocumentConverter._provider_credits({"metadata": {}}) is None
+    assert LlamaParseDocumentConverter._provider_credits(
+        {"job": {"usage": {"credits": "4.5"}}}
+    ) == Decimal("4.5")
 
 
 def test_quality_gate_detects_negative_loss_and_individual_bad_table():
@@ -685,7 +710,17 @@ def test_upload_import_is_idempotent_owner_scoped_and_ready(tmp_path: Path):
         session_id="session-a",
         upload_path=uploaded,
         idempotency_key="same-request",
+        metadata={"company": "Vinamilk", "ticker": "VNM"},
     )
+    # Metadata is part of the request identity: the same key with different
+    # metadata is a different request, never a silent replay.
+    with pytest.raises(IdempotencyConflict):
+        service.create_upload_import(
+            owner_id="owner-a",
+            session_id="session-a",
+            upload_path=uploaded,
+            idempotency_key="same-request",
+        )
     ready = service.run_job(first.job_id)
 
     assert second.job_id == first.job_id
@@ -828,7 +863,7 @@ def test_discovered_report_requires_unexpired_owner_confirmation(tmp_path: Path)
             ticker="VNM",
             fiscal_year=2025,
         )
-    )
+    ).candidates
     candidate = candidates[0]
 
     with pytest.raises(CandidateAccessError, match="owner_mismatch"):
@@ -858,7 +893,7 @@ def test_confirmed_candidate_downloads_converts_and_builds_dataset(tmp_path: Pat
             ticker="VNM",
             fiscal_year=2025,
         )
-    )[0]
+    ).candidates[0]
 
     class Downloader:
         def download(self, confirmed, *, target_dir, cache_namespace):

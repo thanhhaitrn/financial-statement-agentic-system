@@ -30,6 +30,12 @@ class WorkflowServices:
     index_fingerprint: str = ""
     model_fingerprint: str = ""
     web_provider: Any = None
+    # Model call for the company-news analysis: ``(system, user, timeout) ->
+    # JSON text``. None uses the configured Ollama model.
+    web_model: Any = None
+    # Runs the news analysis beside the report branch (graph.web_branch);
+    # None keeps it sequential.
+    web_runner: Any = None
     # Execution limits for this run. Activated per node call so two graphs built
     # with different policies cannot read each other's caps.
     policy: RuntimePolicy = field(default_factory=lambda: DEFAULT_POLICY)
@@ -47,6 +53,8 @@ class GraphState(TypedDict, total=False):
     dataset_ticker: str
     owner_id: str
     force_web_refresh: bool
+    # Run start (UTC ISO): the "now" of every news window in this run.
+    as_of: str
 
     # branch-specific input injected by Send(...)
     worker_query: str
@@ -71,6 +79,17 @@ class GraphState(TypedDict, total=False):
     missing_components: list[str]
     synth_decision: dict
     final_answer: str
+
+    # company-news analysis (WEB_ANALYSIS_ENABLED): the fetched news bundle,
+    # its analysis, and how many analyses this question has used.
+    web_bundle: dict
+    web_analysis: dict
+    web_analysis_runs: int
+    # Analysis agents that also receive the checked news (default: none, the
+    # news goes to Synth only).
+    web_news_agents: list[str]
+    # Key of the news analysis started beside the report branch.
+    web_job: str
 
     # collector / routing control
     collect_decision: str

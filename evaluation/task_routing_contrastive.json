@@ -1,0 +1,22 @@
+{
+  "_comment": "Web planner task classification. Pairs of requests to FIND a report and questions ABOUT a report that use similar words. Target: 0 report_qa questions routed to report_discovery.",
+  "questions": [
+    {"question": "Tìm báo cáo tài chính VNM năm 2025", "expected": "report_discovery"},
+    {"question": "Tải giúp tôi BCTC quý 2 năm 2025 của FPT", "expected": "report_discovery"},
+    {"question": "Lấy giúp tôi báo cáo tài chính hợp nhất đã kiểm toán năm 2024 của Hòa Phát", "expected": "report_discovery"},
+    {"question": "Tìm BCTC bán niên 2025 của MWG", "expected": "report_discovery"},
+    {"question": "Lấy báo cáo tài chính mới nhất của Vinamilk", "expected": "report_discovery"},
+    {"question": "Tìm báo cáo tài chính công ty mẹ quý 3 năm 2025 của VNM", "expected": "report_discovery"},
+    {"question": "Có BCTC năm 2023 của SSI không? Tìm giúp tôi", "expected": "report_discovery"},
+    {"question": "Báo cáo VNM 2025 lợi nhuận bao nhiêu?", "expected": "report_qa"},
+    {"question": "Trong báo cáo tài chính năm 2025, doanh thu thuần là bao nhiêu?", "expected": "report_qa"},
+    {"question": "Báo cáo này đã được kiểm toán chưa?", "expected": "report_qa"},
+    {"question": "Báo cáo tài chính cho thấy khả năng thanh toán của công ty thế nào?", "expected": "report_qa"},
+    {"question": "Tìm khoản mục tiền và tương đương tiền cuối kỳ", "expected": "report_qa"},
+    {"question": "Tìm giúp tôi tổng tài sản trong báo cáo", "expected": "report_qa"},
+    {"question": "So sánh lợi nhuận quý 2 với cùng kỳ năm trước", "expected": "report_qa"},
+    {"question": "Công ty kiểm toán báo cáo này là ai?", "expected": "report_qa"},
+    {"question": "Lấy số liệu hàng tồn kho trong BCTC năm 2025", "expected": "report_qa"},
+    {"question": "Báo cáo quý 2 có ghi nhận dự phòng phải thu khó đòi không?", "expected": "report_qa"}
+  ]
+}

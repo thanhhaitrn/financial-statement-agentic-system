@@ -207,7 +207,7 @@ AGENT_PROFILES = {
             - response_mode chỉ nhận `extractive` hoặc `grounded_interpretation`; mặc định là `extractive`.
             - premise_requirements là danh sách 1-4 premise/sự kiện thực tế cần truy xuất; để [] cho extractive/calculation.
             - company/time_hint là "" nếu không có; need_web=true chỉ khi thật sự cần dữ liệu ngoài BCTC.
-            - web_intent="company_news" chỉ cho tin/sự kiện của chính doanh nghiệp; dùng "unsupported_external" cho thị trường, vĩ mô, lãi suất, quy định, benchmark ngành hoặc dữ liệu ngoài khác; để "" khi need_web=false.
+            - web_intent phân loại theo ĐỐI TƯỢNG và LOẠI DỮ LIỆU người dùng cần (chi tiết ở mục PHÂN LOẠI WEB); để "" khi need_web=false.
 
             ANALYSIS_AXES
             - Dùng 1-4 trục khi câu hỏi cần phân tích tài chính; mỗi item chỉ gồm axis và objective, không trả field table/tables.
@@ -255,6 +255,27 @@ AGENT_PROFILES = {
             - "Đánh giá rủi ro đầu tư" -> dùng các axis phù hợp như agent_liquidity_solvency, agent_cashflow_analysis, agent_profitability.
             - Chỉ đặt need_web=true nếu câu hỏi rõ ràng cần tin tức, bối cảnh ngành, sự kiện gần đây, quy định, hoặc thông tin ngoài BCTC.
             - Nếu có thể trả lời chỉ bằng BCTC, đặt need_web=false.
+
+            PHÂN LOẠI WEB (need_web, web_intent) — xét ĐỐI TƯỢNG và LOẠI DỮ LIỆU cần, không xét từ "ảnh hưởng"/"tác động"
+            - web_intent="company_news": người dùng cần TIN TỨC, SỰ KIỆN hoặc CÔNG BỐ THÔNG TIN về MỘT doanh nghiệp (doanh nghiệp
+              được nêu tên, mã CK, hoặc "công ty"/"doanh nghiệp" đang hỏi). Vẫn là company_news khi câu hỏi hỏi tin đó ảnh hưởng
+              tới chỉ tiêu nào của chính doanh nghiệp (lợi nhuận, biên lợi nhuận, doanh thu, cổ tức...).
+            - web_intent="unsupported_external": người dùng cần dữ liệu KHÔNG phải tin của một doanh nghiệp: vĩ mô (lãi suất, lạm
+              phát, tỷ giá, GDP), thị trường chứng khoán chung (VN-Index, thanh khoản), giá cổ phiếu/định giá (P/E, P/B), số liệu
+              trung bình ngành/đối thủ, chính sách hoặc quy định chung.
+            - need_web=false, web_intent="": trả lời được chỉ bằng BCTC, kể cả câu hỏi vì sao/nguyên nhân biến động mà không
+              hỏi tới tin tức hay dữ liệu bên ngoài.
+            - Ví dụ đối chiếu:
+              + "Tin tức gần đây ảnh hưởng thế nào đến khả năng sinh lời của Vinamilk, xét theo biên lợi nhuận năm 2025?"
+                -> need_web=true, web_intent="company_news" (tin của doanh nghiệp, hỏi ảnh hưởng tới chỉ tiêu của chính nó).
+              + "Lãi suất ngân hàng hiện nay ảnh hưởng thế nào đến lợi nhuận của công ty?"
+                -> need_web=true, web_intent="unsupported_external" (dữ liệu vĩ mô, không phải tin của doanh nghiệp).
+              + "Có tin gì mới về công ty trong tháng này không?" -> need_web=true, web_intent="company_news".
+              + "VN-Index tuần này thế nào?" hoặc "Giá cổ phiếu VNM hôm nay?" -> need_web=true, web_intent="unsupported_external".
+              + "So sánh biên lợi nhuận của công ty với trung bình ngành" -> need_web=true, web_intent="unsupported_external".
+              + "Vì sao biên lợi nhuận gộp năm 2025 giảm so với 2024?" -> need_web=false (trả lời từ BCTC).
+              + "Vì sao biên lợi nhuận gộp năm 2025 giảm, có liên quan tới tin tức gần đây của công ty không?"
+                -> need_web=true, web_intent="company_news".
             """
     },
 

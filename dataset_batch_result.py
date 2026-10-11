@@ -609,7 +609,7 @@ def _prediction_from_error(record: dict, exc: Exception) -> dict:
 
 
 def _collect_pipeline_errors(final_state: dict) -> list[str]:
-    from test import collect_pipeline_errors
+    from finx_pipeline import collect_pipeline_errors
 
     return collect_pipeline_errors(final_state)
 
@@ -623,7 +623,7 @@ def _extract_answer(final_state: dict) -> str:
 
 
 def _extract_run_summary(final_state: dict) -> dict:
-    from test import extract_run_summary
+    from finx_pipeline import extract_run_summary
 
     return extract_run_summary(final_state)
 
@@ -692,13 +692,16 @@ def prepare_dataset_runtime(dataset_id: str):
 
     from dataset_catalog.registry import describe_dataset, get_dataset
     from kb.sqlite_repo import read_kb_manifest
-    from test import ensure_built
+    from finx_pipeline import ensure_built
 
     dataset = get_dataset(dataset_id)
     if dataset is None:
         raise SystemExit(f"Dataset not found: {dataset_id}")
 
-    dataset, conn, collection = ensure_built(dataset)
+    from dataset_catalog.locks import dataset_lock
+
+    with dataset_lock(dataset.dataset_id):
+        dataset, conn, collection = ensure_built(dataset)
     kb_manifest = read_kb_manifest(conn)
     index_generation = str(
         getattr(collection, "generation", "")
@@ -750,8 +753,11 @@ def run_predictions(
     debug_trace: bool = False,
     on_checkpoint=None,
     prepared_runtime=None,
+    web_entry: bool = False,
 ) -> tuple[dict, list[dict]]:
-    from test import execute_query
+    from finx_pipeline import execute_query
+
+    from dataset_batch_runner import WEB_ENTRY_MISROUTE, _plan_web_entry
 
     runtime = prepared_runtime or prepare_dataset_runtime(dataset_id)
     dataset, _conn, collection, dataset_meta = runtime
@@ -765,11 +771,19 @@ def run_predictions(
         sys.stdout.flush()
 
         try:
+            planner_updates = None
+            if web_entry:
+                planner_updates = _plan_web_entry(dataset, question)
+                if planner_updates.get("task_kind") == "report_discovery":
+                    # On the web this question gets a candidate card, not an
+                    # answer: a failed prediction (and a refusal) in the error triage.
+                    raise RuntimeError(WEB_ENTRY_MISROUTE)
             final_state = execute_query(
                 dataset,
                 collection,
                 question,
                 debug_trace=debug_trace,
+                **({"planner_updates": planner_updates} if planner_updates is not None else {}),
             )
             run_summary = _extract_run_summary(final_state)
             errors = _collect_pipeline_errors(final_state)
@@ -966,6 +980,7 @@ def validate_resume_report(
     current_dataset_meta: dict | None = None,
     debug_trace: bool = False,
     skip_eval: bool = True,
+    web_entry: bool = False,
 ) -> None:
     if not report:
         return
@@ -1011,6 +1026,7 @@ def validate_resume_report(
         offset=offset,
         debug_trace=debug_trace,
         skip_eval=skip_eval,
+        web_entry=web_entry,
     )
     if stored_fingerprint == expected_identity["run_fingerprint"]:
         return
@@ -1113,6 +1129,7 @@ def build_report(
     resume_repaired: bool = False,
     frozen_run_identity: dict[str, Any] | None = None,
     identity_guard_violations: list[str] | None = None,
+    web_entry: bool = False,
 ) -> dict:
     seed_path = Path(seed_file)
     seed_checksum = sha256_file(seed_path) if seed_path.is_file() else ""
@@ -1162,6 +1179,7 @@ def build_report(
         offset=offset,
         debug_trace=debug_trace,
         skip_eval=skip_eval,
+        web_entry=web_entry,
     )
     identity_guard_enabled = frozen_run_identity is not None
     if identity_guard_enabled:
@@ -1391,6 +1409,15 @@ def parse_args(argv: list[str] | None = None):
         action="store_true",
         help="Reuse predictions already present in --output and run only missing seed records.",
     )
+    parser.add_argument(
+        "--web-entry",
+        action="store_true",
+        help=(
+            "Answer through the web chat's entry (report discovery on): the web planner "
+            "classifies each question first. A question routed to report discovery is "
+            "recorded as a failed prediction, never forced back to QA."
+        ),
+    )
     return parser.parse_args(argv)
 
 
@@ -1424,6 +1451,7 @@ def main(argv: list[str] | None = None) -> int:
                 current_dataset_meta=prepared_runtime[3],
                 debug_trace=args.debug_trace,
                 skip_eval=True,
+                web_entry=args.web_entry,
             )
         except SeedValidationError as exc:
             raise SystemExit(str(exc)) from exc
@@ -1454,6 +1482,7 @@ def main(argv: list[str] | None = None) -> int:
         offset=args.offset,
         debug_trace=args.debug_trace,
         skip_eval=True,
+        web_entry=args.web_entry,
     )
     identity_guard_violations: list[str] = []
 
@@ -1478,6 +1507,7 @@ def main(argv: list[str] | None = None) -> int:
             source_report=existing_report,
             frozen_run_identity=frozen_run_identity,
             identity_guard_violations=identity_guard_violations,
+            web_entry=args.web_entry,
         )
         identity_guard_violations[:] = report["metadata"][
             "run_identity_guard"
@@ -1495,6 +1525,7 @@ def main(argv: list[str] | None = None) -> int:
                 debug_trace=args.debug_trace,
                 on_checkpoint=write_checkpoint,
                 prepared_runtime=prepared_runtime,
+                web_entry=args.web_entry,
             )
         except SessionLimitError as exc:
             stop_error = f"session_limit ({type(exc).__name__}): {exc}"
@@ -1540,6 +1571,7 @@ def main(argv: list[str] | None = None) -> int:
         resume_repaired=resume_repaired and not bool(stop_error),
         frozen_run_identity=frozen_run_identity,
         identity_guard_violations=identity_guard_violations,
+        web_entry=args.web_entry,
     )
     json_path = write_json_report(report, args.output)
     csv_path = write_csv_report(report, json_path)

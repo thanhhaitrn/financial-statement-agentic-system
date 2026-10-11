@@ -38,7 +38,7 @@ def parse_args():
 
 def _load_dataset(dataset_id: str):
     from dataset_catalog.registry import get_dataset
-    from test import ensure_default_dataset
+    from finx_pipeline import ensure_default_dataset
 
     # A named dataset lets this script validate a specific registered filing;
     # otherwise it follows the same default dataset path as the main CLI.
@@ -82,7 +82,7 @@ def _ensure_ready(dataset, rebuild: bool):
     if rebuild:
         return _force_rebuild(dataset)
 
-    from test import ensure_built
+    from finx_pipeline import ensure_built
 
     return ensure_built(dataset)
 

@@ -952,7 +952,7 @@ def main(argv=None) -> int:
     prediction_enrichment = prepared["prediction_enrichment"]
 
     from dataset_catalog.registry import get_dataset
-    from test import ensure_built
+    from finx_pipeline import ensure_built
     from config.allowed_keywords import TABLE_BS, TABLE_CF, TABLE_IS, TABLE_NOTE
     import graph.evidence as graph_evidence
     from tools.evidence import dedupe_facts, result_to_facts
@@ -961,7 +961,10 @@ def main(argv=None) -> int:
     dataset = get_dataset(args.dataset_id)
     if dataset is None:
         raise SystemExit(f"Dataset not found: {args.dataset_id}")
-    dataset, _conn, collection = ensure_built(dataset)
+    from dataset_catalog.locks import dataset_lock
+
+    with dataset_lock(dataset.dataset_id):
+        dataset, _conn, collection = ensure_built(dataset)
 
     tables = [TABLE_BS, TABLE_IS, TABLE_CF, TABLE_NOTE]
     rows = []

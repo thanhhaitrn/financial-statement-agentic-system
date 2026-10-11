@@ -39,9 +39,8 @@ def build_default_acquisition_service(
     )
     return ReportAcquisitionService(
         store=AcquisitionStore(root / "acquisition.db"),
-        discovery_provider=CafeFReportDiscoveryProvider(
-            timeout_seconds=policy.acquisition.download_timeout_seconds,
-        ),
+        # 15-second deadline for the whole search, no automatic retry.
+        discovery_provider=CafeFReportDiscoveryProvider(),
         converter=LlamaParseDocumentConverter(
             allow_cloud_parse=allow_cloud_parse,
             client=llama_client,
@@ -67,6 +66,7 @@ def build_default_acquisition_service(
         # Managed sources must stay below the registry's ownership boundary.
         converted_dir=Path(SOURCES_DIR) / "imports",
         symbol_catalog_path=Path(DATASETS_DIR) / "web" / "cafef_symbols.json",
+        symbol_alias_path=Path(__file__).resolve().parents[1] / "config" / "company_aliases.json",
     )
 
 __all__ = [

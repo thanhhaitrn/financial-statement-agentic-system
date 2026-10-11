@@ -36,7 +36,7 @@ def test_no_argv_command_rebuilds_sys_argv(monkeypatch):
         seen["argv"] = list(sys.argv)
         return 0
 
-    import test as legacy_cli
+    import finx_pipeline as legacy_cli
 
     monkeypatch.setattr(legacy_cli, "main", fake_main)
     original = list(sys.argv)

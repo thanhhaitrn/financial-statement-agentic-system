@@ -161,6 +161,17 @@ def dispatch_analysis_workers(state: dict):
         dispatch_target = dict(target)
         for key, value in _route_metadata(planner_plan).items():
             dispatch_target.setdefault(key, value)
+        if agent in (state.get("web_news_agents") or []):
+            # The question ties the news to this agent's aspect: it gets the
+            # checked events (never raw article text) as web facts.
+            from web_analysis.facts import news_facts_for_agent
+
+            facts = news_facts_for_agent(state.get("web_analysis") or {}, agent)
+            if facts:
+                dispatch_target["analysis_input_results"] = {
+                    **dict(dispatch_target.get("analysis_input_results") or {}),
+                    "WEB": {"table": "", "facts": facts},
+                }
         target_time_hint = str(dispatch_target.get("time_hint", "") or time_hint).strip()
 
         jobs.append(

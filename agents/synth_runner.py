@@ -2583,9 +2583,45 @@ def _canonical_lookup_candidate(
     }
 
 
+_WEB_NEWS_INSTRUCTION = """
+
+            TIN TỨC DOANH NGHIỆP (`web_news_analysis`)
+            - `web_news_analysis` là dữ liệu tin tức Vietstock đã được hệ thống kiểm tra, có cấu trúc:
+              mỗi sự kiện có `event` (điều gì xảy ra), `date_in_article`/`reported_on` (ngày nêu trong
+              bài / ngày đưa tin),
+              `related_metrics` (liên quan chỉ tiêu nào), `evidence` (trích dẫn khớp nguyên văn và
+              nguồn), `confirmation` + `confirmation_basis` (mức xác nhận và căn cứ), `uncertainties`
+              (điều còn chưa chắc); `sources[].summary` là tóm tắt của chính nguồn tin; `collection` và
+              `limitations` cho biết đã thu thập tới đâu.
+              `sentiment_secondary` chỉ là thông tin phụ.
+            - Khi nói về tin, CHỈ dùng nội dung của các trường đó: không thêm chức danh, vai trò, con số,
+              tên riêng hay chi tiết nào không có nguyên văn trong `event` hoặc `evidence`. Nêu sự kiện kèm
+              thời gian, chỉ tiêu liên quan và mức xác nhận; tin `forecast`, `unconfirmed` hoặc
+              `unattributed` phải nói rõ là chưa chắc.
+            - Nếu câu hỏi chỉ hỏi tin tức, trả lời 1-2 câu tóm tắt (bao nhiêu sự kiện, liên quan chỉ tiêu
+              nào, mức xác nhận) rồi nói chi tiết ở phần tin tức bên dưới; KHÔNG liệt kê lại từng tin.
+              Nếu `collection.list_read_for_window` là false hoặc `status` là partial, nói rõ phần tin
+              chưa đầy đủ. Hệ thống tự gắn phần chi tiết (trích dẫn, link) dưới câu trả lời: không chép
+              lại danh sách tin hay trích dẫn.
+            - Không dùng con số trong tin làm toán hạng, không thay số liệu báo cáo tài chính bằng số liệu
+              trong tin, và không khẳng định một tin là nguyên nhân của biến động số liệu.
+            """
+
+
+def _web_news_for_synth(state: dict) -> Dict[str, Any]:
+    """The checked news analysis as structured data (events, time, related
+    metrics, verified quotes and sources, confirmation, uncertainties,
+    collection limits); no URLs and no article text beyond verified quotes."""
+
+    from web_analysis.facts import structured_news
+
+    return structured_news(state.get("web_analysis") or {})
+
+
 def _synth_system_instruction(state: dict, profile: Dict[str, Any]) -> str:
+    web_instruction = _WEB_NEWS_INSTRUCTION if _web_news_for_synth(state) else ""
     return (
-        f"{profile['system_instruction']}{_synth_difficulty_instruction(state)}"
+        f"{profile['system_instruction']}{_synth_difficulty_instruction(state)}{web_instruction}"
         """
 
             CONTRACT FACT LEDGER — ƯU TIÊN CAO NHẤT
@@ -2644,6 +2680,9 @@ def _build_payload(
         prompt_worker_results["canonical_financial_metrics"] = (
             canonical_financial_metrics
         )
+    web_news = _web_news_for_synth(state)
+    if web_news:
+        prompt_worker_results["web_news_analysis"] = web_news
     return {
         "role": profile["role"],
         "tools_list": "",

@@ -173,15 +173,17 @@ def _extract_time_hint_from_query(user_query: str) -> str:
     return ""
 
 
-def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str], Optional[str]]:
-    if isinstance(result, PlannerEvidencePlan):
+def _coerce_planner_plan(
+    result: Any, schema: type = PlannerEvidencePlan
+) -> tuple[PlannerEvidencePlan, Optional[str], Optional[str]]:
+    if isinstance(result, schema):
         return result, None, None
 
     parsing_error = None
 
     if isinstance(result, dict):
         parsed = result.get("parsed")
-        if isinstance(parsed, PlannerEvidencePlan):
+        if isinstance(parsed, schema):
             return parsed, None, None
 
         if result.get("parsing_error") is not None:
@@ -201,7 +203,7 @@ def _coerce_planner_plan(result: Any) -> tuple[PlannerEvidencePlan, Optional[str
         if payload is None:
             continue
         try:
-            return PlannerEvidencePlan.model_validate(payload), parsing_error, source
+            return schema.model_validate(payload), parsing_error, source
         except ValidationError:
             continue
 
@@ -767,6 +769,53 @@ def _expand_broad_profitability_axes(
 
 
 def run_planner(state: dict) -> dict:
+    return _plan_query(state)
+
+
+def run_web_planner(state: dict) -> dict:
+    """The planner for the web chat with report discovery on.
+
+    One model call decides the task. A request to find a report returns
+    ``task_kind="report_discovery"`` and the ``report_search`` the user asked
+    for, with no company filled in from the open dataset or a regex and no
+    financial heuristics. A financial question is reduced to the QA schema and
+    goes through exactly the QA planner's post-processing, so the graph can
+    start at the router with it instead of planning again."""
+
+    from agents.planner_web import web_planner_instruction
+    from schemas.report_search import WebPlannerPlan
+
+    return _plan_query(
+        state,
+        system_instruction=web_planner_instruction(),
+        schema=WebPlannerPlan,
+        classify_task=True,
+    )
+
+
+def _discovery_updates(state: dict, updates: dict, plan_obj: Any, started_at: float, llm_usage: dict) -> dict:
+    updates["planner_plan"] = {}
+    updates["task_kind"] = "report_discovery"
+    updates["report_search"] = plan_obj.report_search.model_dump()
+    updates["trace"].append(
+        make_log(
+            state,
+            "planner:done",
+            task_kind="report_discovery",
+            duration_ms=int((time.perf_counter() - started_at) * 1000),
+            **llm_usage,
+        )
+    )
+    return updates
+
+
+def _plan_query(
+    state: dict,
+    *,
+    system_instruction: Optional[str] = None,
+    schema: type = PlannerEvidencePlan,
+    classify_task: bool = False,
+) -> dict:
     profile = AGENT_PROFILES["agent_planner"]
     trace = []
     started_at = time.perf_counter()
@@ -783,7 +832,7 @@ def run_planner(state: dict) -> dict:
 
     payload = {
         "role": profile["role"],
-        "system_instruction": profile["system_instruction"],
+        "system_instruction": system_instruction or profile["system_instruction"],
         "user_query": state.get("user_query", ""),
         "worker_query": "",
         "plan_json": "{}",
@@ -803,11 +852,18 @@ def run_planner(state: dict) -> dict:
         raw_result = invoke_prompt(
             PROMPT_TEMPLATE,
             payload,
-            structured_schema=PlannerEvidencePlan,
+            structured_schema=schema,
             plain_payload_factory=_plain_planner_payload,
         )
         llm_usage = extract_usage_metadata(raw_result.get("raw"))
-        plan_obj, parse_warning, recovered_from = _coerce_planner_plan(raw_result)
+        plan_obj, parse_warning, recovered_from = _coerce_planner_plan(raw_result, schema)
+        if classify_task:
+            if getattr(plan_obj, "task_kind", "report_qa") == "report_discovery":
+                return _discovery_updates(state, updates, plan_obj, started_at, llm_usage)
+            # QA: exactly the QA planner's plan and post-processing below.
+            plan_obj = PlannerEvidencePlan.model_validate(
+                plan_obj.model_dump(exclude={"task_kind", "report_search"})
+            )
         updates["planner_plan"] = _enrich_plan_fields(state, plan_obj.model_dump())
         updates["planner_plan"], heuristic_log = _apply_planner_difficulty_heuristics(
             state,
@@ -934,4 +990,7 @@ def run_planner(state: dict) -> dict:
         if debug_log:
             updates["trace"].append(debug_log)
 
+    if classify_task:
+        # A failed call also lands here: it never turns into a discovery.
+        updates["task_kind"] = "report_qa"
     return updates

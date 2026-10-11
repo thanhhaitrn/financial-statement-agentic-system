@@ -9,17 +9,85 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install -e '.[eval,dev]'
+      - run: python -m pip install -e '.[eval,dev,web]'
+      # Detection, not prevention: a tracked database or upload is already
+      # public by the time CI runs, and web uploads bypass local hooks.
+      - run: python scripts/check_tracked_artifacts.py
       - run: python -m pytest tests -q
       - run: >-
           python -m compileall -q
-          agents config dataset_catalog evaluation graph ingestion kb llm schemas
-          scripts tools vectorstore src
-          test.py dataset_batch_runner.py dataset_batch_result.py ragas_eval_runner.py
+          acquisition agents config dataset_catalog evaluation graph ingestion kb llm schemas
+          scripts tools vectorstore web_analysis web_evidence webapp src
+          finx_pipeline.py test.py dataset_batch_runner.py dataset_batch_result.py ragas_eval_runner.py
           eval_retrieval_recall.py analyze_batch_metrics.py output_formatter.py run_rotate.py
       - run: python -m pip wheel --no-deps --no-build-isolation . --wheel-dir /tmp/agentfinx-wheel
+      # The installed web app serves its frontend from package data.
+      - run: >-
+          python -c "import glob, zipfile;
+          names = set(zipfile.ZipFile(glob.glob('/tmp/agentfinx-wheel/agentfinx-*.whl')[0]).namelist());
+          missing = {'webapp/static/chat.html', 'webapp/static/chatbox.js', 'webapp/static/vendor/purify.min.js'} - names;
+          assert not missing, missing"
       - run: detect-secrets scan --all-files --exclude-files '^(ragas_runs|data)/'
+      - name: Whitespace errors and conflict markers in this change
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git diff --check "$base" HEAD
+          fi
+
+  # The Next.js UI (web/): locked install, type check and production build.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm audit --omit=dev --audit-level=high
+
+  # Mocked workers, real browser: the old UI (webapp/static) and the Next.js
+  # UI through its /api proxy. Full end-to-end runs stay local.
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: python -m pip install -e '.[dev,web,e2e]'
+      - run: python -m playwright install --with-deps chromium
+      # The API address is compiled into the build; the test serves FastAPI there.
+      - name: Build the Next.js UI for the test API
+        working-directory: web
+        env:
+          FINX_API_URL: http://127.0.0.1:8765
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - run: python -m pytest tests/test_browser_smoke.py tests/test_next_browser_smoke.py -q
+        env:
+          FINX_REQUIRE_NEXT_SMOKE: "1"

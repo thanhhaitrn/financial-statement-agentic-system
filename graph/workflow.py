@@ -29,6 +29,9 @@ from graph.nodes import (
 )
 from graph.router import route_after_evidence
 from graph.state import GraphState, WorkflowServices
+from graph.web_analysis_node import (agent_web_node, join_web_node,
+                                     make_route_after_build_evidence,
+                                     start_web_node)
 from config.runtime_policy import reset_active_policy, set_active_policy
 from tools.tool_runner import reset_collection, set_collection
 
@@ -91,6 +94,8 @@ def _bind_services(
     services: WorkflowServices | None,
     *,
     inject_web_provider: bool = False,
+    inject_web_model: bool = False,
+    inject_web_runner: bool = False,
 ):
     if services is None:
         return node
@@ -107,6 +112,12 @@ def _bind_services(
                 scoped_state.setdefault("model_fingerprint", services.model_fingerprint)
             if inject_web_provider:
                 return node(scoped_state, web_provider=services.web_provider)
+            if inject_web_runner:
+                if inject_web_model:
+                    return node(scoped_state, web_runner=services.web_runner, web_model=services.web_model)
+                return node(scoped_state, web_runner=services.web_runner)
+            if inject_web_model:
+                return node(scoped_state, web_model=services.web_model)
             return node(scoped_state)
         finally:
             reset_active_policy(policy_token)
@@ -115,7 +126,22 @@ def _bind_services(
     return bound
 
 
-def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
+# ``agent_router`` is the entry for a run whose planner already ran (with its
+# full post-processing) outside the graph — the web entry, which classifies the
+# task before a dataset is activated. It never re-runs the planner.
+ENTRY_POINTS = ("agent_main", "agent_router")
+
+
+def run_with_services(node, services: WorkflowServices | None, state: dict) -> dict:
+    """Run one node outside the graph under the collection/policy context the
+    graph would bind for it."""
+
+    return _bind_services(node, services)(state)
+
+
+def build_workflow(services: WorkflowServices | None = None, *, entry: str = "agent_main") -> StateGraph:
+    if entry not in ENTRY_POINTS:
+        raise ValueError(f"unknown graph entry point: {entry}")
     workflow = StateGraph(state_schema=GraphState)
     workflow.add_node("agent_main", _bind_services(agent_planner, services))
     workflow.add_node("agent_router", _bind_services(agent_router, services))
@@ -127,6 +153,13 @@ def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
             inject_web_provider=True,
         ),
     )
+    # Context agent for company news; not one of the analysis aspects. It runs
+    # beside the report branch (start_web … join_web) unless a report agent
+    # needs its result first (agent_web, sequential).
+    workflow.add_node("agent_web", _bind_services(agent_web_node, services, inject_web_model=True))
+    workflow.add_node("start_web", _bind_services(start_web_node, services, inject_web_runner=True,
+                                                  inject_web_model=True))
+    workflow.add_node("join_web", _bind_services(join_web_node, services, inject_web_runner=True))
     workflow.add_node("collect_analysis", _bind_services(collect_analysis_results_node, services))
     workflow.add_node("agent_synth", _bind_services(agent_synth_node, services))
 
@@ -136,18 +169,25 @@ def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
         workflow.add_node(tool_name, _bind_services(tool_node, services))
         workflow.add_node(finalize_name, _bind_services(finalize_node, services))
 
-    workflow.set_entry_point("agent_main")
+    workflow.set_entry_point(entry)
     workflow.add_edge("agent_main", "agent_router")
     workflow.add_edge("agent_router", "build_evidence")
+    # Every way to Synth passes join_web, which waits for a news analysis
+    # started beside the report branch (a no-op when there is none).
+    after_evidence = {
+        **{name: name for name in ANALYSIS_NODES},
+        "agent_synth": "join_web",
+        "end": END,
+    }
+    parallel = services is not None and services.web_runner is not None
     workflow.add_conditional_edges(
         "build_evidence",
-        route_after_evidence,
-        {
-            **{name: name for name in ANALYSIS_NODES},
-            "agent_synth": "agent_synth",
-            "end": END,
-        },
+        make_route_after_build_evidence(parallel_available=parallel),
+        {**after_evidence, "agent_web": "agent_web", "start_web": "start_web"},
     )
+    workflow.add_conditional_edges("agent_web", route_after_evidence, after_evidence)
+    workflow.add_conditional_edges("start_web", route_after_evidence, after_evidence)
+    workflow.add_edge("join_web", "agent_synth")
 
     for agent_name in ANALYSIS_AGENT_ORDER:
         _agent_node, tool_name, _tool_node, finalize_name, _finalize_node = ANALYSIS_NODES[agent_name]
@@ -162,7 +202,7 @@ def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
     workflow.add_conditional_edges(
         "collect_analysis",
         should_synthesize_after_collect,
-        {"synth": "agent_synth", "stop": END},
+        {"synth": "join_web", "stop": END},
     )
     workflow.add_conditional_edges(
         "agent_synth",
@@ -172,8 +212,8 @@ def build_workflow(services: WorkflowServices | None = None) -> StateGraph:
     return workflow
 
 
-def build_graph(services: WorkflowServices | None = None):
-    return build_workflow(services).compile()
+def build_graph(services: WorkflowServices | None = None, *, entry: str = "agent_main"):
+    return build_workflow(services, entry=entry).compile()
 
 
 # Backward-compatible default graph for the existing root CLI.  New services

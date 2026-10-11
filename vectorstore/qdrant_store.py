@@ -479,6 +479,54 @@ def _active_qdrant_name(client: QdrantClient, logical_name: str) -> str:
     return logical_name
 
 
+def open_active_collection(name: str) -> QdrantCollectionAdapter:
+    """Open the existing active collection for querying — never create one.
+
+    Unlike ``create_collection`` this neither creates a missing collection nor
+    adds payload indexes, so a query path cannot mutate the index. A missing
+    or embedding-incompatible collection raises ``LookupError``: the caller
+    reports "needs build" instead of silently answering from an empty corpus.
+    """
+
+    client = get_client()
+    qdrant_name = _active_qdrant_name(client, name)
+    if not client.collection_exists(collection_name=qdrant_name):
+        raise LookupError(f"collection is not built: {name}")
+    info = client.get_collection(collection_name=qdrant_name)
+    if not _collection_matches_current_config(info):
+        raise LookupError(f"collection does not match the current embedding config: {name}")
+    metadata = getattr(info.config, "metadata", None) or {}
+    return QdrantCollectionAdapter(
+        name,
+        client,
+        qdrant_name=qdrant_name,
+        build_fingerprint=str(metadata.get("build_fingerprint", "") or ""),
+    )
+
+
+def ensure_multiprocess_qdrant_backend() -> None:
+    """Refuse Qdrant modes that several processes cannot share safely.
+
+    The web API and its two workers are separate processes. ``:memory:`` gives
+    each process its own empty index, and an embedded on-disk path is locked to
+    a single process. Only a Qdrant server (``QDRANT_URL`` or an http(s)
+    ``QDRANT_LOCATION``) is valid there; CLI and tests keep the other modes.
+    """
+
+    if QDRANT_LOCATION == ":memory:":
+        raise RuntimeError(
+            "QDRANT_LOCATION=':memory:' cannot be shared by the web API and workers; "
+            "run a Qdrant server and set QDRANT_URL."
+        )
+    if QDRANT_LOCATION and urlparse(QDRANT_LOCATION).scheme.casefold() not in {"http", "https"}:
+        raise RuntimeError(
+            "An embedded filesystem QDRANT_LOCATION cannot be shared by several processes; "
+            "run a Qdrant server and set QDRANT_URL."
+        )
+    if not QDRANT_LOCATION and not QDRANT_URL:
+        raise RuntimeError("Missing QDRANT_URL: the web workers need a shared Qdrant server.")
+
+
 def create_collection(name: str) -> QdrantCollectionAdapter:
     """Return the active collection without deleting an incompatible corpus."""
 
@@ -530,10 +578,14 @@ def create_versioned_collection(
     unique_suffix = uuid.uuid4().hex[:8]
     physical_name = f"{logical_name}__v_{fingerprint[:16]}_{unique_suffix}"
     client = get_client()
+    from datetime import datetime, timezone
+
     metadata = {
         **dict(build_metadata or {}),
         "logical_collection": logical_name,
         "build_fingerprint": fingerprint,
+        # Lets ``agentfinx datasets gc`` age out superseded builds.
+        "created_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
     }
     client.create_collection(
         collection_name=physical_name,

@@ -199,7 +199,7 @@ def test_format_final_answer_only_strips_evidence_boilerplate_at_the_start():
 
 
 def test_run_query_prints_clean_final_answer_without_transport_labels(monkeypatch, capsys):
-    legacy_cli = importlib.import_module("test")
+    legacy_cli = importlib.import_module("finx_pipeline")
     final_state = {
         "synth_decision": {
             "status": "answer",

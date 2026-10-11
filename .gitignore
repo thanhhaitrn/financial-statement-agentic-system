@@ -34,6 +34,15 @@ ragas_runs/*
 !ragas_runs/fixtures/**
 !tests/
 !tests/**
+# Reviewed configuration and evaluation sets for report discovery.
+!config/company_aliases.json
+!evaluation/task_routing_contrastive.json
+!evaluation/context_contrastive.json
+!evaluation/web_intent_contrastive.json
+# The Next.js UI: CI installs from the lockfile.
+!web/package.json
+!web/package-lock.json
+!web/tsconfig.json
 
 # The tests themselves are versioned; generated interpreter caches are not.
 tests/**/__pycache__/

@@ -1,0 +1,5 @@
+{
+  "_comment": "Verified company aliases for report discovery (e.g. a brand name that is not part of the official company name). Add an entry only after checking it against an official source; entries without alias, ticker and source are ignored.",
+  "_example": {"alias": "Brand name", "ticker": "ABC", "source": "https://... (official page checked)", "verified_at": "YYYY-MM-DD"},
+  "aliases": []
+}

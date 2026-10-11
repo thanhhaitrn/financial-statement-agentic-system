@@ -23,13 +23,17 @@ dependencies = [
 
 [project.optional-dependencies]
 web = [
+  "argon2-cffi>=21.3,<26.0",
   "fastapi>=0.115,<1.0",
   "llama-cloud>=2.15,<3.0",
+  "pyjwt>=2.8,<3.0",
   "pypdf>=5.0,<7.0",
   "python-multipart>=0.0.18,<1.0",
   "uvicorn>=0.34,<1.0",
 ]
 smoke = ["reportlab>=4.0,<6.0"]
+# Browser smoke test (tests/test_browser_smoke.py); CI installs Chromium for it.
+e2e = ["playwright>=1.45,<2.0"]
 eval = [
   "ragas>=0.3.4,<0.4",
   "datasets>=4.8,<5.0",
@@ -69,11 +73,13 @@ packages = [
   "scripts",
   "tools",
   "vectorstore",
+  "web_analysis",
   "web_evidence",
+  "webapp",
 ]
 py-modules = [
   "common",
-  "test",
+  "finx_pipeline",
   "dataset_batch_runner",
   "dataset_batch_result",
   "ragas_eval_runner",
@@ -83,6 +89,11 @@ py-modules = [
   "output_formatter",
   "run_rotate",
 ]
+
+[tool.setuptools.package-data]
+# The local web app serves these from inside the installed package.
+webapp = ["static/*.html", "static/*.css", "static/*.js", "static/vendor/*.js"]
+config = ["company_aliases.json"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

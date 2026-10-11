@@ -1,0 +1,7 @@
+.next
+node_modules
+next-env.d.ts
+*.tsbuildinfo
+.env*.local
+# Leftover runtime data from the old `front` branch; never track it.
+backend/

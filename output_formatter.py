@@ -40,12 +40,24 @@ def _normalize_display_answer(answer: str) -> str:
     return text.strip()
 
 
+def _news_section(state: dict) -> str:
+    """Company-news section rendered by code from the checked analysis
+    (WEB_ANALYSIS_ENABLED); empty when there is none."""
+
+    if not state.get("web_analysis"):
+        return ""
+    from web_analysis.render import render_news_section
+
+    return render_news_section(state.get("web_analysis"))
+
+
 def format_final_answer(state: dict) -> str:
     d = state.get("synth_decision", {}) or {}
     status = d.get("status", "answer")
     answer = _normalize_display_answer(d.get("answer", ""))
     if not answer:
         answer = "Chưa đủ dữ liệu để trả lời."
+    news = _news_section(state)
 
     # The synthesizer already incorporates successful analysis outputs.  Printing
     # worker sections again duplicates the answer and can expose stale rounds.
@@ -63,6 +75,8 @@ def format_final_answer(state: dict) -> str:
             missing.extend(followup.get("requirements", []) or [])
 
         missing = _dedupe_keep_order(missing)
+        if news:
+            lines.append(news)
         if missing:
             lines.append(
                 "\n".join(
@@ -71,4 +85,6 @@ def format_final_answer(state: dict) -> str:
             )
         return "\n\n".join(lines)
 
+    if news:
+        lines.append(news)
     return "\n\n".join(lines)

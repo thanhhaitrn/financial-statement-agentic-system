@@ -558,7 +558,7 @@ def test_seed_gold_atoms_survive_success_and_error_prediction_artifacts(
     ]
     assert "expected_atoms" not in records[0]
 
-    import test as workflow_entrypoint
+    import finx_pipeline as workflow_entrypoint
 
     monkeypatch.setattr(
         workflow_entrypoint,

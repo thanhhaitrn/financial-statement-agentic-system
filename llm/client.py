@@ -21,25 +21,35 @@ def _is_local_base_url(base_url: str) -> bool:
     return host in {"", "localhost", "127.0.0.1", "::1"}
 
 
-@lru_cache(maxsize=1)
-def get_llm() -> ChatOllama:
-    """Return one configured client, creating it only on first model call."""
+def build_llm(*, timeout: float | None = None, json_mode: bool = False) -> ChatOllama:
+    """A client with its own HTTP timeout: a caller with a time budget passes
+    what is left of it, so a slow call is cut off at the socket, not merely
+    abandoned while it keeps running."""
     base_url = os.getenv("OLLAMA_BASE_URL", "https://ollama.com").strip()
     api_key = os.getenv("OLLAMA_API_KEY", "").strip()
     if not api_key and not _is_local_base_url(base_url):
         raise RuntimeError("Missing OLLAMA_API_KEY for non-local OLLAMA_BASE_URL")
 
+    seconds = LLM_REQUEST_TIMEOUT_SECONDS if timeout is None else max(float(timeout), 1.0)
     headers = {"Authorization": f"Bearer {api_key}"} if api_key else None
     kwargs = {
         "model": os.getenv("OLLAMA_MODEL", "gpt-oss:120b-cloud"),
         "temperature": float(os.getenv("OLLAMA_TEMPERATURE", "0")),
         "base_url": base_url,
-        "sync_client_kwargs": {"timeout": LLM_REQUEST_TIMEOUT_SECONDS},
-        "async_client_kwargs": {"timeout": LLM_REQUEST_TIMEOUT_SECONDS},
+        "sync_client_kwargs": {"timeout": seconds},
+        "async_client_kwargs": {"timeout": seconds},
     }
+    if json_mode:
+        kwargs["format"] = "json"
     if headers:
         kwargs["headers"] = headers
     return ChatOllama(**kwargs)
+
+
+@lru_cache(maxsize=1)
+def get_llm() -> ChatOllama:
+    """Return one configured client, creating it only on first model call."""
+    return build_llm()
 
 
 def get_llm_identity() -> tuple[str, str]:

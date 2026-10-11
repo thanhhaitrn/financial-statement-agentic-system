@@ -15,7 +15,9 @@ from schemas.table_names import (
 )
 
 
-AgentKind = Literal["planner", "router", "analysis", "synth"]
+# "context" agents add context beside the report (company news) and own no
+# aspect section, tool or table.
+AgentKind = Literal["planner", "router", "analysis", "context", "synth"]
 
 _ANALYSIS_TOOL_NAMES = (
     "get_balance_sheet_info",
@@ -121,6 +123,7 @@ AGENT_SPECS: dict[str, AgentSpec] = {
             keyword_tables=(TABLE_BS, TABLE_IS, TABLE_NOTE),
             default_tool="get_income_statement_info",
         ),
+        AgentSpec("agent_web", "context"),
         AgentSpec("agent_synth", "synth"),
     )
 }

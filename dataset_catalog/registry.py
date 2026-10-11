@@ -421,8 +421,33 @@ def _migrate_registry_document(
     return records
 
 
+class _RegistryRepairRequired(Exception):
+    """An unlocked read found a document that has to be rewritten."""
+
+
 def load_registry() -> List[DatasetRecord]:
-    """Load valid records, migrating legacy storage without losing bad data."""
+    """Load valid records, migrating legacy storage without losing bad data.
+
+    A clean registry is read without a lock: writers replace the file
+    atomically, so readers always see one complete document. Migration and
+    repair rewrite the file, so they re-run under the registry lock — a repair
+    computed from a stale unlocked read could otherwise overwrite a concurrent
+    ``save_dataset`` from another process.
+    """
+
+    try:
+        return _load_registry(allow_write=False)
+    except _RegistryRepairRequired:
+        from dataset_catalog.locks import registry_lock
+
+        with registry_lock():
+            return _load_registry(allow_write=True)
+
+
+def _load_registry(*, allow_write: bool) -> List[DatasetRecord]:
+    def require_write() -> None:
+        if not allow_write:
+            raise _RegistryRepairRequired()
 
     _ensure_layout()
     if not REGISTRY_PATH.exists():
@@ -432,6 +457,7 @@ def load_registry() -> List[DatasetRecord]:
     try:
         raw = json.loads(source_content.decode("utf-8"))
     except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        require_write()
         # The exact original remains in the backup; the readable copy is kept in
         # quarantine so callers never mistake corruption for an empty registry.
         backup_path = _backup_registry(
@@ -458,6 +484,7 @@ def load_registry() -> List[DatasetRecord]:
         return []
 
     if isinstance(raw, list):
+        require_write()
         return _migrate_registry_document(
             raw,
             source_content=source_content,
@@ -465,6 +492,7 @@ def load_registry() -> List[DatasetRecord]:
         )
 
     if not isinstance(raw, dict):
+        require_write()
         return _migrate_registry_document(
             raw,
             source_content=source_content,
@@ -473,6 +501,7 @@ def load_registry() -> List[DatasetRecord]:
 
     schema_version = raw.get("schema_version")
     if schema_version in (None, 1):
+        require_write()
         previous_quarantine, _ = _normalize_existing_quarantine(
             raw.get("quarantine")
         )
@@ -519,6 +548,7 @@ def load_registry() -> List[DatasetRecord]:
         or raw.get("quarantine", []) != normalized_quarantine
     )
     if needs_repair:
+        require_write()
         _backup_registry(source_content, source_format="envelope-v2-repair")
         payload = _registry_envelope_payload(
             records,
@@ -546,44 +576,52 @@ def _load_registry_envelope_context() -> tuple[
 
 
 def save_registry(records: List[DatasetRecord]) -> None:
+    from dataset_catalog.locks import registry_lock
+
     _ensure_layout()
     validated_records = [_normalize_record_paths(record) for record in records]
-    quarantine, migration = _load_registry_envelope_context()
-    payload = _registry_envelope_payload(
-        validated_records,
-        quarantine=quarantine,
-        migration=migration,
-    )
-    _atomic_write_json(REGISTRY_PATH, payload)
+    with registry_lock():
+        quarantine, migration = _load_registry_envelope_context()
+        payload = _registry_envelope_payload(
+            validated_records,
+            quarantine=quarantine,
+            migration=migration,
+        )
+        _atomic_write_json(REGISTRY_PATH, payload)
 
 
 def save_dataset(record: DatasetRecord) -> DatasetRecord:
+    from dataset_catalog.locks import registry_lock
+
     _ensure_layout()
     record = _normalize_record_paths(record)
 
-    existing = {item.dataset_id: item for item in load_registry()}
-    current = existing.get(record.dataset_id)
-    now = _utc_now()
+    # The whole read–modify–write runs under the registry lock: atomic replace
+    # prevents a torn file, but only the lock prevents two processes from each
+    # writing back a registry that is missing the other's record.
+    with registry_lock():
+        existing = {item.dataset_id: item for item in load_registry()}
+        current = existing.get(record.dataset_id)
+        now = _utc_now()
 
-    data = record.model_dump(mode="json")
-    data = _merge_preserved_build_fields(
-        current=current,
-        incoming=record,
-        payload=data,
-    )
-    data["created_at"] = current.created_at if current and current.created_at else (record.created_at or now)
-    data["updated_at"] = now
+        data = record.model_dump(mode="json")
+        data = _merge_preserved_build_fields(
+            current=current,
+            incoming=record,
+            payload=data,
+        )
+        data["created_at"] = current.created_at if current and current.created_at else (record.created_at or now)
+        data["updated_at"] = now
 
-    saved = _normalize_record_paths(DatasetRecord.model_validate(data))
-    existing[saved.dataset_id] = saved
+        saved = _normalize_record_paths(DatasetRecord.model_validate(data))
+        existing[saved.dataset_id] = saved
 
-    records = sorted(existing.values(), key=lambda item: item.dataset_id)
-    save_registry(records)
+        records = sorted(existing.values(), key=lambda item: item.dataset_id)
+        save_registry(records)
 
-    manifest_path = Path(saved.manifest_path)
-    manifest_path.parent.mkdir(parents=True, exist_ok=True)
-    with manifest_path.open("w", encoding="utf-8") as handle:
-        json.dump(saved.model_dump(mode="json"), handle, ensure_ascii=False, indent=2)
+        manifest_path = Path(saved.manifest_path)
+        manifest_path.parent.mkdir(parents=True, exist_ok=True)
+        _atomic_write_json(manifest_path, saved.model_dump(mode="json"))
 
     return saved
 
@@ -632,14 +670,19 @@ def delete_dataset(
 ) -> Optional[DatasetRecord]:
     if not str(dataset_id or "").strip():
         return None
-    dataset_key = validate_dataset_id(dataset_id)
-    existing = {item.dataset_id: item for item in load_registry()}
-    current = existing.pop(dataset_key, None)
-    if current is None:
-        return None
+    from dataset_catalog.locks import registry_lock
 
-    records = sorted(existing.values(), key=lambda item: item.dataset_id)
-    save_registry(records)
+    dataset_key = validate_dataset_id(dataset_id)
+    # Only the registry read–modify–write holds the registry lock. Artifact and
+    # collection removal run after it is released — the caller's dataset lock
+    # still covers them — so no Qdrant call ever runs under the registry lock.
+    with registry_lock():
+        existing = {item.dataset_id: item for item in load_registry()}
+        current = existing.pop(dataset_key, None)
+        if current is None:
+            return None
+        records = sorted(existing.values(), key=lambda item: item.dataset_id)
+        save_registry(records)
 
     _remove_managed_file(current.manifest_path, allowed_dir=MANIFESTS_DIR)
     _remove_managed_file(current.sqlite_db_path, allowed_dir=SQLITE_DIR)

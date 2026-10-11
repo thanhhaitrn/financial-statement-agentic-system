@@ -148,8 +148,28 @@ class WebPolicy:
     max_results: int = 10
     max_refresh_articles: int = 20
     request_timeout_seconds: int = 15
-    max_body_bytes: int = 50_000
+    # Vietstock article pages are ~400 KB of HTML with the body after ~90 KB.
+    max_body_bytes: int = 800_000
     refresh_concurrency: int = 1
+    # Wall-clock limit for one refresh job (listing pages + article fetches).
+    refresh_deadline_seconds: int = 45
+    # Listing pages walked back in time per refresh (20 articles a page).
+    max_listing_pages: int = 5
+    # Per question: time to fetch the text of the articles it selected.
+    article_fetch_seconds: int = 20
+    # WEB_ANALYSIS_ENABLED: model analysis of company news for the open
+    # report. Off by default; it also needs WEB_EVIDENCE_ENABLED.
+    analysis_enabled: bool = False
+    # One budget for the whole news branch: fetching and analysis together.
+    branch_budget_seconds: int = 75
+    analysis_budget_seconds: int = 60
+    analysis_max_model_calls: int = 4
+    analysis_max_articles: int = 10
+    analysis_prompt_article_chars: int = 2_500
+
+    @property
+    def analysis_active(self) -> bool:
+        return self.enabled and self.analysis_enabled
 
 
 @dataclass(frozen=True)
@@ -310,10 +330,35 @@ class RuntimePolicy:
                     source, "WEB_REQUEST_TIMEOUT_SECONDS", 15, maximum=60
                 ),
                 max_body_bytes=_int_env(
-                    source, "WEB_MAX_BODY_BYTES", 50_000, maximum=1_000_000
+                    source, "WEB_MAX_BODY_BYTES", 800_000, maximum=1_000_000
                 ),
                 refresh_concurrency=_int_env(
                     source, "WEB_REFRESH_CONCURRENCY", 1, maximum=4
+                ),
+                refresh_deadline_seconds=_int_env(
+                    source, "WEB_REFRESH_DEADLINE_SECONDS", 45, maximum=300
+                ),
+                max_listing_pages=_int_env(
+                    source, "WEB_MAX_LISTING_PAGES", 5, maximum=20
+                ),
+                article_fetch_seconds=_int_env(
+                    source, "WEB_ARTICLE_FETCH_SECONDS", 20, maximum=120
+                ),
+                analysis_enabled=bool(_bool_env(source, "WEB_ANALYSIS_ENABLED", False)),
+                branch_budget_seconds=_int_env(
+                    source, "WEB_BRANCH_BUDGET_SECONDS", 75, maximum=600
+                ),
+                analysis_budget_seconds=_int_env(
+                    source, "WEB_ANALYSIS_BUDGET_SECONDS", 60, maximum=300
+                ),
+                analysis_max_model_calls=_int_env(
+                    source, "WEB_ANALYSIS_MAX_MODEL_CALLS", 4, maximum=8
+                ),
+                analysis_max_articles=_int_env(
+                    source, "WEB_ANALYSIS_MAX_ARTICLES", 10, maximum=20
+                ),
+                analysis_prompt_article_chars=_int_env(
+                    source, "WEB_ANALYSIS_PROMPT_ARTICLE_CHARS", 2_500, maximum=20_000
                 ),
             ),
             acquisition=AcquisitionPolicy(

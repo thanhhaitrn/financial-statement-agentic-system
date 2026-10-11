@@ -28,10 +28,18 @@ class WebEvidenceRequest(BaseModel):
     ticker: str = ""
     company: str = ""
     as_of: str = ""
+    # Optional publication window (ISO 8601, UTC). Without it the provider
+    # keeps its original "latest articles" behaviour.
+    date_from: str = ""
+    date_to: str = ""
+    # What the question is about, to rank articles and paragraphs. Used in
+    # memory for this request only; never stored or logged.
+    topic: str = ""
     limit: int = Field(default=10, ge=1, le=50)
     force_refresh: bool = False
 
-    @field_validator("query", "owner_id", "ticker", "company", "as_of", mode="before")
+    @field_validator("query", "owner_id", "ticker", "company", "as_of", "date_from", "date_to",
+                     mode="before")
     @classmethod
     def normalize_text(cls, value):
         return " ".join(str(value or "").split())
@@ -55,6 +63,11 @@ class WebEvidence(BaseModel):
     retrieved_at: str = Field(default_factory=utc_now_iso)
     query: str = ""
     content_hash: str = ""
+    # Source summary (sapo) and how much of the article is held:
+    # "full" article text, "summary_only" (the page could not be read) or
+    # "listing_only" (seen in the source's news list, page not fetched yet).
+    summary: str = ""
+    content_status: Literal["full", "summary_only", "listing_only"] = "full"
 
     @field_validator(
         "evidence_id",
@@ -68,6 +81,7 @@ class WebEvidence(BaseModel):
         "retrieved_at",
         "query",
         "content_hash",
+        "summary",
         mode="before",
     )
     @classmethod
@@ -122,6 +136,15 @@ class WebEvidenceBatch(BaseModel):
         "miss"
     )
     refresh_scheduled: bool = False
+    # For a windowed request: the part of the window the source was actually
+    # read for ({"requested_from", "requested_to", "covered_from",
+    # "covered_to", "complete"}), and whether a refresh is still collecting.
+    coverage: dict = Field(default_factory=dict)
+    pending: bool = False
+    # Collection steps kept apart: articles of the window seen in the news
+    # list, of those how many have full text stored, and how many were
+    # selected for this request.
+    stats: dict = Field(default_factory=dict)
 
 
 @runtime_checkable

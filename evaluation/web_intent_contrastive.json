@@ -1,0 +1,23 @@
+{
+  "_comment": "Planner web classification with a report open (dataset_id), as in the chat. Each case states the expected task_kind (web planner only), need_web and web_intent. clear=true cases must be right on every run; clear=false cases are tracked, not gating. company_news = news or events about one company; unsupported_external = macro, market, industry or price data; need_web=false = answerable from the report.",
+  "dataset_id": "suavietnam",
+  "questions": [
+    {"question": "Tin tức gần đây ảnh hưởng thế nào đến khả năng sinh lời của Vinamilk, xét theo biên lợi nhuận năm 2025?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true, "note": "unstable before: 1 of 3 runs gave unsupported_external"},
+    {"question": "Tin tức gần đây về Vinamilk thế nào?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Có tin gì mới về công ty trong tháng này không?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Vinamilk có sự kiện gì đáng chú ý trong 30 ngày qua?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Doanh thu thuần năm 2025 là bao nhiêu và có tin gì gần đây về công ty?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Tuần qua VNM có công bố thông tin gì không?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Vì sao biên lợi nhuận gộp năm 2025 giảm, có liên quan tới tin tức gần đây của công ty không?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Tin về việc Vinamilk trả cổ tức năm nay thế nào?", "task_kind": "report_qa", "need_web": true, "web_intent": "company_news", "clear": true},
+    {"question": "Lãi suất ngân hàng hiện nay ảnh hưởng thế nào đến ngành sữa?", "task_kind": "report_qa", "need_web": true, "web_intent": "unsupported_external", "clear": true},
+    {"question": "VN-Index tuần này diễn biến ra sao?", "task_kind": "report_qa", "need_web": true, "web_intent": "unsupported_external", "clear": true},
+    {"question": "Giá cổ phiếu VNM hôm nay là bao nhiêu?", "task_kind": "report_qa", "need_web": true, "web_intent": "unsupported_external", "clear": true},
+    {"question": "So sánh biên lợi nhuận gộp của Vinamilk với trung bình ngành sữa", "task_kind": "report_qa", "need_web": true, "web_intent": "unsupported_external", "clear": true},
+    {"question": "Tỷ giá USD/VND tăng tác động thế nào tới doanh nghiệp xuất khẩu?", "task_kind": "report_qa", "need_web": true, "web_intent": "unsupported_external", "clear": true},
+    {"question": "Doanh thu thuần năm 2025 là bao nhiêu?", "task_kind": "report_qa", "need_web": false, "web_intent": "", "clear": true},
+    {"question": "Đánh giá khả năng thanh toán ngắn hạn của công ty năm 2025", "task_kind": "report_qa", "need_web": false, "web_intent": "", "clear": true},
+    {"question": "Vì sao biên lợi nhuận gộp năm 2025 giảm so với năm 2024?", "task_kind": "report_qa", "need_web": false, "web_intent": "", "clear": false, "note": "answerable from the report; a model may still look for outside causes"},
+    {"question": "Tìm báo cáo tài chính VNM năm 2025", "task_kind": "report_discovery", "need_web": false, "web_intent": "", "clear": true}
+  ]
+}
