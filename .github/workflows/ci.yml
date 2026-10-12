@@ -27,12 +27,12 @@ jobs:
           finx_pipeline.py test.py dataset_batch_runner.py dataset_batch_result.py ragas_eval_runner.py
           eval_retrieval_recall.py analyze_batch_metrics.py output_formatter.py run_rotate.py
       - run: python -m pip wheel --no-deps --no-build-isolation . --wheel-dir /tmp/agentfinx-wheel
-      # The installed web app serves its frontend from package data.
+      # The wheel carries its config data; the UI lives in web/, not in the package.
       - run: >-
           python -c "import glob, zipfile;
           names = set(zipfile.ZipFile(glob.glob('/tmp/agentfinx-wheel/agentfinx-*.whl')[0]).namelist());
-          missing = {'webapp/static/chat.html', 'webapp/static/chatbox.js', 'webapp/static/vendor/purify.min.js'} - names;
-          assert not missing, missing"
+          assert 'config/company_aliases.json' in names, 'company_aliases.json missing';
+          assert not [n for n in names if n.startswith('webapp/static/')], 'old UI files in the wheel'"
       - run: detect-secrets scan --all-files --exclude-files '^(ragas_runs|data)/'
       - name: Whitespace errors and conflict markers in this change
         run: |
@@ -62,8 +62,8 @@ jobs:
           NEXT_TELEMETRY_DISABLED: "1"
       - run: npm audit --omit=dev --audit-level=high
 
-  # Mocked workers, real browser: the old UI (webapp/static) and the Next.js
-  # UI through its /api proxy. Full end-to-end runs stay local.
+  # Mocked workers, real browser: the Next.js UI through its /api proxy.
+  # Full end-to-end runs stay local.
   browser-smoke:
     runs-on: ubuntu-latest
     steps:
@@ -88,6 +88,6 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run build
-      - run: python -m pytest tests/test_browser_smoke.py tests/test_next_browser_smoke.py -q
+      - run: python -m pytest tests/test_next_browser_smoke.py -q
         env:
           FINX_REQUIRE_NEXT_SMOKE: "1"

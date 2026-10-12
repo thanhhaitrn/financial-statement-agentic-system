@@ -1,4 +1,4 @@
-"""FastAPI app: same-origin static frontend plus a JSON API.
+"""FastAPI app: the JSON API behind the Next.js UI (web/), which proxies /api.
 
 The API never runs the model, parses a document or builds an index; it only
 records work for the workers and reports state. Security boundaries:
@@ -19,13 +19,12 @@ import logging
 import re
 import time
 from datetime import datetime, timedelta, timezone
-from pathlib import Path
 from typing import Any, Callable, Optional
 from urllib.parse import urlsplit
 
 from fastapi import Depends, FastAPI, HTTPException, Request, Response
 from fastapi.exceptions import RequestValidationError
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import JSONResponse
 from pydantic import BaseModel, Field
 
 from dataset_catalog.access import (DatasetAccessError, get_accessible_dataset,
@@ -43,20 +42,6 @@ from webapp.settings import WebSettings
 
 logger = logging.getLogger("agentfinx.web.api")
 
-STATIC_DIR = Path(__file__).resolve().parent / "static"
-_PAGES = {
-    "/": "landing.html",
-    "/landing.html": "landing.html",
-    "/login": "auth.html",
-    "/register": "auth.html",
-    "/auth.html": "auth.html",
-    "/chat": "chat.html",
-    "/chat.html": "chat.html",
-}
-_ASSETS = frozenset(
-    {"tokens.css", "auth.css", "chatstyle.css", "landing.css", "auth.js", "chatbox.js", "landing.js"}
-)
-_VENDOR = frozenset({"marked.min.js", "purify.min.js"})
 _STATE_CHANGING = frozenset({"POST", "PUT", "PATCH", "DELETE"})
 _IDEMPOTENCY_RE = re.compile(r"^[A-Za-z0-9_-]{8,128}$")
 
@@ -738,32 +723,6 @@ def create_app(
         get_service=get_import_service,
         report_discovery=settings.report_discovery,
     )
-
-    # ---------------------------------------------------------------- static
-
-    def static_file(name: str) -> FileResponse:
-        return FileResponse(STATIC_DIR / name, headers={"Cache-Control": "no-cache"})
-
-    def page(name: str):
-        def handler():
-            return static_file(name)
-
-        return handler
-
-    for route, name in _PAGES.items():
-        app.add_api_route(route, page(name), methods=["GET"], include_in_schema=False)
-
-    @app.get("/vendor/{asset}", include_in_schema=False)
-    def vendor_asset(asset: str):
-        if asset not in _VENDOR:
-            raise HTTPException(status_code=404)
-        return static_file(f"vendor/{asset}")
-
-    @app.get("/{asset}", include_in_schema=False)
-    def asset_file(asset: str):
-        if asset not in _ASSETS:
-            raise HTTPException(status_code=404)
-        return static_file(asset)
 
     return app
 

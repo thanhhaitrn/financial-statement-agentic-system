@@ -29,7 +29,7 @@ ORIGIN = "http://127.0.0.1:8000"
 SECRET = "test-secret-" + "y" * 40
 PDF = b"%PDF-1.7\nfixture"
 MARKDOWN = "# BCTC\n\nNội dung báo cáo tài chính đầy đủ để ingest."
-STATIC = Path(__file__).resolve().parents[1] / "webapp" / "static"
+WEB = Path(__file__).resolve().parents[1] / "web"
 
 
 def _configure_registry_paths(monkeypatch, tmp_path):
@@ -350,9 +350,7 @@ def test_import_worker_recovers_interrupted_jobs_and_reports_health(make_web):
 
 
 def test_upload_form_is_pdf_only_with_consent_unticked():
-    html = (STATIC / "chat.html").read_text(encoding="utf-8")
-    script = (STATIC / "chatbox.js").read_text(encoding="utf-8")
-    assert 'accept="application/pdf,.pdf"' in html
-    assert '<input type="checkbox" id="uploadConsent" />' in html
-    assert "allow_cloud_parse: uploadConsent.checked" in script
-    assert "owner" not in script.split("// ---------- report upload ----------")[1].split("composerForm")[0]
+    form = (WEB / "components" / "chat" / "UploadModal.tsx").read_text(encoding="utf-8")
+    assert 'accept="application/pdf,.pdf"' in form
+    assert "const [consent, setConsent] = useState(false);" in form
+    assert "owner" not in form  # ownership comes from the session cookie, never from the form

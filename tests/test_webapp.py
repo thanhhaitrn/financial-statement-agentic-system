@@ -1,6 +1,5 @@
 """Local web app: auth, owner scoping, chat runs, worker, static frontend."""
 
-import re
 from pathlib import Path
 from types import SimpleNamespace
 
@@ -25,7 +24,7 @@ from webapp.worker import (WorkerAlreadyRunning, recover_chat_queue,  # noqa: E4
 
 ORIGIN = "http://127.0.0.1:8000"
 SECRET = "test-secret-" + "x" * 40
-STATIC = Path(__file__).resolve().parents[1] / "webapp" / "static"
+WEB = Path(__file__).resolve().parents[1] / "web"
 
 
 def _configure_registry_paths(monkeypatch, tmp_path):
@@ -113,7 +112,8 @@ def test_settings_have_no_default_secret_and_bind_locally():
     settings = load_settings({"FINX_SECRET_KEY": SECRET, "FINX_WEB_DB": "/tmp/x.sqlite3"})
     assert settings.host == "127.0.0.1"
     assert settings.shared_dataset_ids == frozenset()
-    assert {"http://127.0.0.1:8000", "http://localhost:8000"} <= settings.allowed_origins
+    # The browser's origin is the Next.js UI, not the API port.
+    assert settings.allowed_origins == {"http://127.0.0.1:3000", "http://localhost:3000"}
 
 
 def test_health_reports_actual_worker_context_and_api_mismatch(web):
@@ -438,32 +438,20 @@ def test_one_worker_per_queue_and_health_reports_it(web):
 # ---------------------------------------------------------------------------
 
 
-def test_static_pages_are_allowlisted(web):
+def test_the_api_serves_no_pages_or_files(web):
     client = web.client()
-    assert client.get("/").status_code == 200
-    assert client.get("/chat").status_code == 200
-    assert client.get("/login").status_code == 200
-    assert client.get("/vendor/purify.min.js").status_code == 200
-    for path in ("/app.py", "/.env", "/registry.json", "/vendor/../app.py", "/web.sqlite3"):
+    for path in ("/", "/chat", "/login", "/chatbox.js", "/vendor/purify.min.js", "/app.py", "/.env",
+                 "/registry.json", "/web.sqlite3"):
         assert client.get(path).status_code == 404, path
 
 
-def test_frontend_keeps_tokens_out_of_scripts_and_sanitizes_markdown():
-    scripts = {name: (STATIC / name).read_text(encoding="utf-8") for name in ("auth.js", "chatbox.js", "landing.js")}
-    for name, source in scripts.items():
+def test_the_ui_keeps_tokens_out_of_scripts_and_renders_no_raw_html():
+    sources = {path.relative_to(WEB).as_posix(): path.read_text(encoding="utf-8")
+               for folder in ("app", "components", "lib") for path in (WEB / folder).rglob("*.ts*")}
+    assert sources
+    for name, source in sources.items():
         assert "localStorage" not in source and "sessionStorage" not in source, name
         assert "Authorization" not in source, name
-        assert "localhost:8000" not in source and ":8000" not in source, name
-
-    chatbox = scripts["chatbox.js"]
-    assert "DOMPurify.sanitize" in chatbox
-    assert "bubble.textContent = String(content" in chatbox
-    assert "innerHTML = contentHtml" not in chatbox
-    # Every innerHTML assignment is either a constant or DOMPurify output.
-    for line in chatbox.splitlines():
-        if "innerHTML =" in line:
-            assert re.search(r"innerHTML = (AI_MARK_SVG|DELETE_SVG|window\.DOMPurify\.sanitize)", line), line
-
-    chat_html = (STATIC / "chat.html").read_text(encoding="utf-8")
-    assert chat_html.index("vendor/purify.min.js") < chat_html.index("chatbox.js")
-    assert ".xlsx" not in chat_html and ".csv" not in chat_html
+        assert "dangerouslySetInnerHTML" not in source, name
+    markdown = sources["components/chat/Markdown.tsx"]
+    assert "skipHtml" in markdown and '"img"' in markdown and "rehype-raw" not in (WEB / "package.json").read_text()

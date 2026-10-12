@@ -10,7 +10,7 @@ Database, file upload và bytecode trên branch đó **không** được đưa v
 
 | Lệnh | Vai trò |
 |---|---|
-| `agentfinx serve` | FastAPI phục vụ frontend và API cùng origin. **Không** chạy model, không parse, không build index. |
+| `agentfinx serve` | FastAPI: chỉ có API `/api/*`, giao diện là Next.js (`web/`). **Không** chạy model, không parse, không build index. |
 | `agentfinx worker --queue chat` | Xử lý câu hỏi tuần tự, mỗi lần một câu. |
 | `agentfinx worker --queue import` | Import PDF tải lên: trích xuất, kiểm tra chất lượng, build index, gắn báo cáo vào cuộc trò chuyện. |
 
@@ -31,7 +31,7 @@ export FINX_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe
 export QDRANT_URL=...          # và QDRANT_API_KEY nếu là Qdrant Cloud
 
 agentfinx db init                # chỉ lần đầu: tạo database tài khoản
-agentfinx serve                  # http://127.0.0.1:8000
+agentfinx serve                  # API ở http://127.0.0.1:8000 (giao diện: web/, cổng 3000)
 agentfinx worker --queue chat    # terminal thứ hai
 agentfinx worker --queue import  # terminal thứ ba
 ```
@@ -46,18 +46,16 @@ và kiểm tra, không xóa `dataset_store/`).
 
 ## Giao diện Next.js (`web/`)
 
-`web/` là giao diện mới (Next.js 16, React 19), nối từ branch `namhai-web`. Nó
-**chỉ là UI**: mọi request `/api/*` được Next proxy sang FastAPI ở trên, nên tài
-khoản, cookie phiên, chat run, import và CafeF vẫn do FastAPI xử lý. Phần đăng
-nhập riêng của branch đó (Prisma/SQLite, `AUTH_SECRET`) **không** được đưa vào.
-Giao diện cũ `webapp/static` vẫn chạy ở cổng 8000 cho tới khi bản mới thay thế hẳn.
+`web/` là giao diện duy nhất (Next.js 16, React 19). Nó **chỉ là UI**: mọi request
+`/api/*` được Next proxy sang FastAPI ở trên, nên tài khoản, cookie phiên, chat run,
+import và CafeF do FastAPI xử lý. FastAPI không phục vụ trang nào.
 
 Cần Node.js ≥ 20.9. Chạy ba process ở trên, cộng thêm:
 
 ```bash
-# FastAPI chỉ nhận request thay đổi trạng thái từ origin được phép:
-export FINX_ALLOWED_ORIGINS=http://127.0.0.1:3000,http://localhost:3000,http://127.0.0.1:8000
-
+# FastAPI chỉ nhận request thay đổi trạng thái từ origin được phép. Mặc định là
+# origin của Next (http://127.0.0.1:3000 và http://localhost:3000); đổi cổng hay
+# tên miền của UI thì đặt FINX_ALLOWED_ORIGINS.
 cd web
 npm ci
 npm run dev        # http://127.0.0.1:3000 (bản build: npm run build && npm start)
@@ -80,7 +78,9 @@ Câu hỏi trên báo cáo cần Ollama local cho embedding (`ollama serve`) và
 - CI job `web`: `npm ci`, `npm run typecheck`, `npm run build`, `npm audit --audit-level=high`.
   Job `browser-smoke` build Next với `FINX_API_URL=http://127.0.0.1:8765` rồi chạy
   `tests/test_next_browser_smoke.py` (đăng ký bằng mã mời, câu trả lời không lọt sang cuộc
-  trò chuyện khác, tải lại trang, máy chủ lỗi). Chạy local: build `web/` rồi chạy test;
+  trò chuyện khác, tải lại trang, máy chủ lỗi, markdown không chạy HTML, tải PDF lên, tìm và
+  import báo cáo CafeF, trả lời trên báo cáo đang mở, câu hỏi tiếp theo và làm rõ ngữ cảnh ở cả
+  màn rộng lẫn màn điện thoại, tin tức tự bổ sung). Chạy local: build `web/` rồi chạy test;
   test tự đọc cổng API từ bản build và bỏ qua nếu chưa build.
 
 ### Mở ra ngoài localhost
@@ -103,7 +103,7 @@ dùng chung cho mọi người. Đăng ký mặc định chỉ bằng mã mời 
 |---|---|---|
 | `FINX_SECRET_KEY` | — (bắt buộc, ≥ 32 ký tự) | Ký cookie phiên đăng nhập. |
 | `FINX_HOST` / `FINX_PORT` | `127.0.0.1` / `8000` | Địa chỉ bind. Bind ra ngoài loopback sẽ in cảnh báo. |
-| `FINX_ALLOWED_ORIGINS` | suy ra từ host/port | Origin được phép gửi request thay đổi trạng thái. |
+| `FINX_ALLOWED_ORIGINS` | `http://127.0.0.1:3000,http://localhost:3000` | Origin của giao diện Next được phép gửi request thay đổi trạng thái. |
 | `FINX_WEB_DB` | `storage/web/finx_web.sqlite3` | Database web (user, session, lịch sử, chat run). |
 | `FINX_SHARED_DATASET_IDS` | rỗng | Dataset mẫu dùng chung, phân tách bằng dấu phẩy. Chỉ áp dụng cho dataset **không có owner**. |
 | `FINX_COOKIE_SECURE` | `0` | Đặt `1` khi chạy sau HTTPS. |
@@ -344,9 +344,8 @@ thời gian (tạo trước khi có tính năng này) không bao giờ bị xoá
 - Request thay đổi trạng thái phải có `Origin` (hoặc `Referer`) nằm trong danh sách cho phép; CORS đóng.
 - Mọi session, tin nhắn và chat run đều kiểm tra owner phía server.
 - API không trả đường dẫn nội bộ, tên collection hay chuỗi lỗi của provider.
-- Câu trả lời AI là Markdown, được render bằng Marked rồi lọc bằng DOMPurify
-  (`webapp/static/vendor/`, marked 12.0.2 và DOMPurify 3.1.6, ghim SHA-256 bên dưới).
-  Tin nhắn người dùng luôn hiển thị dạng text.
+- Câu trả lời AI là Markdown, render bằng `react-markdown` + `remark-gfm`: HTML thô bị bỏ,
+  không render ảnh, link chỉ giữ `http(s)`/`mailto`. Tin nhắn người dùng luôn hiển thị dạng text.
 - Không còn câu trả lời demo: pipeline lỗi thì trả thông báo lỗi cố định.
 
 Chưa có: đổi/khôi phục mật khẩu, xác minh email khi đăng ký mở (vì vậy chế độ `open` chỉ dùng
@@ -359,8 +358,7 @@ nhập cũ không có phiên phía server nên mọi người phải đăng nh�
 **Schema v7** thêm bảng `news_updates`: phần tin doanh nghiệp chưa sẵn sàng lúc trả lời được chat
 worker hoàn tất sau (giữa các câu hỏi) và thêm thành tin nhắn `news_update`. API: mỗi chat run có
 `news_update` (`pending`/`done`/`expired`/`failed` kèm tin nhắn), mỗi session có
-`news_update_run_id` để trang tiếp tục chờ sau khi tải lại. Cả giao diện Next và giao diện cũ tự hiện
-cập nhật. Nâng cấp như các bản trước: dừng API và cả hai worker.
+`news_update_run_id` để trang tiếp tục chờ sau khi tải lại. Giao diện tự hiện cập nhật. Nâng cấp như các bản trước: dừng API và cả hai worker.
 
 ## Phiên bản báo cáo (generation)
 
@@ -377,10 +375,3 @@ phải chờ câu hỏi đang chạy xong.
 - Câu hỏi đang chờ: tiếp tục bình thường.
 - Câu hỏi đang chạy dở: đánh dấu **interrupted**, không tự chạy lại (tránh gọi model
   và tính phí hai lần). Người dùng gửi lại nếu cần.
-
-## Vendor libraries
-
-| File | Phiên bản | SHA-256 |
-|---|---|---|
-| `static/vendor/marked.min.js` | marked 12.0.2 | `15fabce5b65898b32b03f5ed25e9f891a729ad4c0d6d877110a7744aa847a894` |
-| `static/vendor/purify.min.js` | DOMPurify 3.1.6 | `c0845096a7c4a6741f362ac506c94c1c7d27dc603bcc1bf64a587f76f2dbe3a1` |

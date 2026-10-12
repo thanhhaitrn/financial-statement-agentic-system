@@ -41,7 +41,7 @@ scripts/                Tiện ích vận hành (run_rotate, diagnostics)
 tests/                  Unit tests (pytest)
 tools/                  Retrieval tools cho agents
 vectorstore/            Qdrant adapter, lexical index, reranker
-webapp/                 FastAPI web app (API, worker) + giao diện cũ webapp/static
+webapp/                 FastAPI web app: API và worker (giao diện là web/)
 web/                    Giao diện Next.js, proxy /api sang webapp (xem webapp/README.md)
 ```
 

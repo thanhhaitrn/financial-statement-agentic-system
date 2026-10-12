@@ -15,6 +15,8 @@ MIN_SECRET_LENGTH = 32
 # invite: only with a code from `agentfinx invites create` (default);
 # open: anyone, for local development only; closed: no new accounts.
 REGISTRATION_MODES = ("invite", "open", "closed")
+# `npm run start`/`npm run dev` in web/ listen on 127.0.0.1:3000.
+DEFAULT_UI_ORIGINS = ("http://127.0.0.1:3000", "http://localhost:3000")
 
 IPNetwork = Union[ipaddress.IPv4Network, ipaddress.IPv6Network]
 
@@ -93,9 +95,9 @@ def load_settings(environ: Optional[Mapping[str, str]] = None) -> WebSettings:
     raw_origins = str(env.get("FINX_ALLOWED_ORIGINS", "") or "")
     origins = {item.strip().rstrip("/") for item in raw_origins.split(",") if item.strip()}
     if not origins:
-        origins = {f"http://{host}:{port}"}
-        if host in {"127.0.0.1", "localhost"}:
-            origins |= {f"http://127.0.0.1:{port}", f"http://localhost:{port}"}
+        # Browsers reach the API only through the Next.js UI (web/, default
+        # port 3000), which forwards their Origin header unchanged.
+        origins = set(DEFAULT_UI_ORIGINS)
 
     db_path = resolve_db_path(env)
 

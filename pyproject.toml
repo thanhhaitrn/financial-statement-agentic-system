@@ -32,7 +32,7 @@ web = [
   "uvicorn>=0.34,<1.0",
 ]
 smoke = ["reportlab>=4.0,<6.0"]
-# Browser smoke test (tests/test_browser_smoke.py); CI installs Chromium for it.
+# Browser smoke test of the Next.js UI (tests/test_next_browser_smoke.py); CI installs Chromium for it.
 e2e = ["playwright>=1.45,<2.0"]
 eval = [
   "ragas>=0.3.4,<0.4",
@@ -91,8 +91,6 @@ py-modules = [
 ]
 
 [tool.setuptools.package-data]
-# The local web app serves these from inside the installed package.
-webapp = ["static/*.html", "static/*.css", "static/*.js", "static/vendor/*.js"]
 config = ["company_aliases.json"]
 
 [tool.pytest.ini_options]

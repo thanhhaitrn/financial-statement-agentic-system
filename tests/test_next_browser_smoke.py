@@ -5,7 +5,7 @@ Playwright; skipped otherwise, unless ``FINX_REQUIRE_NEXT_SMOKE=1`` (CI), where
 a missing build fails. The build compiles in the FastAPI address
 (``FINX_API_URL``), so the test reads it from the build and serves the API
 there. The pipeline is a fake that echoes the question; nothing leaves the
-machine.
+machine; report discovery, PDF import and their parser are fakes too.
 """
 
 import json
@@ -29,18 +29,80 @@ pytest.importorskip("jwt")
 uvicorn = pytest.importorskip("uvicorn")
 sync_api = pytest.importorskip("playwright.sync_api")
 
+from acquisition.cafef import CafeFReportDiscoveryProvider  # noqa: E402
+from acquisition.download import PdfArtifactValidator  # noqa: E402
+from acquisition.service import ReportAcquisitionService  # noqa: E402
+from acquisition.store import AcquisitionStore  # noqa: E402
+from config.runtime_policy import AcquisitionPolicy  # noqa: E402
 from dataset_catalog import registry  # noqa: E402
+from schemas.acquisition import ConvertedDocument, ConvertedPage  # noqa: E402
 from webapp import auth  # noqa: E402
 from webapp import db as webdb  # noqa: E402
 from webapp.app import create_app  # noqa: E402
 from webapp.chat_runner import ChatDependencies  # noqa: E402
-from webapp.settings import WebSettings  # noqa: E402
+from webapp.discovery import run_discovery  # noqa: E402
+from webapp.imports import build_import_handler, make_session_attacher  # noqa: E402
 from webapp.news_updates import run_news_update_once  # noqa: E402
+from webapp.settings import WebSettings  # noqa: E402
 from webapp.worker import run_chat_once  # noqa: E402
 
 WEB = Path(__file__).resolve().parents[1] / "web"
 REQUIRED = os.environ.get("FINX_REQUIRE_NEXT_SMOKE") == "1"
 PASSWORD = "correct horse battery"
+PDF = b"%PDF-1.7\nfixture"
+MARKDOWN = "# BCTC\n\nNội dung báo cáo tài chính đầy đủ để ingest."
+# Markdown the UI must render, plus markup it must never turn into elements.
+UNSAFE_ANSWER = (
+    "**Tổng tài sản**: 45.952 tỷ đồng\n\n"
+    '<img src="x" onerror="window.__xss = 1"><script>window.__xss = 2</script>'
+)
+DISCOVERY_ROWS = [
+    {"Name": "Báo cáo tài chính hợp nhất năm 2025 (đã kiểm toán)",
+     "Link": "https://cafef1.mediacdn.vn/vnm-2025.pdf", "Year": 2025, "Quarter": 5, "Time": "CN/2025"},
+    {"Name": 'Báo cáo quý 2 năm 2025 <img src="x" onerror="window.__xss = 3">',
+     "Link": "https://cafef1.mediacdn.vn/vnm-q2.pdf", "Year": 2025, "Quarter": 2, "Time": "Q2/2025"},
+]
+
+
+def _plan_for(state):
+    # Test double for the web planner: in production the model decides.
+    if state["user_query"].lower().startswith("tìm"):
+        return {"task_kind": "report_discovery", "planner_plan": {}, "trace": [],
+                "report_search": {"subject": "VNM", "fiscal_year": 2025, "period": "annual"}}
+    return {"task_kind": "report_qa", "planner_plan": {}, "trace": []}
+
+
+class _Downloader:
+    def __init__(self, validator):
+        self.validator = validator
+
+    def download(self, candidate, *, target_dir, cache_namespace):
+        Path(target_dir).mkdir(parents=True, exist_ok=True)
+        path = Path(target_dir) / "downloaded.pdf"
+        path.write_bytes(PDF)
+        return self.validator.validate(path, origin="cafef_discovery", source_url=candidate.source_url,
+                                       public_source=True, cache_namespace=cache_namespace)
+
+
+class _Converter:
+    converter_identity = "fake"
+    supports_attempt_ledger = True
+
+    def convert(self, artifact, *, private, consent=None, recorder=None):
+        return ConvertedDocument(
+            markdown=MARKDOWN, pages=[ConvertedPage(page_number=1, markdown=MARKDOWN)],
+            provider="local_text_layer", provider_version="test", tier="local_text",
+            source_sha256=artifact.source_sha256, confirmed_credits="0",
+        )
+
+
+def _build_dataset(job, _artifact, _converted_path):
+    record = registry.build_dataset_record(
+        file_path="data/document.md", company=job.metadata["company"],
+        fiscal_year=job.metadata.get("fiscal_year"), owner_id=job.owner_id, dataset_id=f"imp-{job.job_id[:12]}",
+    )
+    registry.save_dataset(record.model_copy(update={"status": "ready"}))
+    return record.dataset_id
 
 
 def _unavailable(reason: str):
@@ -117,17 +179,41 @@ def stack(monkeypatch, tmp_path):
         allowed_origins=frozenset({origin}),
         shared_dataset_ids=frozenset({shared.dataset_id}),
         heartbeat_interval_seconds=60,
+        report_discovery=True,
+    )
+    catalog = tmp_path / "symbols.json"
+    catalog.write_text(json.dumps({"retrieved_at": datetime.now(timezone.utc).isoformat(), "symbols": [
+        {"ticker": "VNM", "company": "Công ty Cổ phần Sữa Việt Nam", "exchange": "HOSE"}]}), encoding="utf-8")
+    validator = PdfArtifactValidator(max_file_bytes=1024 * 1024, max_pdf_pages=200, page_counter=lambda _path: 1)
+    service = ReportAcquisitionService(
+        store=AcquisitionStore(tmp_path / "acquisition" / "acquisition.db"),
+        discovery_provider=CafeFReportDiscoveryProvider(fetch_json=lambda _url: {"Success": True, "Data": DISCOVERY_ROWS}),
+        converter=_Converter(),
+        validator=validator,
+        downloader=_Downloader(validator),
+        policy=AcquisitionPolicy(monthly_parse_credit_budget=100_000, trial_successful_imports=10,
+                                 per_owner_concurrency=3),
+        symbol_catalog_path=catalog,
+        artifact_dir=tmp_path / "artifacts",
+        converted_dir=tmp_path / "converted",
+        dataset_builder=_build_dataset,
     )
     app = create_app(settings, generation_inspector=lambda _record: "gen-1",
-                     question_admitter=lambda _owner_id: None)
+                     question_admitter=lambda _owner_id: None, import_service=service)
     database = app.state.db
+    service.dataset_attacher = make_session_attacher(database, generation_inspector=lambda _record: "gen-1")
+    asked: list[str] = []
     deps = ChatDependencies(
         shared_dataset_ids=settings.shared_dataset_ids,
         activate=lambda _dataset: SimpleNamespace(generation="gen-1", collection=object()),
-        execute=lambda _ds, _col, question, **_kwargs: {"question": question},
+        execute=lambda _ds, _col, question, **_kwargs: asked.append(question) or {"question": question},
         collect_errors=lambda _state: [],
         format_answer=lambda state: f"**Trả lời** cho: {state['question']}",
+        discovery_enabled=True,
+        plan_task=_plan_for,
+        discover=lambda search, **kwargs: run_discovery(service, search, **kwargs),
     )
+    import_step = build_import_handler(database, service=service)
     worker_open = threading.Event()
     worker_open.set()
     stop = threading.Event()
@@ -136,6 +222,7 @@ def stack(monkeypatch, tmp_path):
         while not stop.is_set():
             worked = worker_open.is_set() and (
                 run_chat_once(database, "next-smoke", deps)
+                or import_step(database, "next-smoke-import")
                 or run_news_update_once(database, "next-smoke", provider_factory=deps.news_provider,
                                         invoke=deps.news_model))
             if not worked:
@@ -156,7 +243,8 @@ def stack(monkeypatch, tmp_path):
         while not server.started and time.monotonic() < deadline:
             time.sleep(0.05)
         assert server.started, "FastAPI did not start"
-        yield SimpleNamespace(origin=origin, db=database, shared=shared, worker_open=worker_open, deps=deps)
+        yield SimpleNamespace(origin=origin, db=database, shared=shared, worker_open=worker_open, deps=deps,
+                              asked=asked, service=service)
     finally:
         web.terminate()
         try:
@@ -175,6 +263,16 @@ def _invite(database, email):
         webdb.create_invite(conn, code_hash=auth.hash_invite_code(code), email=email,
                             expires_at=webdb.iso(datetime.now(timezone.utc) + timedelta(days=1)))
     return code
+
+
+def _sign_up(page, stack, email, name="Người Thử"):
+    code = _invite(stack.db, email)
+    page.goto(f"{stack.origin}/signup?invite={code}")
+    page.fill("#name", name)
+    page.fill("#email", email)
+    page.fill("#password", PASSWORD)
+    page.click("button[type=submit]")
+    page.wait_for_url(f"{stack.origin}/chat")
 
 
 def _ask(page, text):
@@ -439,5 +537,152 @@ def test_news_that_was_not_ready_arrives_by_itself(stack, monkeypatch):
             assert page.locator(".bubble.bot.rich", has_text="Cập nhật tin tức").count() == 2
             assert page.locator(".news-pending").count() == 0
             assert not errors, errors
+        finally:
+            browser.close()
+
+
+def _wait_for_import(page, stack, *, timeout):
+    """Wait until the import card says ready, or fail with what the page and store show."""
+
+    try:
+        page.locator(".import-card .import-processing", has_text="Sẵn sàng").wait_for(timeout=timeout)
+    except sync_api.TimeoutError:
+        jobs = [(job.status, job.error_code, job.billing_status, job.session_attached,
+                 job.session_attachment_error) for job in stack.service.store._all_jobs()]
+        cards = page.locator(".import-card")
+        pytest.fail(f"import never became ready; url={page.url}; "
+                    f"card={cards.first.inner_text() if cards.count() else None!r}; jobs={jobs}")
+
+
+def test_answers_render_safely_and_an_uploaded_pdf_becomes_a_conversation(stack):
+    stack.deps.format_answer = lambda _state: UNSAFE_ANSWER
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        errors: list[str] = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, "upload@example.com")
+            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _ask(page, "Tổng tài sản cuối kỳ?")
+            page.locator(".bubble.bot.rich strong", has_text="Tổng tài sản").wait_for(timeout=15_000)
+            assert page.locator(".bubble.bot.rich img, .bubble.bot.rich script").count() == 0
+            assert page.evaluate("window.__xss") is None
+
+            page.get_by_role("button", name="+ Cuộc trò chuyện mới").click()
+            page.locator(".start-actions").get_by_role("button", name="Tải PDF lên").click()
+            page.set_input_files("#upload-form input[type=file]",
+                                 files=[{"name": "bctc.pdf", "mimeType": "application/pdf", "buffer": PDF}])
+            page.get_by_label("Tên công ty").fill("Công ty Tải Lên")
+            page.get_by_label("Năm tài chính").fill("2025")
+            page.get_by_role("button", name="Tải lên và xử lý").click()
+            _wait_for_import(page, stack, timeout=20_000)
+            page.locator(".import-card .import-billing", has_text="Đã xác nhận").wait_for(timeout=5_000)
+            page.locator("textarea:not([disabled])").wait_for(timeout=10_000)
+
+            page.reload()
+            page.locator(".history-title", has_text="Công ty Tải Lên").wait_for(timeout=10_000)
+            assert not errors, errors
+        finally:
+            browser.close()
+
+
+def test_find_confirm_import_ask_and_answer_on_the_open_report(stack):
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": 1280, "height": 900})
+        errors: list[str] = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, "finder@example.com", name="Người Tìm")
+
+            # Search from the start screen: metadata only, shown as a stored card.
+            page.locator(".start-actions").get_by_role("button", name="Tìm trên CafeF").click()
+            page.get_by_label("Mã CK hoặc tên công ty").fill("VNM")
+            page.get_by_label("Năm tài chính").fill("2025")
+            page.get_by_role("button", name="Tìm báo cáo").click()
+            rows = page.locator(".report-card .cand-row")
+            rows.first.wait_for(timeout=15_000)
+            assert rows.count() == 2
+            assert page.locator(".report-card img").count() == 0  # an untrusted title stays text
+            assert page.evaluate("window.__xss") is None
+            assert '<img src="x"' in page.locator(".report-card").inner_text()
+
+            # A reload shows the same card from history, without searching again.
+            page.reload()
+            page.locator(".history-title", has_text="Tìm báo cáo VNM").click()
+            rows.first.wait_for(timeout=10_000)
+
+            # Choose, confirm (cloud parsing consent is off by default), import, ask.
+            annual = rows.filter(has_text="Báo cáo năm 2025")
+            annual.get_by_role("button", name="Chọn báo cáo này").click()
+            assert not annual.locator(".confirm-panel input[type=checkbox]").is_checked()
+            annual.get_by_role("button", name="Xác nhận tải và xử lý").click()
+            _wait_for_import(page, stack, timeout=20_000)
+            page.locator("textarea:not([disabled])").wait_for(timeout=10_000)
+            _ask(page, "Doanh thu năm 2025?")
+            _answer(page, "Doanh thu năm 2025?").wait_for(timeout=15_000)
+
+            # In a conversation with a report, a question taken as "find a report"
+            # can be answered on the open report instead.
+            _ask(page, "Tìm BCTC VNM năm 2025")
+            override = page.get_by_role("button", name="Trả lời trên báo cáo đang mở").last
+            override.wait_for(timeout=15_000)
+            override.click()
+            _answer(page, "Tìm BCTC VNM năm 2025").wait_for(timeout=15_000)
+            assert stack.asked[-1] == "Tìm BCTC VNM năm 2025"
+            assert not errors, errors
+        finally:
+            browser.close()
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_followup_context_clarification_and_failure_survive_reload(stack, width):
+    first = "Vốn chủ sở hữu của công ty là gì"
+    effective = "Vốn chủ sở hữu của công ty vào đầu năm là bao nhiêu?"
+    stack.deps.context_enabled = True
+
+    def resolve(question, history):
+        if question == "vào đầu năm thì sao":
+            return {"status": "resolved", "question": effective,
+                    "metric": {"kept": [{"source_run_id": history[-1].run_id, "text": "Vốn chủ sở hữu"}]},
+                    "period": {"changed": ["đầu năm"]}}
+        if question == "Chỉ tiêu đó thì sao?":
+            return {"status": "needs_clarification", "metric": {}, "period": {},
+                    "clarification_question": '<img src="x" onerror="window.__context_xss = 1"> Bạn muốn hỏi chỉ tiêu nào?'}
+        return question  # an invalid old-style reply: must not run QA
+
+    stack.deps.clarify = resolve
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 900})
+        errors: list[str] = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, f"context{width}@example.com")
+            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _ask(page, first)
+            _answer(page, first).wait_for(timeout=15_000)
+            _ask(page, "vào đầu năm thì sao")
+            page.locator(".msg-caption", has_text=effective).wait_for(timeout=15_000)
+            assert stack.asked == [first, effective]
+
+            _ask(page, "Chỉ tiêu đó thì sao?")
+            page.locator(".context-card", has_text="Bạn muốn hỏi chỉ tiêu nào?").wait_for(timeout=15_000)
+            assert page.locator(".context-card img").count() == 0
+            assert page.evaluate("window.__context_xss") is None
+            assert stack.asked == [first, effective]
+
+            _ask(page, "Lợi nhuận năm 2025 là bao nhiêu?")
+            page.locator(".context-card", has_text="Không làm rõ được ngữ cảnh").wait_for(timeout=15_000)
+            page.reload()
+            if page.get_by_role("button", name="Mở thanh bên").is_visible():
+                page.get_by_role("button", name="Mở thanh bên").click()
+            page.locator(".history-title", has_text=first).click()
+            page.locator(".msg-caption", has_text=effective).wait_for(timeout=10_000)
+            assert page.locator(".context-card", has_text="Bạn muốn hỏi chỉ tiêu nào?").count() == 1
+            assert page.locator(".context-card", has_text="Không làm rõ được ngữ cảnh").count() == 1
+            assert page.locator(".context-card img, .context-card script").count() == 0
+            assert stack.asked == [first, effective] and not errors, errors
         finally:
             browser.close()
