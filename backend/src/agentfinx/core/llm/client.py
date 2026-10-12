@@ -6,9 +6,10 @@ from functools import lru_cache
 from urllib.parse import urlparse
 
 from langchain_ollama import ChatOllama
-from dotenv import load_dotenv
 
-load_dotenv()
+from agentfinx.core.config import paths
+
+paths.load_env()
 
 
 LLM_REQUEST_TIMEOUT_SECONDS = float(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "900"))

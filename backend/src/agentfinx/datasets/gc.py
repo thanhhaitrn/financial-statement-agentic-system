@@ -141,9 +141,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     gc.add_argument("--apply", action="store_true", help="Delete; without it only the plan is printed")
     args = parser.parse_args(argv)
 
-    from dotenv import load_dotenv
+    from agentfinx.core.config import paths
 
-    load_dotenv()  # Qdrant settings; never printed.
+    paths.load_env()  # Qdrant settings; never printed.
     try:
         result = collect_dataset(args.dataset_id, apply=args.apply)
     except (LookupError, ValueError, RuntimeError) as exc:

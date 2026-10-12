@@ -81,6 +81,23 @@ def home() -> Path:
     return root
 
 
+def load_env() -> None:
+    """Load ``FINX_HOME/.env`` into the environment; set values always win.
+
+    The file is found through FINX_HOME, not the current directory or the
+    code's location, so an installed copy reads the same settings as the
+    checkout. FINX_HOME itself must come from the environment.
+    """
+
+    from dotenv import load_dotenv
+
+    try:
+        root = home()
+    except StorageError:
+        return
+    load_dotenv(root / ".env", override=False)
+
+
 def storage_root(root: Optional[Path] = None) -> Path:
     """``storage/`` without the layout check (for the migration itself)."""
 

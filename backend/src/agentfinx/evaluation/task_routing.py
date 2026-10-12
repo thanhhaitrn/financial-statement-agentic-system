@@ -146,9 +146,9 @@ def main(argv: Optional[list[str]] = None) -> int:
     parser.add_argument("--output", type=Path, help="Write the per-run results as JSON")
     args = parser.parse_args(argv)
 
-    from dotenv import load_dotenv
+    from agentfinx.core.config import paths
 
-    load_dotenv()  # model settings; never printed
+    paths.load_env()  # model settings; never printed
     items = [item for path in args.questions for item in load_questions(path, expect=args.expect)]
     if args.dataset_id is not None:
         for item in items:

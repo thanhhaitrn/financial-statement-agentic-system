@@ -12,7 +12,7 @@
 //
 // The proxy passes a client-sent X-Forwarded-For through unchanged and adds
 // none, so FastAPI must not trust it unless a reverse proxy in front of this
-// app overwrites it (see FINX_TRUSTED_PROXIES in docs/web-app.md).
+// app overwrites it (see FINX_TRUSTED_PROXIES in docs/security.md).
 const api = (process.env.FINX_API_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");
 
 /** @type {import('next').NextConfig} */

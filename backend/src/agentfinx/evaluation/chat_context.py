@@ -128,8 +128,8 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("live evaluation requires --allow-live (use --dry-run to inspect scope)")
     if calls > args.max_calls:
         parser.error(f"{calls} calls exceed --max-calls={args.max_calls}; explicitly raise the cap")
-    from dotenv import load_dotenv
-    load_dotenv()
+    from agentfinx.core.config import paths
+    paths.load_env()
     from agentfinx.core.llm.client import get_llm_identity
     report = evaluate_cases(cases)
     report.update({

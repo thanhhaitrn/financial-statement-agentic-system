@@ -1,7 +1,9 @@
 """Project-wide defaults for ingestion, vector indexing, and dataset metadata."""
 # Code note: Config modules centralize constants used by routing, ingestion, and retrieval.
 
-DEFAULT_DATA_FILE = "data/document.md"
+# Relative to FINX_HOME: the versioned sample report of a source checkout, used
+# by `agentfinx ask` when no dataset is chosen.
+DEFAULT_DATA_FILE = "backend/benchmarks/reports/document.md"
 
 DEFAULT_DATASET = {
     "dataset_id": "",

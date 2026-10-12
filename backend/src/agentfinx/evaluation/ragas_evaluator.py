@@ -94,9 +94,9 @@ def _build_evaluator_embeddings():
 
 
 def _build_evaluator_llm():
-    from dotenv import load_dotenv
+    from agentfinx.core.config import paths
 
-    load_dotenv()
+    paths.load_env()
     timeout = float(os.getenv("LLM_REQUEST_TIMEOUT_SECONDS", "900"))
 
     # Opt-in Claude judge (dormant unless ANTHROPIC_API_KEY is set — needs an

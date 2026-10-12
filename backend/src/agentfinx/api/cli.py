@@ -20,9 +20,9 @@ from typing import Optional
 
 
 def _prepare_environment(host: Optional[str] = None, port: Optional[int] = None) -> dict:
-    from dotenv import load_dotenv
+    from agentfinx.core.config import paths
 
-    load_dotenv()
+    paths.load_env()
     env = dict(os.environ)
     if host:
         env["FINX_HOST"] = host

@@ -9,12 +9,13 @@ import os
 import uuid
 from urllib.parse import urlparse
 
-from dotenv import load_dotenv
 from langchain_ollama import OllamaEmbeddings
 from qdrant_client import QdrantClient, models
 from qdrant_client.http.exceptions import UnexpectedResponse
 
-load_dotenv()
+from agentfinx.core.config import paths
+
+paths.load_env()
 
 EMBEDDING_MODEL = os.getenv("OLLAMA_EMBEDDING_MODEL", "bge-m3")
 EMBEDDING_BASE_URL = os.getenv("OLLAMA_EMBEDDING_BASE_URL") or os.getenv(

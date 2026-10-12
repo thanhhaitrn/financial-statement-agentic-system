@@ -55,8 +55,8 @@ def _parser():
 
 
 def _default_service(*, allow_cloud_parse=False):
-    from dotenv import load_dotenv
-    load_dotenv()  # Never print environment values or credentials.
+    from agentfinx.core.config import paths
+    paths.load_env()  # Never print environment values or credentials.
     from agentfinx.acquisition import build_default_acquisition_service
     from agentfinx.core.config.runtime_policy import RuntimePolicy
     return build_default_acquisition_service(
