@@ -1,0 +1,1278 @@
+"""Pydantic models and coercion helpers for planner, router, and worker outputs."""
+# Code note: Schema modules normalize model/tool payloads; comments here clarify validation side effects.
+
+from enum import StrEnum
+
+from pydantic import (
+    BaseModel,
+    Field,
+    TypeAdapter,
+    ValidationError,
+    field_validator,
+    model_validator,
+)
+from pydantic.json_schema import SkipJsonSchema
+from typing import List, Literal, Any, Optional
+import re, json
+from agentfinx.agents.agent_registry import ANALYSIS_AGENT_ORDER
+from agentfinx.core.config.domain_catalog import ANALYSIS_AXIS_ALIASES, TABLE_CANON
+from agentfinx.core.schemas.requirements import normalize_fact_status
+from agentfinx.core.schemas.table_names import normalize_table_heading
+from agentfinx.core.common import dedupe_keep_order as _dedupe_keep_order
+
+TABLE_NAME = Literal[
+    "BẢNG CÂN ĐỐI KẾ TOÁN",
+    "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH",
+    "BÁO CÁO LƯU CHUYỂN TIỀN TỆ",
+    "THUYẾT MINH BÁO CÁO TÀI CHÍNH",
+    "PHẦN ĐẦU BÁO CÁO TÀI CHÍNH",
+]
+
+
+VALID_TABLE_NAMES = set(TABLE_CANON.values())
+class AnalysisAgentName(StrEnum):
+    """Wire-level name of an analysis agent.
+
+    Members are plain strings (``str(x) == "agent_profitability"``), so the wire
+    format is unchanged; the enum only makes the accepted set explicit and
+    derived from the registry rather than re-typed per schema.
+    """
+
+    PROFITABILITY = "agent_profitability"
+    LIQUIDITY_SOLVENCY = "agent_liquidity_solvency"
+    CASHFLOW_ANALYSIS = "agent_cashflow_analysis"
+    EFFICIENCY = "agent_efficiency"
+
+
+# The registry stays the single source of truth: a spec added there without a
+# matching member here is a wiring bug, not a silently narrower schema.
+assert tuple(member.value for member in AnalysisAgentName) == ANALYSIS_AGENT_ORDER, (
+    "AnalysisAgentName is out of sync with the agent registry: "
+    f"{[m.value for m in AnalysisAgentName]} != {list(ANALYSIS_AGENT_ORDER)}"
+)
+
+AGENT_NAME_VALUES = {member.value for member in AnalysisAgentName}
+
+
+def _normalize_table_value(value: Any) -> Any:
+    if not isinstance(value, str):
+        return value
+
+    # Accept common abbreviations from LLM output, but store only canonical
+    # statement headings in validated plans and worker answers.
+    text = " ".join(value.strip().split())
+    if not text:
+        return text
+
+    key = text.lower()
+    if key in TABLE_CANON:
+        return TABLE_CANON[key]
+
+    normalized = normalize_table_heading(text)
+    if normalized in VALID_TABLE_NAMES:
+        return normalized
+
+    return text
+
+
+def _is_agent_name(value: Any) -> bool:
+    return str(value or "").strip() in AGENT_NAME_VALUES
+
+
+def _flatten_text_items(value: Any) -> List[str]:
+    if value is None:
+        return []
+
+    if isinstance(value, (list, tuple, set)):
+        items: List[str] = []
+        for item in value:
+            items.extend(_flatten_text_items(item))
+        return items
+
+    text = str(value).strip()
+    if not text:
+        return []
+    return [text]
+
+
+def _coerce_keyword_list(value: Any) -> List[str]:
+    if value is None:
+        return []
+
+    if isinstance(value, (list, tuple, set)):
+        return _dedupe_keep_order(_flatten_text_items(value))
+
+    text = str(value).strip()
+    if not text:
+        return []
+
+    # Router/planner models sometimes return comma-separated strings even when
+    # the schema expects a list. Split only obvious list separators.
+    if "," in text or ";" in text:
+        split_items = re.split(r"[;,]", text)
+        normalized = _dedupe_keep_order([item.strip() for item in split_items if item.strip()])
+        if normalized:
+            return normalized
+
+    return [text]
+
+
+def _coerce_text_list(value: Any) -> List[str]:
+    return _dedupe_keep_order(_flatten_text_items(value))
+
+
+def _coerce_worker_fact_item(value: Any) -> Optional[dict]:
+    if value is None:
+        return None
+
+    if isinstance(value, dict):
+        return dict(value)
+
+    if hasattr(value, "model_dump"):
+        dumped = value.model_dump(exclude_none=True)
+        if isinstance(dumped, dict):
+            return dumped
+
+    # Preserve legacy worker output that returns facts as plain strings.
+    text = str(value).strip()
+    if not text:
+        return None
+
+    normalized = " ".join(text.split())
+    item_name = ""
+    fact_value = normalized
+
+    colon_parts = re.split(r"\s*:\s*", normalized, maxsplit=1)
+    if len(colon_parts) == 2:
+        item_name = colon_parts[0].strip(" -")
+        fact_value = colon_parts[1].strip()
+    else:
+        la_match = re.match(r"^(?P<item>.+?)\s+là\s+(?P<value>.+)$", normalized, flags=re.IGNORECASE)
+        if la_match:
+            item_name = la_match.group("item").strip(" -")
+            fact_value = la_match.group("value").strip()
+        else:
+            digit_match = re.search(r"\d", normalized)
+            if digit_match and digit_match.start() > 0:
+                prefix = normalized[:digit_match.start()].strip(" ,.;:-")
+                if prefix:
+                    item_name = prefix
+
+    return {
+        "item_name": item_name,
+        "time_hint": "",
+        "value": fact_value,
+        "source": "",
+        "status": "found",
+    }
+
+
+def _coerce_worker_facts(value: Any) -> List[Any]:
+    if value is None:
+        return []
+
+    if isinstance(value, list):
+        items = value
+    else:
+        items = [value]
+
+    normalized: List[Any] = []
+    for item in items:
+        coerced = _coerce_worker_fact_item(item)
+        if coerced is not None:
+            normalized.append(coerced)
+    return normalized
+
+
+def _coerce_followup_dict(value: dict) -> dict:
+    data = dict(value)
+
+    if "agent" not in data and data.get("agent_name"):
+        data["agent"] = data.get("agent_name")
+
+    if "keywords" not in data:
+        for key in ("keyword", "kw"):
+            if data.get(key):
+                data["keywords"] = data.get(key)
+                break
+
+    if "keywords" in data:
+        data["keywords"] = _coerce_keyword_list(data.get("keywords"))
+
+    if "requirements" not in data:
+        for key in ("requirement", "missing_requirement", "missing_requirements", "missing", "needs"):
+            if data.get(key):
+                data["requirements"] = data.get(key)
+                break
+
+    if "requirements" in data:
+        data["requirements"] = _coerce_text_list(data.get("requirements"))
+
+    return data
+
+
+def _coerce_followup_sequence(items: List[Any]) -> Optional[dict]:
+    if not items:
+        return None
+
+    agent = str(items[0] or "").strip()
+    if agent not in AGENT_NAME_VALUES:
+        return None
+
+    table = None
+    requirements: List[str] = []
+    reason = ""
+    cursor = 1
+
+    if len(items) > cursor:
+        candidate_table = _normalize_table_value(items[cursor])
+        if candidate_table in VALID_TABLE_NAMES:
+            table = candidate_table
+            cursor += 1
+
+    if len(items) > cursor:
+        requirements = _coerce_text_list(items[cursor])
+        cursor += 1
+
+    if len(items) > cursor:
+        reason = str(items[cursor] or "").strip()
+
+    return {
+        "agent": agent,
+        "table": table,
+        "requirements": requirements,
+        "reason": reason,
+    }
+
+
+def _coerce_followups_payload(value: Any) -> Any:
+    if value is None:
+        return []
+
+    if isinstance(value, dict):
+        return [_coerce_followup_dict(value)]
+
+    if not isinstance(value, list):
+        return value
+
+    if not value:
+        return []
+
+    normalized = []
+    index = 0
+
+    while index < len(value):
+        item = value[index]
+
+        if isinstance(item, dict):
+            normalized.append(_coerce_followup_dict(item))
+            index += 1
+            continue
+
+        if isinstance(item, (list, tuple)):
+            seq = _coerce_followup_sequence(list(item))
+            if seq is None:
+                return value
+            normalized.append(seq)
+            index += 1
+            continue
+
+        if _is_agent_name(item):
+            next_index = index + 1
+            while next_index < len(value) and not _is_agent_name(value[next_index]):
+                next_index += 1
+
+            seq = _coerce_followup_sequence(value[index:next_index])
+            if seq is None:
+                return value
+            normalized.append(seq)
+            index = next_index
+            continue
+
+        return value
+
+    return normalized
+
+AGENT_NAME = AnalysisAgentName
+ANALYSIS_AXIS = AnalysisAgentName
+
+PLANNER_DIFFICULTY_LEVEL = Literal[
+    "easy",
+    "medium",
+    "hard",
+]
+PLANNER_RESPONSE_MODE = Literal[
+    "extractive",
+    "grounded_interpretation",
+]
+WEB_INTENT = Literal["", "company_news", "unsupported_external"]
+
+
+def _map_question_type_to_difficulty(value: Any) -> str:
+    text = str(value or "").strip().lower()
+    if text in {"easy", "medium", "hard"}:
+        return text
+    if text == "calculation":
+        return "medium"
+    if text in {"evaluation", "risk_assessment"}:
+        return "hard"
+    return "easy"
+
+
+# ---------- Planner evidence plan ---------
+class RerankRanking(BaseModel):
+    """Listwise rerank output: candidate IDs ordered by relevance (best first)."""
+
+    ranking: List[int] = Field(default_factory=list)
+
+    @field_validator("ranking", mode="before")
+    @classmethod
+    def normalize_ranking(cls, v):
+        if v is None:
+            return []
+        if isinstance(v, (int, str)):
+            v = [v]
+        seen: set = set()
+        result: List[int] = []
+        for item in v:
+            try:
+                idx = int(item)
+            except (TypeError, ValueError):
+                continue
+            if idx < 0 or idx in seen:
+                continue
+            seen.add(idx)
+            result.append(idx)
+        return result
+
+
+class PlannerAnalysisAxis(BaseModel):
+    axis: ANALYSIS_AXIS
+    components: SkipJsonSchema[List[str]] = Field(default_factory=list, exclude=True)
+    objective: str = ""
+
+    @field_validator("axis", mode="before")
+    @classmethod
+    def normalize_axis(cls, v):
+        if v is None:
+            return ""
+        text = str(v).strip()
+        if not text:
+            return text
+        normalized = ANALYSIS_AXIS_ALIASES.get(text.lower())
+        return normalized or text
+
+    @field_validator("objective", mode="before")
+    @classmethod
+    def normalize_objective(cls, v):
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator("components", mode="before")
+    @classmethod
+    def normalize_components(cls, v):
+        if v is None:
+            return []
+        return [str(item).strip() for item in v if str(item).strip()]
+
+
+class PlannerEvidencePlan(BaseModel):
+    difficulty_level: PLANNER_DIFFICULTY_LEVEL = "easy"
+    response_mode: PLANNER_RESPONSE_MODE = "extractive"
+    premise_requirements: List[str] = Field(default_factory=list)
+    tables: SkipJsonSchema[List[TABLE_NAME]] = Field(default_factory=list, exclude=True)
+    analysis_axes: List[PlannerAnalysisAxis] = Field(default_factory=list)
+    required_components: SkipJsonSchema[List[str]] = Field(default_factory=list, exclude=True)
+    company: Optional[str] = ""
+    time_hint: Optional[str] = ""
+    need_web: bool = False
+    web_intent: WEB_INTENT = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def migrate_legacy_question_type(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+        if "difficulty_level" not in data and "question_type" in data:
+            data["difficulty_level"] = _map_question_type_to_difficulty(data.get("question_type"))
+        return data
+
+    @field_validator("difficulty_level", mode="before")
+    @classmethod
+    def normalize_difficulty_level(cls, value):
+        return _map_question_type_to_difficulty(value)
+
+    @field_validator("response_mode", mode="before")
+    @classmethod
+    def normalize_response_mode(cls, value):
+        normalized = str(value or "").strip().lower()
+        if normalized in {"grounded_interpretation", "grounded-interpretation"}:
+            return "grounded_interpretation"
+        return "extractive"
+
+    @field_validator("tables", mode="before")
+    @classmethod
+    def normalize_tables(cls, v):
+        if v is None:
+            return []
+        out = []
+        for item in v:
+            if isinstance(item, dict) and "table" in item:
+                item = item["table"]
+            if isinstance(item, str):
+                out.append(_normalize_table_value(item))
+            else:
+                out.append(item)
+        return out
+
+    @field_validator("company", "time_hint", mode="before")
+    @classmethod
+    def normalize_nullable_str(cls, v):
+        if v is None:
+            return ""
+        return str(v).strip()
+
+    @field_validator("web_intent", mode="before")
+    @classmethod
+    def normalize_web_intent(cls, value):
+        normalized = str(value or "").strip().lower().replace("-", "_")
+        aliases = {
+            "news": "company_news",
+            "tin_tuc": "company_news",
+            "company_news": "company_news",
+            "external": "unsupported_external",
+            "market": "unsupported_external",
+            "macro": "unsupported_external",
+        }
+        return aliases.get(normalized, normalized)
+
+    @field_validator("required_components", "premise_requirements", mode="before")
+    @classmethod
+    def normalize_string_lists(cls, v):
+        if v is None:
+            return []
+        return [str(item).strip() for item in v if str(item).strip()]
+
+    @model_validator(mode="after")
+    def consolidate_plan(self):
+        tables = []
+        seen_tables = set()
+        normalized_axes = []
+
+        for table in self.tables:
+            if table not in seen_tables:
+                tables.append(table)
+                seen_tables.add(table)
+
+        for axis in self.analysis_axes:
+            axis_components = []
+            axis_seen_components = set()
+            for component in axis.components:
+                if component not in axis_seen_components:
+                    axis_components.append(component)
+                    axis_seen_components.add(component)
+
+            axis.components = axis_components
+            normalized_axes.append(axis)
+
+        if not normalized_axes and tables:
+            inferred_axes = []
+            for table in tables:
+                if table == "BẢNG CÂN ĐỐI KẾ TOÁN":
+                    inferred_axes.append("agent_liquidity_solvency")
+                elif table == "BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH":
+                    inferred_axes.append("agent_profitability")
+                elif table == "BÁO CÁO LƯU CHUYỂN TIỀN TỆ":
+                    inferred_axes.append("agent_cashflow_analysis")
+
+            seen_axes = set()
+            for axis_name in inferred_axes or ["agent_profitability"]:
+                if axis_name in seen_axes:
+                    continue
+                normalized_axes.append(
+                    PlannerAnalysisAxis(
+                        axis=axis_name,
+                        components=list(self.required_components),
+                        objective="",
+                    )
+                )
+                seen_axes.add(axis_name)
+
+        self.tables = tables
+        self.analysis_axes = normalized_axes
+        self.required_components = _dedupe_keep_order(self.required_components)
+        self.premise_requirements = _dedupe_keep_order(self.premise_requirements)
+        return self
+
+
+# ---------- Router / Dispatch plan ----------
+class Target(BaseModel):
+    agent: AGENT_NAME
+    table: Optional[TABLE_NAME] = None
+    requirements: List[str] = Field(default_factory=list)
+    keywords: List[str] = Field(default_factory=list, exclude=True)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy_target_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "requirements" not in data and data.get("keywords"):
+            data["requirements"] = data.get("keywords")
+
+        return data
+
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def normalize_requirements(cls, value):
+        return _coerce_text_list(value)
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def normalize_keywords(cls, value):
+        return _coerce_keyword_list(value)
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        if normalized in VALID_TABLE_NAMES:
+            return normalized
+        return None
+
+    @model_validator(mode="after")
+    def finalize_target_defaults(self):
+        if not self.requirements and self.keywords:
+            self.requirements = _coerce_text_list(self.keywords)
+
+        return self
+
+
+CALCULATION_OPERATION = Literal[
+    "delta",
+    "percent_change",
+    "ratio",
+    "share",
+    "multiple",
+    "sum",
+]
+OPERAND_ROLE = Literal[
+    "current",
+    "previous",
+    "numerator",
+    "denominator",
+    "component",
+]
+
+
+class EvidenceOperand(BaseModel):
+    """A typed slot that must bind to one fact before deterministic arithmetic."""
+
+    role: OPERAND_ROLE
+    query: str = ""
+    metric: str = ""
+    entity: str = ""
+    period: str = ""
+    period_role: str = ""
+    reporting_basis: str = ""
+    period_label: str = ""
+    value_type: str = ""
+    aggregation_level: str = ""
+    scope_label: str = ""
+    counterparty: str = ""
+    transaction_type: str = ""
+    movement_type: str = ""
+    geography: str = ""
+    policy_topic: str = ""
+    section_key: str = ""
+    table: Optional[TABLE_NAME] = None
+
+    @field_validator(
+        "query",
+        "metric",
+        "entity",
+        "period",
+        "period_role",
+        "reporting_basis",
+        "period_label",
+        "value_type",
+        "aggregation_level",
+        "scope_label",
+        "counterparty",
+        "transaction_type",
+        "movement_type",
+        "geography",
+        "policy_topic",
+        "section_key",
+        mode="before",
+    )
+    @classmethod
+    def normalize_operand_text(cls, value):
+        return str(value or "").strip()
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_operand_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        return normalized if normalized in VALID_TABLE_NAMES else None
+
+
+class EvidencePlanItem(BaseModel):
+    table: Optional[TABLE_NAME] = None
+    query: str = ""
+    needby: List[ANALYSIS_AXIS] = Field(default_factory=list)
+    operation: Optional[CALCULATION_OPERATION] = None
+    operand_role: Optional[OPERAND_ROLE] = None
+    operands: Optional[List[EvidenceOperand]] = None
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy_evidence_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "needby" not in data and "needed_by" in data:
+            data["needby"] = data.get("needed_by")
+
+        if not data.get("query"):
+            for key in ("requirement", "keyword", "keywords", "requirements"):
+                raw = data.get(key)
+                items = _coerce_text_list(raw)
+                if items:
+                    data["query"] = items[0]
+                    break
+
+        return data
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        if normalized in VALID_TABLE_NAMES:
+            return normalized
+        return None
+
+    @field_validator("query", mode="before")
+    @classmethod
+    def normalize_text(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @field_validator("needby", mode="before")
+    @classmethod
+    def normalize_needby(cls, value):
+        items = _coerce_text_list(value)
+        normalized = []
+        for item in items:
+            agent = ANALYSIS_AXIS_ALIASES.get(str(item or "").strip().lower(), str(item or "").strip())
+            if agent in ANALYSIS_AXIS_ALIASES.values() and agent not in normalized:
+                normalized.append(agent)
+        return normalized
+
+    @field_validator("operands", mode="before")
+    @classmethod
+    def normalize_operands(cls, value):
+        if value in (None, ""):
+            return None
+        if isinstance(value, dict):
+            return [value]
+        if isinstance(value, list):
+            return value or None
+        return None
+
+
+class AnalysisPlanItem(BaseModel):
+    agent: ANALYSIS_AXIS
+    objective: str = ""
+
+    @field_validator("agent", mode="before")
+    @classmethod
+    def normalize_agent(cls, value):
+        text = str(value or "").strip()
+        return ANALYSIS_AXIS_ALIASES.get(text.lower(), text)
+
+    @field_validator("objective", mode="before")
+    @classmethod
+    def normalize_objective(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+
+class EvidenceDispatchPlan(BaseModel):
+    """Lenient transport envelope for one raw router response.
+
+    ``analysis_plan`` is typed: it carries nothing beyond ``agent``/``objective``
+    and an entry that cannot be typed is dropped rather than failing the plan.
+
+    ``evidence_plan`` and ``targets`` stay ``List[dict]`` on purpose. The router
+    emits per-item retrieval metadata (``period``, ``period_role``,
+    ``value_type``, ``operands``, ``scope_label``, ``counterparty`` and more)
+    that ``EvidencePlanItem`` does not model but that the keyworder reads back
+    to build typed calculation contracts. Typing the envelope would silently
+    strip that metadata, and one malformed item would reject the whole plan
+    instead of being dropped downstream.
+    """
+
+    evidence_plan: List[dict] = Field(default_factory=list)
+    analysis_plan: List[AnalysisPlanItem] = Field(default_factory=list)
+    targets: List[dict] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_current_router_output(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        for wrapper_key in (
+            "evidence_dispatch_plan",
+            "dispatch_plan",
+            "router_plan",
+            "worker_plan",
+            "plan",
+            "output",
+            "data",
+            "result",
+        ):
+            nested = data.get(wrapper_key)
+            if isinstance(nested, dict):
+                nested_data = dict(nested)
+                nested_data.update({k: v for k, v in data.items() if k not in nested_data})
+                data = nested_data
+                break
+
+        if "evidence_plan" not in data:
+            for key in ("evidence", "evidence_items", "retrieval_plan", "retrieval_queries", "queries", "items"):
+                if key in data:
+                    data["evidence_plan"] = data.get(key)
+                    break
+
+        if "analysis_plan" not in data:
+            for key in ("analysis", "analysis_items", "analyses"):
+                if key in data:
+                    data["analysis_plan"] = data.get(key)
+                    break
+
+        if "targets" not in data:
+            for key in ("retrieval_targets", "workers", "worker_targets"):
+                if key in data:
+                    data["targets"] = data.get(key)
+                    break
+
+        return data
+
+    @field_validator("analysis_plan", mode="before")
+    @classmethod
+    def keep_typeable_analysis_items(cls, value):
+        """Drop analysis entries the schema cannot type, keep the rest."""
+
+        items = cls.normalize_router_items(value)
+        typed = []
+        for item in items:
+            try:
+                typed.append(AnalysisPlanItem.model_validate(item))
+            except ValidationError:
+                continue
+        return typed
+
+    @field_validator("evidence_plan", "targets", mode="before")
+    @classmethod
+    def normalize_router_items(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, dict):
+            for key in ("items", "queries", "requirements", "targets", "evidence_plan", "analysis_plan"):
+                nested = value.get(key)
+                if isinstance(nested, list):
+                    value = nested
+                    break
+            else:
+                value = [value]
+        elif not isinstance(value, list):
+            value = [value]
+
+        items = []
+        for item in value:
+            if isinstance(item, dict):
+                items.append(dict(item))
+                continue
+            text = str(item or "").strip()
+            if text:
+                items.append({"query": text})
+        return items
+
+
+class WorkerFact(BaseModel):
+    content_type: str = ""
+    company: str = ""
+    fiscal_year: str = ""
+    index_generation: str = ""
+    table: str = ""
+    fact_id: str = ""
+    note_number: str = ""
+    note_ref: str = ""
+    note_title: str = ""
+    section_path: str = ""
+    block_id: str = ""
+    subheading: str = ""
+    item_name: str = ""
+    row_label: str = ""
+    column_label: str = ""
+    time_hint: str = ""
+    period: str = ""
+    period_label: str = ""
+    period_role: str = ""
+    reporting_basis: str = ""
+    value_type: str = ""
+    aggregation_level: str = ""
+    unit: str = ""
+    value_kind: str = ""
+    value: str = ""
+    parsed_value: str = ""
+    metric_label: str = ""
+    entity_label: str = ""
+    scope_label: str = ""
+    counterparty: str = ""
+    transaction_type: str = ""
+    movement_type: str = ""
+    geography: str = ""
+    policy_topic: str = ""
+    section_key: str = ""
+    message: str = ""
+    source: str = ""
+    source_url: str = ""
+    publisher: str = ""
+    published_at: str = ""
+    retrieved_at: str = ""
+    source_page: str = ""
+    source_table: str = ""
+    source_item: str = ""
+    evidence_role: str = ""
+    linked_parent_fact_id: str = ""
+    linked_parent_item: str = ""
+    linked_parent_value: str = ""
+    linked_parent_period_label: str = ""
+    linked_parent_aggregation_level: str = ""
+    evidence_state: str = ""
+    search_exhaustive: bool = False
+    status: Literal["found", "not_found_after_search", "ambiguous"] = "found"
+
+    @field_validator(
+        "content_type",
+        "company",
+        "fiscal_year",
+        "index_generation",
+        "table",
+        "fact_id",
+        "note_number",
+        "note_ref",
+        "note_title",
+        "section_path",
+        "block_id",
+        "subheading",
+        "item_name",
+        "row_label",
+        "column_label",
+        "time_hint",
+        "period",
+        "period_label",
+        "period_role",
+        "reporting_basis",
+        "value_type",
+        "aggregation_level",
+        "unit",
+        "value_kind",
+        "value",
+        "parsed_value",
+        "metric_label",
+        "entity_label",
+        "scope_label",
+        "counterparty",
+        "transaction_type",
+        "movement_type",
+        "geography",
+        "policy_topic",
+        "section_key",
+        "message",
+        "source",
+        "source_url",
+        "publisher",
+        "published_at",
+        "retrieved_at",
+        "source_page",
+        "source_table",
+        "source_item",
+        "evidence_role",
+        "linked_parent_fact_id",
+        "linked_parent_item",
+        "linked_parent_value",
+        "linked_parent_period_label",
+        "linked_parent_aggregation_level",
+        "evidence_state",
+        mode="before",
+    )
+    @classmethod
+    def normalize_fact_strings(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @field_validator("status", mode="before")
+    @classmethod
+    def normalize_status(cls, value):
+        return normalize_fact_status(value)
+
+
+class WorkerNarrative(BaseModel):
+    content_type: str = "narrative"
+    note_number: str = ""
+    note_title: str = ""
+    subheading: str = ""
+    summary: str = ""
+    relevance: str = ""
+    source: str = ""
+
+    @field_validator(
+        "content_type",
+        "note_number",
+        "note_title",
+        "subheading",
+        "summary",
+        "relevance",
+        "source",
+        mode="before",
+    )
+    @classmethod
+    def normalize_narrative_strings(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+
+class WorkerOutput(BaseModel):
+    table: str = ""
+    statement: str = ""
+    facts: list[WorkerFact] = Field(default_factory=list)
+    narratives: list[WorkerNarrative] = Field(default_factory=list)
+    missing: List[str] = Field(default_factory=list)
+
+    @field_validator("table", "statement", mode="before")
+    @classmethod
+    def normalize_table(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @field_validator("facts", mode="before")
+    @classmethod
+    def normalize_facts(cls, value):
+        return _coerce_worker_facts(value)
+
+    @field_validator("narratives", mode="before")
+    @classmethod
+    def normalize_narratives(cls, value):
+        if value is None:
+            return []
+        if isinstance(value, list):
+            return value
+        return [value]
+
+    @field_validator("missing", mode="before")
+    @classmethod
+    def normalize_missing(cls, value):
+        return _coerce_text_list(value)
+
+
+class WorkerAnswer(WorkerOutput):
+    kind: Literal["answer"] = "answer"
+
+
+WORKER_RESPONSE_ADAPTER = TypeAdapter(WorkerAnswer)
+WORKER_RESPONSE_JSON_SCHEMA = WORKER_RESPONSE_ADAPTER.json_schema()
+WORKER_RESPONSE_JSON_SCHEMA.setdefault("title", "WorkerAnswer")
+WORKER_RESPONSE_JSON_SCHEMA.setdefault(
+    "description",
+    "Structured worker answer with extracted facts after native tool calls are complete.",
+)
+
+
+def _analysis_answer_from_facts(value: Any) -> str:
+    facts = _coerce_worker_facts(value)
+    if not facts:
+        return ""
+
+    lines: List[str] = []
+    for fact in facts:
+        if not isinstance(fact, dict):
+            continue
+        item_name = str(fact.get("item_name", "") or "").strip()
+        time_hint = str(fact.get("time_hint", "") or "").strip()
+        fact_value = str(fact.get("value", "") or "").strip()
+        prefix = " - ".join(part for part in (item_name, time_hint) if part)
+        if prefix and fact_value:
+            lines.append(f"{prefix}: {fact_value}")
+        elif fact_value:
+            lines.append(fact_value)
+        elif prefix:
+            lines.append(prefix)
+
+    return "\n".join(lines)
+
+
+class AnalysisOutput(BaseModel):
+    answer: str = ""
+    requirements: List[str] = Field(default_factory=list)
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_legacy_analysis_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+
+        data = dict(value)
+
+        if "answer" not in data:
+            for key in ("analysis", "summary", "result", "conclusion", "response", "text"):
+                if data.get(key):
+                    data["answer"] = data.get(key)
+                    break
+
+        if ("answer" not in data or not str(data.get("answer", "")).strip()) and data.get("facts"):
+            data["answer"] = _analysis_answer_from_facts(data.get("facts"))
+
+        if "requirements" not in data:
+            for key in ("requirement", "missing_requirement", "missing_requirements", "missing", "needs"):
+                if data.get(key):
+                    data["requirements"] = data.get(key)
+                    break
+
+        return data
+
+    @field_validator("answer", mode="before")
+    @classmethod
+    def normalize_answer(cls, value):
+        if value is None:
+            return ""
+        if isinstance(value, (list, tuple, set)):
+            return "\n".join(item for item in _flatten_text_items(value) if item)
+        return str(value).strip()
+
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def normalize_requirements(cls, value):
+        return _coerce_text_list(value)
+
+
+ANALYSIS_RESPONSE_JSON_SCHEMA = AnalysisOutput.model_json_schema()
+ANALYSIS_RESPONSE_JSON_SCHEMA.setdefault("title", "AnalysisOutput")
+ANALYSIS_RESPONSE_JSON_SCHEMA.setdefault(
+    "description",
+    "Structured analysis response with a synthesized answer and optional missing-data requirements.",
+)
+
+
+def _extract_first_json_object(text: str) -> Optional[str]:
+    if not text:
+        return None
+
+    cleaned = text.strip()
+    cleaned = re.sub(r"^```(?:json)?\s*", "", cleaned, flags=re.IGNORECASE)
+    cleaned = re.sub(r"\s*```$", "", cleaned)
+
+    start = cleaned.find("{")
+    if start == -1:
+        return None
+
+    depth = 0
+    in_string = False
+    escape = False
+
+    for idx in range(start, len(cleaned)):
+        ch = cleaned[idx]
+
+        if escape:
+            escape = False
+            continue
+
+        if ch == "\\":
+            escape = True
+            continue
+
+        if ch == '"':
+            in_string = not in_string
+            continue
+
+        if in_string:
+            continue
+
+        if ch == "{":
+            depth += 1
+        elif ch == "}":
+            depth -= 1
+            if depth == 0:
+                return cleaned[start:idx + 1]
+
+    return None
+
+
+def extract_answer_json(text: str) -> dict:
+    answer_match = re.search(r"ANSWER:\s*(\{.*\})\s*$", text, flags=re.DOTALL)
+    candidates = []
+
+    if answer_match:
+        candidates.append(answer_match.group(1))
+
+    candidates.append(text)
+    candidates.append(_extract_first_json_object(text))
+
+    for candidate in candidates:
+        if not candidate:
+            continue
+        try:
+            parsed = json.loads(candidate)
+        except Exception:
+            continue
+        if isinstance(parsed, dict):
+            return parsed
+
+    raise ValueError("Không tìm thấy JSON hợp lệ trong phản hồi worker.")
+
+
+def parse_worker_response_payload(value: Any):
+    if isinstance(value, WorkerAnswer):
+        return value
+
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(exclude_none=True)
+
+    if not isinstance(value, dict):
+        raise ValueError("Worker payload phải là dict hoặc text hợp lệ.")
+
+    data = dict(value)
+    if "kind" not in data:
+        data["kind"] = "answer"
+
+    return WORKER_RESPONSE_ADAPTER.validate_python(data)
+
+
+def parse_worker_response(text: str):
+    stripped = str(text or "").strip()
+    if not stripped:
+        raise ValueError("Worker response rỗng.")
+
+    data = extract_answer_json(stripped)
+    if "kind" not in data:
+        data["kind"] = "answer"
+    return WORKER_RESPONSE_ADAPTER.validate_python(data)
+
+
+def parse_worker_output(text: str):
+    parsed = parse_worker_response(text)
+    return WorkerOutput.model_validate(parsed.model_dump(exclude={"kind"}))
+
+
+def parse_analysis_response_payload(value: Any):
+    if isinstance(value, AnalysisOutput):
+        return value
+
+    if hasattr(value, "model_dump"):
+        value = value.model_dump(exclude_none=True)
+
+    if not isinstance(value, dict):
+        raise ValueError("Analysis payload phải là dict hoặc text hợp lệ.")
+
+    return AnalysisOutput.model_validate(value)
+
+
+def parse_analysis_response(text: str):
+    stripped = str(text or "").strip()
+    if not stripped:
+        raise ValueError("Analysis response rỗng.")
+
+    data = extract_answer_json(stripped)
+    return AnalysisOutput.model_validate(data)
+
+
+# ---------- Synth ----------
+class SynthFollowupRequest(BaseModel):
+    agent: Optional[str] = None
+    table: Optional[TABLE_NAME] = None
+    requirements: List[str] = Field(default_factory=list)
+    keywords: List[str] = Field(default_factory=list, exclude=True)
+    reason: str = ""
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_followup_fields(cls, value):
+        if not isinstance(value, dict):
+            return value
+        return _coerce_followup_dict(value)
+
+    @field_validator("agent", mode="before")
+    @classmethod
+    def normalize_followup_agent(cls, value):
+        if value is None:
+            return None
+        text = str(value or "").strip()
+        return text or None
+
+    @field_validator("table", mode="before")
+    @classmethod
+    def normalize_followup_table(cls, value):
+        if value is None or not isinstance(value, str):
+            return value
+        normalized = _normalize_table_value(value)
+        if normalized in VALID_TABLE_NAMES:
+            return normalized
+        return None
+
+    @field_validator("requirements", mode="before")
+    @classmethod
+    def normalize_followup_requirements(cls, value):
+        return _coerce_text_list(value)
+
+    @field_validator("keywords", mode="before")
+    @classmethod
+    def normalize_followup_keywords(cls, value):
+        return _coerce_keyword_list(value)
+
+    @field_validator("reason", mode="before")
+    @classmethod
+    def normalize_followup_reason(cls, value):
+        if value is None:
+            return ""
+        return str(value).strip()
+
+    @model_validator(mode="after")
+    def finalize_followup_defaults(self):
+        if not self.requirements and self.keywords:
+            self.requirements = _coerce_text_list(self.keywords)
+
+        return self
+
+class SynthDecision(BaseModel):
+    status: Literal["answer", "need_more"] = "answer"
+    answer: str = ""
+    followups: List[SynthFollowupRequest] = Field(default_factory=list)
+
+    @field_validator("followups", mode="before")
+    @classmethod
+    def normalize_followups(cls, v):
+        return _coerce_followups_payload(v)

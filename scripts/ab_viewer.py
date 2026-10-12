@@ -23,7 +23,7 @@ from typing import Any
 import pandas as pd
 import streamlit as st
 
-from config.paths import eval_runs_dir
+from agentfinx.core.config.paths import eval_runs_dir
 
 RUNS_DIR = eval_runs_dir()
 BLOB_RE = re.compile(r"^(?P<config>.+)_q(?P<question>\d+)\.json$")

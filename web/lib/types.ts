@@ -1,4 +1,4 @@
-// Shapes returned by the FastAPI backend (webapp/app.py, imports.py, discovery.py).
+// Shapes returned by the FastAPI backend (backend/src/agentfinx/api: app.py, imports.py, discovery.py).
 
 export type Features = { report_discovery: boolean; chat_context: boolean };
 export type User = { id: string; name: string; email: string };

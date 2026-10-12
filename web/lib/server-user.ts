@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 
-// Name of the HttpOnly cookie set by the FastAPI backend (webapp/auth.py).
+// Name of the HttpOnly cookie set by the FastAPI backend (backend/src/agentfinx/api/auth.py).
 const SESSION_COOKIE = "finx_session";
 // Inlined at build time from next.config.mjs, the same value as the /api proxy.
 const API = (process.env.FINX_API_URL || "http://127.0.0.1:8000").replace(/\/+$/, "");

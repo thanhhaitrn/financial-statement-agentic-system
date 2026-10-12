@@ -11,7 +11,7 @@ type Mode = "login" | "signup";
 type Registration = "invite" | "open" | "closed";
 type Errors = { name?: string; email?: string; password?: string; invite?: string; form?: string };
 
-// Same limits as the FastAPI backend (webapp/app.py, webapp/auth.py).
+// Same limits as the FastAPI backend (backend/src/agentfinx/api: app.py, auth.py).
 const MIN_PASSWORD = 8;
 const MAX_PASSWORD = 256;
 

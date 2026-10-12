@@ -15,25 +15,23 @@ jobs:
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install -e '.[eval,dev,web]'
+      - run: python -m pip install -e 'backend[eval,dev,web]'
       # Detection, not prevention: a tracked database or upload is already
       # public by the time CI runs, and web uploads bypass local hooks.
       - run: python scripts/check_tracked_artifacts.py
-      - run: python -m pytest tests -q
-      - run: >-
-          python -m compileall -q
-          acquisition agents config dataset_catalog evaluation graph ingestion kb llm schemas
-          scripts tools vectorstore web_analysis web_evidence webapp src
-          finx_pipeline.py test.py dataset_batch_runner.py dataset_batch_result.py ragas_eval_runner.py
-          eval_retrieval_recall.py analyze_batch_metrics.py output_formatter.py run_rotate.py
-      - run: python -m pip wheel --no-deps --no-build-isolation . --wheel-dir /tmp/agentfinx-wheel
-      # The wheel carries its config data; the UI lives in web/, not in the package.
+      - run: python -m pytest -q
+        working-directory: backend
+      - run: python -m compileall -q backend/src scripts
+      - run: python -m pip wheel --no-deps --no-build-isolation ./backend --wheel-dir /tmp/agentfinx-wheel
+      # The wheel is the agentfinx package with its data; no tests, benchmarks or UI.
       - run: >-
           python -c "import glob, zipfile;
           names = set(zipfile.ZipFile(glob.glob('/tmp/agentfinx-wheel/agentfinx-*.whl')[0]).namelist());
-          assert 'config/company_aliases.json' in names, 'company_aliases.json missing';
-          assert not [n for n in names if n.startswith('webapp/static/')], 'old UI files in the wheel'"
-      - run: detect-secrets scan --all-files --exclude-files '^(ragas_runs|data)/'
+          required = {'agentfinx/core/config/company_aliases.json', 'agentfinx/evaluation/data/task_routing_contrastive.json'};
+          assert required <= names, required - names;
+          stray = sorted({n.split('/')[0] for n in names} - {'agentfinx'} - {n.split('/')[0] for n in names if '.dist-info/' in n});
+          assert not stray, stray"
+      - run: detect-secrets scan --all-files --exclude-files '^backend/benchmarks/'
       - name: Whitespace errors and conflict markers in this change
         run: |
           base="${{ github.event.pull_request.base.sha || github.event.before }}"
@@ -77,7 +75,7 @@ jobs:
           node-version: "22"
           cache: npm
           cache-dependency-path: web/package-lock.json
-      - run: python -m pip install -e '.[dev,web,e2e]'
+      - run: python -m pip install -e 'backend[dev,web,e2e]'
       - run: python -m playwright install --with-deps chromium
       # The API address is compiled into the build; the test serves FastAPI there.
       - name: Build the Next.js UI for the test API
@@ -89,5 +87,6 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
       - run: python -m pytest tests/test_next_browser_smoke.py -q
+        working-directory: backend
         env:
           FINX_REQUIRE_NEXT_SMOKE: "1"

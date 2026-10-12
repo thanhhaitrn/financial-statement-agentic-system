@@ -1,0 +1,80 @@
+[build-system]
+requires = ["setuptools>=69", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "agentfinx"
+version = "0.1.0"
+description = "Evidence-first Vietnamese financial-report QA pipeline"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+  "pandas>=2.2,<3.0",
+  "pydantic>=2.9,<3.0",
+  "python-dotenv>=0.21,<2.0",
+  "langchain>=1.2,<2.0",
+  "langchain-core>=1.3,<2.0",
+  "langchain-ollama>=1.0,<2.0",
+  "langgraph>=1.1,<2.0",
+  # Cloud collection currently runs Qdrant 1.19; stay within one minor version
+  # so qdrant-client's compatibility contract does not warn on every query.
+  "qdrant-client>=1.18,<2.0",
+]
+
+[project.optional-dependencies]
+web = [
+  "argon2-cffi>=21.3,<26.0",
+  "fastapi>=0.115,<1.0",
+  "llama-cloud>=2.15,<3.0",
+  "pyjwt>=2.8,<3.0",
+  "pypdf>=5.0,<7.0",
+  "python-multipart>=0.0.18,<1.0",
+  "uvicorn>=0.34,<1.0",
+]
+smoke = ["reportlab>=4.0,<6.0"]
+# Browser smoke test of the Next.js UI (tests/test_next_browser_smoke.py); CI installs Chromium for it.
+e2e = ["playwright>=1.45,<2.0"]
+eval = [
+  "ragas>=0.3.4,<0.4",
+  "datasets>=4.8,<5.0",
+  "langchain-anthropic>=1.0,<2.0",
+]
+dev = [
+  "pytest>=7.4,<9.0",
+  # scripts/ab_viewer.py (repository root) — local viewer for routing A/B run directories
+  "streamlit>=1.37,<2.0",
+  "ruff>=0.9,<1.0",
+  "mypy>=1.11,<2.0",
+  "detect-secrets>=1.5,<2.0",
+]
+
+[project.scripts]
+# One entry point; every command is a subcommand (agentfinx --help).
+agentfinx = "agentfinx.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+"agentfinx.core.config" = ["company_aliases.json"]
+# Reviewed question sets the evaluators use by default.
+"agentfinx.evaluation" = ["data/*.json"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+src = ["src", "tests"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B"]
+ignore = ["E501"]
+
+[tool.mypy]
+python_version = "3.11"
+explicit_package_bases = true
+ignore_missing_imports = true
+mypy_path = "src"

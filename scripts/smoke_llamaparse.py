@@ -61,15 +61,15 @@ def main(argv=None):
 
     from dotenv import load_dotenv
     load_dotenv()
-    from acquisition.download import PdfArtifactValidator, SecurePdfDownloader
-    from acquisition.llamaparse import LlamaParseDocumentConverter
-    from acquisition.service import ReportAcquisitionService
-    from acquisition.store import AcquisitionStore
-    from config.runtime_policy import AcquisitionPolicy
-    from ingestion.pipeline import build_knowledge_base
-    from kb.sqlite_repo import read_kb_manifest
-    from schemas.datasets import DatasetRecord
-    from ingestion.table_parser import attach_context
+    from agentfinx.acquisition.download import PdfArtifactValidator, SecurePdfDownloader
+    from agentfinx.acquisition.llamaparse import LlamaParseDocumentConverter
+    from agentfinx.acquisition.service import ReportAcquisitionService
+    from agentfinx.acquisition.store import AcquisitionStore
+    from agentfinx.core.config.runtime_policy import AcquisitionPolicy
+    from agentfinx.ingestion.pipeline import build_knowledge_base
+    from agentfinx.datasets.kb.sqlite_repo import read_kb_manifest
+    from agentfinx.core.schemas.datasets import DatasetRecord
+    from agentfinx.ingestion.table_parser import attach_context
 
     converter = LlamaParseDocumentConverter(cache_dir=args.work_dir / "cache", allow_cloud_parse=True,
                                            local_extractor=None)
