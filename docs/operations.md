@@ -37,13 +37,23 @@ agentfinx storage migrate --apply   # sao chép và kiểm tra
 
 Lệnh `--apply`:
 - **Từ chối chạy** khi có khóa đang bị giữ, hoặc một worker vừa báo nhịp tim (dưới 60 giây).
+- **Khóa kho cũ suốt quá trình:** giữ mọi khóa trong `dataset_store/locks` và khóa ghi trên
+  từng database cũ. Process nào muốn ghi (ví dụ `agentfinx serve` còn chạy) sẽ chờ rồi báo lỗi,
+  không ghi vào kho sắp bị bỏ.
 - **Sao chép:**
-  - SQLite sao chép bằng backup API, kiểm tra `integrity_check` và số dòng từng bảng;
+  - SQLite sao chép bằng backup API, rồi so **toàn bộ nội dung** với nguồn (digest của mọi
+    dòng, không chỉ số dòng) và chạy `integrity_check`;
   - file khác kiểm bằng SHA-256;
-  - đường dẫn trong registry và manifest được viết lại.
+  - đường dẫn trong registry và manifest được viết lại;
+  - đường dẫn nằm trong các database đã sao chép mà trỏ vào `dataset_store/` (ví dụ PDF của một
+    job import đang chờ) được chuyển sang chỗ mới; sau đó không bản sao nào được còn nhắc tới
+    `dataset_store/`. Riêng KB giữ nguyên đường dẫn nguồn trong fact (chỉ để truy vết; sửa nó sẽ
+    buộc build lại).
 - **Kiểm tra bằng chính code của app:**
   - registry mở được mà không cần sửa;
   - mọi báo cáo `ready` qua được phép kiểm mà chat dùng.
+- **Kiểm tra kho cũ không đổi:** cuối cùng, kho cũ phải đúng như lúc sao chép (cùng nội dung
+  database, cùng hash file, không có file mới).
 - **Ghi kết quả:** chỉ sau tất cả các bước trên mới ghi `storage/migration.json`.
 
 `dataset_store/` và `data/` không bị đụng tới; xóa bằng tay sau khi đã chạy thử app trên dữ liệu
@@ -90,7 +100,7 @@ Mẫu đầy đủ: `.env.example`.
 | `FINX_SECRET_KEY` | — (bắt buộc, ≥ 32 ký tự) | Ký cookie phiên |
 | `FINX_HOST` / `FINX_PORT` | `127.0.0.1` / `8000` | Địa chỉ của API |
 | `FINX_ALLOWED_ORIGINS` | `http://127.0.0.1:3000,http://localhost:3000` | Origin của giao diện được gửi request thay đổi trạng thái |
-| `FINX_WEB_DB` | `storage/web/finx_web.sqlite3` | Database tài khoản |
+| `FINX_WEB_DB` | `storage/web/finx_web.sqlite3` | Database tài khoản; đường dẫn tương đối tính theo `FINX_HOME` |
 | `FINX_SHARED_DATASET_IDS` | rỗng | Báo cáo không có owner mà mọi tài khoản được hỏi |
 | `FINX_REGISTRATION` | `invite` | `invite`, `open` (chỉ khi phát triển local), `closed` |
 | `FINX_REPORT_DISCOVERY_ENABLED` | `0` | Tìm báo cáo trên CafeF (form và chat) |

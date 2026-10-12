@@ -77,6 +77,11 @@ def main(argv: list[str] | None = None) -> int:
         return 2
 
     module_name, accepts_argv = _COMMANDS[command]
+    # FINX_HOME/.env before the command's modules are imported: several of
+    # them (the runtime policy among them) read the environment on import.
+    from agentfinx.core.config import paths
+
+    paths.load_env()
     entry = _load_main(module_name)
 
     if accepts_argv:

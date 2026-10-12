@@ -66,8 +66,10 @@ def default_db_path() -> Path:
 
 
 def resolve_db_path(env: Mapping[str, str]) -> Path:
-    db_raw = str(env.get("FINX_WEB_DB", "") or "").strip()
-    return Path(db_raw).expanduser() if db_raw else default_db_path()
+    # A relative FINX_WEB_DB is relative to FINX_HOME, never to the current directory.
+    from agentfinx.core.config import paths
+
+    return paths.web_db_path(env)
 
 
 def _flag(value: Optional[str]) -> bool:

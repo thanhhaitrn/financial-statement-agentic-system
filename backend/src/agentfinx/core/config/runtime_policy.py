@@ -20,6 +20,8 @@ from dataclasses import asdict, dataclass, replace
 from hashlib import sha256
 from typing import Mapping, Optional
 
+from agentfinx.core.config import paths
+
 ROUTING_MODES = ("legacy", "shadow", "model_first")
 
 
@@ -479,6 +481,9 @@ class RuntimePolicy:
         return replace(self, **groups)
 
 
+# Built on import from the environment, so FINX_HOME/.env is loaded first
+# whichever module imports this one first.
+paths.load_env()
 DEFAULT_POLICY = RuntimePolicy.from_env()
 
 _active_policy: ContextVar[RuntimePolicy] = ContextVar("agentfinx_policy", default=DEFAULT_POLICY)

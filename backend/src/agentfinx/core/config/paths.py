@@ -25,7 +25,7 @@ from __future__ import annotations
 import os
 from contextlib import contextmanager
 from pathlib import Path
-from typing import Iterator, Optional
+from typing import Iterator, Mapping, Optional
 
 HOME_ENV = "FINX_HOME"
 WEB_DB_ENV = "FINX_WEB_DB"
@@ -146,6 +146,20 @@ def locks_dir() -> Path:
 
 def default_web_db_path() -> Path:
     return storage_dir() / "web" / "finx_web.sqlite3"
+
+
+def web_db_path(environ: Optional[Mapping[str, str]] = None) -> Path:
+    """The account database: ``FINX_WEB_DB`` (relative to FINX_HOME), or the default.
+
+    Always absolute, so it does not depend on the current directory and can
+    be opened as a SQLite URI.
+    """
+
+    env = os.environ if environ is None else environ
+    raw = str(env.get(WEB_DB_ENV, "") or "").strip()
+    if not raw:
+        return default_web_db_path()
+    return from_stored(raw).resolve(strict=False)
 
 
 def acquisition_dir() -> Path:

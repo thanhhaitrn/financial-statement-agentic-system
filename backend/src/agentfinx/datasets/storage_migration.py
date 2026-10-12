@@ -20,15 +20,24 @@ Safety:
 - it copies and never deletes: dataset_store/ (and data/) stay as they were,
   to be removed by hand once the new layout is confirmed;
 - it refuses while any lock in dataset_store/locks is held (a worker, a
-  build, a registry write) or a worker reported in the last minute, and
-  holds every lock while it copies;
-- SQLite files are copied with the online backup API and checked
-  (integrity_check, same tables and row counts); other files by SHA-256;
+  build, a registry write) or a worker reported in the last minute;
+- until it has finished it holds every one of those locks **and a write lock
+  on every old database**, so nothing can change the old store meanwhile: a
+  process that tries to write (say a running ``agentfinx serve``) waits and
+  then fails, instead of writing into a store that is being left behind;
+- SQLite files are copied with the online backup API and compared with
+  their source row by row (a digest of the whole content, not row counts);
+  other files by SHA-256;
+- paths inside the copied databases that point into dataset_store/ (an
+  import job's uploaded PDF, for one) are rewritten to the new place, and
+  no copy may still refer to dataset_store/ afterwards. Knowledge bases are
+  the exception: their fact rows keep the source path they were built from,
+  as provenance (see ``_VERBATIM_DATABASES``);
 - the result is checked with the code the app runs: the registry loads
   without needing repair, and every ready dataset passes the check a chat
   question makes (a failure there would turn its conversations read-only);
-- the old databases must not have changed while it copied (a running
-  ``agentfinx serve`` would lose those writes);
+- at the end the old store must be exactly what was copied: same database
+  contents, same file hashes, no new files;
 - only then is storage/migration.json written. Until it exists the app
   refuses to start, so a failed or partial copy is never used.
 
@@ -61,6 +70,13 @@ _IGNORED_NAMES = {".DS_Store"}
 _PATH_FIELDS = ("file_path", "source_pdf_path", "sqlite_db_path", "manifest_path", "raw_tables_path")
 # A worker that reported this recently may still be running.
 _WORKER_GRACE_SECONDS = 60
+# How long to wait for an old database's write lock before giving up.
+_LOCK_WAIT_SECONDS = 5
+# Databases copied verbatim, paths and all. A knowledge base's fact rows name
+# their source file for provenance only (it is never opened from there), and
+# those rows are part of its fingerprint: rewriting them would force a rebuild
+# of its facts and index. legacy/ holds copies nothing reads.
+_VERBATIM_DATABASES = ("datasets/sqlite", "legacy")
 
 # Old place (relative to dataset_store/) -> new place (relative to storage/).
 # The first entry whose path parts prefix the file wins; None: not copied.
@@ -244,14 +260,42 @@ def _try_lock(path: Path, stack: Optional[ExitStack] = None) -> bool:
 
 
 @contextmanager
-def _hold_legacy_locks(legacy: Path) -> Iterator[None]:
+def _write_locked(path: Path) -> Iterator[None]:
+    """Hold the database's write lock: readers go on, no one else can commit."""
+
+    conn = sqlite3.connect(path, timeout=_LOCK_WAIT_SECONDS, isolation_level=None)
+    try:
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+        except sqlite3.OperationalError as exc:
+            raise MigrationError(
+                f"{path} is in use ({exc}); stop `agentfinx serve` and the workers first"
+            ) from exc
+        yield
+    finally:
+        if conn.in_transaction:
+            conn.execute("ROLLBACK")
+        conn.close()
+
+
+@contextmanager
+def _freeze_old_store(plan: Plan) -> Iterator[None]:
+    """Hold every lock file and every old database's write lock until done."""
+
     with ExitStack() as stack:
-        busy = [path.name for path in sorted((legacy / "locks").glob("*.lock")) if not _try_lock(path, stack)]
+        busy = [path.name for path in sorted((plan.legacy / "locks").glob("*.lock")) if not _try_lock(path, stack)]
         if busy:
             raise MigrationError(
                 f"in use: {', '.join(busy)}; stop `agentfinx serve`, the workers and any build first"
             )
+        for step in plan.steps:
+            if step.kind == "sqlite":
+                stack.enter_context(_write_locked(step.source))
         yield
+
+
+def _after_copy() -> None:
+    """Called once everything is copied, before it is checked (a test seam)."""
 
 
 def _recent_workers(web_db: Path) -> list[str]:
@@ -286,7 +330,23 @@ def _table_counts(path: Path) -> dict[str, int]:
         conn.close()
 
 
-def _copy_sqlite(source: Path, target: Path) -> dict[str, int]:
+def _content_digest(path: Path) -> str:
+    """Schema and every row of every table, independent of the file's pages."""
+
+    conn = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
+    try:
+        digest = hashlib.sha256()
+        for line in conn.iterdump():
+            digest.update(line.encode("utf-8"))
+            digest.update(b"\n")
+        return digest.hexdigest()
+    finally:
+        conn.close()
+
+
+def _copy_sqlite(source: Path, target: Path) -> str:
+    """Copy and prove the copy holds exactly the source's content; its digest."""
+
     target.parent.mkdir(parents=True, exist_ok=True)
     src = sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)
     dst = sqlite3.connect(target)
@@ -304,10 +364,73 @@ def _copy_sqlite(source: Path, target: Path) -> dict[str, int]:
         conn.close()
     if str(result).lower() != "ok":
         raise MigrationError(f"integrity_check failed for {target}: {result}")
-    before, after = _table_counts(source), _table_counts(target)
-    if before != after:
-        raise MigrationError(f"row counts differ after copying {source.name}: {before} != {after}")
-    return before
+    digest = _content_digest(source)
+    if _content_digest(target) != digest:
+        raise MigrationError(f"the copy of {source} does not hold the same content")
+    return digest
+
+
+def _path_rewrites(plan: Plan) -> list[tuple[str, str]]:
+    """(old, new) directory prefixes for paths stored inside databases."""
+
+    pairs = []
+    for old, new in LAYOUT:
+        source = plan.legacy / old
+        if new is not None and "." not in PurePosixPath(old).name:  # directories only
+            pairs.append((f"{source.resolve()}/", f"{plan.storage / new}/"))
+    pairs.append((f"{plan.legacy.resolve()}/", f"{plan.storage / 'legacy'}/"))  # anything else
+    with_escaped = []
+    for old, new in pairs:
+        with_escaped.append((old, new))
+        escaped_old, escaped_new = json.dumps(old)[1:-1], json.dumps(new)[1:-1]
+        if escaped_old != old:  # the same path inside JSON text
+            with_escaped.append((escaped_old, escaped_new))
+    return sorted(with_escaped, key=lambda pair: -len(pair[0]))
+
+
+def _text_columns(conn) -> list[tuple[str, str]]:
+    columns = []
+    for (table,) in conn.execute(
+            "SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'"):
+        quoted = table.replace(chr(34), chr(34) * 2)
+        for row in conn.execute(f'PRAGMA table_info("{quoted}")'):
+            columns.append((table, row[1]))
+    return columns
+
+
+def _rewrite_stored_paths(target: Path, plan: Plan) -> int:
+    """Point paths inside a copied database at the new layout; rows changed."""
+
+    pairs = _path_rewrites(plan)
+    conn = sqlite3.connect(target, isolation_level=None)
+    changed = 0
+    try:
+        conn.execute("BEGIN")
+        for table, column in _text_columns(conn):
+            t, c = table.replace(chr(34), chr(34) * 2), column.replace(chr(34), chr(34) * 2)
+            for old, new in pairs:
+                cursor = conn.execute(
+                    f'UPDATE "{t}" SET "{c}" = replace("{c}", ?, ?) '
+                    f'WHERE typeof("{c}") = \'text\' AND instr("{c}", ?) > 0', (old, new, old))
+                changed += cursor.rowcount
+        conn.execute("COMMIT")
+        remaining = [
+            f"{table}.{column}" for table, column in _text_columns(conn)
+            if conn.execute(
+                f'SELECT 1 FROM "{table.replace(chr(34), chr(34) * 2)}" '
+                f'WHERE typeof("{column.replace(chr(34), chr(34) * 2)}") = \'text\' '
+                f'AND (instr("{column.replace(chr(34), chr(34) * 2)}", ?) > 0 '
+                f'OR instr("{column.replace(chr(34), chr(34) * 2)}", ?) > 0) LIMIT 1',
+                (str(plan.legacy.resolve()), json.dumps(str(plan.legacy.resolve()))[1:-1])).fetchone()
+        ]
+        result = conn.execute("PRAGMA integrity_check").fetchone()[0]
+    finally:
+        conn.close()
+    if remaining:
+        raise MigrationError(f"{target.name} still refers to {plan.legacy} in {', '.join(remaining)}")
+    if str(result).lower() != "ok":
+        raise MigrationError(f"integrity_check failed for {target} after rewriting paths: {result}")
+    return changed
 
 
 def _by_top_level(relative_paths: list[str]) -> dict[str, int]:
@@ -332,8 +455,12 @@ def _relocated_record(record: dict, plan: Plan) -> dict:
     return record
 
 
-def _apply(plan: Plan) -> dict:
-    counts: dict[str, dict[str, int]] = {}
+def _apply(plan: Plan) -> tuple[dict[str, str], dict[str, str], int]:
+    """Copy every step; what each source was (content digests, file hashes)."""
+
+    digests: dict[str, str] = {}
+    hashes: dict[str, str] = {}
+    rewritten = 0
     for step in plan.steps:
         if step.kind == "registry":
             document = json.loads(step.source.read_text(encoding="utf-8"))
@@ -346,13 +473,32 @@ def _apply(plan: Plan) -> dict:
             document = json.loads(step.source.read_text(encoding="utf-8"))
             _write_json(step.target, _relocated_record(document, plan) if isinstance(document, dict) else document)
         elif step.kind == "sqlite":
-            counts[str(step.source)] = _copy_sqlite(step.source, step.target)
+            digests[str(step.source)] = _copy_sqlite(step.source, step.target)
+            if not any(step.target.is_relative_to(plan.storage / kept) for kept in _VERBATIM_DATABASES):
+                rewritten += _rewrite_stored_paths(step.target, plan)
         else:
             step.target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(step.source, step.target)
             if _sha256(step.source) != _sha256(step.target):
                 raise MigrationError(f"copy of {step.source} does not match")
-    return counts
+        if step.kind != "sqlite":
+            hashes[str(step.source)] = _sha256(step.source)
+    return digests, hashes, rewritten
+
+
+def _check_old_store_unchanged(plan: Plan, digests: dict[str, str], hashes: dict[str, str]) -> None:
+    """The old store must still be exactly what was copied."""
+
+    for source, digest in digests.items():
+        if _content_digest(Path(source)) != digest:
+            raise MigrationError(f"{source} changed during the migration; stop `agentfinx serve` and retry")
+    for source, digest in hashes.items():
+        if not Path(source).is_file() or _sha256(Path(source)) != digest:
+            raise MigrationError(f"{source} changed during the migration; retry once nothing writes to it")
+    current = build_plan(plan.home)
+    appeared = sorted({str(step.source) for step in current.steps} - {str(step.source) for step in plan.steps})
+    if appeared:
+        raise MigrationError(f"new files appeared during the migration ({appeared[0]}, …); retry")
 
 
 def _verify_with_app_code(plan: Plan) -> dict:
@@ -440,19 +586,19 @@ def migrate(home: Path, *, apply: bool, out=None) -> int:
         print("dry run: nothing changed. Run again with --apply to copy.", file=out)
         return 0
 
-    with _hold_legacy_locks(legacy):
-        counts = _apply(plan)
+    with _freeze_old_store(plan):
+        digests, hashes, rewritten = _apply(plan)
+        _after_copy()
         result = _verify_with_app_code(plan)
-        for source, before in counts.items():
-            if _table_counts(Path(source)) != before:
-                raise MigrationError(f"{source} changed while it was copied; stop `agentfinx serve` and retry")
+        _check_old_store_unchanged(plan, digests, hashes)
         web = _web_summary(storage / "web" / "finx_web.sqlite3")
         record = {
             "migrated_at": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
             "from": str(legacy),
             "files": len(plan.steps),
             "bytes": total_bytes,
-            "sqlite_checked": len(counts),
+            "sqlite_checked": len(digests),
+            "stored_paths_rewritten": rewritten,
             "reports": {paths.to_stored(s): paths.to_stored(t) for s, t in plan.reports.items()},
             "legacy": _by_top_level(plan.unknown),
             "skipped": _by_top_level(plan.skipped),
@@ -462,7 +608,8 @@ def migrate(home: Path, *, apply: bool, out=None) -> int:
         }
         _write_json(storage / paths.MIGRATION_RECORD_NAME, record)
     print(f"migrated: {result['datasets']} datasets ({result['ready_checked']} ready, all open), "
-          f"{web.get('accounts', 0)} accounts, {len(counts)} SQLite files checked.", file=out)
+          f"{web.get('accounts', 0)} accounts, {len(digests)} SQLite files checked, "
+          f"{rewritten} stored paths moved.", file=out)
     print(f"{legacy} was not changed; delete it once the app works on the new storage.", file=out)
     return 0
 
@@ -483,7 +630,7 @@ def status(out=None) -> int:
     except paths.StorageError as exc:
         print(f"status      {exc}", file=out)
         return 1
-    web_db = Path(os.environ.get(paths.WEB_DB_ENV, "") or paths.default_web_db_path())
+    web_db = paths.web_db_path()
     web = _web_summary(web_db)
     print(f"web db      {web_db}  " + (f"(schema v{web['schema_version']}, {web['accounts']} accounts)" if web
                                        else "(missing: create it with `agentfinx db init`)"), file=out)

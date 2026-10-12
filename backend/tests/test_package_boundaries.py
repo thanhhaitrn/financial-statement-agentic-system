@@ -5,7 +5,8 @@
   network library, nothing from news.collect, and from the acquisition side
   only the local symbol catalog;
 - news.dates and news.topics are shared, pure helpers;
-- evaluation.predict and evaluation.batch share evaluation.runner instead of
+- evaluation.predict and evaluation.batch share evaluation.runner (running a
+  question) and evaluation.ledger (the evidence ledger checks) instead of
   importing each other.
 """
 
@@ -61,7 +62,12 @@ def test_shared_news_helpers_stay_pure():
 
 
 def test_predict_and_batch_do_not_import_each_other():
-    assert not any(name.startswith("agentfinx.evaluation.batch")
-                   for name in _imports(PACKAGE / "evaluation" / "predict.py"))
-    assert not any(name.startswith("agentfinx.evaluation.predict")
-                   for name in _imports(PACKAGE / "evaluation" / "runner.py"))
+    def imports_module(path: Path, module: str) -> bool:
+        return any(name == module or name.startswith(module + ".") for name in _imports(path))
+
+    evaluation = PACKAGE / "evaluation"
+    assert not imports_module(evaluation / "predict.py", "agentfinx.evaluation.batch")
+    assert not imports_module(evaluation / "batch.py", "agentfinx.evaluation.predict")
+    for shared in ("runner.py", "ledger.py"):
+        for user in ("agentfinx.evaluation.batch", "agentfinx.evaluation.predict"):
+            assert not imports_module(evaluation / shared, user), (shared, user)
