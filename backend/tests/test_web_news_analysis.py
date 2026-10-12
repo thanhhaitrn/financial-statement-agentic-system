@@ -14,7 +14,7 @@ import pytest
 from agentfinx.core.config.runtime_policy import DEFAULT_POLICY, reset_active_policy, set_active_policy
 from agentfinx.workflow.evidence import build_evidence_pack
 from agentfinx.workflow.state import WorkflowServices
-from agentfinx.workflow.web_analysis_node import (agent_web_node, bundle_key, needs_web_analysis,
+from agentfinx.workflow.news_node import (agent_web_node, bundle_key, needs_web_analysis,
                                      route_after_build_evidence)
 from agentfinx.workflow.graph import _bind_services, build_graph
 from agentfinx.core.schemas.web_analysis import NewsArticle, WebContext
@@ -24,8 +24,8 @@ from agentfinx.news.analysis.pipeline import analyze_company_news, articles_from
 from agentfinx.news.analysis.render import render_news_section
 from agentfinx.news.analysis.window import WindowError, resolve_news_window
 from agentfinx.news.collect.cache import WebEvidenceCache
-from agentfinx.news.collect.dates import parse_published
-from agentfinx.news.collect.symbols import StockSymbol, SymbolCatalog
+from agentfinx.news.dates import parse_published
+from agentfinx.acquisition.symbols import StockSymbol, SymbolCatalog
 from agentfinx.news.collect.vietstock import VietstockHttpFetcher, VietstockNewsProvider
 
 AS_OF = datetime(2026, 10, 11, 3, 0, tzinfo=timezone.utc)
@@ -613,7 +613,7 @@ def test_agent_web_runs_once_per_bundle_and_is_capped(monkeypatch):
 
 @pytest.mark.parametrize("entry", ["agent_main", "agent_router"])
 def test_both_graph_entries_run_the_news_branch_and_join_it_before_synth(entry):
-    from agentfinx.workflow.web_branch import WebBranchRunner
+    from agentfinx.workflow.news_branch import WebBranchRunner
 
     runner = WebBranchRunner()
     edges = {(edge.source, edge.target)
@@ -1033,7 +1033,7 @@ def test_collection_steps_are_shown_apart():
     ("doanh thu quý 2 và tin gần đây", "2026-09-11", "2026-10-11"),
 ])
 def test_news_windows_read_vietnamese_time_forms(question, start, end):
-    from agentfinx.news.collect.dates import VIETNAM_TZ
+    from agentfinx.news.dates import VIETNAM_TZ
 
     window = resolve_news_window(question, AS_OF)
     assert (window.date_from.astimezone(VIETNAM_TZ).date().isoformat(),
@@ -1066,7 +1066,7 @@ def _bundle(question="Tin tức gần đây của Vinamilk?", needby=(), fetch_s
 
 
 def test_the_news_branch_runs_beside_the_report_unless_an_agent_needs_it():
-    from agentfinx.workflow.web_analysis_node import web_mode
+    from agentfinx.workflow.news_node import web_mode
 
     token = set_active_policy(ANALYSIS_POLICY)
     try:
@@ -1082,7 +1082,7 @@ def test_the_news_branch_runs_beside_the_report_unless_an_agent_needs_it():
 
 
 def test_one_budget_covers_fetching_and_analysis():
-    from agentfinx.workflow.web_analysis_node import analysis_budget
+    from agentfinx.workflow.news_node import analysis_budget
 
     policy = replace(ANALYSIS_POLICY, web=replace(ANALYSIS_POLICY.web, branch_budget_seconds=75,
                                                     analysis_budget_seconds=60))
@@ -1096,8 +1096,8 @@ def test_one_budget_covers_fetching_and_analysis():
 
 
 def test_started_analysis_is_joined_before_synth():
-    from agentfinx.workflow.web_analysis_node import join_web_node, start_web_node
-    from agentfinx.workflow.web_branch import WebBranchRunner
+    from agentfinx.workflow.news_node import join_web_node, start_web_node
+    from agentfinx.workflow.news_branch import WebBranchRunner
 
     runner = WebBranchRunner()
     token = set_active_policy(ANALYSIS_POLICY)
@@ -1117,7 +1117,7 @@ def test_started_analysis_is_joined_before_synth():
 
 def test_the_join_does_not_wait_past_the_budget():
     import time as clock_module
-    from agentfinx.workflow.web_branch import WebBranchRunner
+    from agentfinx.workflow.news_branch import WebBranchRunner
 
     runner = WebBranchRunner()
     release = Event()
@@ -1131,7 +1131,7 @@ def test_the_join_does_not_wait_past_the_budget():
 
 
 def test_an_unfinished_analysis_goes_out_as_pending_for_a_later_update():
-    from agentfinx.workflow.web_analysis_node import join_web_node
+    from agentfinx.workflow.news_node import join_web_node
 
     class Never:
         def join(self, key):
@@ -1150,7 +1150,7 @@ def test_an_unfinished_analysis_goes_out_as_pending_for_a_later_update():
 
 def test_the_runner_really_runs_beside_the_caller():
     import time as clock_module
-    from agentfinx.workflow.web_branch import WebBranchRunner
+    from agentfinx.workflow.news_branch import WebBranchRunner
 
     runner = WebBranchRunner()
     started = clock_module.monotonic()

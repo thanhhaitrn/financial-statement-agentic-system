@@ -15,8 +15,8 @@ import re
 from datetime import date
 from typing import Iterable, Optional
 
-from agentfinx.news.collect.dates import VIETNAM_TZ, parse_published
-from agentfinx.news.collect.topics import _STOP, fold
+from agentfinx.news.dates import VIETNAM_TZ, parse_published
+from agentfinx.news.topics import _STOP, fold
 
 _NUMBER = re.compile(r"\d+(?:[.,]\d+)*\s*%?")
 _SENTENCE = re.compile(r"(?<=[.!?;])\s+")

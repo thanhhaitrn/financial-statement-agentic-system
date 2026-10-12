@@ -20,7 +20,7 @@ from pathlib import Path
 from typing import Optional
 
 from agentfinx.core.schemas.web_evidence import WebEvidence
-from agentfinx.news.collect.dates import parse_published
+from agentfinx.news.dates import parse_published
 
 
 @dataclass(frozen=True)

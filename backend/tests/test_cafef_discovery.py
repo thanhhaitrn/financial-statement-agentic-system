@@ -16,7 +16,7 @@ from agentfinx.acquisition.service import (ReportAcquisitionService,
 from agentfinx.acquisition.store import AcquisitionStore
 from agentfinx.core.config.runtime_policy import AcquisitionPolicy
 from agentfinx.core.schemas.acquisition import ReportQuery
-from agentfinx.news.collect.symbols import (CafeFSymbolCatalogJob, SymbolCatalog,
+from agentfinx.acquisition.symbols import (CafeFSymbolCatalogJob, SymbolCatalog,
                                   SymbolCatalogRefreshError,
                                   parse_cafef_symbols, refresh_catalog_if_due)
 

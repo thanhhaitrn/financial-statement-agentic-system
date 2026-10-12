@@ -13,7 +13,7 @@ pytestmark = pytest.mark.skipif(
 
 
 def test_live_listing_and_articles_parse_for_a_large_cap():
-    from agentfinx.news.collect.dates import parse_published
+    from agentfinx.news.dates import parse_published
     from agentfinx.news.collect.vietstock import VietstockHttpFetcher
 
     ticker = os.environ.get("FINX_LIVE_WEB_TICKER", "VNM")
@@ -39,7 +39,7 @@ def test_live_listing_and_articles_parse_for_a_large_cap():
 
 
 def test_live_paging_reaches_an_older_window_with_matching_dates():
-    from agentfinx.news.collect.dates import parse_published
+    from agentfinx.news.dates import parse_published
     from agentfinx.news.collect.vietstock import VietstockHttpFetcher, parse_vietstock_article
 
     ticker = os.environ.get("FINX_LIVE_WEB_TICKER", "VNM")

@@ -29,7 +29,7 @@ from agentfinx.workflow.nodes import (
 )
 from agentfinx.workflow.router import route_after_evidence
 from agentfinx.workflow.state import GraphState, WorkflowServices
-from agentfinx.workflow.web_analysis_node import (agent_web_node, join_web_node,
+from agentfinx.workflow.news_node import (agent_web_node, join_web_node,
                                      make_route_after_build_evidence,
                                      start_web_node)
 from agentfinx.core.config.runtime_policy import reset_active_policy, set_active_policy

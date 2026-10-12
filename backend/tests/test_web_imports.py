@@ -259,6 +259,19 @@ def test_client_cannot_set_owner_paths_usage_or_remote_ids(make_web, extra):
     assert web.service.store.next_queued_job() is None
 
 
+def test_an_import_needs_exactly_one_source(make_web):
+    web = make_web()
+    client = web.client()
+    _register(client, "alice@example.com")
+    upload = _upload(client).json()
+    session = _post(client, "/api/sessions", {}).json()
+    base = {"session_id": session["id"], "idempotency_key": "import-key-1", "metadata": {"company": "Công ty A"}}
+    for source in ({}, {"upload_id": upload["upload_id"], "confirmed_candidate_id": "c" * 32}):
+        response = _post(client, "/api/report-imports", {**base, **source})
+        assert response.status_code == 422 and response.json()["detail"]["code"] == "one_source_required"
+    assert web.service.store._all_jobs() == []
+
+
 def test_metadata_rejects_unknown_fields(make_web):
     client = make_web().client()
     _register(client, "alice@example.com")

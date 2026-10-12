@@ -186,7 +186,7 @@ def run_discovery(
             reason = resolution.status
             choices = list(resolution.matches[:MAX_CHOICES])
             if not choices and suggested_ticker:
-                from agentfinx.news.collect.symbols import StockSymbol, looks_like_ticker
+                from agentfinx.acquisition.symbols import StockSymbol, looks_like_ticker
 
                 if looks_like_ticker(suggested_ticker):
                     catalog = service.symbol_catalog()

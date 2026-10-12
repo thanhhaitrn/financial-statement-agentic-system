@@ -271,7 +271,7 @@ def build_import_handler(
                 logger.exception("import hand-off recovery failed")
         if catalog_path is not None and now >= due["catalog"]:
             due["catalog"] = now + CATALOG_CHECK_SECONDS
-            from agentfinx.news.collect.symbols import refresh_catalog_if_due
+            from agentfinx.acquisition.symbols import refresh_catalog_if_due
 
             result = refresh_catalog_if_due(catalog_path)
             if result:

@@ -2,7 +2,9 @@
 
 from types import SimpleNamespace
 
-import agentfinx.evaluation.batch as runner
+import agentfinx.evaluation.batch as batch
+import agentfinx.evaluation.runner as runner
+import agentfinx.workflow.pipeline as pipeline
 from agentfinx.datasets import registry
 
 DISCOVERY = {"task_kind": "report_discovery", "planner_plan": {}, "trace": [],
@@ -22,8 +24,8 @@ def _dataset():
 def _run(monkeypatch, tmp_path, *, web_entry):
     monkeypatch.setenv("FINX_HOME", str(tmp_path))
     planned, executed = [], []
-    monkeypatch.setattr(runner, "describe_dataset", lambda _dataset: "dataset")
-    monkeypatch.setattr(runner, "ensure_built",
+    monkeypatch.setattr(batch, "describe_dataset", lambda _dataset: "dataset")
+    monkeypatch.setattr(batch, "ensure_built",
                         lambda dataset: (dataset, None, SimpleNamespace(generation="gen-1")))
 
     def plan(_dataset, query):
@@ -34,11 +36,11 @@ def _run(monkeypatch, tmp_path, *, web_entry):
         executed.append((query, kwargs))
         return {}
 
-    monkeypatch.setattr(runner, "_plan_web_entry", plan)
-    monkeypatch.setattr(runner, "execute_query", execute)
-    monkeypatch.setattr(runner, "serialize_run_result",
+    monkeypatch.setattr(runner, "plan_web_entry", plan)
+    monkeypatch.setattr(pipeline, "execute_query", execute)
+    monkeypatch.setattr(batch, "serialize_run_result",
                         lambda _state, query, **_kwargs: {"query": query, "errors": []})
-    result = runner.run_dataset_queries(
+    result = batch.run_dataset_queries(
         _dataset(),
         [{"id": "a", "query": "Tìm BCTC VNM năm 2025"}, {"id": "b", "query": "Doanh thu?"}],
         web_entry=web_entry,
@@ -58,10 +60,9 @@ def test_web_entry_records_a_misroute_as_a_refusal_and_reuses_the_plan(monkeypat
 
 def test_predict_web_entry_records_a_misroute_as_a_failed_prediction(monkeypatch):
     import agentfinx.evaluation.predict as predict
-    import agentfinx.workflow.pipeline as pipeline
 
     calls = []
-    monkeypatch.setattr(runner, "_plan_web_entry",
+    monkeypatch.setattr(runner, "plan_web_entry",
                         lambda _dataset, question: DISCOVERY if question.startswith("Tìm") else QA)
 
     def execute(_dataset, _collection, question, **kwargs):
@@ -99,7 +100,7 @@ def test_the_cli_entry_never_runs_the_web_planner(monkeypatch, tmp_path):
 
 
 def _identity(**kwargs):
-    return runner.build_batch_run_identity(
+    return batch.build_batch_run_identity(
         query_records=[{"id": "q1", "query": "Doanh thu?"}],
         results=[],
         selected_dataset_ids=None,

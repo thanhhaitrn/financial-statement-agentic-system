@@ -60,7 +60,7 @@ def _analyze(context: dict, provider, invoke) -> Any:
     from agentfinx.core.config.runtime_policy import DEFAULT_POLICY
     from agentfinx.core.schemas.web_analysis import WebContext
     from agentfinx.core.schemas.web_evidence import WebEvidenceRequest
-    from agentfinx.news.analysis.pipeline import analyze_company_news, articles_from_evidence
+    from agentfinx.news import service as news_service
 
     policy = DEFAULT_POLICY.web
     web_context = WebContext.model_validate(context)
@@ -73,15 +73,12 @@ def _analyze(context: dict, provider, invoke) -> Any:
                   "coverage": dict(batch.coverage or {}), "stats": dict(batch.stats or {})}
     if batch.pending:
         return None  # the list is still being read: try again later
-    return analyze_company_news(
+    return news_service.analyze(
         web_context,
-        articles_from_evidence([item.model_dump(mode="json") for item in batch.evidence]),
+        [item.model_dump(mode="json") for item in batch.evidence],
         batch_meta,
         invoke=invoke,
         budget_seconds=policy.analysis_budget_seconds,
-        max_calls=policy.analysis_max_model_calls,
-        max_articles=policy.analysis_max_articles,
-        prompt_article_chars=policy.analysis_prompt_article_chars,
     )
 
 
@@ -119,11 +116,7 @@ def run_news_update_once(
             if provider is None:
                 expired = True  # web evidence was switched off since
             else:
-                if invoke is None:
-                    from agentfinx.news.analysis.model import ollama_json_invoker
-
-                    invoke = ollama_json_invoker()
-                analysis = _analyze(context, provider, invoke)
+                analysis = _analyze(context, provider, invoke)  # invoke=None: the configured model
         except Exception:
             logger.exception("news update %s failed", row["id"])
             if row["attempts"] >= MAX_ATTEMPTS:

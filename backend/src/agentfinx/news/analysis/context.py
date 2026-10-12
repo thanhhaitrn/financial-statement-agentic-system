@@ -17,8 +17,8 @@ from typing import Optional
 from agentfinx.core.config import COMPANY_ALIASES_PATH
 from agentfinx.core.schemas.web_analysis import WebContext
 from agentfinx.news.analysis.window import WindowError, resolve_news_window
-from agentfinx.news.collect.dates import iso_utc
-from agentfinx.news.collect.symbols import fold_text
+from agentfinx.news.dates import iso_utc
+from agentfinx.acquisition.symbols import fold_text
 
 ALIAS_PATH = COMPANY_ALIASES_PATH
 _TICKER_TOKEN = re.compile(r"\b[A-Z][A-Z0-9]{2}\b")
@@ -28,7 +28,7 @@ def default_symbol_catalog():
     """The CafeF symbol catalog if one was downloaded; ``None`` otherwise."""
 
     from agentfinx.core.config import paths
-    from agentfinx.news.collect.symbols import SymbolCatalog
+    from agentfinx.acquisition.symbols import SymbolCatalog
 
     path = paths.symbol_catalog_path()
     if not path.exists():

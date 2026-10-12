@@ -4,7 +4,7 @@ After ``build_evidence`` leaves a news bundle (need_web, web_intent =
 company_news), the analysis runs in one of two ways:
 
 - **parallel** (default): ``start_web`` starts it outside the graph steps
-  (``graph.web_branch``) and the report branch goes on at once; ``join_web``
+  (``workflow.news_branch``) and the report branch goes on at once; ``join_web``
   waits for it before Synth. Only Synth receives the news.
 - **sequential**: when an analysis agent itself needs the news (the question
   ties the news to that agent's figures, see ``web_analysis.facts``), the
@@ -27,11 +27,11 @@ import json
 from hashlib import sha256
 
 from agentfinx.core.config.runtime_policy import active_policy
+from agentfinx.core.schemas.web_analysis import Collection, WebAnalysis, WebContext
+from agentfinx.news import service as news_service
+from agentfinx.news.analysis.facts import links_news_to_analysis, news_agents
 from agentfinx.workflow.logger import make_log
 from agentfinx.workflow.router import route_after_evidence
-from agentfinx.core.schemas.web_analysis import Collection, WebAnalysis, WebContext
-from agentfinx.news.analysis.facts import links_news_to_analysis, news_agents
-from agentfinx.news.analysis.pipeline import analyze_company_news, articles_from_evidence
 
 MAX_RUNS_PER_QUESTION = 2
 
@@ -99,26 +99,13 @@ def analysis_budget(bundle: dict) -> float:
 
 
 def analyze_bundle(bundle: dict, *, web_model=None, budget_seconds: float) -> WebAnalysis:
-    policy = active_policy().web
     try:
         context = WebContext.model_validate(bundle.get("context") or {})
     except ValueError:
         context = WebContext(status="unsupported", message="Thiếu thông tin để tìm tin doanh nghiệp.")
     try:
-        if web_model is None:
-            from agentfinx.news.analysis.model import ollama_json_invoker
-
-            web_model = ollama_json_invoker()
-        analysis = analyze_company_news(
-            context,
-            articles_from_evidence(list(bundle.get("evidence") or [])),
-            dict(bundle.get("batch") or {}),
-            invoke=web_model,
-            budget_seconds=budget_seconds,
-            max_calls=policy.analysis_max_model_calls,
-            max_articles=policy.analysis_max_articles,
-            prompt_article_chars=policy.analysis_prompt_article_chars,
-        )
+        analysis = news_service.analyze(context, bundle.get("evidence") or [], bundle.get("batch") or {},
+                                        invoke=web_model, budget_seconds=budget_seconds)
     except Exception as exc:
         analysis = WebAnalysis(
             status="error",

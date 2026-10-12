@@ -26,8 +26,8 @@ from agentfinx.core.schemas.web_evidence import (WebEvidence, WebEvidenceBatch,
                                   WebEvidenceRequest)
 from agentfinx.agents.tools.http_safety import allowed_https_url, allowlisted_opener
 from agentfinx.news.collect.cache import Coverage, WebEvidenceCache
-from agentfinx.news.collect.dates import iso_utc, parse_published
-from agentfinx.news.collect.topics import (has_topic, topic_score, topic_terms,
+from agentfinx.news.dates import iso_utc, parse_published
+from agentfinx.news.topics import (has_topic, topic_score, topic_terms,
                                  without_common_terms)
 
 VIETSTOCK_HOSTS = {"vietstock.vn", "finance.vietstock.vn"}

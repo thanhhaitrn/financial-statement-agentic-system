@@ -22,7 +22,8 @@ from agentfinx.evaluation.contracts import (
     stable_json_fingerprint,
 )
 from agentfinx.workflow.output_formatter import format_final_answer
-from agentfinx.workflow.pipeline import collect_pipeline_errors, ensure_built, execute_query, extract_run_summary
+from agentfinx.evaluation.runner import run_question
+from agentfinx.workflow.pipeline import collect_pipeline_errors, ensure_built, extract_run_summary
 from agentfinx.core.common import dedupe_keep_order as _dedupe_keep_order
 
 def _normalize_reference(value) -> str:
@@ -329,22 +330,6 @@ def _runtime_error_result(
     return result
 
 
-WEB_ENTRY_MISROUTE = "web_entry:routed_to_report_discovery"
-
-
-def _plan_web_entry(dataset, query: str) -> dict:
-    """The web chat's planner call for one question (same function and policy
-    context as the chat worker)."""
-
-    from agentfinx.agents.planner_runner import run_web_planner
-    from agentfinx.workflow.state import WorkflowServices
-    from agentfinx.workflow.graph import run_with_services
-
-    state = {"user_query": query, "dataset_id": dataset.dataset_id, "debug_trace": False,
-             "tool_observations": [], "run_id": "batch", "trace": []}
-    return run_with_services(run_web_planner, WorkflowServices(collection=None), state)
-
-
 def run_dataset_queries(
     dataset,
     queries: list,
@@ -423,28 +408,9 @@ def run_dataset_queries(
         reference = str(query_record.get("reference", "") or "").strip()
         query_id = query_record.get("id")
         try:
-            planner_updates = None
-            if web_entry:
-                planner_updates = _plan_web_entry(dataset, query)
-                if planner_updates.get("task_kind") == "report_discovery":
-                    # On the web this question would get a candidate card, not an
-                    # answer: it counts against recall and as a refusal.
-                    dataset_result["runs"].append(
-                        _runtime_error_result(
-                            query,
-                            RuntimeError(WEB_ENTRY_MISROUTE),
-                            query_id=query_id,
-                            reference=reference,
-                        )
-                    )
-                    continue
-            final_state = execute_query(
-                dataset,
-                collection,
-                query,
-                debug_trace=debug_trace,
-                **({"planner_updates": planner_updates} if planner_updates is not None else {}),
-            )
+            # A web-entry misroute raises and is recorded below as a refusal.
+            final_state = run_question(dataset, collection, query, debug_trace=debug_trace,
+                                       web_entry=web_entry)
             dataset_result["runs"].append(
                 serialize_run_result(
                     final_state,

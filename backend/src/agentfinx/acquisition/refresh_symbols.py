@@ -6,7 +6,7 @@ import argparse
 
 from agentfinx.core.config import paths
 from agentfinx.core.config.runtime_policy import DEFAULT_POLICY
-from agentfinx.news.collect.symbols import CafeFSymbolCatalogJob
+from agentfinx.acquisition.symbols import CafeFSymbolCatalogJob
 
 
 def main() -> None:

@@ -757,9 +757,7 @@ def run_predictions(
     prepared_runtime=None,
     web_entry: bool = False,
 ) -> tuple[dict, list[dict]]:
-    from agentfinx.workflow.pipeline import execute_query
-
-    from agentfinx.evaluation.batch import WEB_ENTRY_MISROUTE, _plan_web_entry
+    from agentfinx.evaluation.runner import run_question
 
     runtime = prepared_runtime or prepare_dataset_runtime(dataset_id)
     dataset, _conn, collection, dataset_meta = runtime
@@ -773,20 +771,9 @@ def run_predictions(
         sys.stdout.flush()
 
         try:
-            planner_updates = None
-            if web_entry:
-                planner_updates = _plan_web_entry(dataset, question)
-                if planner_updates.get("task_kind") == "report_discovery":
-                    # On the web this question gets a candidate card, not an
-                    # answer: a failed prediction (and a refusal) in the error triage.
-                    raise RuntimeError(WEB_ENTRY_MISROUTE)
-            final_state = execute_query(
-                dataset,
-                collection,
-                question,
-                debug_trace=debug_trace,
-                **({"planner_updates": planner_updates} if planner_updates is not None else {}),
-            )
+            # A web-entry misroute raises: a failed prediction (and a refusal) in the triage.
+            final_state = run_question(dataset, collection, question, debug_trace=debug_trace,
+                                       web_entry=web_entry)
             run_summary = _extract_run_summary(final_state)
             errors = _collect_pipeline_errors(final_state)
             if any(is_session_limit_error(error) for error in errors):

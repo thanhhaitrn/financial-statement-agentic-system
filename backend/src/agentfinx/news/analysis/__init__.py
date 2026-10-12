@@ -2,7 +2,7 @@
 
 ``context`` decides what to look up, ``pipeline`` analyses what the evidence
 stage fetched, ``render`` writes the answer section. The graph node lives in
-``graph.web_analysis_node``.
+``workflow.news_node``.
 """
 
 from agentfinx.news.analysis.context import build_web_context

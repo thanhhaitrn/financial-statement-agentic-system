@@ -279,7 +279,7 @@ def _limit_facts_for_analysis_prompt(
     *,
     state: dict | None = None,
 ) -> list[dict]:
-    # Import lazily because graph.evidence imports this module to prepare the
+    # Import lazily because workflow.evidence imports this module to prepare the
     # analysis dispatch after retrieval. The evidence module is the canonical
     # owner of NOTE=12, schedule NOTE=24, main=10/16 and report-section=10.
     from agentfinx.workflow.evidence import (

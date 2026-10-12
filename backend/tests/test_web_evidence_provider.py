@@ -7,7 +7,7 @@ from agentfinx.workflow.state import WorkflowServices
 from agentfinx.workflow.graph import _bind_services
 from agentfinx.core.schemas.web_evidence import WebEvidenceRequest
 from agentfinx.news.collect.cache import WebEvidenceCache
-from agentfinx.news.collect.symbols import (CafeFSymbolCatalogJob, load_symbol_catalog,
+from agentfinx.acquisition.symbols import (CafeFSymbolCatalogJob, load_symbol_catalog,
                                   parse_cafef_symbols)
 from agentfinx.news.collect.vietstock import (VietstockNewsProvider,
                                     parse_vietstock_article)

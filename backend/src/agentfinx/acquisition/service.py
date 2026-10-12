@@ -226,7 +226,7 @@ class ReportAcquisitionService:
         self.quota = AcquisitionQuota(store, policy, now=self._now)
 
     def symbol_catalog(self):
-        from agentfinx.news.collect.symbols import SymbolCatalog
+        from agentfinx.acquisition.symbols import SymbolCatalog
 
         if self.symbol_catalog_path is None:
             return SymbolCatalog({})
@@ -235,7 +235,7 @@ class ReportAcquisitionService:
     def resolve_subject(self, text: str) -> SubjectResolution:
         """Map a ticker or company name to catalog symbols. Never guesses."""
 
-        from agentfinx.news.collect.symbols import StockSymbol, looks_like_ticker
+        from agentfinx.acquisition.symbols import StockSymbol, looks_like_ticker
 
         raw = " ".join(str(text or "").split())
         catalog = self.symbol_catalog()

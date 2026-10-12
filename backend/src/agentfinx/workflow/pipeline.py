@@ -517,7 +517,7 @@ def execute_query(
     model_fingerprint = hashlib.sha256(
         "\x1f".join(get_llm_identity()).encode("utf-8")
     ).hexdigest()
-    from agentfinx.workflow.web_branch import WebBranchRunner
+    from agentfinx.workflow.news_branch import WebBranchRunner
 
     web_runner = WebBranchRunner() if DEFAULT_POLICY.web.analysis_active else None
     graph = build_graph(

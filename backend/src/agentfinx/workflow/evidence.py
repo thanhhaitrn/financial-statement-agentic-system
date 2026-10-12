@@ -176,7 +176,7 @@ def _news_analysis_context(state: dict):
     from datetime import datetime, timezone
 
     from agentfinx.news.analysis.context import build_web_context, default_symbol_catalog
-    from agentfinx.news.collect.dates import parse_published
+    from agentfinx.news.dates import parse_published
 
     as_of = parse_published(state.get("as_of")) or datetime.now(timezone.utc)
     try:

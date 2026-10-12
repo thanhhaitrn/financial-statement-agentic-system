@@ -19,7 +19,7 @@ import unicodedata
 from dataclasses import dataclass
 from datetime import date, datetime, time, timedelta, timezone
 
-from agentfinx.news.collect.dates import VIETNAM_TZ
+from agentfinx.news.dates import VIETNAM_TZ
 
 DEFAULT_DAYS = 30
 

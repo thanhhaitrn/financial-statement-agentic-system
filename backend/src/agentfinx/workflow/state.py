@@ -33,7 +33,7 @@ class WorkflowServices:
     # Model call for the company-news analysis: ``(system, user, timeout) ->
     # JSON text``. None uses the configured Ollama model.
     web_model: Any = None
-    # Runs the news analysis beside the report branch (graph.web_branch);
+    # Runs the news analysis beside the report branch (workflow.news_branch);
     # None keeps it sequential.
     web_runner: Any = None
     # Execution limits for this run. Activated per node call so two graphs built
