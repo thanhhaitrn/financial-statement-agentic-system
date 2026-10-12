@@ -17,7 +17,8 @@ artifacts/   Kết quả chạy: báo cáo đánh giá, log (không track)
 ## Cần có
 
 - Python ≥ 3.11 và Node.js ≥ 20.9.
-- Ollama cho model chat và embedding (`ollama serve`; mặc định embedding `bge-m3`).
+- Ollama: model chat mặc định trên Ollama Cloud (`OLLAMA_API_KEY`); embedding mặc định ở Ollama
+  local (`ollama serve`, model `bge-m3`), cần cho build index và truy xuất vector.
 - Qdrant dạng server (Qdrant Cloud hoặc chạy local) cho giao diện web.
 - Tùy chọn: khóa LlamaParse để trích xuất PDF scan.
 

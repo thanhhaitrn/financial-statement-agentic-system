@@ -40,6 +40,40 @@ jobs:
             git diff --check "$base" HEAD
           fi
 
+  # The wheel alone, installed in a fresh environment, runs from outside the
+  # repository with nothing but FINX_HOME, and never starts on a database it
+  # was not told to create.
+  clean-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip wheel --no-deps ./backend --wheel-dir /tmp/wheel
+      - run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/python -m pip install "$(ls /tmp/wheel/agentfinx-*.whl)[web]"
+      - name: Run from outside the repository
+        working-directory: /tmp
+        env:
+          FINX_HOME: /tmp/finx-home
+          QDRANT_URL: http://127.0.0.1:6333
+        run: |
+          set -e
+          export FINX_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          /tmp/venv/bin/agentfinx --help
+          if FINX_HOME= /tmp/venv/bin/agentfinx storage status; then echo "ran without FINX_HOME"; exit 1; fi
+          mkdir -p "$FINX_HOME"
+          if /tmp/venv/bin/agentfinx serve --port 8790; then echo "served without a database"; exit 1; fi
+          /tmp/venv/bin/agentfinx db init
+          /tmp/venv/bin/agentfinx storage status
+          /tmp/venv/bin/agentfinx serve --port 8790 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8790/api/health >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8790/api/health | python -c "import json, sys; assert json.load(sys.stdin)['api'] == 'ok'"
+          kill %1
+
   # The Next.js UI (web/): locked install, type check and production build.
   web:
     runs-on: ubuntu-latest
