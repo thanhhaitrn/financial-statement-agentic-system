@@ -27,6 +27,18 @@ agentfinx storage status    # FINX_HOME, database đang dùng, số tài khoản
 - Sao chép nguyên `storage/`; chỉ mục Qdrant nằm trên Qdrant server, sao lưu theo cách của nó.
 - Không bao giờ xóa `storage/` để "dọn dẹp".
 
+**Chuyển `FINX_HOME` sang chỗ khác:**
+- **Đường dẫn được lưu tương đối:** registry, manifest và đường dẫn file của job import (PDF,
+  Markdown) đều lưu tương đối với `FINX_HOME`, nên có thể chuyển cả thư mục.
+- **File nằm ngoài `FINX_HOME`** (ví dụ báo cáo thêm bằng `--file-path` từ chỗ khác) giữ đường dẫn
+  tuyệt đối và không được bảo đảm sau khi chuyển.
+- **Thứ tự:**
+  1. dừng API, hai worker và mọi lệnh CLI;
+  2. nếu vừa cập nhật code, chạy một lệnh mở database tại **chỗ cũ** để nó tự nâng schema, ví dụ
+     `agentfinx reports budget`. Bản nâng cấp chỉ chuyển sang dạng tương đối những đường dẫn nằm
+     trong `FINX_HOME` hiện tại, và không đoán vị trí mới từ tên file;
+  3. chuyển thư mục, đặt `FINX_HOME` mới, rồi `agentfinx storage status`.
+
 **Migrate từ bố cục cũ:** máy từng chạy bản trước có `dataset_store/` ở repo; app từ chối chạy
 cho tới khi dữ liệu được chuyển.
 
@@ -45,10 +57,11 @@ Lệnh `--apply`:
     dòng, không chỉ số dòng) và chạy `integrity_check`;
   - file khác kiểm bằng SHA-256;
   - đường dẫn trong registry và manifest được viết lại;
-  - đường dẫn nằm trong các database đã sao chép mà trỏ vào `dataset_store/` (ví dụ PDF của một
-    job import đang chờ) được chuyển sang chỗ mới; sau đó không bản sao nào được còn nhắc tới
-    `dataset_store/`. Riêng KB giữ nguyên đường dẫn nguồn trong fact (chỉ để truy vết; sửa nó sẽ
-    buộc build lại).
+  - đường dẫn nằm trong các database đã sao chép mà trỏ vào `dataset_store/` được chuyển sang chỗ
+    mới; sau đó không bản sao nào được còn nhắc tới `dataset_store/`. Riêng KB giữ nguyên đường
+    dẫn nguồn trong fact (chỉ để truy vết; sửa nó sẽ buộc build lại);
+  - đường dẫn PDF và Markdown của job import, dù kho cũ ghi tuyệt đối hay tương đối, được đặt vào
+    `storage/` và lưu tương đối; job chưa xong phải tìm thấy file của nó ở chỗ mới.
 - **Kiểm tra bằng chính code của app:**
   - registry mở được mà không cần sửa;
   - mọi báo cáo `ready` qua được phép kiểm mà chat dùng.

@@ -193,5 +193,6 @@ Mọi dữ liệu ghi ra nằm dưới `FINX_HOME`:
   mục mã CK;
 - `artifacts/`: kết quả chạy, gồm báo cáo đánh giá và log.
 
-Registry và manifest lưu đường dẫn tương đối với `FINX_HOME`, nên có thể chuyển cả thư mục.
+Registry, manifest và đường dẫn file của job import lưu tương đối với `FINX_HOME`, nên có thể
+chuyển cả thư mục.
 Chi tiết, cách migrate và sao lưu: [Vận hành](operations.md).

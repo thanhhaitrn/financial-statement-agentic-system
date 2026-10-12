@@ -28,11 +28,15 @@ Safety:
 - SQLite files are copied with the online backup API and compared with
   their source row by row (a digest of the whole content, not row counts);
   other files by SHA-256;
-- paths inside the copied databases that point into dataset_store/ (an
-  import job's uploaded PDF, for one) are rewritten to the new place, and
-  no copy may still refer to dataset_store/ afterwards. Knowledge bases are
-  the exception: their fact rows keep the source path they were built from,
-  as provenance (see ``_VERBATIM_DATABASES``);
+- paths inside the copied databases that point into dataset_store/ are
+  rewritten to the new place, and no copy may still refer to dataset_store/
+  afterwards. Knowledge bases are the exception: their fact rows keep the
+  source path they were built from, as provenance (see
+  ``_VERBATIM_DATABASES``);
+- an import job's file paths (its PDF, its Markdown) are moved from what the
+  old database holds, absolute or already relative, to their place in
+  storage/, stored relative to FINX_HOME; a job that has not finished must
+  find its files there;
 - the result is checked with the code the app runs: the registry loads
   without needing repair, and every ready dataset passes the check a chat
   question makes (a failure there would turn its conversations read-only);
@@ -483,7 +487,55 @@ def _apply(plan: Plan) -> tuple[dict[str, str], dict[str, str], int]:
                 raise MigrationError(f"copy of {step.source} does not match")
         if step.kind != "sqlite":
             hashes[str(step.source)] = _sha256(step.source)
+    # After every file is in place, so a job's files can be checked.
+    rewritten += _relocate_import_jobs(plan)
     return digests, hashes, rewritten
+
+
+def _relocate_import_jobs(plan: Plan) -> int:
+    """An import job's files, from the old database's values to stored form in the copy."""
+
+    from agentfinx.acquisition.store import JOB_PATH_FIELDS, TERMINAL_JOB_STATUSES
+
+    source = plan.legacy / "acquisition" / "acquisition.db"
+    target = plan.storage / "acquisition" / "acquisition.db"
+    if not source.is_file() or not target.is_file():
+        return 0
+    old_db = sqlite3.connect(source.as_uri() + "?mode=ro", uri=True)
+    try:
+        originals = {job_id: json.loads(payload)
+                     for job_id, payload in old_db.execute("SELECT job_id, payload_json FROM import_jobs")}
+    finally:
+        old_db.close()
+    new_db = sqlite3.connect(target, isolation_level=None)
+    moved = 0
+    try:
+        new_db.execute("BEGIN")
+        for job_id, original in originals.items():
+            row = new_db.execute("SELECT payload_json FROM import_jobs WHERE job_id = ?", (job_id,)).fetchone()
+            current = json.loads(row[0])
+            unfinished = original.get("status") not in TERMINAL_JOB_STATUSES
+            for name in JOB_PATH_FIELDS:
+                value = str(original.get(name) or "")
+                if not value:
+                    continue
+                stored = _relocate(value, plan)
+                old_file, new_file = _resolve(value, plan.home), paths.from_stored(stored)
+                if new_file.resolve(strict=False).is_relative_to(plan.legacy.resolve()):
+                    raise MigrationError(f"import job {job_id}: {name} still points into {plan.legacy}")
+                if unfinished and old_file.is_file() and not new_file.is_file():
+                    raise MigrationError(f"import job {job_id}: {name} was not copied to {new_file}")
+                if unfinished and not old_file.is_file():
+                    plan.warnings.append(f"import job {job_id} ({original.get('status')}): its {name} "
+                                         f"{value} is missing, so the job cannot continue")
+                current[name] = stored
+            new_db.execute("UPDATE import_jobs SET payload_json = ? WHERE job_id = ?",
+                           (json.dumps(current, ensure_ascii=False, sort_keys=True), job_id))
+            moved += 1
+        new_db.execute("COMMIT")
+    finally:
+        new_db.close()
+    return moved
 
 
 def _check_old_store_unchanged(plan: Plan, digests: dict[str, str], hashes: dict[str, str]) -> None:
@@ -525,7 +577,28 @@ def _verify_with_app_code(plan: Plan) -> dict:
                 raise MigrationError(f"dataset {record.dataset_id} would not open: {exc.code}") from exc
             ready += 1
         missing_sources = [record.dataset_id for record in records if not Path(record.file_path).is_file()]
-    return {"datasets": len(records), "ready_checked": ready, "missing_sources": missing_sources}
+        import_jobs = _check_import_jobs(plan)
+    return {"datasets": len(records), "ready_checked": ready, "missing_sources": missing_sources,
+            "unfinished_import_jobs": import_jobs}
+
+
+def _check_import_jobs(plan: Plan) -> int:
+    """Read the jobs back as the import worker will; unfinished ones must find their files."""
+
+    from agentfinx.acquisition.store import JOB_PATH_FIELDS, TERMINAL_JOB_STATUSES, AcquisitionStore
+
+    database = plan.storage / "acquisition" / "acquisition.db"
+    if not database.is_file():
+        return 0
+    store = AcquisitionStore(database)  # also brings the copy to the current schema
+    unfinished = [job for job in store._all_jobs() if job.status not in TERMINAL_JOB_STATUSES]
+    missing_before = " ".join(plan.warnings)
+    for job in unfinished:
+        for name in JOB_PATH_FIELDS:
+            value = getattr(job, name)
+            if value and not Path(value).is_file() and job.job_id not in missing_before:
+                raise MigrationError(f"import job {job.job_id} would not find its {name}: {value}")
+    return len(unfinished)
 
 
 def _web_summary(db_path: Path) -> dict:

@@ -7,6 +7,11 @@ unconfirmed. An attempt row is written *before* a remote job is created and
 the remote job ID is stored as soon as the provider returns it, so a crash can
 leave an unresolved submission but never an untraced one. Usage is recorded
 idempotently per remote job ID — reconciling twice never charges twice.
+
+A job's file paths (``upload_path``, ``converted_path``) are stored relative
+to FINX_HOME when they are inside it, and read back against the current
+FINX_HOME, so the whole directory can move. A path outside FINX_HOME stays
+absolute and is not guaranteed to survive a move.
 """
 
 from __future__ import annotations
@@ -22,12 +27,19 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Iterator, Optional
 
-from agentfinx.core.schemas.acquisition import (TERMINAL_REMOTE_STATUSES, ImportJob,
-                                 ReportCandidate, utc_now_iso)
+from agentfinx.core.config import paths
+from agentfinx.core.schemas.acquisition import (
+    TERMINAL_REMOTE_STATUSES,
+    ImportJob,
+    ReportCandidate,
+    utc_now_iso,
+)
 
 TERMINAL_JOB_STATUSES = {"ready", "failed"}
 # PRAGMA user_version of the acquisition database.
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = 3
+# The file paths a job carries; stored relative to FINX_HOME (see the module doc).
+JOB_PATH_FIELDS = ("upload_path", "converted_path")
 _UNRESOLVED_ATTEMPT_STATES = ("submitting", "remote_id_lost")
 
 
@@ -84,6 +96,44 @@ def _legacy_identity_fields(payload: dict) -> dict:
     elif payload.get("origin") == "upload" and payload.get("source_sha256"):
         fields.update(source_kind="upload", source_id=payload["source_sha256"])
     return fields
+
+
+def stored_job_path(value: str) -> str:
+    """How a job's file path is written: relative to FINX_HOME when inside it.
+
+    Empty and already relative values are kept; so is a path outside FINX_HOME,
+    or any path while FINX_HOME is not configured.
+    """
+
+    if not value or not Path(value).is_absolute():
+        return value
+    try:
+        return paths.to_stored(value)
+    except paths.StorageError:
+        return value
+
+
+def absolute_job_path(value: str) -> str:
+    """A stored job path, resolved against the current FINX_HOME."""
+
+    if not value or Path(value).is_absolute():
+        return value
+    return str(paths.from_stored(value))
+
+
+def _job_payload(job: ImportJob) -> str:
+    data = job.model_dump(mode="json")
+    for name in JOB_PATH_FIELDS:
+        data[name] = stored_job_path(str(data.get(name) or ""))
+    return json.dumps(data, ensure_ascii=False, sort_keys=True)
+
+
+def _job_from_payload(payload_json: str) -> ImportJob:
+    data = json.loads(payload_json)
+    for name in JOB_PATH_FIELDS:
+        if data.get(name):
+            data[name] = absolute_job_path(str(data[name]))
+    return ImportJob.model_validate(data)
 
 
 def _safe_lock_name(value: str) -> str:
@@ -215,14 +265,22 @@ class AcquisitionStore:
     def _migrate(self) -> None:
         """v0 → v1: jobs written before the attempt ledger get an explicit
         billing status. v1 → v2: request identity fields are backfilled where
-        the stored job allows it. Processing status, the pending flag and
-        ``updated_at`` (the accounting time) are left exactly as they were."""
+        the stored job allows it. v2 → v3: a job's file paths inside FINX_HOME
+        are stored relative to it. Processing status, the pending flag,
+        ``updated_at`` (the accounting time) and the attempt ledger are left
+        exactly as they were.
+
+        Upgrade a database at its original place, before moving FINX_HOME: an
+        absolute path from elsewhere is kept, never guessed from a file name.
+        An existing database is backed up next to itself first."""
 
         with self.transaction(), self._connect() as connection:
             version = int(connection.execute("PRAGMA user_version").fetchone()[0])
             if version >= SCHEMA_VERSION:
                 return
             rows = connection.execute("SELECT job_id, payload_json FROM import_jobs").fetchall()
+            if rows:
+                self._backup(version)
             for row in rows:
                 payload = json.loads(row["payload_json"])
                 changed = False
@@ -232,6 +290,12 @@ class AcquisitionStore:
                 if version < 2 and not payload.get("request_fingerprint"):
                     payload.update(_legacy_identity_fields(payload))
                     changed = True
+                if version < 3:
+                    for name in JOB_PATH_FIELDS:
+                        stored = stored_job_path(str(payload.get(name) or ""))
+                        if stored != str(payload.get(name) or ""):
+                            payload[name] = stored
+                            changed = True
                 if not changed:
                     continue
                 connection.execute(
@@ -239,6 +303,25 @@ class AcquisitionStore:
                     (json.dumps(payload, ensure_ascii=False, sort_keys=True), row["job_id"]),
                 )
             connection.execute(f"PRAGMA user_version = {SCHEMA_VERSION}")
+
+    def _backup(self, version: int) -> Path:
+        """Copy the database as it is before an upgrade.
+
+        Called while the upgrade holds the write lock and before it changes
+        anything: a separate reading connection still sees that state, and
+        nothing else can commit meanwhile.
+        """
+
+        stamp = datetime.now(timezone.utc).strftime("%Y%m%dT%H%M%S%fZ")
+        target = self.path.with_name(f"{self.path.name}.backup-v{version}-{stamp}")
+        reader = sqlite3.connect(self.path, timeout=10)
+        copy = sqlite3.connect(target)
+        try:
+            reader.backup(copy)
+        finally:
+            copy.close()
+            reader.close()
+        return target
 
     # ------------------------------------------------------------------ trials
 
@@ -315,14 +398,14 @@ class AcquisitionStore:
         key = str(idempotency_key or "").strip()
         if not key:
             raise ValueError("idempotency_key is required")
-        payload = json.dumps(job.model_dump(mode="json"), ensure_ascii=False, sort_keys=True)
+        payload = _job_payload(job)
         with self.transaction(), self._connect() as connection:
             existing = connection.execute(
                 "SELECT payload_json FROM import_jobs WHERE owner_id = ? AND idempotency_key = ?",
                 (job.owner_id, key),
             ).fetchone()
             if existing is not None:
-                return ImportJob.model_validate(json.loads(existing["payload_json"]))
+                return _job_from_payload(existing["payload_json"])
             connection.execute(
                 """
                 INSERT INTO import_jobs (
@@ -409,7 +492,7 @@ class AcquisitionStore:
             ).fetchone()
         if row is None:
             return None
-        return ImportJob.model_validate(json.loads(row["payload_json"]))
+        return _job_from_payload(row["payload_json"])
 
     def get_job(self, job_id: str, *, owner_id: str = "") -> ImportJob | None:
         with self._connect() as connection:
@@ -419,14 +502,14 @@ class AcquisitionStore:
             ).fetchone()
         if row is None:
             return None
-        job = ImportJob.model_validate(json.loads(row["payload_json"]))
+        job = _job_from_payload(row["payload_json"])
         if owner_id and job.owner_id != owner_id:
             return None
         return job
 
     def update_job(self, job: ImportJob) -> ImportJob:
         updated = job.model_copy(update={"updated_at": utc_now_iso()})
-        payload = json.dumps(updated.model_dump(mode="json"), ensure_ascii=False, sort_keys=True)
+        payload = _job_payload(updated)
         with self._connect() as connection:
             cursor = connection.execute(
                 """
@@ -445,7 +528,7 @@ class AcquisitionStore:
             rows = connection.execute(
                 f"SELECT payload_json FROM import_jobs {where} ORDER BY created_at, rowid", params
             ).fetchall()
-        return [ImportJob.model_validate(json.loads(row["payload_json"])) for row in rows]
+        return [_job_from_payload(row["payload_json"]) for row in rows]
 
     def jobs_in_statuses(self, statuses: set[str]) -> list[ImportJob]:
         if not statuses:
@@ -497,7 +580,7 @@ class AcquisitionStore:
             rows = connection.execute("SELECT payload_json FROM import_jobs").fetchall()
         total = 0
         for row in rows:
-            job = ImportJob.model_validate(json.loads(row["payload_json"]))
+            job = _job_from_payload(row["payload_json"])
             accounting_time = (
                 job.updated_at if job.status in TERMINAL_JOB_STATUSES else job.created_at
             )
