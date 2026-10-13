@@ -1,0 +1,79 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" preserveAspectRatio="xMidYMid slice">
+  <!-- A muted gouache landscape (sky, fields, river) behind the product frame, drawn for AgentFinX. -->
+  <defs>
+    <linearGradient id="sky" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#bccac9"/>
+      <stop offset=".4" stop-color="#dcd9cb"/>
+      <stop offset=".64" stop-color="#eddcbf"/>
+    </linearGradient>
+    <radialGradient id="sun" cx=".64" cy=".55" r=".42">
+      <stop offset="0" stop-color="#f8ecd3" stop-opacity=".95"/>
+      <stop offset="1" stop-color="#f8ecd3" stop-opacity="0"/>
+    </radialGradient>
+    <linearGradient id="treeline" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8e9a8c"/><stop offset="1" stop-color="#a3a993"/>
+    </linearGradient>
+    <linearGradient id="meadow" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#9aa384"/><stop offset="1" stop-color="#8a9575"/>
+    </linearGradient>
+    <linearGradient id="field" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#c2ac7f"/><stop offset="1" stop-color="#a38c62"/>
+    </linearGradient>
+    <linearGradient id="near" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#6b7a5b"/><stop offset="1" stop-color="#4f5c46"/>
+    </linearGradient>
+    <linearGradient id="water" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#e6dfc9"/><stop offset="1" stop-color="#c4c6b7"/>
+    </linearGradient>
+    <filter id="brush" x="-10%" y="-10%" width="120%" height="120%">
+      <feTurbulence type="fractalNoise" baseFrequency=".011 .028" numOctaves="3" seed="7"/>
+      <feDisplacementMap in="SourceGraphic" scale="12"/>
+    </filter>
+    <filter id="cloud" x="-20%" y="-80%" width="140%" height="260%">
+      <feTurbulence type="fractalNoise" baseFrequency=".005 .035" numOctaves="3" seed="2"/>
+      <feDisplacementMap in="SourceGraphic" scale="46"/>
+      <feGaussianBlur stdDeviation="5"/>
+    </filter>
+    <filter id="grain">
+      <feTurbulence type="fractalNoise" baseFrequency=".85" numOctaves="2" seed="3" stitchTiles="stitch"/>
+      <feColorMatrix values="0 0 0 0 .22  0 0 0 0 .2  0 0 0 0 .15  0 0 0 .5 0"/>
+    </filter>
+  </defs>
+
+  <rect width="1600" height="900" fill="url(#sky)"/>
+  <rect width="1600" height="900" fill="url(#sun)"/>
+  <g fill="#f6efe0" filter="url(#cloud)">
+    <ellipse cx="290" cy="140" rx="300" ry="28" opacity=".6"/>
+    <ellipse cx="430" cy="200" rx="220" ry="18" opacity=".45"/>
+    <ellipse cx="1160" cy="110" rx="340" ry="30" opacity=".55"/>
+    <ellipse cx="1320" cy="180" rx="240" ry="17" opacity=".42"/>
+    <ellipse cx="780" cy="250" rx="280" ry="17" opacity=".38"/>
+    <ellipse cx="80" cy="290" rx="170" ry="13" opacity=".32"/>
+    <ellipse cx="1510" cy="300" rx="190" ry="13" opacity=".32"/>
+    <ellipse cx="640" cy="350" rx="230" ry="11" opacity=".28"/>
+    <ellipse cx="1060" cy="380" rx="200" ry="10" opacity=".26"/>
+  </g>
+
+  <g filter="url(#brush)">
+    <path fill="url(#treeline)" d="M-80 960 V520 C40 506 120 512 220 500 C300 492 360 506 440 498 C540 488 600 502 700 494 C800 486 880 500 980 492 C1080 486 1160 500 1260 492 C1360 486 1460 502 1680 494 V960 Z"/>
+    <path fill="url(#meadow)" d="M-80 960 V560 C120 548 260 556 420 548 S760 538 920 552 S1240 540 1400 550 S1600 546 1680 548 V960 Z"/>
+    <path fill="url(#field)" d="M-80 960 V632 C160 612 320 628 480 614 S780 602 920 624 S1200 606 1340 626 S1560 612 1680 618 V960 Z"/>
+    <path fill="url(#water)" d="M540 960 C600 830 700 760 760 700 C800 662 860 640 930 630 C870 650 840 680 820 720 C780 790 760 870 750 960 Z"/>
+    <path fill="url(#near)" d="M-80 960 V700 C60 660 200 690 320 672 S520 650 600 690 S700 770 650 960 Z"/>
+    <path fill="url(#near)" d="M1680 960 V680 C1520 650 1380 690 1250 670 S1050 660 980 700 S880 800 930 960 Z"/>
+  </g>
+
+  <g fill="#3e4838" filter="url(#brush)" opacity=".9">
+    <ellipse cx="150" cy="690" rx="46" ry="30"/>
+    <ellipse cx="205" cy="700" rx="34" ry="24"/>
+    <ellipse cx="96" cy="708" rx="30" ry="20"/>
+    <ellipse cx="1330" cy="672" rx="52" ry="32"/>
+    <ellipse cx="1392" cy="684" rx="36" ry="24"/>
+    <ellipse cx="1270" cy="690" rx="28" ry="19"/>
+    <ellipse cx="1488" cy="668" rx="26" ry="17"/>
+    <ellipse cx="1060" cy="640" rx="22" ry="14"/>
+    <ellipse cx="455" cy="628" rx="20" ry="12"/>
+  </g>
+
+  <rect width="1600" height="900" filter="url(#grain)" opacity=".3"/>
+</svg>

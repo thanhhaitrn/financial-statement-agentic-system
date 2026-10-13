@@ -9,17 +9,118 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
           cache: pip
-      - run: python -m pip install -e '.[eval,dev]'
-      - run: python -m pytest tests -q
+      - run: python -m pip install -e 'backend[eval,dev,web]'
+      # Detection, not prevention: a tracked database or upload is already
+      # public by the time CI runs, and web uploads bypass local hooks.
+      - run: python scripts/check_tracked_artifacts.py
+      - run: python -m pytest -q
+        working-directory: backend
+      - run: python -m compileall -q backend/src scripts
+      - run: python -m pip wheel --no-deps --no-build-isolation ./backend --wheel-dir /tmp/agentfinx-wheel
+      # The wheel is the agentfinx package with its data; no tests, benchmarks or UI.
       - run: >-
-          python -m compileall -q
-          agents config dataset_catalog evaluation graph ingestion kb llm schemas
-          scripts tools vectorstore src
-          test.py dataset_batch_runner.py dataset_batch_result.py ragas_eval_runner.py
-          eval_retrieval_recall.py analyze_batch_metrics.py output_formatter.py run_rotate.py
-      - run: python -m pip wheel --no-deps --no-build-isolation . --wheel-dir /tmp/agentfinx-wheel
-      - run: detect-secrets scan --all-files --exclude-files '^(ragas_runs|data)/'
+          python -c "import glob, zipfile;
+          names = set(zipfile.ZipFile(glob.glob('/tmp/agentfinx-wheel/agentfinx-*.whl')[0]).namelist());
+          required = {'agentfinx/core/config/company_aliases.json', 'agentfinx/evaluation/data/task_routing_contrastive.json'};
+          assert required <= names, required - names;
+          stray = sorted({n.split('/')[0] for n in names} - {'agentfinx'} - {n.split('/')[0] for n in names if '.dist-info/' in n});
+          assert not stray, stray"
+      - run: detect-secrets scan --all-files --exclude-files '^backend/benchmarks/'
+      - name: Whitespace errors and conflict markers in this change
+        run: |
+          base="${{ github.event.pull_request.base.sha || github.event.before }}"
+          if [ -n "$base" ] && [ "$base" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$base^{commit}" 2>/dev/null; then
+            git diff --check "$base" HEAD
+          fi
+
+  # The wheel alone, installed in a fresh environment, runs from outside the
+  # repository with nothing but FINX_HOME, and never starts on a database it
+  # was not told to create.
+  clean-install:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - run: python -m pip wheel --no-deps ./backend --wheel-dir /tmp/wheel
+      - run: |
+          python -m venv /tmp/venv
+          /tmp/venv/bin/python -m pip install "$(ls /tmp/wheel/agentfinx-*.whl)[web]"
+      - name: Run from outside the repository
+        working-directory: /tmp
+        env:
+          FINX_HOME: /tmp/finx-home
+          QDRANT_URL: http://127.0.0.1:6333
+        run: |
+          set -e
+          export FINX_SECRET_KEY="$(python -c 'import secrets; print(secrets.token_urlsafe(48))')"
+          /tmp/venv/bin/agentfinx --help
+          if FINX_HOME= /tmp/venv/bin/agentfinx storage status; then echo "ran without FINX_HOME"; exit 1; fi
+          mkdir -p "$FINX_HOME"
+          if /tmp/venv/bin/agentfinx serve --port 8790; then echo "served without a database"; exit 1; fi
+          /tmp/venv/bin/agentfinx db init
+          /tmp/venv/bin/agentfinx storage status
+          /tmp/venv/bin/agentfinx serve --port 8790 &
+          for i in $(seq 1 30); do curl -fsS http://127.0.0.1:8790/api/health >/dev/null && break; sleep 1; done
+          curl -fsS http://127.0.0.1:8790/api/health | python -c "import json, sys; assert json.load(sys.stdin)['api'] == 'ok'"
+          kill %1
+
+  # The Next.js UI (web/): locked install, type check and production build.
+  web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci --no-audit --no-fund
+      - run: npm run typecheck
+      - run: npm run build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+      - run: npm audit --omit=dev --audit-level=high
+
+  # Mocked workers, real browser: the Next.js UI through its /api proxy.
+  # Full end-to-end runs stay local.
+  browser-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: pip
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: python -m pip install -e 'backend[dev,web,e2e]'
+      - run: python -m playwright install --with-deps chromium
+      # The API address is compiled into the build; the test serves FastAPI there.
+      - name: Build the Next.js UI for the test API
+        working-directory: web
+        env:
+          FINX_API_URL: http://127.0.0.1:8765
+          NEXT_TELEMETRY_DISABLED: "1"
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+      - run: python -m pytest tests/test_next_browser_smoke.py -q
+        working-directory: backend
+        env:
+          FINX_REQUIRE_NEXT_SMOKE: "1"

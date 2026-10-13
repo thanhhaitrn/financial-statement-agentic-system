@@ -12,8 +12,8 @@ import json
 import time
 from typing import Any
 
-from tools.langchain_tools import get_langchain_tools_for_agent
-from tools.tool_calls import invalid_tool_calls, response_tool_calls
+from agentfinx.agents.tools.langchain_tools import get_langchain_tools_for_agent
+from agentfinx.agents.tools.tool_calls import invalid_tool_calls, response_tool_calls
 
 
 DEFAULT_PROBES = {
@@ -35,7 +35,7 @@ def _content_preview(response: Any) -> str:
 
 
 def run_probe(agent_name: str, query: str) -> dict:
-    from llm.client import llm
+    from agentfinx.core.llm.client import llm
 
     tools = get_langchain_tools_for_agent(agent_name)
     if not tools:
