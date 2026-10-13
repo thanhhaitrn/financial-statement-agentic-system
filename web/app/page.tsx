@@ -1,15 +1,47 @@
+import Footer from "@/components/Footer";
 import PageLink from "@/components/PageLink";
 import Navbar from "@/components/Navbar";
-import Footer from "@/components/Footer";
 import Reveal from "@/components/Reveal";
-import HeroDemo from "@/components/HeroDemo";
+import { CitedAnswer, PeriodComparison, VerifiedNews } from "@/components/landing/FeatureVisuals";
+import ProductDemo from "@/components/landing/ProductDemo";
+import { SAMPLE } from "@/components/landing/sample";
 import { getUser } from "@/lib/server-user";
 
-const WORDS = ["Hệ", "thống", "phân", "tích", "báo", "cáo", "tài", "chính"];
-const STEPS = [
-  ["01", "Chọn hoặc tải báo cáo"],
-  ["02", "Đặt câu hỏi"],
-  ["03", "Nhận phân tích"],
+// Figures are generated isometric line drawings in public/landing.
+const HIGHLIGHTS = [
+  {
+    figure: "/landing/fig-report.svg",
+    title: "Chuyên cho báo cáo tài chính",
+    body: "Đọc bảng cân đối, kết quả kinh doanh, lưu chuyển tiền tệ, thuyết minh thành dữ liệu có cấu trúc.",
+  },
+  {
+    figure: "/landing/fig-agents.svg",
+    title: "Vận hành bằng agent",
+    body: "Các agent chuyên về từng khía cạnh tài chính, có thể điều chỉnh theo phong cách phân tích của bạn.",
+  },
+  {
+    figure: "/landing/fig-source.svg",
+    title: "Kiểm chứng từng con số",
+    body: "Mỗi kết luận dẫn về bảng hoặc thuyết minh gốc, kèm số trang khi báo cáo có.",
+  },
+];
+
+const FEATURES = [
+  {
+    title: "Trả lời kèm nguồn",
+    body: "Mỗi kết luận chỉ rõ bảng hoặc thuyết minh lấy số liệu, kèm số trang khi báo cáo có, để đối chiếu với bản gốc.",
+    visual: <CitedAnswer />,
+  },
+  {
+    title: "So sánh cùng kỳ",
+    body: "Chỉ tiêu được đặt cạnh kỳ trước với cùng đơn vị, nên biến động hiện ra ngay mà không phải tự cộng trừ.",
+    visual: <PeriodComparison />,
+  },
+  {
+    title: "Tin tức có mức xác nhận",
+    body: "Tin doanh nghiệp từ Vietstock, mỗi sự kiện kèm câu trích nguyên văn và mức xác nhận do hệ thống kiểm tra.",
+    visual: <VerifiedNews />,
+  },
 ];
 
 export default async function HomePage() {
@@ -20,98 +52,69 @@ export default async function HomePage() {
       <Navbar loggedIn={!!user} />
       <main>
         <section className="hero container">
-          <h1 className="hero-title">
-            {WORDS.map((w, i) => (
-              <span key={w + i}><span className="w"><span style={{ animationDelay: `${120 + i * 55}ms` }}>{w}</span></span>{" "}</span>
-            ))}
-            <span className="w"><em style={{ animationDelay: `${120 + WORDS.length * 55}ms` }}>AgentFinX</em></span>
+          <h1 className="hero-title fade-up">
+            Phân tích báo cáo tài chính
+            <br />
+            cùng AI agent
           </h1>
-          <p className="hero-sub fade-up" style={{ ["--d" as string]: "700ms" }}>
-            Chọn hoặc tải lên báo cáo tài chính, đặt câu hỏi bằng tiếng Việt và nhận câu trả lời có số liệu kèm nguồn trong báo cáo.
-          </p>
-          <div className="hero-cta fade-up" style={{ ["--d" as string]: "820ms" }}>
-            <PageLink href={user ? "/chat" : "/signup"} className="btn btn-dark btn-lg">
-              {user ? "Vào ứng dụng" : "Tạo tài khoản"}
+          <div className="hero-row fade-up" style={{ ["--d" as string]: "160ms" }}>
+            <p className="hero-sub">
+              Tự động hóa quy trình phân tích tài chính doanh nghiệp bằng hệ thống trí tuệ nhân tạo.
+            </p>
+            <PageLink className="btn btn-dark hero-new" href={user ? "/chat" : "/signup"}>
+              {user ? "Vào ứng dụng" : "Tạo tài khoản"} <span aria-hidden="true">→</span>
             </PageLink>
-            <a href="#features" className="btn btn-soft btn-lg">Xem thêm</a>
           </div>
         </section>
 
-        <div className="container demo-wrap fade-up" style={{ ["--d" as string]: "950ms" }}>
-          <HeroDemo />
-        </div>
-
-
-        <section className="section container" id="features">
-          <Reveal><h2 className="h2">Được thiết kế cho <em>công việc phân tích</em> thực tế</h2></Reveal>
-          <div className="bento">
-            <Reveal className="cell c2" delay={0}>
-              <div className="cell-in">
-                <div className="viz doc-viz">
-                  <div className="chips"><span className="mono">Bảng cân đối</span><span className="mono">KQKD</span><span className="mono">Lưu chuyển tiền tệ</span><span className="mono">Thuyết minh</span></div>
-                  <div className="lines"><i /><i /><i /><i /><i /><b /></div>
-                </div>
-                <h3>Đọc hiểu cả bộ báo cáo</h3>
-                <p className="muted">Bảng cân đối, kết quả kinh doanh, lưu chuyển tiền tệ và thuyết minh được nhận diện và liên kết, nên câu hỏi chéo giữa các bảng vẫn truy được đúng số liệu.</p>
-              </div>
-            </Reveal>
-            <Reveal className="cell" delay={90}>
-              <div className="cell-in">
-                <div className="viz quote-viz">
-                  <p>&quot;Nợ vay ngắn hạn giảm 18% so với đầu năm.&quot;</p>
-                  <span className="mono tag">Thuyết minh · Vay ngắn hạn</span>
-                </div>
-                <h3>Trả lời có dẫn nguồn</h3>
-                <p className="muted">Mỗi kết luận chỉ rõ bảng hoặc thuyết minh lấy số liệu để bạn đối chiếu với báo cáo gốc.</p>
-              </div>
-            </Reveal>
-            <Reveal className="cell" delay={0}>
-              <div className="cell-in">
-                <div className="viz metric-viz">
-                  {[["ROE", "14,2%", "71%"], ["ROA", "6,8%", "34%"], ["Nợ/VCSH", "0,9", "45%"]].map(([k, v, w]) => (
-                    <div key={k} className="metric"><span className="mono">{k}</span><span className="track"><u style={{ ["--w" as string]: w }} /></span><b className="mono">{v}</b></div>
-                  ))}
-                </div>
-                <h3>Chỉ số tính sẵn</h3>
-                <p className="muted">ROE, ROA, hệ số nợ và biên lợi nhuận được tính từ số liệu trong báo cáo, kèm công thức.</p>
-              </div>
-            </Reveal>
-            <Reveal className="cell c2" delay={90}>
-              <div className="cell-in">
-                <div className="viz line-viz">
-                  <svg viewBox="0 0 400 120" preserveAspectRatio="none">
-                    <path className="ln a" pathLength={1} d="M0 95 C50 90 80 70 130 72 S210 40 260 44 S350 20 400 12" />
-                    <path className="ln b" pathLength={1} d="M0 100 C60 98 90 90 140 86 S220 76 270 70 S350 62 400 56" />
-                  </svg>
-                </div>
-                <h3>So sánh đầu kỳ và cuối kỳ</h3>
-                <p className="muted">Hỏi về biến động giữa đầu kỳ và cuối kỳ, năm nay và năm trước của cùng một báo cáo.</p>
-              </div>
-            </Reveal>
-          </div>
+        <section className="demo-section fade-up" style={{ ["--d" as string]: "280ms" }}>
+          <ProductDemo />
         </section>
 
-        <section className="section container" id="how">
-          <Reveal><h2 className="h2">Ba bước để có <em>câu trả lời</em></h2></Reveal>
-          <div className="steps">
-            {STEPS.map(([n, t], i) => (
-              <Reveal key={n} className="step" delay={i * 110}>
-                <div className="step-line" />
-                <span className="mono muted">{n}</span>
-                <h3>{t}</h3>
+        <section className="section container" id="san-pham">
+          <Reveal>
+            <h2 className="statement">
+              <span>Một cách mới để đọc báo cáo tài chính.</span> Xây dựng riêng cho doanh nghiệp Việt Nam,
+              AgentFinX để các AI agent trích xuất số liệu, tính chỉ số và đối chiếu cùng kỳ — bạn chỉ việc đặt
+              câu hỏi.
+            </h2>
+          </Reveal>
+          <div className="highlights">
+            {HIGHLIGHTS.map((item, i) => (
+              <Reveal key={item.title} className="highlight" delay={i * 90}>
+                <span className="highlight-n mono">HÌNH 0.{i + 1}</span>
+                <div className="highlight-fig">
+                  <img src={item.figure} alt="" />
+                </div>
+                <h3>{item.title}</h3>
+                <p className="muted">{item.body}</p>
               </Reveal>
             ))}
           </div>
         </section>
 
-        <section className="container cta-wrap">
+        <section className="section container" id="tinh-nang">
           <Reveal>
-            <div className="cta">
-              <h2>Phân tích báo cáo đầu tiên của bạn <em>ngay hôm nay</em></h2>
-              <PageLink href={user ? "/chat" : "/signup"} className="btn btn-light btn-lg">
-                {user ? "Vào ứng dụng" : "Tạo tài khoản"}
-              </PageLink>
-            </div>
+            <h2 className="h2">Mỗi câu trả lời đều kiểm chứng được</h2>
+            <p className="section-note muted">Ví dụ dùng dữ liệu minh họa của {SAMPLE.company} ({SAMPLE.ticker}).</p>
+          </Reveal>
+          <div className="features">
+            {FEATURES.map((feature, i) => (
+              <Reveal key={feature.title} className="feature" delay={i * 90}>
+                {feature.visual}
+                <h3>{feature.title}</h3>
+                <p className="muted">{feature.body}</p>
+              </Reveal>
+            ))}
+          </div>
+        </section>
+
+        <section className="cta container">
+          <Reveal>
+            <h2 className="cta-title">Thử AgentFinX ngay.</h2>
+            <PageLink className="btn btn-dark btn-lg" href={user ? "/chat" : "/signup"}>
+              {user ? "Vào ứng dụng" : "Dùng thử demo"} <span aria-hidden="true">→</span>
+            </PageLink>
           </Reveal>
         </section>
       </main>
