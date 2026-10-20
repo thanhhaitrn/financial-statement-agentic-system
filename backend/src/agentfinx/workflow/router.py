@@ -8,6 +8,7 @@ from collections import defaultdict
 from langgraph.types import Send
 
 from agentfinx.agents.agent_registry import is_analysis_agent
+from agentfinx.core import experiment
 from agentfinx.core.common import dedupe_keep_order as _dedupe_keep_order
 
 ROUTE_METADATA_FIELDS = (
@@ -167,6 +168,7 @@ def dispatch_analysis_workers(state: dict):
             from agentfinx.news.analysis.facts import news_facts_for_agent
 
             facts = news_facts_for_agent(state.get("web_analysis") or {}, agent)
+            experiment.emit("web_facts_dispatched", agent=agent, facts=facts)
             if facts:
                 dispatch_target["analysis_input_results"] = {
                     **dict(dispatch_target.get("analysis_input_results") or {}),

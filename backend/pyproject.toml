@@ -38,6 +38,8 @@ eval = [
   "ragas>=0.3.4,<0.4",
   "datasets>=4.8,<5.0",
   "langchain-anthropic>=1.0,<2.0",
+  # eval-security: Wilson intervals, exact McNemar and Holm (pre-registered statistics)
+  "statsmodels>=0.14,<0.15",
 ]
 dev = [
   "pytest>=7.4,<9.0",

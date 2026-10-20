@@ -5,23 +5,10 @@ from __future__ import annotations
 import argparse
 import json
 import os
-import re
 import subprocess
 from pathlib import Path
 
-
-_KEY_LINE_RE = re.compile(
-    r"^\s*OLLAMA_API_KEY\s*=\s*['\"]?([^\s#'\"]+)['\"]?\s*(?:#.*)?$"
-)
-
-
-def _load_keys(path: Path) -> list[str]:
-    keys = []
-    for line in path.read_text(encoding="utf-8").splitlines():
-        match = _KEY_LINE_RE.match(line)
-        if match and match.group(1) not in keys:
-            keys.append(match.group(1))
-    return keys
+from agentfinx.core.llm.keys import load_keys as _load_keys
 
 
 def _count_done(path: Path, count_key: str) -> int:
@@ -54,6 +41,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
     parser.add_argument("count_key", choices=("predictions", "scores"))
     parser.add_argument("limit", type=int)
     parser.add_argument("--env-file", type=Path, default=Path(".env"))
+    parser.add_argument("--include-commented-keys", action="store_true")
     parser.add_argument("command", nargs=argparse.REMAINDER)
     args = parser.parse_args(argv)
     if args.command and args.command[0] == "--":
@@ -69,7 +57,7 @@ def _parse_args(argv: list[str] | None = None) -> argparse.Namespace:
 
 def main(argv: list[str] | None = None) -> int:
     args = _parse_args(argv)
-    keys = _load_keys(args.env_file)
+    keys = _load_keys(args.env_file, include_commented=args.include_commented_keys)
     if not keys:
         raise SystemExit("No uncommented OLLAMA_API_KEY entries found.")
 
@@ -81,7 +69,7 @@ def main(argv: list[str] | None = None) -> int:
         env = dict(os.environ)
         env["OLLAMA_API_KEY"] = key
         print(f"[rotate] {args.count_key} done={done}/{args.limit} -> running", flush=True)
-        process = subprocess.run(args.command, env=env)
+        process = subprocess.run(args.command, env=env, check=False)
         last_return_code = int(process.returncode)
         print(
             f"[rotate] exit={last_return_code} "

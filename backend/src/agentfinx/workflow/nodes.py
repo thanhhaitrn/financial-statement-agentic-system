@@ -23,7 +23,25 @@ def agent_router(state: dict) -> dict:
 
 
 def evidence_pack_node(state: dict, *, web_provider=None) -> dict:
-    return build_evidence_pack(state, web_provider=web_provider)
+    updates = build_evidence_pack(state, web_provider=web_provider)
+    if state.get("controlled_web_facts"):
+        updates = _with_controlled_web_facts(state, updates)
+    return updates
+
+
+def _with_controlled_web_facts(state: dict, updates: dict) -> dict:
+    """Security experiment only (controlled exposure): the given WEB facts
+    become the run's WEB container, visible to the analysis agents this
+    question dispatches, whatever the router asked for. Facts keep their
+    origin labels; nothing else changes."""
+
+    from agentfinx.core import experiment
+
+    agents = list(updates.get("expected_workers") or [])
+    facts = [{**fact, "needby": agents} for fact in state["controlled_web_facts"]]
+    experiment.emit("controlled_web_facts_injected", agents=agents, facts=facts)
+    return {**updates, "worker_results": {**dict(updates.get("worker_results") or {}),
+                                          "WEB": {"table": "", "facts": facts}}}
 
 
 def agent_profitability_node(state: dict) -> dict:

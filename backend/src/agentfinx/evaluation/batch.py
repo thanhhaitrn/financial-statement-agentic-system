@@ -297,6 +297,44 @@ def serialize_run_result(
     return result
 
 
+def built_dataset_identity(dataset, conn, collection) -> dict:
+    """KB and index generations of a built dataset, as runs record them."""
+
+    try:
+        from agentfinx.datasets.kb.sqlite_repo import read_kb_manifest
+
+        kb_manifest = read_kb_manifest(conn)
+    except Exception:
+        kb_manifest = {}
+    index_generation = str(
+        getattr(collection, "generation", "")
+        or getattr(collection, "build_fingerprint", "")
+        or ""
+    ).strip()
+    return {
+        "ingestion_version": dataset.ingestion_version,
+        "vector_collection_name": dataset.vector_collection_name,
+        "source_sha256": kb_manifest.get("source_sha256", ""),
+        "facts_sha256": kb_manifest.get("facts_sha256", ""),
+        "parser_version": kb_manifest.get("parser_version", ""),
+        "kb_schema_version": kb_manifest.get("schema_version", ""),
+        "kb_generation": (
+            stable_json_fingerprint(kb_manifest) if kb_manifest else ""
+        ),
+        "index_generation": index_generation,
+        "dataset_generation": stable_json_fingerprint(
+            {
+                "dataset_id": dataset.dataset_id,
+                "ingestion_version": dataset.ingestion_version,
+                "source_sha256": kb_manifest.get("source_sha256", ""),
+                "parser_version": kb_manifest.get("parser_version", ""),
+                "schema_version": kb_manifest.get("schema_version", ""),
+                "facts_sha256": kb_manifest.get("facts_sha256", ""),
+            }
+        ),
+    }
+
+
 def _runtime_error_result(
     query: str,
     exc: Exception,
@@ -362,41 +400,7 @@ def run_dataset_queries(
     dataset_result["status"] = dataset.status
     dataset_result["facts_count"] = dataset.facts_count
     dataset_result["vector_docs_count"] = dataset.vector_docs_count
-    try:
-        from agentfinx.datasets.kb.sqlite_repo import read_kb_manifest
-
-        kb_manifest = read_kb_manifest(conn)
-    except Exception:
-        kb_manifest = {}
-    index_generation = str(
-        getattr(collection, "generation", "")
-        or getattr(collection, "build_fingerprint", "")
-        or ""
-    ).strip()
-    dataset_result.update(
-        {
-            "ingestion_version": dataset.ingestion_version,
-            "vector_collection_name": dataset.vector_collection_name,
-            "source_sha256": kb_manifest.get("source_sha256", ""),
-            "facts_sha256": kb_manifest.get("facts_sha256", ""),
-            "parser_version": kb_manifest.get("parser_version", ""),
-            "kb_schema_version": kb_manifest.get("schema_version", ""),
-            "kb_generation": (
-                stable_json_fingerprint(kb_manifest) if kb_manifest else ""
-            ),
-            "index_generation": index_generation,
-        }
-    )
-    dataset_result["dataset_generation"] = stable_json_fingerprint(
-        {
-            "dataset_id": dataset.dataset_id,
-            "ingestion_version": dataset.ingestion_version,
-            "source_sha256": kb_manifest.get("source_sha256", ""),
-            "parser_version": kb_manifest.get("parser_version", ""),
-            "schema_version": kb_manifest.get("schema_version", ""),
-            "facts_sha256": kb_manifest.get("facts_sha256", ""),
-        }
-    )
+    dataset_result.update(built_dataset_identity(dataset, conn, collection))
     dataset_result["dataset_identity"] = dataset_identity_payload(dataset_result)
 
     for query_record in query_records:

@@ -9,7 +9,7 @@ execution can retain the bounded candidate set.
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from functools import lru_cache
 import re
 import unicodedata
@@ -29,7 +29,8 @@ from agentfinx.ingestion.period_normalize import (
     section_total_key,
 )
 from agentfinx.ingestion.semantic_dimensions import (
-    derive_query_semantic_dimensions,
+    SemanticFactDimensions,
+    derive_query_semantic_dimensions as _derive_query_semantic_dimensions,
     derive_semantic_fact_dimensions,
 )
 from agentfinx.core.schemas.table_names import (
@@ -210,6 +211,37 @@ def _ascii_text(value: Any) -> str:
 
 def _tokens(value: Any) -> set[str]:
     return set(_TOKEN_RE.findall(_ascii_text(value)))
+
+
+# "Doanh thu thuần / Lợi nhuận gộp về bán hàng và cung cấp dịch vụ" name the
+# income-statement lines 10 and 20, which cover sales and services together.
+# Their "bán hàng" is not a sale direction: typing such a query as a sale makes
+# the slot filter reject a report whose own line reads "... về cung cấp dịch
+# vụ" (a service-only company). Query side only; indexed facts keep the types
+# the parser gave them, so no rebuild is needed.
+_STATEMENT_SALES_LINE_RE = re.compile(
+    r"\b(?:doanh\s+thu\s+thuần|lợi\s+nhuận\s+gộp)\s+về\s+bán\s+hàng\s+và\s+"
+    r"cung\s+cấp\s+dịch\s+vụ\b(?!\s+cho\b)",
+    flags=re.IGNORECASE,
+)
+
+
+def derive_query_semantic_dimensions(
+    query: Any,
+    *,
+    entity: Any = "",
+) -> SemanticFactDimensions:
+    dimensions = _derive_query_semantic_dimensions(query, entity=entity)
+    if dimensions.transaction_type != "sale":
+        return dimensions
+    text = unicodedata.normalize("NFC", str(query or ""))
+    stripped = _STATEMENT_SALES_LINE_RE.sub(" ", text)
+    if stripped == text or (
+        _derive_query_semantic_dimensions(stripped, entity=entity).transaction_type
+        == "sale"
+    ):
+        return dimensions
+    return replace(dimensions, transaction_type="")
 
 
 def _explicit_period_labels(value: Any) -> tuple[str, ...]:

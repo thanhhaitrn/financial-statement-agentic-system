@@ -14,6 +14,8 @@ from pydantic import ValidationError
 
 from agentfinx.agents.agent_registry import ANALYSIS_ASPECT_LABELS, is_analysis_agent
 from agentfinx.core.config.domain_catalog import CURRENT_PERIOD_MARKERS, PREVIOUS_PERIOD_MARKERS
+from agentfinx.core import experiment
+from agentfinx.core.ablation import guard
 from agentfinx.core.config.runtime_policy import DEFAULT_POLICY, active_policy
 from agentfinx.agents.profiles import AGENT_PROFILES
 from agentfinx.agents.prompts import PROMPT_TEMPLATE
@@ -36,7 +38,7 @@ from agentfinx.core.schemas.requirements import (
     requirement_evidence_state,
 )
 from agentfinx.core.schemas.numbers import parse_financial_decimal
-from agentfinx.core.schemas.evidence_origin import fact_provenance, is_report_fact
+from agentfinx.core.schemas.evidence_origin import fact_provenance, provenance_allows, record_after_gate
 from agentfinx.core.schemas.financial_validation import (
     canonical_profitability_metrics,
     financial_answer_violations,
@@ -1391,23 +1393,29 @@ def _fact_match_score(segment: str, fact: dict) -> int:
 def _calculation_facts(worker_results_payload: Dict[str, Any]) -> list[tuple[dict, Decimal]]:
     output: list[tuple[dict, Decimal]] = []
     seen = set()
+    site = "synth.calculation_operands"
     for fact in _iter_retrieval_facts(worker_results_payload):
-        if not is_report_fact(fact):
+        if not provenance_allows(fact, site=site):
             continue
         if normalize_fact_status(fact.get("status", "found")) != "found":
+            record_after_gate(fact, site=site, outcome="rejected:status_not_found")
             continue
         # Derived values are valid only when every operand can be traced
         # back to one stable source fact. Legacy/placeholder facts may
         # still be shown as evidence, but they are not calculation inputs.
         if not str(fact.get("fact_id", "") or "").strip():
+            record_after_gate(fact, site=site, outcome="rejected:no_fact_id")
             continue
         if not str(fact.get("source", "") or "").strip():
+            record_after_gate(fact, site=site, outcome="rejected:no_source")
             continue
         value = parse_financial_decimal(
             fact.get("parsed_value", "") or fact.get("value")
         )
         if value is None:
+            record_after_gate(fact, site=site, outcome="rejected:unparseable_number")
             continue
+        record_after_gate(fact, site=site, outcome="accepted_as_operand")
         key = (
             str(fact.get("fact_id", "") or ""),
             str(fact.get("fiscal_year", "") or ""),
@@ -2520,16 +2528,21 @@ def _canonical_lookup_candidate(
         return None
 
     candidates: list[tuple[float, dict]] = []
+    site = "synth.lookup_candidate"
     for fact in _iter_retrieval_facts(worker_results_payload):
-        if not is_report_fact(fact):
+        if not provenance_allows(fact, site=site):
             continue
         if normalize_fact_status(fact.get("status", "found")) != "found":
+            record_after_gate(fact, site=site, outcome="rejected:status_not_found")
             continue
         value = str(fact.get("value", "") or "").strip()
         if not value or len(value) > 500:
+            record_after_gate(fact, site=site, outcome="rejected:value_empty_or_too_long")
             continue
         if not fact_matches_required_slots(slots, fact, value):
+            record_after_gate(fact, site=site, outcome="rejected:slots_mismatch")
             continue
+        record_after_gate(fact, site=site, outcome="accepted_as_candidate")
         candidates.append((fact_slot_score(slots, fact, value), fact))
 
     if not candidates:
@@ -2603,8 +2616,12 @@ _WEB_NEWS_INSTRUCTION = """
               Nếu `collection.list_read_for_window` là false hoặc `status` là partial, nói rõ phần tin
               chưa đầy đủ. Hệ thống tự gắn phần chi tiết (trích dẫn, link) dưới câu trả lời: không chép
               lại danh sách tin hay trích dẫn.
-            - Không dùng con số trong tin làm toán hạng, không thay số liệu báo cáo tài chính bằng số liệu
-              trong tin, và không khẳng định một tin là nguyên nhân của biến động số liệu.
+            - """ + guard(
+    "prompt.web_rule.synth_news",
+    """Không dùng con số trong tin làm toán hạng, không thay số liệu báo cáo tài chính bằng số liệu
+              trong tin, và không""",
+    removed="Không",
+) + """ khẳng định một tin là nguyên nhân của biến động số liệu.
             """
 
 
@@ -2928,10 +2945,12 @@ def _grounded_valid_facts(
     worker_results_payload: Dict[str, Any],
 ) -> list[dict]:
     candidates = []
+    site = "synth.grounded_facts"
     for fact in _iter_retrieval_facts(worker_results_payload):
-        if not is_report_fact(fact):
+        if not provenance_allows(fact, site=site):
             continue
         if normalize_fact_status(fact.get("status", "found")) != "found":
+            record_after_gate(fact, site=site, outcome="rejected:status_not_found")
             continue
         value = str(
             fact.get("value", "")
@@ -2939,13 +2958,16 @@ def _grounded_valid_facts(
             or ""
         ).strip()
         if not value:
+            record_after_gate(fact, site=site, outcome="rejected:empty_value")
             continue
         if not (
             str(fact.get("fact_id", "") or "").strip()
             or str(fact.get("source", "") or "").strip()
             or str(fact.get("source_page", "") or "").strip()
         ):
+            record_after_gate(fact, site=site, outcome="rejected:no_traceable_source")
             continue
+        record_after_gate(fact, site=site, outcome="accepted_as_grounding")
         candidates.append(fact)
     return candidates
 
@@ -3421,12 +3443,15 @@ def _facts_matching_requirement(
     worker_results_payload: Dict[str, Any],
 ) -> List[dict]:
     matches = []
+    site = "synth.requirement_match"
     for fact in _iter_retrieval_facts(worker_results_payload):
-        if not is_report_fact(fact):
+        if not provenance_allows(fact, site=site):
             continue
         if normalize_fact_status(fact.get("status", "found")) != "found":
+            record_after_gate(fact, site=site, outcome="rejected:status_not_found")
             continue
         if requirement_evidence_state(requirement, [fact]) == REQUIREMENT_MATCHED:
+            record_after_gate(fact, site=site, outcome="accepted_as_requirement_match")
             matches.append(fact)
     return matches
 
@@ -3714,7 +3739,8 @@ def _retry_synth_quality_once(
         + ". Không thêm diagnostics hay tên violation vào answer. Chỉ xuất "
         "JSON SynthDecision; nội dung cuối cùng hoàn toàn do bạn tạo."
     )
-    repaired, usage, mode = _invoke_synth(retry_payload)
+    with experiment.call_kind("answer_repair"):
+        repaired, usage, mode = _invoke_synth(retry_payload)
 
     # ---- Candidate pipeline: initial -> general_repair -> targeted_repair ----
     # Every candidate is scored BEFORE any acceptance decision.  Selection is
@@ -3780,7 +3806,8 @@ def _retry_synth_quality_once(
             + (": " + ", ".join(required_aspects) if required_aspects else "")
             + ". Chỉ xuất JSON SynthDecision."
         )
-        targeted, targeted_usage, targeted_mode = _invoke_synth(targeted_payload)
+        with experiment.call_kind("answer_repair"):
+            targeted, targeted_usage, targeted_mode = _invoke_synth(targeted_payload)
         repair_rounds = 2
         usage = merge_usage_metadata(usage, targeted_usage) or usage
         mode = targeted_mode or mode

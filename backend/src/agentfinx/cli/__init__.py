@@ -20,6 +20,7 @@ installed entry point and routes a subcommand to it.
     agentfinx triage ...         -> evaluation.triage      (prediction errors)
     agentfinx eval-routing ...   -> evaluation.task_routing (planner task/web decisions)
     agentfinx eval-context ...   -> evaluation.chat_context (follow-up question resolver)
+    agentfinx eval-security ...  -> evaluation.security.cli (ablation checks, security pilot)
 """
 
 from __future__ import annotations
@@ -48,6 +49,7 @@ _COMMANDS: dict[str, tuple[str, bool]] = {
     "triage": ("agentfinx.evaluation.triage", True),
     "eval-routing": ("agentfinx.evaluation.task_routing", True),
     "eval-context": ("agentfinx.evaluation.chat_context", True),
+    "eval-security": ("agentfinx.evaluation.security.cli", True),
 }
 
 

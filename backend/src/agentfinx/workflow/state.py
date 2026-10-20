@@ -55,6 +55,9 @@ class GraphState(TypedDict, total=False):
     force_web_refresh: bool
     # Run start (UTC ISO): the "now" of every news window in this run.
     as_of: str
+    # Security experiment only (controlled exposure): WEB facts placed at the
+    # analysis agents' fact input after retrieval. Never set by the product.
+    controlled_web_facts: list[dict]
 
     # branch-specific input injected by Send(...)
     worker_query: str

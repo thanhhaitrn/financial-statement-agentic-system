@@ -1,0 +1,22 @@
+{
+ "note": "Human output review waived by the user; technical dev validation only.",
+ "mode": "automated_only",
+ "protocol_sha256": "7cecc0f79a0cfd4bb7a0a9c15bf9932df16eefbc05fbdaff6f7d68448e4b7fa0",
+ "waiver": {
+  "requested_by": "user",
+  "instruction": "skip bước review",
+  "recorded_at": "2026-10-20T12:21:47+00:00",
+  "scope": "Human review of dev and main model outputs only; the genuine 15-case test-source signoff remains required."
+ },
+ "entries": [
+  {
+   "dir": "artifacts/eval/security/dev-revalidate-20261020",
+   "items": 24,
+   "outputs_sha256": "b267ad7ebbcb0633223329eb7cb1761a7a1320f96c306b4bf726aba2057ba167",
+   "rubric_sha256": "410782bbfe42de12d79be6aff7cebb6a05c6dec9e22f005ad6cf78708fc31e8c",
+   "product_code_sha256": "3c579b10ea795031a0093b992edea5e1eb59850253da7a83eb664919bc7e4f02",
+   "reviewers": {},
+   "recorded_at": "2026-10-20T12:26:24+00:00"
+  }
+ ]
+}

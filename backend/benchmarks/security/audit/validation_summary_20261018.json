@@ -1,0 +1,556 @@
+{
+ "attack_set_sha256": "d2a132dfbdaca930bf6b9835520d2b1b44f41893693b65c9eb9c00950656e8d0",
+ "test_split_sha256": "5b537d43172c219cc0192865f759c96465add035a63b644d448530cfcb1f4ead",
+ "spec_sha256": "e7bd61aeb1a121fc9f205666bd8a2114f33ad9213e0960920734816d17ea24c9",
+ "deterministic_build_byte_equal": true,
+ "counts": {
+  "dev": {
+   "I1": 3,
+   "I2": 2,
+   "I3": 2,
+   "I4": 3,
+   "P1": 3,
+   "P2": 3,
+   "P3": 2,
+   "P4": 2
+  },
+  "test": {
+   "I1": 12,
+   "I2": 10,
+   "I3": 8,
+   "I4": 10,
+   "P1": 12,
+   "P2": 10,
+   "P3": 10,
+   "P4": 8
+  }
+ },
+ "companies": {
+  "nhuadanang": 12,
+  "chipsang": 13,
+  "songda": 13,
+  "ngoisaogeru": 13,
+  "traphaco": 12,
+  "suavietnam": 12,
+  "hoaphat": 12,
+  "apec": 13
+ },
+ "derived_questions": {
+  "dev": 4,
+  "test": 16
+ },
+ "changed_cases": {
+  "dev": [
+   {
+    "case_id": "P1_DPC_001",
+    "fields": [
+     "articles",
+     "attacker_target"
+    ]
+   }
+  ],
+  "test": [
+   {
+    "case_id": "I1_S72_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_VNM_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_CNC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_CCS_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_DPC_002",
+    "fields": [
+     "articles",
+     "attacker_target"
+    ]
+   },
+   {
+    "case_id": "I1_API_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_VNM_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_S72_003",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_HPG_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_CCS_003",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_CNC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I1_GER_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_S72_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_VNM_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_HPG_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_GER_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_DPC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_API_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_CNC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_CCS_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_API_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I2_S72_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_CNC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_VNM_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_GER_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_HPG_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_CCS_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_DPC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_CNC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I3_API_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_DPC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_HPG_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_VNM_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_S72_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_CCS_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_GER_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_API_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_S72_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_GER_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "I4_DPC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_HPG_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_VNM_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_CCS_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_CNC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_GER_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_CCS_003",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_API_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_VNM_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_DPC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_CNC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_S72_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P1_HPG_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_API_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_CCS_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_HPG_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_DPC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_VNM_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_S72_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_GER_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_CNC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_GER_003",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P2_S72_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_CNC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_API_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_DPC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_HPG_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_VNM_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_CCS_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_DPC_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_GER_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_API_003",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P3_S72_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_VNM_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_HPG_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_CNC_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_CCS_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_S72_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_CCS_002",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_API_001",
+    "fields": [
+     "articles"
+    ]
+   },
+   {
+    "case_id": "P4_GER_002",
+    "fields": [
+     "articles"
+    ]
+   }
+  ]
+ },
+ "freeze_ready": false,
+ "signoff_problems": [
+  "no reviewer named",
+  "I1_GER_001: not fully reviewed",
+  "I2_API_001: not fully reviewed",
+  "I2_API_002: not fully reviewed",
+  "I2_S72_002: not fully reviewed",
+  "I3_API_001: not fully reviewed",
+  "I3_DPC_001: not fully reviewed",
+  "P1_API_001: not fully reviewed",
+  "P1_DPC_002: not fully reviewed",
+  "P2_GER_002: not fully reviewed",
+  "P3_API_003: not fully reviewed",
+  "P3_CNC_001: not fully reviewed",
+  "P3_DPC_002: not fully reviewed",
+  "P3_GER_001: not fully reviewed",
+  "P4_CCS_001: not fully reviewed",
+  "P4_CNC_001: not fully reviewed"
+ ],
+ "model_calls": 0
+}

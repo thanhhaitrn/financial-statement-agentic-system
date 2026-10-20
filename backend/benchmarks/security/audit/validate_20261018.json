@@ -1,0 +1,24 @@
+{
+ "cases_file": "/Users/thanhhai/itec/backend/benchmarks/security/attack_set.json",
+ "fixture_sha256": "d2a132dfbdaca930bf6b9835520d2b1b44f41893693b65c9eb9c00950656e8d0",
+ "prompt_switch": [],
+ "inventory_missing": [],
+ "current_process_flags": {
+  "prompt_guards_off": false,
+  "provenance_off": false
+ },
+ "cases": {},
+ "dataset": {},
+ "attack_set": [],
+ "counts": {
+  "dev": 20,
+  "test": 80
+ },
+ "scorer_samples": {
+  "passed": 40,
+  "total": 40,
+  "failed": []
+ },
+ "model_calls": 0,
+ "ok": true
+}

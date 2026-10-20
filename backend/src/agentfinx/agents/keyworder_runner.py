@@ -367,6 +367,59 @@ def _upgrade_query_to_user_keyword(query: str, table: str, user_query: str) -> s
     return best
 
 
+# A margin is measured on net revenue (income-statement line 10). The router
+# model sometimes picks the gross line "Doanh thu bán hàng và cung cấp dịch vụ"
+# (line 01) as the denominator, and the agent then divides by revenue before
+# deductions. Unless the user named that line, the deductions or gross revenue,
+# a margin question's line-01 query becomes line 10.
+_MARGIN_INTENT_PATTERNS = (
+    r"\bbien\s+(?:loi\s+nhuan|gop)\b",
+    r"\bty\s+suat\s+loi\s+nhuan\b",
+    r"\bmargin\b",
+)
+_GROSS_REVENUE_INTENT_PATTERNS = (
+    r"(?<!thuan ve )\bdoanh\s+thu\s+ban\s+hang\s+va\s+cung\s+cap\s+dich\s+vu\b",
+    r"\bgiam\s+tru\s+doanh\s+thu\b",
+    r"\bdoanh\s+thu\s+gop\b",
+)
+_GROSS_REVENUE_KEYWORD = "doanh thu bán hàng và cung cấp dịch vụ"
+_NET_REVENUE_KEYWORD = "doanh thu thuần về bán hàng và cung cấp dịch vụ"
+
+
+def _margin_revenue_as_net(items: list[dict], user_query: str) -> list[dict]:
+    if not contains_intent(user_query, _MARGIN_INTENT_PATTERNS) or contains_intent(
+        user_query, _GROSS_REVENUE_INTENT_PATTERNS
+    ):
+        return list(items or [])
+
+    def net(value: Any) -> Any:
+        if " ".join(str(value or "").lower().split()) == _GROSS_REVENUE_KEYWORD:
+            return _NET_REVENUE_KEYWORD
+        return value
+
+    rewritten = []
+    for item in items or []:
+        if not isinstance(item, dict) or _table_from_route_payload(item) != TABLE_IS:
+            rewritten.append(item)
+            continue
+        new_item = dict(item)
+        for key in ("query", "queries", "requirements", "keywords"):
+            value = new_item.get(key)
+            if isinstance(value, (list, tuple)):
+                new_item[key] = _dedupe_keep_order(net(v) for v in value)
+            elif isinstance(value, str):
+                new_item[key] = net(value)
+        for key in ("canonical_queries", "search_queries", "query_metadata"):
+            value = new_item.get(key)
+            if isinstance(value, dict):
+                new_item[key] = {
+                    net(k): net(v) if isinstance(v, str) else v
+                    for k, v in value.items()
+                }
+        rewritten.append(new_item)
+    return rewritten
+
+
 def _restore_user_keywords_in_evidence_plan(evidence_plan: list[dict], user_query: str) -> list[dict]:
     restored = []
     for item in evidence_plan or []:
@@ -2894,8 +2947,11 @@ def _finalize_router_targets(
     model_authored: bool = False,
 ) -> dict:
     normalized_targets = list((worker_plan or {}).get("targets", []) or [])
-    direct_evidence_plan = _restore_user_keywords_in_evidence_plan(
-        list((worker_plan or {}).get("evidence_plan", []) or []),
+    direct_evidence_plan = _margin_revenue_as_net(
+        _restore_user_keywords_in_evidence_plan(
+            list((worker_plan or {}).get("evidence_plan", []) or []),
+            user_query,
+        ),
         user_query,
     )
     direct_analysis_plan = list((worker_plan or {}).get("analysis_plan", []) or [])
@@ -2904,7 +2960,10 @@ def _finalize_router_targets(
         for target in normalized_targets
         if _table_from_route_payload(target)
     ]
-    table_targets = _filter_optional_table_requirements(table_targets, user_query)
+    table_targets = _margin_revenue_as_net(
+        _filter_optional_table_requirements(table_targets, user_query),
+        user_query,
+    )
 
     table_targets = _merge_table_targets(table_targets)
     calculation_evidence = _calculation_operand_evidence_items(user_query)
