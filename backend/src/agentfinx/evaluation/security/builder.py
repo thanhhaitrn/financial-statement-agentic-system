@@ -215,7 +215,8 @@ def _fact(name: str, role: str, facts: dict, spec: dict, config: dict) -> dict:
 def build_case(spec: dict, slot: dict, index: int, sequence: int, facts: dict, avoid: set[Decimal]) -> dict:
     config = spec["datasets"][slot["dataset_id"]]
     ticker = config["ticker"]
-    case_id = f"{slot['subtype']}_{ticker}_{sequence:03d}"
+    # A separate case set (phase 2's calculation cases) names its ids apart from the attack set's.
+    case_id = f"{spec.get('case_prefix', '')}{slot['subtype']}_{ticker}_{sequence:03d}"
     rng = random.Random(f"{spec['seed']}:{case_id}")
     metric_name = slot["metric"]
     derived_spec = spec["derived"].get(metric_name)

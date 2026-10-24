@@ -22,6 +22,16 @@ machinery (worker processes, key failover, budget ledger) with these rules:
 - the budget is the protocol's (its own ledger, not the pilot's 300) and is
   never raised on resume; resume needs the same protocol, schedule and
   fingerprint.
+
+A ``controlled`` protocol runs the same machinery with the attack articles at
+the workers' fact input (``exposure="controlled"``). Its preflight pins the
+product version and the index to the main run's instead of checking the main
+freeze, and its fingerprint leaves out the scorer: scoring is deferred.
+
+A ``replay`` protocol (phase 2) runs the A′ configurations in the replay
+worker, one call each on the D evidence extracted from the main run. Its
+preflight needs gate G1, the pinned product and the pinned evidence (G2
+passed); no index is opened.
 """
 
 from __future__ import annotations
@@ -120,14 +130,32 @@ def preflight(protocol_path: str | Path | None = None, *, identities: dict | Non
 
     protocol, protocol_sha, path = protocol_module.load(protocol_path)
     cases = protocol_module.attack_set(protocol)
+    controlled = protocol_module.kind(protocol) in ("controlled", "l5")
+    replay = protocol_module.kind(protocol) == "replay"
     problems: list[str] = [f"protocol: {p}" for p in protocol_module.problems(protocol, cases)]
-    problems += [f"freeze: {p}" for p in freeze_module.frozen_problems(cases)]
-    problems += [f"dev review: {p}" for p in freeze_module.dev_review_problems(cases)]
-    signoff_path = cases.path.parent / "review" / "test_case_signoff.json"
-    signoff = json.loads(signoff_path.read_text(encoding="utf-8")) if signoff_path.exists() else {}
-    problems += [f"test-case review: {p}" for p in freeze_module.signoff_problems(cases, signoff)]
+    if replay:
+        pinned = protocol.get("pinned") or {}
+        if freeze_module.product_code_sha256() != pinned.get("product_code_sha256"):
+            problems.append("product: the code differs from the pinned product version")
+        problems += [f"G1: {p}" for p in protocol_module.g1_problems(protocol)]
+        problems += [f"evidence: {p}" for p in replay_evidence_problems(protocol)]
+        datasets = {}
+    elif controlled:
+        # The scoring code may change before this run is scored; what must not
+        # change is the product the main run measured and the index it read.
+        pinned = protocol.get("pinned") or {}
+        if freeze_module.product_code_sha256() != pinned.get("product_code_sha256"):
+            problems.append("product: the code differs from the pinned product version")
+        if protocol_module.kind(protocol) == "l5":
+            problems += [f"G1: {p}" for p in protocol_module.g1_problems(protocol)]
+    else:
+        problems += [f"freeze: {p}" for p in freeze_module.frozen_problems(cases)]
+        problems += [f"dev review: {p}" for p in freeze_module.dev_review_problems(cases)]
+        signoff_path = cases.path.parent / "review" / "test_case_signoff.json"
+        signoff = json.loads(signoff_path.read_text(encoding="utf-8")) if signoff_path.exists() else {}
+        problems += [f"test-case review: {p}" for p in freeze_module.signoff_problems(cases, signoff)]
     problems += [f"report {dataset}: {p}" for dataset, items in checks.check_datasets(cases).items() for p in items]
-    if datasets is None:
+    if datasets is None and not replay:
         datasets = {}
         from agentfinx.evaluation.security import readiness
 
@@ -140,14 +168,21 @@ def preflight(protocol_path: str | Path | None = None, *, identities: dict | Non
                 datasets[dataset_id] = readiness.open_read_only(dataset_id)[2]
             except Exception as exc:  # reported, never built
                 problems.append(f"index {dataset_id}: {type(exc).__name__}: {exc}")
+    if controlled:
+        pinned_datasets = (protocol.get("pinned") or {}).get("datasets") or {}
+        for dataset_id, identity in datasets.items():
+            wanted = pinned_datasets.get(dataset_id) or {}
+            if any(identity.get(key) != wanted.get(key) for key in ("dataset_generation", "index_generation")):
+                problems.append(f"index {dataset_id}: differs from the pinned main-run index")
     if identities is None:
-        identities = {config: worker_identity(config) for config in protocol["configs"]}
+        identities = {config: worker_identity(config, protocol_module.exposure(protocol))
+                      for config in protocol["configs"]}
     problems += [f"config {p}" for p in protocol_module.identity_problems(protocol, identities)]
     try:
         import statsmodels  # noqa: F401
     except ImportError:
         problems.append("statsmodels is not installed (needed for the pre-registered statistics)")
-    excluded = freeze_module.excluded(cases)
+    excluded = {} if controlled or replay else freeze_module.excluded(cases)
     return {"ok": not problems, "problems": problems, "protocol": str(path), "protocol_sha256": protocol_sha,
             "attack_set_sha256": cases.sha256, "datasets": datasets, "identities": identities,
             "dependencies": protocol_module.dependencies(), "excluded": sorted(excluded),
@@ -156,7 +191,7 @@ def preflight(protocol_path: str | Path | None = None, *, identities: dict | Non
 
 def main_fingerprint(protocol: dict, protocol_sha: str, check: dict, schedule: list[dict]) -> dict:
     identities = check["identities"]
-    sample = identities["D"]
+    sample = identities["D"] if "D" in identities else identities[sorted(identities)[-1]]
     payload = {
         "protocol_sha256": protocol_sha,
         "attack_set_sha256": check["attack_set_sha256"],
@@ -172,7 +207,58 @@ def main_fingerprint(protocol: dict, protocol_sha: str, check: dict, schedule: l
         "budget": int(protocol["budget"]["model_calls"]), "seed": int(protocol["schedule"]["seed"]),
         "schedule_sha256": stable_json_fingerprint(schedule),
     }
+    if protocol_module.kind(protocol) in ("controlled", "l5"):
+        # Scoring is a later, versioned step: the scorer is not part of what
+        # the answers were made with, so changing it never blocks a resume.
+        del payload["scorer_version"]
+        payload.update(exposure=protocol_module.exposure(protocol),
+                       product_code_sha256=(protocol.get("pinned") or {}).get("product_code_sha256"))
+    if protocol_module.kind(protocol) == "replay":
+        from agentfinx.evaluation.security.replay_worker import code_sha256
+
+        del payload["scorer_version"]
+        payload.update(exposure="replay",
+                       product_code_sha256=(protocol.get("pinned") or {}).get("product_code_sha256"),
+                       replay_code_sha256=code_sha256(),
+                       evidence_summary_sha256=protocol["evidence"]["summary_sha256"])
     return {"sha256": stable_json_fingerprint(payload), "payload": payload}
+
+
+def evidence_dir(protocol: dict) -> Path:
+    """The extraction directory, relative to the backend or the repository root."""
+
+    from agentfinx.evaluation import benchmarks
+
+    name = Path(protocol["evidence"]["dir"])
+    if name.is_absolute():
+        return name
+    project = benchmarks.paths.project_root()
+    options = [project / name, project.parent / name, Path.cwd() / name]
+    return next((path for path in options if path.exists()), options[1])
+
+
+def replay_evidence(protocol: dict) -> dict[tuple[str, str], Path]:
+    """The extracted D evidence of each (case, condition)."""
+
+    root = evidence_dir(protocol)
+    summary = json.loads((root / "summary.json").read_text(encoding="utf-8"))
+    return {(row["case_id"], row["condition"]): root / "runs" / f"{row['run_id']}.json" for row in summary["rows"]}
+
+
+def replay_evidence_problems(protocol: dict) -> list[str]:
+    root = evidence_dir(protocol)
+    summary_path = root / "summary.json"
+    if not summary_path.is_file():
+        return [f"no extracted evidence at {root}"]
+    if hashlib.sha256(summary_path.read_bytes()).hexdigest() != protocol["evidence"]["summary_sha256"]:
+        return ["summary.json differs from the pinned extraction"]
+    summary = json.loads(summary_path.read_text(encoding="utf-8"))
+    found = [] if summary.get("g2") == "pass" else ["gate G2 did not pass"]
+    files = replay_evidence(protocol)
+    wanted = {(case_id, condition) for case_id in protocol["case_ids"] for condition in protocol["conditions"]}
+    found += [f"{case_id}/{condition}: no evidence file" for case_id, condition in sorted(wanted)
+              if not files.get((case_id, condition), Path("/nonexistent")).is_file()]
+    return found
 
 
 # --- runner -------------------------------------------------------------------
@@ -186,7 +272,7 @@ class MainRun(Pilot):
         super().__init__(out_dir, cases, case_ids=list(protocol["case_ids"]),
                          budget=int(protocol["budget"]["model_calls"]), run_timeout=run_timeout, keys=keys,
                          retry_exhausted_keys=retry_exhausted_keys, configs=tuple(protocol["configs"]),
-                         conditions=tuple(protocol["conditions"]))
+                         conditions=tuple(protocol["conditions"]), exposure=protocol_module.exposure(protocol))
         self.protocol, self.protocol_sha, self.protocol_path = protocol, protocol_sha, path
         self.seed = int(protocol["schedule"]["seed"])
         self.preflight_fn = preflight_fn or (lambda: preflight(path))
@@ -194,7 +280,12 @@ class MainRun(Pilot):
         self.prompt_index = PromptIndex(self.prompt_log_path)
 
     def schedule(self) -> list[dict]:
-        return main_schedule(self.case_ids, self.configs, self.conditions, seed=self.seed)
+        full = main_schedule(self.case_ids, self.configs, self.conditions, seed=self.seed)
+        if self.protocol.get("cells"):
+            # A correction run: only the listed cells, in the seeded order.
+            wanted = {(c["case_id"], c["config"], c["condition"]) for c in self.protocol["cells"]}
+            return [item for item in full if (item["case_id"], item["config"], item["condition"]) in wanted]
+        return full
 
     # --- manifest -------------------------------------------------------------
     def prepare(self, *, fingerprint_value: dict | None = None) -> dict:
@@ -225,7 +316,7 @@ class MainRun(Pilot):
             "experiment": self.protocol["experiment"],
             "created_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
             "protocol": str(self.protocol_path), "protocol_sha256": self.protocol_sha,
-            "seed": self.seed, "exposure": "natural",
+            "kind": protocol_module.kind(self.protocol), "seed": self.seed, "exposure": self.exposure,
             "case_ids": self.case_ids, "configs": {name: self.protocol["configs"][name] for name in self.configs},
             "conditions": list(self.conditions), "repetition": 0,
             "schedule": schedule, "budget": self.budget, "pilot_env": self.protocol["environment"],
@@ -245,6 +336,11 @@ class MainRun(Pilot):
 
     def _spec(self, item: dict, attempt: int) -> dict:
         spec = super()._spec(item, attempt)
+        if protocol_module.kind(self.protocol) == "replay":
+            path = replay_evidence(self.protocol)[(item["case_id"], item["condition"])]
+            spec.update(repetition=int(item.get("repetition", 0)), evidence_path=str(path),
+                        evidence_run_id=path.stem, evidence_sha256=hashlib.sha256(path.read_bytes()).hexdigest())
+            return spec
         manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
         dataset_id = self.cases.case(item["case_id"])["dataset_id"]
         spec.update(repetition=int(item.get("repetition", 0)), index_mode="read_only",

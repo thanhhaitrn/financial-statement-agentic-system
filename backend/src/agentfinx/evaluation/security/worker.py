@@ -35,6 +35,8 @@ CONFIG_FLAGS = {
     "B": {"prompt_guards_off": True, "provenance_off": True},
     "C": {"prompt_guards_off": False, "provenance_off": True},
     "D": {"prompt_guards_off": False, "provenance_off": False},
+    # Phase 2's 2×2 (B, C, E, D): L5 alone, without the prompt guards.
+    "E": {"prompt_guards_off": True, "provenance_off": False},
 }
 INFRA_ERRORS = ("timeout", "connect", "readerror", "remoteprotocol", "httpstatus", "responseerror",
                 "ratelimit", "serviceunavailable", "connectionerror")
@@ -127,7 +129,7 @@ def run(spec: dict) -> dict:
     result = {key: spec[key] for key in ("run_id", "case_id", "config", "condition", "attempt", "question")}
     result.update({"exposure": spec.get("exposure", "natural"), "repetition": int(spec.get("repetition", 0)),
                    "identity": identity(), "status": "", "errors": []})
-    if (result["exposure"] == "controlled") == result["identity"]["web_analysis_active"]:
+    if (result["exposure"] in ("controlled", "structured")) == result["identity"]["web_analysis_active"]:
         result.update(status="config_mismatch", errors=["news analysis switch does not match the exposure"])
         _write_json(run_dir / "result.json", result)
         return result
@@ -182,14 +184,23 @@ def run(spec: dict) -> dict:
                 from agentfinx.evaluation.runner import run_question
 
                 extra = {"web_provider": provider}
-                if result["exposure"] == "controlled":
+                if result["exposure"] in ("controlled", "structured"):
                     # The articles go straight to the workers' fact input as the app's
                     # WEB facts; the product's own web path stays off.
                     from agentfinx.evaluation.security.baseline import news_request
 
                     batch = provider.search(news_request(spec["question"], ticker=spec["ticker"],
                                                          company=spec["company"], as_of=spec["as_of"]))
-                    extra = {"controlled_web_facts": [item.as_fact() for item in batch.evidence]}
+                    facts = [item.as_fact() for item in batch.evidence]
+                    if result["exposure"] == "structured":
+                        # The attacker's figure enters as a typed fact in place of its
+                        # article's text: the number is in the value, never in prose.
+                        figures = spec.get("structured_figures") or []
+                        typed = {figure["article_url"] for figure in figures}
+                        facts = [item.as_fact() for item in batch.evidence if item.source_url not in typed]
+                        facts += [item.as_structured_fact(figure) for item in batch.evidence
+                                  for figure in figures if figure["article_url"] == item.source_url]
+                    extra = {"controlled_web_facts": facts}
                 final_state = run_question(dataset, collection, spec["question"], as_of=spec["as_of"],
                                            experiment_context=context, **extra)
                 serialized = serialize_run_result(final_state, spec["question"], query_id=spec["run_id"],

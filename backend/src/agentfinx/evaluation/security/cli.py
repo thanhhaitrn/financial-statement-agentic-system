@@ -366,11 +366,78 @@ def run_main(args) -> int:
     log(f"Ollama credential failover: {len(keys)} unique configured keys (values never logged)")
     status = runner.run(log=log)
     log(json.dumps({key: value for key, value in status.items() if key != "missing"}, indent=1))
-    from agentfinx.evaluation.security.main_report import score_main
+    if (runner.protocol.get("scoring") or {}).get("mode") == "deferred":
+        log("scoring deferred by the protocol: answers collected, not scored")
+    else:
+        from agentfinx.evaluation.security.main_report import score_main
 
-    _offline(score_main, out)
-    log(f"provisional report: {out / 'main_report.md'}")
+        _offline(score_main, out)
+        log(f"provisional report: {out / 'main_report.md'}")
     return 3 if status.get("stopped") == "all_keys_exhausted" else 0
+
+
+def ai_review_packet(args) -> int:
+    """The blind packet of the ambiguous answers, for an AI reviewer."""
+
+    from agentfinx.evaluation.security import ai_review
+
+    path, count = _offline(ai_review.build_packet, Path(args.out))
+    print(json.dumps({"packet": str(path), "items": count}, ensure_ascii=False))
+    return 0
+
+
+def ai_review_record(args) -> int:
+    """Check and store an AI's labels (a sensitivity analysis, not a human review)."""
+
+    from agentfinx.evaluation.security import ai_review
+
+    submitted = json.loads(Path(args.labels).read_text(encoding="utf-8"))
+    stored = _offline(ai_review.record, Path(args.out), submitted)
+    print(json.dumps({"items": len(stored["items"]), "reviewer": stored["reviewer"]}, ensure_ascii=False))
+    return 0
+
+
+def human_review_packet(args) -> int:
+    """The blind phase-2 sample for two human reviewers (no model call)."""
+
+    from agentfinx.evaluation.security import human_review
+
+    summary = _offline(human_review.build_packet, Path(args.out), Path(args.main), Path(args.controlled))
+    print(json.dumps(summary, ensure_ascii=False))
+    return 0
+
+
+def human_review_record(args) -> int:
+    """Two human reviewers' labels: agreement, disagreements and, once adjudicated, the scorer check."""
+
+    from agentfinx.evaluation.security import human_review
+
+    result = _offline(human_review.record, Path(args.out), Path(args.first), Path(args.second),
+                      names=(args.first_name, args.second_name), kinds=(args.first_kind, args.second_kind),
+                      adjudication=Path(args.adjudication) if args.adjudication else None)
+    print(json.dumps({"kind": result["kind"], "items": result["items"], "disagreements": result["disagreements"],
+                      "adjudicated": "final_labels" in result}, ensure_ascii=False))
+    return 0
+
+
+def replay_extract(args) -> int:
+    """Phase 2 gate G2: the D runs' evidence before and after analysis (no model call)."""
+
+    from agentfinx.evaluation.security import replay
+
+    summary = _offline(replay.extract, Path(args.main), Path(args.out))
+    print(json.dumps({key: summary[key] for key in ("g2", "runs", "pre_extracted", "post_extracted")}))
+    print(f"report: {Path(args.out) / 'G2.md'}")
+    return 0 if summary["g2"] == "pass" else 1
+
+
+def sensitivity(args) -> int:
+    from agentfinx.evaluation.security.sensitivity import sensitivity as run_sensitivity
+
+    result = _offline(run_sensitivity, Path(args.out))
+    print(f"{result['ai_labelled_answers']} answers with AI labels; report: "
+          f"{Path(args.out) / 'sensitivity_ai_review.md'}")
+    return 0
 
 
 def score(args) -> int:
@@ -445,6 +512,29 @@ def main(argv: list[str] | None = None) -> int:
     p_score.add_argument("--cases", default=None)
     p_score.add_argument("--final", action="store_true",
                          help="main experiment: the final report; refuses while required review is missing")
+    p_aip = sub.add_parser("ai-review-packet", help="blind packet of a main run's ambiguous answers for an AI")
+    p_aip.add_argument("--out", required=True, help="the main run directory")
+    p_air = sub.add_parser("ai-review-record", help="check and store an AI's labels (never a human review)")
+    p_air.add_argument("--out", required=True, help="the main run directory")
+    p_air.add_argument("--labels", required=True, help="JSON: reviewer + items with labels and reasons")
+    p_sens = sub.add_parser("sensitivity", help="metrics again with the AI labels (sensitivity analysis)")
+    p_sens.add_argument("--out", required=True, help="the main run directory")
+    p_hrp = sub.add_parser("human-review-packet", help="phase 2: blind sample for two human reviewers")
+    p_hrp.add_argument("--out", required=True, help="new directory for the packet")
+    p_hrp.add_argument("--main", default="artifacts/eval/security/main-20261020")
+    p_hrp.add_argument("--controlled", default="artifacts/eval/security/controlled-L5-20261023")
+    p_hrr = sub.add_parser("human-review-record", help="phase 2: agreement and scorer check of two humans")
+    p_hrr.add_argument("--out", required=True, help="the packet directory")
+    p_hrr.add_argument("--first", required=True, help="reviewer 1 sheet (xlsx or csv)")
+    p_hrr.add_argument("--second", required=True, help="reviewer 2 sheet (xlsx or csv)")
+    p_hrr.add_argument("--first-name", required=True)
+    p_hrr.add_argument("--second-name", required=True)
+    p_hrr.add_argument("--first-kind", required=True, choices=("human", "ai"))
+    p_hrr.add_argument("--second-kind", required=True, choices=("human", "ai"))
+    p_hrr.add_argument("--adjudication", default=None, help="adjudication CSV with decision and reason")
+    p_rex = sub.add_parser("replay-extract", help="phase 2: D evidence before/after analysis, gate G2")
+    p_rex.add_argument("--main", default="artifacts/eval/security/main-20261020")
+    p_rex.add_argument("--out", required=True, help="new directory for the extracted evidence")
     p_pre = sub.add_parser("preflight", help="check every precondition of the main run (no model call)")
     p_pre.add_argument("--protocol", default=None)
     p_pre.add_argument("--out", default=None, help="also write preflight.json here")
@@ -473,6 +563,18 @@ def main(argv: list[str] | None = None) -> int:
         return exclude(args)
     if args.command == "dev-review":
         return dev_review(args)
+    if args.command == "ai-review-packet":
+        return ai_review_packet(args)
+    if args.command == "ai-review-record":
+        return ai_review_record(args)
+    if args.command == "sensitivity":
+        return sensitivity(args)
+    if args.command == "replay-extract":
+        return replay_extract(args)
+    if args.command == "human-review-packet":
+        return human_review_packet(args)
+    if args.command == "human-review-record":
+        return human_review_record(args)
     if args.command == "preflight":
         return preflight(args)
     if args.command == "run":

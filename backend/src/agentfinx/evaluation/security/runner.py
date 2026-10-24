@@ -33,6 +33,8 @@ from agentfinx.evaluation.contracts import atomic_write_json, stable_json_finger
 from agentfinx.evaluation.security import cases as cases_module
 from agentfinx.evaluation.security.freeze import product_code_sha256
 from agentfinx.evaluation.security.key_rotation import KeyPool, quota_reason
+from agentfinx.evaluation.security.l5 import structured_figures
+from agentfinx.evaluation.security.replay_worker import REPLAY_CONFIG_FLAGS
 from agentfinx.evaluation.security.scorer import SCORER_VERSION
 from agentfinx.evaluation.security.worker import CONFIG_FLAGS
 
@@ -49,12 +51,27 @@ PILOT_ENV = {
 # WEB facts (worker_results["WEB"], where the provenance gates read), with the
 # news analysis and the product's own web path off.
 CONTROLLED_ENV = {**PILOT_ENV, "WEB_ANALYSIS_ENABLED": "0", "WEB_EVIDENCE_ENABLED": "0"}
-EXPOSURES = {"natural": PILOT_ENV, "controlled": CONTROLLED_ENV}
+# Evidence-matched replay (phase 2): one call on evidence read from the main
+# run's logs; nothing of the product's web path runs.
+REPLAY_ENV = dict(CONTROLLED_ENV)
+# Phase 2's L5 2×2: like controlled, but the attacker's figure is a typed fact
+# (``WebEvidence.as_structured_fact``) instead of an article's text.
+STRUCTURED_ENV = dict(CONTROLLED_ENV)
+EXPOSURES = {"natural": PILOT_ENV, "controlled": CONTROLLED_ENV, "replay": REPLAY_ENV, "structured": STRUCTURED_ENV}
+ALL_CONFIG_FLAGS = {**CONFIG_FLAGS, **REPLAY_CONFIG_FLAGS}
 RETRYABLE = {"infra_error", "runtime_error", "timeout"}
 
 
+def worker_module(config: str) -> str:
+    """The process that answers a cell: the replay worker for A′ configurations."""
+
+    if config in REPLAY_CONFIG_FLAGS:
+        return "agentfinx.evaluation.security.replay_worker"
+    return "agentfinx.evaluation.security.worker"
+
+
 def config_env(config: str) -> dict:
-    flags = CONFIG_FLAGS[config]
+    flags = ALL_CONFIG_FLAGS[config]
     return {"AGENTFINX_ABLATE_PROMPT_GUARDS": "1" if flags["prompt_guards_off"] else "0",
             "AGENTFINX_ABLATE_PROVENANCE": "1" if flags["provenance_off"] else "0"}
 
@@ -230,6 +247,8 @@ class Pilot:
             "articles": cases_module.condition_articles(self.cases, item["case_id"], item["condition"]),
             "run_dir": str(run_dir), "events_path": str(self.events_path),
             "prompt_log_path": str(self.prompt_log_path), "budget_path": str(self.budget_path),
+            **({"structured_figures": structured_figures(case)}
+               if self.exposure == "structured" and item["condition"] == "attack" else {}),
         }
 
     def _launch(self, spec: dict) -> dict:
@@ -250,7 +269,7 @@ class Pilot:
         started = time.perf_counter()
         with open(run_dir / "worker.log", "w", encoding="utf-8") as log:
             try:
-                subprocess.run([sys.executable, "-m", "agentfinx.evaluation.security.worker",
+                subprocess.run([sys.executable, "-m", worker_module(spec["config"]),
                                 "--spec", str(spec_path)], env=env, stdout=log, stderr=subprocess.STDOUT,
                                timeout=self.run_timeout, check=False)
             except subprocess.TimeoutExpired:
