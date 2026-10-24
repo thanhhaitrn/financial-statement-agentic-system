@@ -65,6 +65,29 @@ agentfinx batch --web-entry --queries-file …        # đi qua planner của ch
 
 ### Chạy song song nhiều khóa
 
+Pilot bảo mật có cơ chế đổi key riêng ngay trong runner. Lệnh dưới tiếp tục đúng
+thư mục kết quả, ưu tiên key đang hoạt động rồi dùng các key dự phòng trong
+`FINX_HOME/.env` khi Ollama báo quota:
+
+```bash
+agentfinx eval-security pilot --allow-live --out artifacts/eval/security/<pilot-id> --budget 300 --include-commented-keys
+```
+
+`--keys-file` chọn file key khác. Mặc định chỉ đọc dòng `OLLAMA_API_KEY=` đang bật;
+`--include-commented-keys` cho phép dùng cả dòng `# OLLAMA_API_KEY=` làm dự phòng.
+Runner dùng chung bộ đọc key với `scripts/run_rotate.py`, loại key trùng, không sửa
+`.env` và chỉ truyền secret qua môi trường worker. Key được giữ cố định trong mỗi
+lượt QA. Quota tạo attempt mới trên key kế tiếp; kết quả thành công không chạy lại.
+Lỗi mạng thông thường chỉ thử lại một lần trên cùng key, không kích hoạt đổi key.
+
+Mọi attempt vẫn tính vào cùng ngân sách 300 lần gọi. Hết key thì dừng với
+`all_keys_exhausted` (exit code 3), giữ kết quả và trạng thái key để resume. Khi quota
+đã được nhà cung cấp cấp lại, dùng `--retry-exhausted-keys` để thử lại các key cũ;
+cờ này không đặt lại ngân sách. Có thể thêm key mới vào file rồi resume mà không
+thử lại key đã hết quota. Không chạy đồng thời hai runner trong cùng thư mục.
+Thay đổi chính sách điều phối được ghi ở `orchestration.jsonl`, tách khỏi fingerprint
+model/prompt để không làm mất hiệu lực các câu trả lời đã hoàn tất.
+
 Mỗi `OLLAMA_API_KEY` có quota riêng, nên có thể chia seed thành nhiều shard, mỗi shard một khóa
 và một file output riêng.
 

@@ -1,0 +1,62 @@
+{
+ "kind": "g1_freeze",
+ "gate": "G1",
+ "recorded_at": "2026-10-24T12:18:07+00:00",
+ "rubric": {
+  "path": "benchmarks/security/RUBRIC_v3.4.md",
+  "sha256": "df7c3bbe14ce9998aa43c49ebbce84669dab2cf6145f7a94852f14b8a07a2250",
+  "draft_sha256": "96ccee86f272a2c72d73d841a7cb3203c3bdd6a3fd38241ec0078f187b003e66",
+  "revisions_after_review": 1
+ },
+ "scorer": {
+  "version": "security-scorer-v3.4",
+  "path": "analysis/security_scorer_v34/scorer.py",
+  "sha256": "8ee9bf64b5ce216ec94ecf427f599bec7f6bb9a3cba6df20b0141c785fef6a07",
+  "package_sha256": {
+   "__init__.py": "b50d138fa438c004ee2bc1c172461e12f93a2eb432c37677c3eaaeb407d6783c",
+   "replay_report.py": "597770d51f2f3ad22ea0cfb1a0ca658b0d5143c02ac67a51b7bac327c17e06ae",
+   "rescore.py": "e0b3a79e60bb45899f1ec7e9598467addd2ae723822a62601eab161691c04561",
+   "scorer.py": "8ee9bf64b5ce216ec94ecf427f599bec7f6bb9a3cba6df20b0141c785fef6a07",
+   "test_scorer.py": "73a961afeed5c071b509c84cd72961ab8259e197103a83633700c5c35bd125f9",
+   "validate.py": "c0a212ec423947bf58c47643d3391f2a26fda9e7ac89be46db386a645f58a5be"
+  },
+  "location_note": "ngoài src/agentfinx nên product_code_sha256 không đổi (3c579b10…)"
+ },
+ "validation": {
+  "packet": "artifacts/eval/security/phase2/human-review-20261024",
+  "record": "ai_review.json",
+  "record_sha256": "f8c400e510f1ee2d8eb573e2dc38948928567588936b42f7bf2e704deac8549f",
+  "adjudication_sha256": "52bdba8162877bd616685ec83068ee9c9ba42219658401957df79c60b3b04fa9",
+  "kind": "ai_review",
+  "counts_as_human_validation": false,
+  "reviewers": [
+   "Codex (AI)",
+   "Claude, 3 subagent mù (AI)"
+  ],
+  "adjudicator": "Claude (AI, phiên chính; không mở private/key.json khi phân xử)",
+  "items": 110,
+  "disagreements": 19,
+  "scorer_kappa_vs_adjudicated": {
+   "v3.3": {
+    "report_correct": 0.945,
+    "adopted_target": 0.657,
+    "refused": 0.655,
+    "conflict_flagged": 0.359,
+    "summary_asserts": 0.467
+   },
+   "v3.4_fitted": {
+    "report_correct": 0.882,
+    "adopted_target": 0.903,
+    "refused": 0.794,
+    "conflict_flagged": 0.538,
+    "summary_asserts": 0.649
+   }
+  },
+  "decision_rule": "nhãn có kappa scorer–nhãn đã phân xử < 0,6 (conflict_flagged) dùng nhãn đã phân xử cho câu đã chấm"
+ },
+ "deviation": "Protocol đăng ký hai người chấm độc lập. Theo yêu cầu của nhóm, cả hai reviewer là AI và người phân xử là AI. Không được gọi là kiểm chứng bằng người; paper phải ghi rõ.",
+ "main_rescore": {
+  "dir": "artifacts/eval/security/main-20261020/rescore-v3.4-20261024",
+  "scores_sha256": "72fc4badbc1f4d344d225837dc365a46c5418b4ceece2e19eac56c7a0ff3a3f0"
+ }
+}

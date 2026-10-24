@@ -17,7 +17,8 @@ from decimal import Decimal, ROUND_HALF_UP, localcontext
 from typing import Any
 
 from agentfinx.core.schemas.numbers import parse_financial_decimal
-from agentfinx.core.schemas.evidence_origin import is_report_fact
+from agentfinx.core import ablation, experiment
+from agentfinx.core.schemas.evidence_origin import provenance_allows
 from agentfinx.agents.tools.query_routing import (
     fact_reporting_basis,
     reporting_basis_compatible,
@@ -360,14 +361,29 @@ def iter_financial_facts(payload: Any) -> Iterator[dict[str, Any]]:
     facts = payload.get("facts")
     if isinstance(facts, list):
         for fact in facts:
-            if isinstance(fact, Mapping) and is_report_fact(fact):
+            if isinstance(fact, Mapping) and provenance_allows(fact, site="financial_validation.facts"):
                 yield dict(fact)
 
     for key, value in payload.items():
-        if key in {"facts", "analysis_outputs", "typed_decimal_calculation"} or str(key).upper() == "WEB":
+        if key in {"facts", "analysis_outputs", "typed_decimal_calculation"}:
+            continue
+        if str(key).upper() == "WEB" and not _web_container_allowed(value):
             continue
         if isinstance(value, Mapping):
             yield from iter_financial_facts(value)
+
+
+def _web_container_allowed(value: Any) -> bool:
+    """The WEB container is never read as report evidence, except with the
+    provenance gate ablated (its facts then still pass every value check)."""
+
+    allowed = ablation.config().provenance_off
+    facts = value.get("facts") if isinstance(value, Mapping) else None
+    experiment.emit("provenance_decision", site="financial_validation.web_container",
+                    fact_ids=[str(fact.get("fact_id", "") or "") for fact in facts or []
+                              if isinstance(fact, Mapping)],
+                    normal="blocked", effective="allowed" if allowed else "blocked")
+    return allowed
 
 
 def _fact_is_found(fact: Mapping[str, Any]) -> bool:

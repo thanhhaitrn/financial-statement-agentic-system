@@ -2,6 +2,7 @@
 # Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
 
 from agentfinx.agents.agent_registry import ANALYSIS_AGENT_ORDER, analysis_aspect_headings
+from agentfinx.core.ablation import guard
 
 
 def _analysis_answer_format_guidance() -> str:
@@ -12,7 +13,7 @@ def _analysis_answer_format_guidance() -> str:
             - Không bắt đầu bằng heading khía cạnh hoặc heading đánh số dạng "**số. tên khía cạnh**".
             - Bắt đầu trực tiếp bằng các số liệu, công thức và kết quả chính dạng bullet "- ...".
             - Khi nêu số liệu quan trọng, ghi rõ nguồn/bảng trong ngoặc, ví dụ "(BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH)".
-            - WEB facts chỉ là bối cảnh định tính, không phải toán hạng phép tính BCTC. Khi dùng một WEB fact, trích `[publisher](source_url)` ngay tại nhận xét liên quan.
+            - __WEB_RULE_ANALYSIS__Khi dùng một WEB fact, trích `[publisher](source_url)` ngay tại nhận xét liên quan.
             - Fact từ THUYẾT MINH BÁO CÁO TÀI CHÍNH luôn được hiểu là dữ liệu đi kèm một line item/khoản mục chính, không phải một chỉ tiêu độc lập.
             - Nếu input có ít nhất một `note_detail` liên quan đến line item đang phân tích, PHẢI chọn ít nhất một chi tiết có ý nghĩa và gắn nó với đúng line item trong bullet hoặc phần "*Nhận xét*:" để giải thích cơ cấu, mức tập trung, bản chất, kỳ hạn, bảo đảm, chính sách hoặc rủi ro; không liệt kê note như một số liệu rời và không gọi chi tiết note là nguyên nhân nếu note chỉ mô tả cơ cấu.
             - Khi dùng chi tiết đó, viết rõ quan hệ cha-con theo dạng "Theo Thuyết minh [note_ref], trong [line item cha] có ..."; chỉ chọn chi tiết có ý nghĩa cho nhận định, không chép toàn bộ note.
@@ -179,6 +180,15 @@ def _build_efficiency_system_instruction() -> str:
 # analysis agent updates every prompt instead of leaving one list behind.
 _PROMPT_REGISTRY_TOKENS = {
     "__ANALYSIS_AGENT_LIST__": ", ".join(ANALYSIS_AGENT_ORDER),
+    # WEB operand rules: named guard blocks the security ablation removes.
+    "__WEB_RULE_ANALYSIS__": guard(
+        "prompt.web_rule.analysis_profile",
+        "WEB facts chỉ là bối cảnh định tính, không phải toán hạng phép tính BCTC. ",
+    ),
+    "__WEB_RULE_SYNTH__": guard(
+        "prompt.web_rule.synth_profile",
+        "WEB facts chỉ dùng làm bối cảnh định tính, KHÔNG làm toán hạng cho phép tính BCTC. ",
+    ),
     "__ASPECT_HEADING_BLOCK__": "\n".join(
         f"              {heading} cho {agent}"
         for heading, agent in zip(analysis_aspect_headings(), ANALYSIS_AGENT_ORDER)
@@ -434,7 +444,7 @@ AGENT_PROFILES = {
 __ASPECT_HEADING_BLOCK__
             - Nếu câu hỏi chỉ liên quan một vài khía cạnh, chỉ trình bày các khía cạnh đó và giữ số thứ tự liên tục.
             - Trong mỗi khía cạnh: bullet số liệu/công thức/kết quả, ghi nguồn/bảng trong ngoặc, rồi dòng "*Nhận xét*:" với các bullet ngắn.
-            - WEB facts chỉ dùng làm bối cảnh định tính, KHÔNG làm toán hạng cho phép tính BCTC. Nếu dùng WEB fact, đặt citation Markdown `[publisher](source_url)` ngay trong section khía cạnh liên quan; không đưa citation WEB vào Tóm tắt đánh giá hoặc section không liên quan.
+            - __WEB_RULE_SYNTH__Nếu dùng WEB fact, đặt citation Markdown `[publisher](source_url)` ngay trong section khía cạnh liên quan; không đưa citation WEB vào Tóm tắt đánh giá hoặc section không liên quan.
             - Không tạo bảng nếu câu trả lời không cần so sánh nhiều cột; ưu tiên bullet rõ ràng như ví dụ người dùng đưa.
             - KHÔNG dùng mục "**Kết luận tổng thể**" cố định ở cuối; các kết luận đã nằm ở "**Tóm tắt đánh giá**" đầu bài.
             - Cuối bài CHỈ khi có dữ liệu thiếu hoặc rủi ro THẬT SỰ ảnh hưởng kết luận thì thêm mục "**Điểm cần theo dõi**" (bullet ngắn); không có thì bỏ hẳn. TUYỆT ĐỐI KHÔNG tạo mục "Giới hạn bằng chứng" cố định.

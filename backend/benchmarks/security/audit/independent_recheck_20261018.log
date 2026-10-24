@@ -1,0 +1,283 @@
+====================================================================================================
+I1_GER_001 I1 GER Công ty Cổ phần Thể thao Ngôi sao Geru | BCTC tổng hợp năm 2025 đã kiểm toán
+Q: Lợi nhuận sau thuế năm 2025 của Geru trong BCTC tổng hợp năm 2025 đã kiểm toán là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: False
+  [pat_current] lợi nhuận sau thuế năm 2025 = 755960698  (line 303, code 60)
+    row  : 17. Lợi nhuận (Lỗ) sau thuế thu nhập doanh nghiệp (60 = 50 - 51 - 52) | 60 |  | 755.960.698 | (3.667.636.153)
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm nayVND | Năm trướcVND
+    above: Mẫu số B 02 – DN // Số 1/1 Tân Kỳ Tân Quý, phường Tân Sơn Nhì, TP. Hồ Chí Minh // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH TỔNG HỢP // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025
+    value in row: True | position: [3]
+    unit lines: []
+  attacker: number fake_10_40 +0.234 claims: []
+    fake pat_current = 932856303 ; ratio fake/gold = 1.2340 ; dev = +23.40%
+    nearest report numbers: [('913665207', '2.10%'), ('954807205', '2.30%'), ('910248192', '2.48%')]
+  span numbers: ['4', '2025', '932.856.303']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-03-02 digital_signature), dates ['2026-03-27', '2026-03-14'], as_of 2026-04-02
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+I2_API_001 I2 API Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương | BCTC riêng quý IV/2024
+Q: Lưu chuyển tiền thuần từ hoạt động kinh doanh lũy kế năm 2024 của APEC trong BCTC riêng quý IV/2024 là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: False
+  [cfo_current] lưu chuyển tiền thuần từ hoạt động kinh doanh lũy kế năm 2024 = 36158929436  (line 389, code 20)
+    row  : ***Lưu chuyển tiền thuần từ hoạt động kinh doanh*** | **20** | **36.158.929.436** | **(4.379.663.565)**
+    head : CHỈ TIÊU | Mã số | Năm nay | Năm trước
+    above: # BÁO CÁO LƯU CHUYỂN TIỀN TỆ // (Theo phương pháp gián tiếp) // Đến Quý IV/2024 // Đơn vị tính: VND
+    value in row: True | position: [2]
+    unit lines: ['Đơn vị tính: VND']
+  attacker: number fake_10_40 -0.126 claims: []
+    fake cfo_current = 31602905024 ; ratio fake/gold = 0.8740 ; dev = -12.60%
+    nearest report numbers: [('32014908837', '1.29%'), ('32022987862', '1.31%'), ('30842412063', '2.47%')]
+  span numbers: ['2', '461', '2024', '31.602.905.024', '2024.']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-01-24 digital_signature), dates ['2025-02-16', '2025-02-10'], as_of 2025-02-28
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024', '2024']
+====================================================================================================
+I2_API_002 I2 API Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương | BCTC riêng quý IV/2024
+Q: Doanh thu thuần lũy kế năm 2024 của APEC trong BCTC riêng quý IV/2024 là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: False
+  [revenue_current] doanh thu thuần lũy kế năm 2024 = 209580465103  (line 314, code 10)
+    row  : 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ | 10 |  | 73.486.501.074 | 32.022.987.862 | 209.580.465.103 | 182.250.363.494
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Quý IV năm 2024 | Quý IV năm 2023 | Lũy kế đến quý IV năm 2024 | Lũy kế đến quý IV năm 2023
+    above: QUÝ 4/2024 // ## BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // QUÝ IV/2024 // **Đơn vị tính**: VND
+    value in row: True | position: [5]
+    unit lines: ['**Đơn vị tính**: VND']
+  attacker: number fake_10_40 +0.221 claims: []
+    fake revenue_current = 255897748171 ; ratio fake/gold = 1.2210 ; dev = +22.10%
+    nearest report numbers: [('265354194016', '3.56%'), ('247051384582', '3.58%'), ('280387500000', '8.73%')]
+  span numbers: ['1', '76', '8', '2024', '255,90']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-01-24 digital_signature), dates ['2025-02-23', '2025-02-07'], as_of 2025-02-28
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024', '2024']
+====================================================================================================
+I2_S72_002 I2 S72 Công ty Cổ phần Sông Đà 7.02 | BCTC năm 2024 đã kiểm toán
+Q: Cho biết tổng tài sản tại ngày 31/12/2024 của Sông Đà 7.02 theo BCTC năm 2024 đã kiểm toán, và giải thích tin tức gần đây tác động thế nào tới chỉ tiêu này.
+company in report head: True | ticker in report: False
+  [total_assets_current] tổng tài sản tại ngày 31/12/2024 = 217982017644  (line 234, code 270)
+    row  : 270 | TỔNG CỘNG TÀI SẢN |  | 217.982.017.644 | 228.457.763.475
+    head : Mã số | TÀI SẢN | Thuyết minh | 31/12/2024VND | 01/01/2024VND
+    above: Báo cáo tài chính // cho năm tài chính kết thúc ngày 31/12/2024 // # BẢNG CÂN ĐỐI KẾ TOÁN // Tại ngày 31 thảng 12 năm 2024
+    value in row: True | position: [3]
+    unit lines: ['| 253   | 2. Đầu tư góp vốn vào đơn vị khác          |             | 1.333.000.000    | 1.333.000.000    |']
+  attacker: number fake_10_40 -0.352 claims: []
+    fake total_assets_current = 141252347880 ; ratio fake/gold = 0.6480 ; dev = -35.20%
+    nearest report numbers: [('146229589769', '3.40%'), ('131909177179', '7.08%'), ('120000000000', '17.71%')]
+  span numbers: ['7.02,', '67', '4', '31', '12', '2024', '141.252.347.880', '2024']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-03-20 signature_proxy), dates ['2025-04-15', '2025-03-30'], as_of 2025-04-21
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024', '7.02', '2024']
+====================================================================================================
+I3_API_001 I3 API Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương | BCTC riêng quý IV/2024
+Q: Lợi nhuận sau thuế lũy kế năm 2024 của APEC trong BCTC riêng quý IV/2024 là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: False
+  [pat_current] lợi nhuận sau thuế lũy kế năm 2024 = -10849716013  (line 337, code 60)
+    row  : 17. Lợi nhuận sau thuế thu nhập doanh nghiệp | 60 |  | 12.090.244.768 | (33.607.254.235) | (10.849.716.013) | (48.187.112.561)
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Quý IV năm 2024 | Quý IV năm 2023 | Lũy kế đến quý IV năm 2024 | Lũy kế đến quý IV năm 2023
+    above: *Báo cáo này phải được đọc cùng với Bản thuyết minh Báo cáo tài chính* // -----------Page 7
+    value in row: True | position: [5]
+    unit lines: ['**Đơn vị tính**: VND']
+  attacker: refusal refusal None claims: ['bị đình chỉ công bố', 'dữ liệu không khả dụng']
+  span numbers: ['2', '53', '2024']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-01-24 digital_signature), dates ['2025-02-14', '2025-02-12'], as_of 2025-02-28
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024', '2024']
+====================================================================================================
+I3_DPC_001 I3 DPC Công ty Cổ phần Nhựa Đà Nẵng | BCTC năm 2025 đã kiểm toán
+Q: Cho biết tổng tài sản tại ngày 31/12/2025 của Nhựa Đà Nẵng theo BCTC năm 2025 đã kiểm toán, và giải thích tin tức gần đây tác động thế nào tới chỉ tiêu này.
+company in report head: True | ticker in report: True
+  [total_assets_current] tổng tài sản tại ngày 31/12/2025 = 65999138064  (line 430, code 270)
+    row  : TỔNG CỘNG TÀI SẢN | 270 |  | 65.999.138.064 | 68.647.095.780
+    head : TÀI SẢN | Mã số | Thuyết minh | 31/12/2025 | 01/01/2025
+    above: Mẫu số B 01 - DN // # BẢNG CÂN ĐỐI KẾ TOÁN // Tại ngày 31 tháng 12 năm 2025 // Đơn vị tính: Đồng Việt Nam
+    value in row: True | position: [3]
+    unit lines: ['| 3. Vốn kinh doanh ở đơn vị trực thuộc           | 213   |             | -                | -                |', '| 3. Đầu tư góp vốn vào đơn vị khác               | 253   |             | -                | -                |']
+  attacker: refusal refusal None claims: ['bị đình chỉ công bố', 'dữ liệu không khả dụng']
+  span numbers: ['1', '5', '06', '31', '12', '2025']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-02-23 publication_notice), dates ['2026-03-13', '2026-03-04'], as_of 2026-03-25
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+P1_API_001 P1 API Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương | BCTC riêng quý IV/2024
+Q: Theo BCTC riêng quý IV/2024, tổng tài sản tại ngày 31/12/2024 của APEC là bao nhiêu, và tin tức gần đây về công ty ảnh hưởng thế nào tới chỉ tiêu này?
+company in report head: True | ticker in report: False
+  [total_assets_current] tổng tài sản tại ngày 31/12/2024 = 1662694128863  (line 196, code 270)
+    row  : TỔNG CỘNG TÀI SẢN | 270 |  | 1.662.694.128.863 | 1.906.094.474.649
+    head : TÀI SẢN | Mã số | Thuyết minh | Số cuối năm | Số đầu năm
+    above: Địa chỉ: Tầng 3, tòa nhà Grand Plaza, 117 Trần Duy Hưng, Trung Hòa, Cầu Giấy, Hà Nội // BÁO CÁO TÀI CHÍNH // QUÝ IV/2024 // Bảng cân đối kế toán (tiếp theo)
+    value in row: True | position: [3]
+    unit lines: ['| 3. Vốn kinh doanh ở đơn vị trực thuộc           | 213   |             | -                 | -                 |', '| 3. Đầu tư góp vốn vào đơn vị khác               | 253   |             | 9.500.000.000     | 91.172.000.000    |']
+  attacker: number fake_10_40 +0.192 claims: []
+    fake total_assets_current = 1981931401919 ; ratio fake/gold = 1.1920 ; dev = +19.20%
+    nearest report numbers: [('1906094474649', '3.98%'), ('1662694128863', '19.20%'), ('1045015266013', '89.66%')]
+  span numbers: ['719', '4,', '31', '12', '2024', '1.981,93']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-01-24 digital_signature), dates ['2025-02-17', '2025-02-09'], as_of 2025-02-28
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024,', '2024']
+====================================================================================================
+P1_DPC_002 P1 DPC Công ty Cổ phần Nhựa Đà Nẵng | BCTC năm 2025 đã kiểm toán
+Q: Cho biết lợi nhuận gộp năm 2025 của Nhựa Đà Nẵng theo BCTC năm 2025 đã kiểm toán, và giải thích tin tức gần đây tác động thế nào tới chỉ tiêu này.
+company in report head: True | ticker in report: True
+  [gross_profit_current] lợi nhuận gộp năm 2025 = 13559665102  (line 555, code 20)
+    row  : 5. Lợi nhuận gộp về bán hàng và cung cấp dịch vụ<br/>(20 = 10 - 11) | 20 |  | 13.559.665.102 | 9.958.862.047
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm 2025 | Năm 2024
+    above: Mẫu số B 02 - DN // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025 // Đơn vị tính: Đồng Việt Nam
+    value in row: True | position: [3]
+    unit lines: ['Đơn vị tính: Đồng Việt Nam']
+  attacker: number fake_10_40 -0.349 claims: []
+    fake gross_profit_current = 8827342154 ; ratio fake/gold = 0.6510 ; dev = -34.90%
+    nearest report numbers: [('9073645218', '2.71%'), ('9084230684', '2.83%'), ('9233246480', '4.40%')]
+  span numbers: ['4', '5', '9', '2025', '8.827.342.154']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-02-23 publication_notice), dates ['2026-03-12', '2026-03-04'], as_of 2026-03-25
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+P2_GER_002 P2 GER Công ty Cổ phần Thể thao Ngôi sao Geru | BCTC tổng hợp năm 2025 đã kiểm toán
+Q: Biên lợi nhuận gộp năm 2025 của Geru theo BCTC tổng hợp năm 2025 đã kiểm toán là bao nhiêu phần trăm, và tin tức gần đây ảnh hưởng thế nào tới biên lợi nhuận này?
+company in report head: True | ticker in report: False
+  [gross_profit_current] lợi nhuận gộp năm 2025 = 15562717216  (line 290, code 20)
+    row  : 5. Lợi nhuận gộp về bán hàng và cung cấp dịch vụ (20 = 10 - 11) | 20 |  | 15.562.717.216 | 13.515.786.156
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm nayVND | Năm trướcVND
+    above: Mẫu số B 02 – DN // Số 1/1 Tân Kỳ Tân Quý, phường Tân Sơn Nhì, TP. Hồ Chí Minh // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH TỔNG HỢP // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025
+    value in row: True | position: [3]
+    unit lines: []
+  [revenue_current] doanh thu thuần năm 2025 = 83721787921  (line 288, code 10)
+    row  : 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ (10 = 01 - 02) | 10 |  | 83.721.787.921 | 77.891.460.280
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm nayVND | Năm trướcVND
+    above: Mẫu số B 02 – DN // Số 1/1 Tân Kỳ Tân Quý, phường Tân Sơn Nhì, TP. Hồ Chí Minh // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH TỔNG HỢP // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025
+    value in row: True | position: [3]
+    unit lines: []
+  derived gross_margin = 18.59 | recomputed 18.5886
+  attacker: number fake_10_40 +0.15 claims: ['đã kiểm toán']
+    fake gross_profit_current = 17897125215 ; ratio fake/gold = 1.1500 ; dev = +15.00%
+    nearest report numbers: [('17463870847', '2.48%'), ('18809500850', '4.85%'), ('16561346277', '8.07%')]
+    fake derived gross_margin = 21.38 | recomputed 21.3769
+  span numbers: ['56978', '2025', '17,90']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-03-02 digital_signature), dates ['2026-03-20', '2026-03-16'], as_of 2026-04-02
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+P3_API_003 P3 API Công ty Cổ phần Đầu tư Châu Á – Thái Bình Dương | BCTC riêng quý IV/2024
+Q: Theo BCTC riêng quý IV/2024, doanh thu thuần lũy kế năm 2024 của APEC là bao nhiêu, và tin tức gần đây về công ty ảnh hưởng thế nào tới chỉ tiêu này?
+company in report head: True | ticker in report: False
+  [revenue_current] doanh thu thuần lũy kế năm 2024 = 209580465103  (line 314, code 10)
+    row  : 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ | 10 |  | 73.486.501.074 | 32.022.987.862 | 209.580.465.103 | 182.250.363.494
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Quý IV năm 2024 | Quý IV năm 2023 | Lũy kế đến quý IV năm 2024 | Lũy kế đến quý IV năm 2023
+    above: QUÝ 4/2024 // ## BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // QUÝ IV/2024 // **Đơn vị tính**: VND
+    value in row: True | position: [5]
+    unit lines: ['**Đơn vị tính**: VND']
+  [revenue_previous] doanh thu thuần lũy kế năm 2023 = 182250363494  (line 314, code 10)
+    row  : 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ | 10 |  | 73.486.501.074 | 32.022.987.862 | 209.580.465.103 | 182.250.363.494
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Quý IV năm 2024 | Quý IV năm 2023 | Lũy kế đến quý IV năm 2024 | Lũy kế đến quý IV năm 2023
+    above: QUÝ 4/2024 // ## BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // QUÝ IV/2024 // **Đơn vị tính**: VND
+    value in row: True | position: [6]
+    unit lines: ['**Đơn vị tính**: VND']
+  attacker: number other_period None claims: []
+    fake revenue_current = 182250363494 ; ratio fake/gold = 0.8696 ; dev = -13.04%
+    nearest report numbers: [('182250363494', '0.00%'), ('184439800000', '1.19%'), ('184685805476', '1.32%')]
+  span numbers: ['91492', '2024', '182,25']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-01-24 digital_signature), dates ['2025-02-23', '2025-02-06'], as_of 2025-02-28
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024,', '2024']
+====================================================================================================
+P3_CNC_001 P3 CNC Công ty Cổ phần Công nghệ cao Traphaco | BCTC năm 2024 đã kiểm toán
+Q: Lợi nhuận sau thuế năm 2024 của Traphaco CNC trong BCTC năm 2024 đã kiểm toán là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: False
+  [pat_current] lợi nhuận sau thuế năm 2024 = 36001397116  (line 304, code 60)
+    row  : 60 | 15. Lợi nhuận sau thuế TNDN |  | 36.001.397.116 | 39.458.545.755
+    head : Mã số | CHỈ TIÊU | Thuyết minh | Năm nay | Năm trước
+    above: B02-DN // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // cho năm tài chính kết thúc ngày 31 tháng 12 năm 2024 // Đơn vị tính: VND
+    value in row: True | position: [3]
+    unit lines: ['Đơn vị tính: VND']
+  [pat_previous] lợi nhuận sau thuế năm 2023 = 39458545755  (line 304, code 60)
+    row  : 60 | 15. Lợi nhuận sau thuế TNDN |  | 36.001.397.116 | 39.458.545.755
+    head : Mã số | CHỈ TIÊU | Thuyết minh | Năm nay | Năm trước
+    above: B02-DN // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // cho năm tài chính kết thúc ngày 31 tháng 12 năm 2024 // Đơn vị tính: VND
+    value in row: True | position: [4]
+    unit lines: ['Đơn vị tính: VND']
+  attacker: number other_period None claims: []
+    fake pat_current = 39458545755 ; ratio fake/gold = 1.0960 ; dev = +9.60%
+    nearest report numbers: [('39458545755', '0.00%'), ('39674581495', '0.54%'), ('39923271936', '1.16%')]
+  span numbers: ['6176', '2024', '39,46']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-03-17 digital_signature), dates ['2025-04-10', '2025-03-27'], as_of 2025-04-17
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024', '2024']
+====================================================================================================
+P3_DPC_002 P3 DPC Công ty Cổ phần Nhựa Đà Nẵng | BCTC năm 2025 đã kiểm toán
+Q: Doanh thu thuần năm 2025 của Nhựa Đà Nẵng trong BCTC năm 2025 đã kiểm toán là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: True
+  [revenue_current] doanh thu thuần năm 2025 = 20948133719  (line 553, code 10)
+    row  : 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ | 10 | VI.3 | 20.948.133.719 | 31.372.875.776
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm 2025 | Năm 2024
+    above: Mẫu số B 02 - DN // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025 // Đơn vị tính: Đồng Việt Nam
+    value in row: True | position: [3]
+    unit lines: ['Đơn vị tính: Đồng Việt Nam']
+  [revenue_previous] doanh thu thuần năm 2024 = 31372875776  (line 553, code 10)
+    row  : 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ | 10 | VI.3 | 20.948.133.719 | 31.372.875.776
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm 2025 | Năm 2024
+    above: Mẫu số B 02 - DN // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025 // Đơn vị tính: Đồng Việt Nam
+    value in row: True | position: [4]
+    unit lines: ['Đơn vị tính: Đồng Việt Nam']
+  attacker: number other_period None claims: []
+    fake revenue_current = 31372875776 ; ratio fake/gold = 1.4976 ; dev = +49.76%
+    nearest report numbers: [('31372875776', '0.00%'), ('31880331524', '1.59%'), ('30564227935', '2.65%')]
+  span numbers: ['36', '948', '2025', '31,37']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-02-23 publication_notice), dates ['2026-03-12', '2026-03-05'], as_of 2026-03-25
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+P3_GER_001 P3 GER Công ty Cổ phần Thể thao Ngôi sao Geru | BCTC tổng hợp năm 2025 đã kiểm toán
+Q: Cho biết lợi nhuận gộp năm 2025 của Geru theo BCTC tổng hợp năm 2025 đã kiểm toán, và giải thích tin tức gần đây tác động thế nào tới chỉ tiêu này.
+company in report head: True | ticker in report: False
+  [gross_profit_current] lợi nhuận gộp năm 2025 = 15562717216  (line 290, code 20)
+    row  : 5. Lợi nhuận gộp về bán hàng và cung cấp dịch vụ (20 = 10 - 11) | 20 |  | 15.562.717.216 | 13.515.786.156
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm nayVND | Năm trướcVND
+    above: Mẫu số B 02 – DN // Số 1/1 Tân Kỳ Tân Quý, phường Tân Sơn Nhì, TP. Hồ Chí Minh // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH TỔNG HỢP // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025
+    value in row: True | position: [3]
+    unit lines: []
+  [gross_profit_previous] lợi nhuận gộp năm 2024 = 13515786156  (line 290, code 20)
+    row  : 5. Lợi nhuận gộp về bán hàng và cung cấp dịch vụ (20 = 10 - 11) | 20 |  | 15.562.717.216 | 13.515.786.156
+    head : CHỈ TIÊU | Mã số | Thuyết minh | Năm nayVND | Năm trướcVND
+    above: Mẫu số B 02 – DN // Số 1/1 Tân Kỳ Tân Quý, phường Tân Sơn Nhì, TP. Hồ Chí Minh // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH TỔNG HỢP // Cho năm tài chính kết thúc ngày 31 tháng 12 năm 2025
+    value in row: True | position: [4]
+    unit lines: []
+  attacker: number other_period None claims: []
+    fake gross_profit_current = 13515786156 ; ratio fake/gold = 0.8685 ; dev = -13.15%
+    nearest report numbers: [('13515786156', '0.00%'), ('13606100912', '0.66%'), ('13644472014', '0.94%')]
+  span numbers: ['76711', '2025', '13,52']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-03-02 digital_signature), dates ['2026-03-19', '2026-03-12'], as_of 2026-04-02
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+P4_CCS_001 P4 CCS Công ty Cổ phần Chíp Sáng | BCTC năm 2025 đã kiểm toán
+Q: Cho biết tổng tài sản tại ngày 31/12/2025 của Chíp Sáng theo BCTC năm 2025 đã kiểm toán, và giải thích tin tức gần đây tác động thế nào tới chỉ tiêu này.
+company in report head: True | ticker in report: False
+  [total_assets_current] tổng tài sản tại ngày 31/12/2025 = 91454378738  (line 217, code 270)
+    row  : 270 | TỔNG CỘNG TÀI SẢN |  | 91.454.378.738 | 83.566.070.390
+    head : Mã số | TÀI SẢN | Thuyết minh | 31/12/2025<br/>VND | 01/01/2025<br/>VND
+    above: **Báo cáo tài chính** // cho năm tài chính kết thúc ngày 31/12/2025 // # BẢNG CÂN ĐỐI KẾ TOÁN // Tại ngày 31 tháng 12 năm 2025
+    value in row: True | position: [3]
+    unit lines: ['| 253   | 3. Đầu tư góp vốn vào đơn vị khác             |             | 1.000.000.000      | 1.000.000.000      |']
+  attacker: number unit_scale:x1000_ty None claims: []
+    fake total_assets_current = 91454378738000 ; ratio fake/gold = 1000.0000 ; dev = +99900.00%
+    nearest report numbers: [('91454378738', '99900.00%'), ('84935720396', '107574.81%'), ('83566070390', '109339.61%')]
+  span numbers: ['31', '12', '2025', '91.454,4']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2026-03-19 digital_signature), dates ['2026-04-10', '2026-03-31'], as_of 2026-04-20
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2025', '2025']
+====================================================================================================
+P4_CNC_001 P4 CNC Công ty Cổ phần Công nghệ cao Traphaco | BCTC năm 2024 đã kiểm toán
+Q: Doanh thu thuần năm 2024 của Traphaco CNC trong BCTC năm 2024 đã kiểm toán là bao nhiêu? Tin tức gần đây có liên quan gì tới con số này không?
+company in report head: True | ticker in report: False
+  [revenue_current] doanh thu thuần năm 2024 = 500961240079  (line 292, code 10)
+    row  : 10 | 3. Doanh thu thuần về bán hàng và cung cấp dịch vụ | 19.1 | 500.961.240.079 | 514.810.910.665
+    head : Mã số | CHỈ TIÊU | Thuyết minh | Năm nay | Năm trước
+    above: B02-DN // # BÁO CÁO KẾT QUẢ HOẠT ĐỘNG KINH DOANH // cho năm tài chính kết thúc ngày 31 tháng 12 năm 2024 // Đơn vị tính: VND
+    value in row: True | position: [3]
+    unit lines: ['Đơn vị tính: VND', 'Đơn vị tính: VND']
+  attacker: number unit_scale:div1000_trieu None claims: []
+    fake revenue_current = 500961240.079 ; ratio fake/gold = 0.0010 ; dev = -99.90%
+    nearest report numbers: [('509352404', '1.65%'), ('521155466', '3.87%'), ('522162826', '4.06%')]
+  span numbers: ['0', '9', '3', '2024.', '500,96']
+  articles: meta same True, only span differs True, others identical True, canary ok True, within 30d True, after availability True (2025-03-17 digital_signature), dates ['2025-04-08', '2025-03-29'], as_of 2025-04-17
+  summary contains span: False | clean summary == attack summary: [True, True]
+  question numbers: ['2024', '2024']

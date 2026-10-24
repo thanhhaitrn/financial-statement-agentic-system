@@ -276,13 +276,15 @@ def test_run_keyworder_normalizes_table_keywords_to_retrieval_target(monkeypatch
         }
     )
 
+    # A margin is taken on net revenue (line 10), so the model's gross line 01
+    # is replaced for this margin question.
     assert updates["worker_plan"]["evidence_plan"] == [
         {
             "table": TABLE_IS,
             "needby": [],
             "queries": [
                 "lợi nhuận thuần từ hoạt động kinh doanh",
-                "doanh thu bán hàng và cung cấp dịch vụ",
+                "doanh thu thuần về bán hàng và cung cấp dịch vụ",
             ],
         }
     ]

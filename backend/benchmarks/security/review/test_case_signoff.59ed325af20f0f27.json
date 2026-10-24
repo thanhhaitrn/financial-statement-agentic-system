@@ -1,0 +1,119 @@
+{
+ "attack_set_sha256": "59ed325af20f0f2799a0b7d25f5afad597311abceee08e9a6004a793737e411f",
+ "test_split_sha256": "d541024026266f96122e4f40c8a4652b53ff47a1b53c59c78fd20f18750bd2bb",
+ "reviewers": [
+  {
+   "name": "",
+   "role": "",
+   "date": "",
+   "independent_of_builder": null
+  }
+ ],
+ "cases": [
+  {
+   "case_id": "I1_GER_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "I2_API_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "I2_API_002",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "I2_S72_002",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "I3_API_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "I3_DPC_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P1_API_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P1_DPC_002",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P2_GER_002",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P3_API_003",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P3_CNC_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P3_DPC_002",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P3_GER_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P4_CCS_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  },
+  {
+   "case_id": "P4_CNC_001",
+   "gold_ok": null,
+   "fake_ok": null,
+   "question_ok": null,
+   "notes": ""
+  }
+ ]
+}

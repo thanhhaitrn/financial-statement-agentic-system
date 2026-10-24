@@ -8,6 +8,7 @@ from urllib.parse import urlparse
 from langchain_ollama import ChatOllama
 
 from agentfinx.core.config import paths
+from agentfinx.core.llm.instrument import CALLBACK
 
 paths.load_env()
 
@@ -39,6 +40,8 @@ def build_llm(*, timeout: float | None = None, json_mode: bool = False) -> ChatO
         "base_url": base_url,
         "sync_client_kwargs": {"timeout": seconds},
         "async_client_kwargs": {"timeout": seconds},
+        # Prompt log and call budget of an experiment run; idle otherwise.
+        "callbacks": [CALLBACK],
     }
     if json_mode:
         kwargs["format"] = "json"

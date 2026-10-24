@@ -449,13 +449,15 @@ def collect_pipeline_errors(final_state: dict) -> list[str]:
     return _collect_pipeline_errors(final_state)
 
 
-def _build_initial_state(dataset, query: str, *, debug_trace: bool = False) -> dict:
+def _build_initial_state(dataset, query: str, *, debug_trace: bool = False,
+                         as_of: str | None = None) -> dict:
     from datetime import datetime, timezone
 
     return {
         "user_query": query,
         # The "now" of this run: news windows end here, not at each node's clock.
-        "as_of": datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
+        # An evaluation may fix it (``as_of``) so a replay sees the same window.
+        "as_of": as_of or datetime.now(timezone.utc).replace(microsecond=0).isoformat(),
         "dataset_id": dataset.dataset_id,
         "dataset_company": str(getattr(dataset, "company", "") or ""),
         "dataset_ticker": str(getattr(dataset, "ticker", "") or ""),
@@ -485,10 +487,19 @@ def execute_query(
     owner_id: str = "",
     admission_quota=None,
     planner_updates: dict | None = None,
+    as_of: str | None = None,
+    experiment_context=None,
+    controlled_web_facts: list[dict] | None = None,
 ) -> dict:
     """``planner_updates`` is the planner result the web entry already
     produced for this question; the graph then starts at the router and does
-    not plan again. The CLI and batch runs never pass it."""
+    not plan again. The CLI and batch runs never pass it.
+
+    ``as_of`` fixes the run's "now" (ISO 8601) and ``experiment_context`` (a
+    ``core.experiment.ExperimentContext``) records the run for an
+    experiment; ``controlled_web_facts`` places WEB facts at the analysis
+    agents' fact input (controlled exposure). All are for evaluation only
+    and default to a normal run."""
 
     import hashlib
 
@@ -534,7 +545,11 @@ def execute_query(
         ),
         entry="agent_router" if planner_updates else "agent_main",
     )
-    initial_state = _build_initial_state(dataset, query, debug_trace=debug_trace)
+    initial_state = _build_initial_state(dataset, query, debug_trace=debug_trace, as_of=as_of)
+    if experiment_context is not None:
+        initial_state["run_id"] = experiment_context.run_id
+    if controlled_web_facts:
+        initial_state["controlled_web_facts"] = list(controlled_web_facts)
     if planner_updates:
         initial_state["planner_plan"] = dict(planner_updates.get("planner_plan") or {})
         initial_state["last_agent"] = "agent_planner"
@@ -545,12 +560,15 @@ def execute_query(
     initial_state["collection_generation"] = collection_generation
     initial_state["model_fingerprint"] = model_fingerprint
     started_at = time.perf_counter()
+    from agentfinx.core import experiment
+
     try:
-        final_state = _run_graph(
-            graph,
-            initial_state,
-            on_trace_entry=on_trace_entry,
-        )
+        with experiment.activate(experiment_context):
+            final_state = _run_graph(
+                graph,
+                initial_state,
+                on_trace_entry=on_trace_entry,
+            )
     finally:
         if web_runner is not None:
             web_runner.close()

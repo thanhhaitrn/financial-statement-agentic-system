@@ -299,6 +299,10 @@ KEYWORD_SYNONYMS: Dict[str, str] = {
     "tổng tài sản": "tổng cộng tài sản",
     "tài sản lưu động": "tài sản ngắn hạn",
     "doanh thu thuần": "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+    # Service-only companies name income-statement lines 10 and 20 without
+    # "bán hàng"; they are the same lines.
+    "doanh thu thuần về cung cấp dịch vụ": "doanh thu thuần về bán hàng và cung cấp dịch vụ",
+    "lợi nhuận gộp về cung cấp dịch vụ": "lợi nhuận gộp về bán hàng và cung cấp dịch vụ",
     "lợi nhuận sau thuế": "lợi nhuận sau thuế thu nhập doanh nghiệp",
     "lợi nhuận giữ lại": "lợi nhuận sau thuế chưa phân phối",
 }

@@ -31,6 +31,7 @@ from agentfinx.agents.tools.query_routing import (
     fact_period_role,
     fact_sibling_group_key,
     fact_slot_score,
+    metric_slot_compatibility,
     parse_query_slots,
 )
 from agentfinx.datasets.vectorstore.llm_reranker import llm_rerank_enabled, llm_rerank_order
@@ -1152,6 +1153,13 @@ def _structured_slots_satisfied(slots, docs, metas):
     return False
 
 
+def _metrics_overlap(first: str, second: str) -> bool:
+    return (
+        metric_slot_compatibility(first, second)[0]
+        or metric_slot_compatibility(second, first)[0]
+    )
+
+
 def get_related_info(
     query: str,
     table: str,
@@ -1184,9 +1192,17 @@ def get_related_info(
     # every core profitability pair falls through to fallible dense top-k.
     intent_slots = parse_query_slots(raw_intent or raw_query)
     scoped_query_slots = parse_query_slots(raw_query)
+    # Likewise when the scoped query names a metric of its own that the
+    # intent's metric neither equals nor contains (the net-revenue operand of a
+    # gross-margin question): binding to the intent would fetch the intent's
+    # line for every operand, leaving this one to dense top-k.
     query_slots = (
         scoped_query_slots
-        if scoped_query_slots.metric and not intent_slots.metric
+        if scoped_query_slots.metric
+        and (
+            not intent_slots.metric
+            or not _metrics_overlap(scoped_query_slots.metric, intent_slots.metric)
+        )
         else intent_slots
     )
 

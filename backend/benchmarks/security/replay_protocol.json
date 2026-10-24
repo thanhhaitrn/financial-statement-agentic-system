@@ -1,0 +1,231 @@
+{
+ "protocol_version": "security-replay-v1",
+ "kind": "replay",
+ "experiment": "agentfinx-security-replay",
+ "description": "Giai đoạn 2, Việc 2: đối chứng khớp evidence A′. Một lần gọi model như A, với evidence mà D đã lấy trong đợt chính (trích từ log, không chạy lại retrieval). Thí nghiệm bổ sung có protocol định trước; không gộp vào 640 ô của đợt chính.",
+ "registered_under": {
+  "protocol": "benchmarks/security/protocol_phase2.json",
+  "sha256": "42489f7ec757fa79b74e92bc95899ce10c5a91ac46c767b3528672e2f2de116f",
+  "experiment": "evidence_matched_replay"
+ },
+ "attack_set": {
+  "path": "benchmarks/security/attack_set.json",
+  "sha256": "d2a132dfbdaca930bf6b9835520d2b1b44f41893693b65c9eb9c00950656e8d0",
+  "split": "test"
+ },
+ "case_ids": [
+  "I1_API_001",
+  "I1_CCS_002",
+  "I1_CCS_003",
+  "I1_CNC_001",
+  "I1_CNC_002",
+  "I1_DPC_002",
+  "I1_GER_001",
+  "I1_HPG_001",
+  "I1_S72_002",
+  "I1_S72_003",
+  "I1_VNM_001",
+  "I1_VNM_002",
+  "I2_API_001",
+  "I2_API_002",
+  "I2_CCS_001",
+  "I2_CNC_002",
+  "I2_DPC_001",
+  "I2_GER_002",
+  "I2_HPG_001",
+  "I2_S72_001",
+  "I2_S72_002",
+  "I2_VNM_001",
+  "I3_API_001",
+  "I3_CCS_001",
+  "I3_CNC_001",
+  "I3_CNC_002",
+  "I3_DPC_001",
+  "I3_GER_001",
+  "I3_HPG_002",
+  "I3_VNM_002",
+  "I4_API_002",
+  "I4_CCS_001",
+  "I4_DPC_001",
+  "I4_DPC_002",
+  "I4_GER_001",
+  "I4_GER_002",
+  "I4_HPG_002",
+  "I4_S72_001",
+  "I4_S72_002",
+  "I4_VNM_001",
+  "P1_API_001",
+  "P1_CCS_002",
+  "P1_CCS_003",
+  "P1_CNC_001",
+  "P1_CNC_002",
+  "P1_DPC_002",
+  "P1_GER_001",
+  "P1_HPG_001",
+  "P1_HPG_002",
+  "P1_S72_002",
+  "P1_VNM_001",
+  "P1_VNM_002",
+  "P2_API_002",
+  "P2_CCS_001",
+  "P2_CNC_001",
+  "P2_DPC_001",
+  "P2_GER_002",
+  "P2_GER_003",
+  "P2_HPG_001",
+  "P2_S72_001",
+  "P2_S72_002",
+  "P2_VNM_002",
+  "P3_API_002",
+  "P3_API_003",
+  "P3_CCS_001",
+  "P3_CNC_001",
+  "P3_DPC_001",
+  "P3_DPC_002",
+  "P3_GER_001",
+  "P3_HPG_002",
+  "P3_S72_001",
+  "P3_VNM_001",
+  "P4_API_001",
+  "P4_CCS_001",
+  "P4_CCS_002",
+  "P4_CNC_001",
+  "P4_GER_002",
+  "P4_HPG_001",
+  "P4_S72_001",
+  "P4_VNM_001"
+ ],
+ "conditions": [
+  "clean",
+  "attack"
+ ],
+ "repetitions": 1,
+ "configs": {
+  "Apre": {
+   "label": "A + evidence trước phân tích của D",
+   "pipeline": "baseline_replay",
+   "prompt_guards_off": false,
+   "provenance_off": false,
+   "evidence": "pre",
+   "untrusted_labels": false
+  },
+  "Apost": {
+   "label": "A + đầu vào Synth của D",
+   "pipeline": "baseline_replay",
+   "prompt_guards_off": false,
+   "provenance_off": false,
+   "evidence": "post",
+   "untrusted_labels": false
+  },
+  "ApostG": {
+   "label": "Apost + nhãn untrusted (L1)",
+   "pipeline": "baseline_replay",
+   "prompt_guards_off": false,
+   "provenance_off": false,
+   "evidence": "post",
+   "untrusted_labels": true,
+   "guard": "prompt.untrusted_labels (đúng văn bản đăng ký trong core/ablation.py), gắn vào hai tiêu đề evidence"
+  }
+ },
+ "exposure": "replay",
+ "exposure_detail": "không retrieval, không provider tin, không pipeline; evidence đọc từ file đã trích (đúng hash)",
+ "environment": {
+  "WEB_EVIDENCE_ENABLED": "0",
+  "WEB_ANALYSIS_ENABLED": "0",
+  "LLM_RERANK": "0"
+ },
+ "model": {
+  "provider": "ollama",
+  "model": "gpt-oss:120b-cloud",
+  "base_url": "https://ollama.com",
+  "temperature": "0",
+  "backend_version": "ghi từ siêu dữ liệu phản hồi nếu cloud cung cấp; nếu không: chưa xác định"
+ },
+ "embedding": {
+  "provider": "ollama",
+  "model": "bge-m3"
+ },
+ "context": {
+  "system": "baseline.SYSTEM",
+  "format": "baseline.build_messages",
+  "chunk_chars": 2000,
+  "article_chars": 4000,
+  "report_facts": "mỗi fact một dòng (tên, giá trị, đơn vị, kỳ, nguồn), gom theo bảng thành đoạn ≤ 2.000 ký tự, không cắt fact; số đoạn không giới hạn ở 10 như A",
+  "news_pre": "bài thô, đúng định dạng của A",
+  "news_post": "mỗi sự kiện của khối tin đã phân tích là một mục: tiêu đề, ngày, giải thích, chỉ tiêu, trích dẫn, mức xác nhận, điều còn chưa chắc",
+  "precheck": "check_prompt: không mất fact nào, không đoạn hay bài nào bị cắt, đoạn chèn và payload ở lượt tấn công giữ nguyên như trong evidence (đã đạt 480/480 prompt)"
+ },
+ "evidence": {
+  "dir": "artifacts/eval/security/phase2/replay-evidence-20261024",
+  "summary_sha256": "1d9f5b22037cb2db69456a308aff097b943b260ec316e565e7e9a4739ee3bd14",
+  "source_config": "D",
+  "boundaries": {
+   "pre": "ragas_facts_by_table + bài thô provider trả về",
+   "post": "<worker_results> của request agent_synth cuối cùng"
+  }
+ },
+ "pinned": {
+  "product_code_sha256": "3c579b10ea795031a0093b992edea5e1eb59850253da7a83eb664919bc7e4f02",
+  "main_commit": "7d5d5817b0ab526fc72528035ad42bc3944f5de4"
+ },
+ "requires": {
+  "g1_record": "benchmarks/security/review/g1_freeze_v3.4.json",
+  "rule": "không chạy trước G1 (rubric và scorer v3.4 đóng băng)"
+ },
+ "reference_cells": "A và D lấy từ đợt chính main-20261020, chấm lại bằng scorer v3.4; không chạy lại",
+ "budget": {
+  "model_calls": 550,
+  "estimate": "480 ô × 1 lần gọi, cộng thử lại",
+  "ledger": "budget.json riêng trong thư mục chạy",
+  "increase": "không bao giờ tự tăng"
+ },
+ "schedule": {
+  "seed": 20261024,
+  "order": "xáo thứ tự case, rồi xáo các ô của mỗi case; chạy tuần tự"
+ },
+ "cell": {
+  "identity": [
+   "case_id",
+   "config",
+   "condition",
+   "repetition"
+  ],
+  "repetition": 0,
+  "selection": "lần hợp lệ đầu tiên; mọi attempt khác được giữ để kiểm toán và tính chi phí"
+ },
+ "validity": [
+  "status ok",
+  "câu trả lời không rỗng",
+  "snapshot có và đúng hash",
+  "prompt log đủ: mọi request có phản hồi, số request bằng model_calls"
+ ],
+ "retry": {
+  "infra_error_or_missing_artifact": 1,
+  "provider_quota": "đổi sang key kế tiếp, chạy lại đúng ô, không tính vào lượt thử lại",
+  "stop": [
+   "hết key",
+   "hết ngân sách",
+   "cấu hình hoặc chỉ mục không khớp"
+  ],
+  "never": "không chạy lại câu trả lời hợp lệ vì điểm thấp"
+ },
+ "resume": "dùng nguyên lịch và fingerprint; kiểm tra protocol, tập cấu hình, điều kiện, case, ngân sách; khác là từ chối",
+ "scoring": {
+  "mode": "deferred",
+  "rule": "chấm bằng scorer v3.4 đã đóng băng ở G1; A, D của đợt chính chấm cùng phiên bản"
+ },
+ "comparisons": {
+  "A→Apre": "tác dụng của việc có đúng fact BCTC (retrieval)",
+  "Apre→Apost": "tác dụng của chọn lọc và bước phân tích tin",
+  "Apost→D": "phần còn lại của pipeline nhiều bước",
+  "Apost→ApostG": "tác dụng của nhãn prompt, ở nơi chưa bị hiệu ứng sàn"
+ },
+ "statistics": {
+  "ci": "Wilson 95%",
+  "test": "McNemar chính xác, ghép theo case_id",
+  "multiplicity": "Holm trong mỗi bảng",
+  "zero_cells": "báo cận trên Clopper–Pearson 95% (0/80 → ≤ 4,5%; 0/30 → ≤ 11,6%)",
+  "not_used": "GLMM và mô hình phức tạp (để sau hội nghị)"
+ },
+ "reporting_rule": "nếu Apost ≈ D chỉ được viết: khi được cấp evidence đã xử lý, một lần gọi cuối đạt kết quả tương đương trên bộ thử này; không được viết là kiến trúc nhiều agent không có đóng góp, vì chính pipeline đó đã tạo ra evidence"
+}

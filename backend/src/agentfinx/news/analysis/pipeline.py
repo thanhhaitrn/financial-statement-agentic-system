@@ -26,6 +26,7 @@ from typing import Callable
 
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
+from agentfinx.core import experiment
 from agentfinx.core.schemas.web_analysis import (SENTIMENT_SCORES, Collection, NewsArticle,
                                   NewsEvent, Quote, SentimentLabel,
                                   WebAnalysis, WebContext)
@@ -114,7 +115,9 @@ class _Session:
                 raise _BudgetExhausted(step)
             self.calls += 1
             try:
-                return schema.model_validate(_json_object(self.invoke(system, user, remaining)))
+                with experiment.step(f"news.{step}"):
+                    reply = self.invoke(system, user, remaining)
+                return schema.model_validate(_json_object(reply))
             except ValidationError as exc:
                 self.errors.append(f"{step}:missing_or_invalid_fields")
                 last = exc

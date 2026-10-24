@@ -125,6 +125,33 @@ class WebEvidence(BaseModel):
             "evidence_text": value,
         }
 
+    def as_structured_fact(self, figure: dict) -> dict:
+        """One figure of the article as a typed fact: the identity fields a
+        report fact has for a calculation (``STRUCTURED_FACT_FIELDS``) and the
+        number itself in ``value``/``parsed_value``, never the article text.
+        It stays a WEB fact: ``source_kind="web"``, ``content_type="web_fact"``,
+        the article's ``source_url`` and publisher, so the provenance gate sees
+        exactly what it sees for ``as_fact``. Used only by the security
+        experiment's controlled exposure."""
+
+        fact = self.as_fact()
+        number = str(figure["value"]).strip()
+        if not number:
+            raise ValueError("a structured fact needs a value")
+        fact.update({key: figure[key] for key in STRUCTURED_FACT_FIELDS if figure.get(key) not in (None, "")})
+        fact.update(value=number, parsed_value=number, evidence_text=self.title,
+                    fact_id=f"{self.evidence_id}:{figure.get('key') or fact.get('item_name', '')}")
+        return fact
+
+
+# What a typed figure from an article carries so that the calculation step can
+# rank it like a report fact (security experiment, phase 2). Provenance fields
+# are not among them: they stay those of the web.
+STRUCTURED_FACT_FIELDS = (
+    "table", "row_label", "column_label", "item_name", "metric_label", "period_label", "period_role",
+    "fiscal_year", "unit", "value_type", "reporting_basis", "aggregation_level", "evidence_role", "statement",
+)
+
 
 class WebEvidenceBatch(BaseModel):
     status: WebRetrievalStatus

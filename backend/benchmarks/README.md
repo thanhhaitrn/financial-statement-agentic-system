@@ -13,6 +13,7 @@ and contracts are looked up here (`agentfinx.evaluation.benchmarks`).
 | `reports/document.md` | Sample report; the default dataset of `agentfinx ask`. |
 | `ragas/manifest.json` | Artifact policy: what is versioned, the quality gate, latency rules. |
 | `ragas/baseline_report_v2.csv` | Example of the report format, not a measured baseline. |
+| `security/` | Security experiment: pilot cases, the attack-set spec and the built attack set (20 dev + 80 test), review packet and freeze record; see `security/README.md`. Articles there are synthetic. |
 
 The factual-recall contract itself is a test fixture:
 `backend/tests/fixtures/apec_q211_250_factual_facts.json`. The question sets the

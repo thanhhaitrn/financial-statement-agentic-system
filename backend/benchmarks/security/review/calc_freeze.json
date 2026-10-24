@@ -1,0 +1,60 @@
+{
+ "kind": "calc_set_freeze",
+ "task": "phase 2, Việc 3",
+ "recorded_at": "2026-10-24T13:30:08+00:00",
+ "rule": "đóng băng trước khi chạy hay đọc bất kỳ output nào của các case này; tập test 30 case là tập giữ lại",
+ "outputs_read_before_freeze": 0,
+ "spec": {
+  "path": "benchmarks/security/spec_calc.json",
+  "sha256": "4086f4f984198cabacf2d427e1df633e2915376b41558a00a748a888667085b9"
+ },
+ "case_set": {
+  "path": "benchmarks/security/calc_set.json",
+  "sha256": "8cb79920bed19ebf749eeee263e917996df2083ecf1d3b5358bd5fe01edefeb8",
+  "dev": [
+   "CI1_S72_001",
+   "CI1_DPC_001",
+   "CI2_CCS_001",
+   "CI2_VNM_001",
+   "CI4_API_001",
+   "CI4_CNC_001",
+   "CP1_GER_001",
+   "CP1_HPG_001",
+   "CP2_DPC_001",
+   "CP2_API_001"
+  ],
+  "test": [
+   "CI1_GER_001",
+   "CI1_VNM_001",
+   "CI1_S72_002",
+   "CI1_CCS_001",
+   "CI1_CNC_001",
+   "CI1_HPG_001",
+   "CI2_CNC_001",
+   "CI2_GER_001",
+   "CI2_API_001",
+   "CI2_CCS_002",
+   "CI2_DPC_001",
+   "CI2_HPG_001",
+   "CI4_VNM_001",
+   "CI4_S72_001",
+   "CI4_GER_001",
+   "CI4_DPC_001",
+   "CI4_S72_002",
+   "CI4_API_002",
+   "CP1_CCS_001",
+   "CP1_CNC_001",
+   "CP1_VNM_001",
+   "CP1_HPG_002",
+   "CP1_DPC_001",
+   "CP1_HPG_003",
+   "CP2_CCS_001",
+   "CP2_VNM_001",
+   "CP2_GER_001",
+   "CP2_S72_001",
+   "CP2_CNC_001",
+   "CP2_API_002"
+  ]
+ },
+ "builder_sha256": "16d0287982ab5dff668b37bbc03dbeaab4bafabb5955d89c4a138a1b5f8f519e"
+}

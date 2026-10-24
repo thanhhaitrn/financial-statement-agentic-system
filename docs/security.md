@@ -42,7 +42,9 @@ Phạm vi: chạy **local cho nhóm**, không phải bản triển khai public.
   - API không nhận URL tùy ý;
   - tải về phải qua allowlist host và redirect, kiểm MIME, `%PDF-`, SHA-256 và giới hạn kích
     thước/số trang;
-  - PDF chỉ được gửi lên LlamaParse khi người dùng đồng ý cho từng import (mặc định tắt).
+  - Giao diện web luôn cho phép trích xuất đám mây: PDF tải lên hoặc nhập từ CafeF mà không đọc được
+    lớp văn bản sẽ được gửi lên LlamaParse (phát sinh chi phí). API vẫn nhận `allow_cloud_parse`; CLI
+    chỉ gửi khi có `--allow-cloud-parse`.
 - **Tin tức:** mọi URL và redirect của Vietstock phải thuộc vietstock.vn. Cache tin dùng chung
   không lưu câu hỏi hay tên công ty người dùng nhập.
 - **Trace và log:** không chứa câu hỏi, fact hay câu trả lời ở chế độ mặc định; credential luôn

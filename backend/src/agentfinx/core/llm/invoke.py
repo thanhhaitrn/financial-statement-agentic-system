@@ -6,10 +6,12 @@ from __future__ import annotations
 import os
 import json
 import re
+from contextlib import nullcontext
 from typing import Any, Callable, Dict, Optional
 
 from pydantic import ValidationError
 
+from agentfinx.core import experiment
 from agentfinx.core.llm.client import get_llm, get_llm_identity
 
 
@@ -221,7 +223,9 @@ def _invoke_plain_prompt(
 
     resolved_prompt_template = _resolve_prompt_template(prompt_template, plain_payload)
     chain = resolved_prompt_template | get_llm()
-    result = chain.invoke(plain_payload)
+    # A plain call after a failed structured one re-asks for the JSON.
+    with experiment.call_kind("json_repair") if structured_error is not None else nullcontext():
+        result = chain.invoke(plain_payload)
     fallback_mode = mode or ("plain_json" if normalized_schema is not None else "plain")
     normalized = _normalize_invoke_result(
         {
