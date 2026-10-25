@@ -31,6 +31,12 @@ def validate(packet: Path) -> dict:
     key = json.loads((packet / "private" / "key.json").read_text(encoding="utf-8"))["items"]
     record = json.loads((packet / "ai_review.json").read_text(encoding="utf-8"))
     final = record["final_labels"]
+    # A human's final decisions override the adjudicated labels they name.
+    human = packet / "human_decisions.json"
+    if human.exists():
+        for item, decided in json.loads(human.read_text(encoding="utf-8"))["items"].items():
+            final[item] = {**final[item], **{label: {"true": True, "false": False}.get(value, value)
+                                             for label, value in decided.items()}}
     cases = {}
     autos = {"v33": {}, "v34": {}}
     for item_id, entry in key.items():
