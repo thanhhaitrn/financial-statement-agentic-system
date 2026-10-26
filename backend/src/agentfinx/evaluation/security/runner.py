@@ -85,11 +85,12 @@ def worker_env(config: str, extra: dict | None = None, *, exposure: str = "natur
     return env
 
 
-def worker_identity(config: str, exposure: str = "natural") -> dict:
-    """The identity a worker of ``config`` reports, from a real worker process."""
+def worker_identity(config: str, exposure: str = "natural", extra: dict | None = None) -> dict:
+    """The identity a worker of ``config`` reports, from a real worker process
+    (``extra``: further environment, e.g. the protocol's model)."""
 
     output = subprocess.run([sys.executable, "-m", "agentfinx.evaluation.security.worker", "--identity"],
-                            env=worker_env(config, exposure=exposure), capture_output=True, text=True,
+                            env=worker_env(config, extra, exposure=exposure), capture_output=True, text=True,
                             timeout=300, check=True)
     return json.loads(output.stdout.strip().splitlines()[-1])
 
@@ -171,6 +172,7 @@ class Pilot:
         self.prompt_log_path = out_dir / "prompt_log.jsonl"
         self.key_pool = KeyPool(keys, out_dir / "key_rotation.json") if keys is not None else None
         self.retry_exhausted_keys = retry_exhausted_keys
+        self.extra_env: dict[str, str] = {}  # a protocol's own environment (e.g. OLLAMA_MODEL)
 
     # --- manifest -------------------------------------------------------------
     def prepare(self, *, fingerprint_value: dict | None = None) -> dict:
@@ -256,7 +258,7 @@ class Pilot:
         run_dir.mkdir(parents=True, exist_ok=True)
         spec_path = run_dir / "spec.json"
         spec_path.write_text(json.dumps(spec, ensure_ascii=False, indent=1), encoding="utf-8")
-        env = worker_env(spec["config"], {experiment.PROMPT_LOG_ENV: spec["prompt_log_path"]},
+        env = worker_env(spec["config"], {**self.extra_env, experiment.PROMPT_LOG_ENV: spec["prompt_log_path"]},
                          exposure=self.exposure)
         if self.key_pool is not None:
             selected = self.key_pool.select()
