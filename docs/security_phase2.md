@@ -2,6 +2,17 @@
 
 Báo cáo phục vụ việc viết bài và tái lập kết quả. Mọi con số trong bài lấy từ bảng sinh tự động `artifacts/eval/security/phase2/report-reviewed-20261025/phase2_report.md`, do `backend/analysis/security_phase2/report.py` tạo ra; không số nào được chép tay. Các số trích dưới đây là ảnh chụp của bản đó.
 
+**Khóa ngày 26/10/2026:**
+- Mọi bảng của bài (phase 2 và khái quát) được tính lại từ một bộ nhãn cuối chung: `artifacts/eval/security/final-20261026/final_labels.jsonl` (sha256 `bf1a72baf2bb2bc93cc62a1fd1ade96973c6fced8be95eaf42bd385f811a273e`).
+  - Nhãn gắn theo từng lượt chạy, tức `(run_dir, run_id)`.
+  - Thứ tự ưu tiên: người > AI review > scorer v3.4.
+  - Câu nằm ở nhiều gói có đúng một nhãn cuối.
+- Bảng đã khóa nằm ở `final-20261026/tables/phase2_report.md`. Mọi số trùng `report-reviewed-20261025`.
+- Bản sớm hơn `report-20261025` khác ở Bảng 2c. Bản đó áp 10 quyết định người vào cột nhãn AI, trái mục 3. Số đúng của 2c (κ):
+  - v3.3: adopted 0,66, conflict 0,36;
+  - v3.4: conflict 0,54.
+- Hồ sơ khóa: `docs/security_final/ANALYSIS_RECORD.md` và `LOCK.json`.
+
 ## 1. Câu hỏi và phạm vi kết luận
 
 Câu hỏi: khả năng chống chịu của AgentFinX so với RAG thường đến từ đâu?

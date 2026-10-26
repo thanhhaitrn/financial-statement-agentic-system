@@ -85,6 +85,7 @@ class Labels:
         self.phase2 = root / "phase2"
         self.repo = root.parents[2]
         self.ai, self.human, self.human_refs, self.inputs = {}, defaultdict(dict), defaultdict(list), {}
+        self.ai_refs = defaultdict(list)
         keys = {}
         for name in PACKETS:
             path = self.phase2 / name / "private" / "key.json"
@@ -99,7 +100,7 @@ class Labels:
             self.inputs[f"phase2/{name}/{path.name}"] = _sha(path)
             found = _load(path)["items"]
             for item, entry in keys[name].items():
-                self.ai[self.ident(entry)] = {"labels": found[item], "raw": entry.get("raw") or {}}
+                self.add_ai(self.ident(entry), found[item], entry.get("raw") or {}, f"{name}:{item}")
         for name, key in keys.items():
             path = self.phase2 / name / "human_decisions.json"
             if path.exists():
@@ -128,6 +129,27 @@ class Labels:
             options = [self.repo / run_dir, self.repo / "backend" / run_dir]
             run_dir = next((path for path in options if (path / "runs").is_dir()), options[0])
         return str(run_dir.resolve()), entry["run_id"]
+
+    def add_ai(self, ident: tuple[str, str], labels: dict, raw: dict, ref: str) -> None:
+        """One AI review label set per answer; an answer in two AI packets must carry the same labels."""
+
+        given = {label: str(labels.get(label, "")).strip().lower() for label in human_review.LABELS}
+        known = self.ai.get(ident)
+        if known is not None:
+            before = {label: str(known["labels"].get(label, "")).strip().lower() for label in human_review.LABELS}
+            if before != given:
+                raise SystemExit(f"{ref}: AI labels disagree with {self.ai_refs[ident]} for {ident[1]}")
+        else:
+            self.ai[ident] = {"labels": labels, "raw": raw}
+        self.ai_refs[ident].append(ref)
+
+    def without_human(self, run_dir: str, run_id: str, scorer_final: dict) -> tuple[dict, str]:
+        """The label before any human decision: AI review, then scorer v3.4 (sensitivity)."""
+
+        ident = (str(Path(run_dir).resolve()), run_id)
+        if ident in self.ai:
+            return replay_report.ai_dims(self.ai[ident]["labels"]), "ai"
+        return dict(scorer_final or {}), "scorer"
 
     def _human(self, ident: tuple[str, str], decided: dict, ref: str) -> None:
         for label, value in decided.items():
@@ -295,8 +317,10 @@ def model_calls(root: Path) -> dict:
     return {"runs": out, "phase2_total": sum(phase2), "all_total": sum(v["used"] for v in out.values())}
 
 
-def build(root: Path) -> dict:
-    labels = Labels(root)
+def build(root: Path, labels=None) -> dict:
+    """``labels``: the final label set to use (default: built from the review packets)."""
+
+    labels = labels if labels is not None else Labels(root)
     answers, sources, raw, cases, _ = answers_of(root, labels)
     table1 = results(answers, sources, raw, cases, ["A", "B", "C", "D"], primary_tests)
     table3 = results(answers, sources, raw, cases, ["A", "Apre", "Apost", "ApostG", "D"], chain_tests)
