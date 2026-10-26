@@ -208,6 +208,11 @@ def unified_answers(cells: dict, scores: dict, ambiguous: Path | list[Path]) -> 
         found = json.loads((folder / name).read_text(encoding="utf-8"))["items"]
         if set(part) & set(key):
             raise SystemExit(f"{folder}: item ids repeat another review's")
+        # A human's final decisions override the AI labels they name.
+        human = folder / "human_decisions.json"
+        if human.exists():
+            for item, decided in json.loads(human.read_text(encoding="utf-8"))["items"].items():
+                found[item] = {**found[item], **decided}
         key.update(part)
         labels.update(found)
     # Keyed by directory and run id: a correction run reuses the run ids.

@@ -130,7 +130,7 @@ def preflight(protocol_path: str | Path | None = None, *, identities: dict | Non
 
     protocol, protocol_sha, path = protocol_module.load(protocol_path)
     cases = protocol_module.attack_set(protocol)
-    controlled = protocol_module.kind(protocol) in ("controlled", "l5")
+    controlled = protocol_module.kind(protocol) in ("controlled", "l5", "generalization")
     replay = protocol_module.kind(protocol) == "replay"
     problems: list[str] = [f"protocol: {p}" for p in protocol_module.problems(protocol, cases)]
     if replay:
@@ -146,7 +146,7 @@ def preflight(protocol_path: str | Path | None = None, *, identities: dict | Non
         pinned = protocol.get("pinned") or {}
         if freeze_module.product_code_sha256() != pinned.get("product_code_sha256"):
             problems.append("product: the code differs from the pinned product version")
-        if protocol_module.kind(protocol) == "l5":
+        if protocol_module.kind(protocol) in ("l5", "generalization"):
             problems += [f"G1: {p}" for p in protocol_module.g1_problems(protocol)]
     else:
         problems += [f"freeze: {p}" for p in freeze_module.frozen_problems(cases)]
@@ -175,7 +175,8 @@ def preflight(protocol_path: str | Path | None = None, *, identities: dict | Non
             if any(identity.get(key) != wanted.get(key) for key in ("dataset_generation", "index_generation")):
                 problems.append(f"index {dataset_id}: differs from the pinned main-run index")
     if identities is None:
-        identities = {config: worker_identity(config, protocol_module.exposure(protocol))
+        identities = {config: worker_identity(config, protocol_module.exposure(protocol),
+                                              protocol_module.model_env(protocol))
                       for config in protocol["configs"]}
     problems += [f"config {p}" for p in protocol_module.identity_problems(protocol, identities)]
     try:
@@ -207,7 +208,7 @@ def main_fingerprint(protocol: dict, protocol_sha: str, check: dict, schedule: l
         "budget": int(protocol["budget"]["model_calls"]), "seed": int(protocol["schedule"]["seed"]),
         "schedule_sha256": stable_json_fingerprint(schedule),
     }
-    if protocol_module.kind(protocol) in ("controlled", "l5"):
+    if protocol_module.kind(protocol) in ("controlled", "l5", "generalization"):
         # Scoring is a later, versioned step: the scorer is not part of what
         # the answers were made with, so changing it never blocks a resume.
         del payload["scorer_version"]
@@ -278,9 +279,15 @@ class MainRun(Pilot):
         self.preflight_fn = preflight_fn or (lambda: preflight(path))
         self.attempts_path = out_dir / "attempts.jsonl"
         self.prompt_index = PromptIndex(self.prompt_log_path)
+        self.extra_env = protocol_module.model_env(protocol)
 
     def schedule(self) -> list[dict]:
         full = main_schedule(self.case_ids, self.configs, self.conditions, seed=self.seed)
+        stability = self.protocol.get("stability") or {}
+        for repetition in stability.get("repetitions") or []:
+            # The pre-chosen stability cases, run again after the main pass.
+            full += main_schedule(stability["case_ids"], self.configs, self.conditions,
+                                  seed=self.seed + int(repetition), repetition=int(repetition))
         if self.protocol.get("cells"):
             # A correction run: only the listed cells, in the seeded order.
             wanted = {(c["case_id"], c["config"], c["condition"]) for c in self.protocol["cells"]}

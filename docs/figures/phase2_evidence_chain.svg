@@ -1,0 +1,46 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1066" height="498" viewBox="0 0 1066 498">
+<rect width="1066" height="498" fill="#fff"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="16" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="533.0" y="26.0">Đối chứng khớp evidence: A → Apre → Apost → D</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="241.0" y="66.0">Evidence báo cáo (BCTC)</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="487.0" y="66.0">Tin tức</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="13" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="733.0" y="66.0">Sinh câu trả lời</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="65.0" y="125.0">A</tspan></text>
+<rect x="126" y="92" width="230" height="66" rx="6" fill="#fafafa" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="241.0" y="117.8">Top-10 đoạn BCTC</tspan><tspan x="241.0" y="132.2">(tìm vector, không rerank)</tspan></text>
+<rect x="372" y="92" width="230" height="66" rx="6" fill="#fafafa" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="487.0" y="125.0">Bài báo thô</tspan></text>
+<rect x="618" y="92" width="230" height="66" rx="6" fill="#fafafa" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="733.0" y="125.0">Một lần gọi model</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="65.0" y="213.0">Apre</tspan></text>
+<rect x="126" y="180" width="230" height="66" rx="6" fill="#b9b9b9" stroke="#555" stroke-width="1.6"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="241.0" y="205.8">Fact BCTC mà D đã truy xuất</tspan><tspan x="241.0" y="220.2">(trước khi cắt cho Synth)</tspan></text>
+<rect x="372" y="180" width="230" height="66" rx="6" fill="#fafafa" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="487.0" y="213.0">Bài báo thô</tspan></text>
+<rect x="618" y="180" width="230" height="66" rx="6" fill="#fafafa" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="733.0" y="213.0">Một lần gọi model</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="65.0" y="301.0">Apost</tspan></text>
+<rect x="126" y="268" width="230" height="66" rx="6" fill="#b9b9b9" stroke="#555" stroke-width="1.6"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="241.0" y="301.0">Fact BCTC D gửi cho Synth</tspan></text>
+<rect x="372" y="268" width="230" height="66" rx="6" fill="#b9b9b9" stroke="#555" stroke-width="1.6"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="487.0" y="293.8">Tin đã phân tích</tspan><tspan x="487.0" y="308.2">(+ kết quả agent phân tích)</tspan></text>
+<rect x="618" y="268" width="230" height="66" rx="6" fill="#fafafa" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="733.0" y="301.0">Một lần gọi model</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="15" font-weight="bold" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="65.0" y="389.0">D</tspan></text>
+<rect x="126" y="356" width="230" height="66" rx="6" fill="#ececec" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="241.0" y="389.0">Truy xuất theo planner/router</tspan></text>
+<rect x="372" y="356" width="230" height="66" rx="6" fill="#ececec" stroke="#555" stroke-width="1"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="487.0" y="389.0">Chọn lọc và phân tích tin</tspan></text>
+<rect x="618" y="356" width="230" height="66" rx="6" fill="#b9b9b9" stroke="#555" stroke-width="1.6"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="733.0" y="381.8">Pipeline nhiều bước</tspan><tspan x="733.0" y="396.2">(agent, Synth)</tspan></text>
+<path d="M866,125.0 H876 V213.0 H866" fill="none" stroke="#333" stroke-width="1.4"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="start" dominant-baseline="middle" fill="#111"><tspan x="888" y="169.0">đúng fact BCTC</tspan></text>
+<path d="M866,213.0 H876 V301.0 H866" fill="none" stroke="#333" stroke-width="1.4"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="start" dominant-baseline="middle" fill="#111"><tspan x="888" y="249.8">chọn lọc và</tspan><tspan x="888" y="264.2">phân tích tin</tspan></text>
+<path d="M866,301.0 H876 V389.0 H866" fill="none" stroke="#333" stroke-width="1.4"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="12" font-weight="normal" text-anchor="start" dominant-baseline="middle" fill="#111"><tspan x="888" y="337.8">phần còn lại</tspan><tspan x="888" y="352.2">của pipeline</tspan></text>
+<rect x="126" y="450" width="22" height="16" rx="3" fill="#b9b9b9" stroke="#555"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" text-anchor="start" dominant-baseline="middle" fill="#111"><tspan x="156" y="458.0">thay đổi so với hàng trên</tspan></text>
+<rect x="386" y="450" width="22" height="16" rx="3" fill="#ececec" stroke="#555"/>
+<text font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" text-anchor="start" dominant-baseline="middle" fill="#111"><tspan x="416" y="458.0">khác A</tspan></text>
+<text font-family="Helvetica, Arial, sans-serif" font-size="11" font-weight="normal" text-anchor="middle" dominant-baseline="middle" fill="#111"><tspan x="533.0" y="484.0">Apre và Apost dùng đúng prompt và giới hạn của A; evidence lấy từ log của D trong đợt chính.</tspan></text>
+</svg>

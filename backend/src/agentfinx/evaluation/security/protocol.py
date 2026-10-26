@@ -13,6 +13,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections import Counter
 from pathlib import Path
 
 from agentfinx.evaluation import benchmarks
@@ -44,6 +45,15 @@ def kind(protocol: dict) -> str:
 
 def exposure(protocol: dict) -> str:
     return {"controlled": "controlled", "replay": "replay", "l5": "structured"}.get(kind(protocol), "natural")
+
+
+def model_env(protocol: dict) -> dict[str, str]:
+    """The environment a protocol sets for its workers beyond the exposure's:
+    a generalization run names the answering model."""
+
+    if kind(protocol) == "generalization":
+        return {"OLLAMA_MODEL": str(protocol["model"]["model"])}
+    return {}
 
 
 def numeric_test_cases(cases: cases_module.CaseFile) -> list[str]:
@@ -155,6 +165,74 @@ def replay_problems(protocol: dict, cases: cases_module.CaseFile) -> list[str]:
     return found
 
 
+def generalization_problems(protocol: dict, cases: cases_module.CaseFile) -> list[str]:
+    """A generalization run: the natural workflow on the 80 test cases, A and/or D,
+    clean and attack, with another answering model named by the protocol; the
+    product and index pinned; a pre-chosen stability subset run again; scoring
+    deferred to the scorer frozen at G1."""
+
+    import re
+
+    from agentfinx.evaluation.security.runner import PILOT_ENV
+    from agentfinx.evaluation.security.worker import CONFIG_FLAGS
+
+    found = []
+    if protocol["attack_set"]["sha256"] != cases.sha256:
+        found.append("attack set differs from the protocol's")
+    test = cases.case_ids(split="test")
+    if protocol.get("pilot"):
+        # A pilot runs a few dev cases only; the test cases stay unseen.
+        if not protocol["case_ids"] or not set(protocol["case_ids"]) <= set(cases.case_ids(split="dev")):
+            found.append("a pilot uses dev cases only")
+        if protocol.get("stability"):
+            found.append("a pilot has no stability runs")
+    elif sorted(protocol["case_ids"]) != sorted(test) or len(set(protocol["case_ids"])) != len(protocol["case_ids"]):
+        found.append("case ids differ from the test split")
+    if len(set(protocol["case_ids"])) != len(protocol["case_ids"]):
+        found.append("duplicate case ids")
+    if not protocol["configs"] or not set(protocol["configs"]) <= {"A", "D"}:
+        found.append("a generalization run uses A and/or D")
+    for config, settings in protocol["configs"].items():
+        flags = CONFIG_FLAGS.get(config) or {}
+        if {key: settings.get(key) for key in flags} != flags:
+            found.append(f"config {config}: switches differ from the worker's")
+    if list(protocol["conditions"]) != list(cases_module.CONDITIONS):
+        found.append("conditions differ from clean/attack")
+    model = protocol.get("model") or {}
+    if not all(str(model.get(key, "")).strip() for key in ("provider", "model", "base_url", "temperature")):
+        found.append("the answering model is not fully named")
+    if protocol.get("environment") != PILOT_ENV:
+        found.append("a generalization run uses the natural workflow's environment")
+    stability = protocol.get("stability") or {}
+    chosen = stability.get("case_ids") or []
+    if not set(chosen) <= set(test) or len(set(chosen)) != len(chosen):
+        found.append("stability cases must be distinct test cases")
+    per_subtype = Counter(cases.case(case_id)["subtype"] for case_id in chosen)
+    if chosen and (set(per_subtype.values()) != {int(stability.get("per_subtype", 0))}
+                   or len(per_subtype) != len({cases.case(c)["subtype"] for c in test})):
+        found.append("stability cases must cover every subtype equally")
+    if chosen and (not stability.get("repetitions") or 0 in stability["repetitions"]):
+        found.append("stability repetitions are the extra runs (1, 2, …)")
+    if int(protocol["budget"]["model_calls"]) <= 0:
+        found.append("budget must be positive")
+    pinned = protocol.get("pinned") or {}
+    if not re.fullmatch(r"[0-9a-f]{64}", str(pinned.get("product_code_sha256", ""))):
+        found.append("the product version is not pinned")
+    for dataset_id in cases.dataset_ids(protocol["case_ids"]):
+        if not (pinned.get("datasets") or {}).get(dataset_id, {}).get("index_generation"):
+            found.append(f"index of {dataset_id} is not pinned")
+    for case_id in protocol["case_ids"]:
+        if protocol["as_of"].get(case_id) != cases.case(case_id)["as_of"]:
+            found.append(f"{case_id}: as_of differs from the attack set")
+    if protocol["retrieval"].get("index_mode") != "read_only":
+        found.append("the run reads the index only")
+    if not (protocol.get("requires") or {}).get("g1_record"):
+        found.append("the G1 record is not named")
+    if (protocol.get("scoring") or {}).get("mode") != "deferred":
+        found.append("scoring of a generalization run is deferred to the scorer frozen at G1")
+    return found
+
+
 def g1_problems(protocol: dict) -> list[str]:
     """Gate G1: the frozen rubric (and scorer) v3.4 recorded before any new run."""
 
@@ -251,6 +329,8 @@ def problems(protocol: dict, cases: cases_module.CaseFile) -> list[str]:
         from agentfinx.evaluation.security.l5 import l5_problems
 
         return l5_problems(protocol, cases)
+    if kind(protocol) == "generalization":
+        return generalization_problems(protocol, cases)
     found = review_policy_problems(protocol)
     for case_id in (protocol.get("dev_validation") or {}).get("case_ids", []):
         if case_id not in cases.case_ids(split="dev"):

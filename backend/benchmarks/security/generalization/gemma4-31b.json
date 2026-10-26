@@ -1,0 +1,353 @@
+{
+ "protocol_version": "security-generalization-v1",
+ "kind": "generalization",
+ "experiment": "agentfinx-security-generalization-gemma4-31b",
+ "description": "Mở rộng (26/10/2026): khả năng khái quát của kết quả A/D sang model trả lời khác. Workflow tự nhiên như đợt chính; chỉ đổi model trả lời (OLLAMA_MODEL). Một lượt chính trên 80 case test; 16 case chọn trước chạy thêm hai lượt để đo độ ổn định, báo riêng.",
+ "pilot": false,
+ "registered_under": {
+  "plan": "docs/security_generalization.md",
+  "main_protocol_sha256": "7cecc0f79a0cfd4bb7a0a9c15bf9932df16eefbc05fbdaff6f7d68448e4b7fa0"
+ },
+ "attack_set": {
+  "path": "benchmarks/security/attack_set.json",
+  "sha256": "d2a132dfbdaca930bf6b9835520d2b1b44f41893693b65c9eb9c00950656e8d0",
+  "split": "test"
+ },
+ "case_ids": [
+  "I1_API_001",
+  "I1_CCS_002",
+  "I1_CCS_003",
+  "I1_CNC_001",
+  "I1_CNC_002",
+  "I1_DPC_002",
+  "I1_GER_001",
+  "I1_HPG_001",
+  "I1_S72_002",
+  "I1_S72_003",
+  "I1_VNM_001",
+  "I1_VNM_002",
+  "I2_API_001",
+  "I2_API_002",
+  "I2_CCS_001",
+  "I2_CNC_002",
+  "I2_DPC_001",
+  "I2_GER_002",
+  "I2_HPG_001",
+  "I2_S72_001",
+  "I2_S72_002",
+  "I2_VNM_001",
+  "I3_API_001",
+  "I3_CCS_001",
+  "I3_CNC_001",
+  "I3_CNC_002",
+  "I3_DPC_001",
+  "I3_GER_001",
+  "I3_HPG_002",
+  "I3_VNM_002",
+  "I4_API_002",
+  "I4_CCS_001",
+  "I4_DPC_001",
+  "I4_DPC_002",
+  "I4_GER_001",
+  "I4_GER_002",
+  "I4_HPG_002",
+  "I4_S72_001",
+  "I4_S72_002",
+  "I4_VNM_001",
+  "P1_API_001",
+  "P1_CCS_002",
+  "P1_CCS_003",
+  "P1_CNC_001",
+  "P1_CNC_002",
+  "P1_DPC_002",
+  "P1_GER_001",
+  "P1_HPG_001",
+  "P1_HPG_002",
+  "P1_S72_002",
+  "P1_VNM_001",
+  "P1_VNM_002",
+  "P2_API_002",
+  "P2_CCS_001",
+  "P2_CNC_001",
+  "P2_DPC_001",
+  "P2_GER_002",
+  "P2_GER_003",
+  "P2_HPG_001",
+  "P2_S72_001",
+  "P2_S72_002",
+  "P2_VNM_002",
+  "P3_API_002",
+  "P3_API_003",
+  "P3_CCS_001",
+  "P3_CNC_001",
+  "P3_DPC_001",
+  "P3_DPC_002",
+  "P3_GER_001",
+  "P3_HPG_002",
+  "P3_S72_001",
+  "P3_VNM_001",
+  "P4_API_001",
+  "P4_CCS_001",
+  "P4_CCS_002",
+  "P4_CNC_001",
+  "P4_GER_002",
+  "P4_HPG_001",
+  "P4_S72_001",
+  "P4_VNM_001"
+ ],
+ "conditions": [
+  "clean",
+  "attack"
+ ],
+ "repetitions": 1,
+ "configs": {
+  "A": {
+   "label": "plain RAG baseline",
+   "pipeline": "baseline",
+   "prompt_guards_off": false,
+   "provenance_off": false,
+   "description": "Một lần gọi model với 10 đoạn báo cáo (không rerank) và các bài tin của cửa sổ; không planner, không phân tích tin, không hậu kiểm tài chính, không cảnh báo injection."
+  },
+  "D": {
+   "label": "full AgentFinX",
+   "pipeline": "agentfinx",
+   "prompt_guards_off": false,
+   "provenance_off": false,
+   "removed": [],
+   "always_on": [
+    "always.schema",
+    "always.quote_check",
+    "always.event_structure",
+    "always.routing",
+    "always.agent_scope",
+    "always.value_checks",
+    "L4.news_checks",
+    "prompt.untrusted_labels",
+    "prompt.web_rule.template",
+    "prompt.web_rule.analysis_profile",
+    "prompt.web_rule.synth_profile",
+    "prompt.web_rule.synth_news",
+    "prompt.news_untrusted",
+    "provenance.report_fact_gate",
+    "provenance.web_container_skip"
+   ]
+  }
+ },
+ "exposure": "natural",
+ "environment": {
+  "WEB_EVIDENCE_ENABLED": "1",
+  "WEB_ANALYSIS_ENABLED": "1",
+  "LLM_RERANK": "0"
+ },
+ "model": {
+  "provider": "ollama",
+  "model": "gemma4:31b-cloud",
+  "base_url": "https://ollama.com",
+  "temperature": "0",
+  "backend_version": "ghi từ siêu dữ liệu phản hồi nếu cloud cung cấp; nếu không: chưa xác định"
+ },
+ "embedding": {
+  "provider": "ollama",
+  "model": "bge-m3"
+ },
+ "retrieval": {
+  "index_mode": "read_only",
+  "rebuild_at_start": false,
+  "llm_rerank": false,
+  "baseline": {
+   "top_k": 10,
+   "chunk_chars": 2000,
+   "article_chars": 4000
+  }
+ },
+ "as_of": {
+  "I1_API_001": "2025-02-28T12:00:00+07:00",
+  "I1_CCS_002": "2026-04-20T12:00:00+07:00",
+  "I1_CCS_003": "2026-04-20T12:00:00+07:00",
+  "I1_CNC_001": "2025-04-17T12:00:00+07:00",
+  "I1_CNC_002": "2025-04-17T12:00:00+07:00",
+  "I1_DPC_002": "2026-03-25T12:00:00+07:00",
+  "I1_GER_001": "2026-04-02T12:00:00+07:00",
+  "I1_HPG_001": "2025-09-30T12:00:00+07:00",
+  "I1_S72_002": "2025-04-21T12:00:00+07:00",
+  "I1_S72_003": "2025-04-21T12:00:00+07:00",
+  "I1_VNM_001": "2026-03-30T12:00:00+07:00",
+  "I1_VNM_002": "2026-03-30T12:00:00+07:00",
+  "I2_API_001": "2025-02-28T12:00:00+07:00",
+  "I2_API_002": "2025-02-28T12:00:00+07:00",
+  "I2_CCS_001": "2026-04-20T12:00:00+07:00",
+  "I2_CNC_002": "2025-04-17T12:00:00+07:00",
+  "I2_DPC_001": "2026-03-25T12:00:00+07:00",
+  "I2_GER_002": "2026-04-02T12:00:00+07:00",
+  "I2_HPG_001": "2025-09-30T12:00:00+07:00",
+  "I2_S72_001": "2025-04-21T12:00:00+07:00",
+  "I2_S72_002": "2025-04-21T12:00:00+07:00",
+  "I2_VNM_001": "2026-03-30T12:00:00+07:00",
+  "I3_API_001": "2025-02-28T12:00:00+07:00",
+  "I3_CCS_001": "2026-04-20T12:00:00+07:00",
+  "I3_CNC_001": "2025-04-17T12:00:00+07:00",
+  "I3_CNC_002": "2025-04-17T12:00:00+07:00",
+  "I3_DPC_001": "2026-03-25T12:00:00+07:00",
+  "I3_GER_001": "2026-04-02T12:00:00+07:00",
+  "I3_HPG_002": "2025-09-30T12:00:00+07:00",
+  "I3_VNM_002": "2026-03-30T12:00:00+07:00",
+  "I4_API_002": "2025-02-28T12:00:00+07:00",
+  "I4_CCS_001": "2026-04-20T12:00:00+07:00",
+  "I4_DPC_001": "2026-03-25T12:00:00+07:00",
+  "I4_DPC_002": "2026-03-25T12:00:00+07:00",
+  "I4_GER_001": "2026-04-02T12:00:00+07:00",
+  "I4_GER_002": "2026-04-02T12:00:00+07:00",
+  "I4_HPG_002": "2025-09-30T12:00:00+07:00",
+  "I4_S72_001": "2025-04-21T12:00:00+07:00",
+  "I4_S72_002": "2025-04-21T12:00:00+07:00",
+  "I4_VNM_001": "2026-03-30T12:00:00+07:00",
+  "P1_API_001": "2025-02-28T12:00:00+07:00",
+  "P1_CCS_002": "2026-04-20T12:00:00+07:00",
+  "P1_CCS_003": "2026-04-20T12:00:00+07:00",
+  "P1_CNC_001": "2025-04-17T12:00:00+07:00",
+  "P1_CNC_002": "2025-04-17T12:00:00+07:00",
+  "P1_DPC_002": "2026-03-25T12:00:00+07:00",
+  "P1_GER_001": "2026-04-02T12:00:00+07:00",
+  "P1_HPG_001": "2025-09-30T12:00:00+07:00",
+  "P1_HPG_002": "2025-09-30T12:00:00+07:00",
+  "P1_S72_002": "2025-04-21T12:00:00+07:00",
+  "P1_VNM_001": "2026-03-30T12:00:00+07:00",
+  "P1_VNM_002": "2026-03-30T12:00:00+07:00",
+  "P2_API_002": "2025-02-28T12:00:00+07:00",
+  "P2_CCS_001": "2026-04-20T12:00:00+07:00",
+  "P2_CNC_001": "2025-04-17T12:00:00+07:00",
+  "P2_DPC_001": "2026-03-25T12:00:00+07:00",
+  "P2_GER_002": "2026-04-02T12:00:00+07:00",
+  "P2_GER_003": "2026-04-02T12:00:00+07:00",
+  "P2_HPG_001": "2025-09-30T12:00:00+07:00",
+  "P2_S72_001": "2025-04-21T12:00:00+07:00",
+  "P2_S72_002": "2025-04-21T12:00:00+07:00",
+  "P2_VNM_002": "2026-03-30T12:00:00+07:00",
+  "P3_API_002": "2025-02-28T12:00:00+07:00",
+  "P3_API_003": "2025-02-28T12:00:00+07:00",
+  "P3_CCS_001": "2026-04-20T12:00:00+07:00",
+  "P3_CNC_001": "2025-04-17T12:00:00+07:00",
+  "P3_DPC_001": "2026-03-25T12:00:00+07:00",
+  "P3_DPC_002": "2026-03-25T12:00:00+07:00",
+  "P3_GER_001": "2026-04-02T12:00:00+07:00",
+  "P3_HPG_002": "2025-09-30T12:00:00+07:00",
+  "P3_S72_001": "2025-04-21T12:00:00+07:00",
+  "P3_VNM_001": "2026-03-30T12:00:00+07:00",
+  "P4_API_001": "2025-02-28T12:00:00+07:00",
+  "P4_CCS_001": "2026-04-20T12:00:00+07:00",
+  "P4_CCS_002": "2026-04-20T12:00:00+07:00",
+  "P4_CNC_001": "2025-04-17T12:00:00+07:00",
+  "P4_GER_002": "2026-04-02T12:00:00+07:00",
+  "P4_HPG_001": "2025-09-30T12:00:00+07:00",
+  "P4_S72_001": "2025-04-21T12:00:00+07:00",
+  "P4_VNM_001": "2026-03-30T12:00:00+07:00"
+ },
+ "pinned": {
+  "product_code_sha256": "fcf31c1d8afce0556a2f74227435c8d783388b9326368edb6b93e6d68fe0e2ba",
+  "datasets": {
+   "apec": {
+    "dataset_generation": "4d83a608d1ba5dc3ae2b3fd279f47a9b48da025f894f2564960a6169c402777d",
+    "index_generation": "be83d0fa1a8b6d1d8ca593dc3b7f6c116feb807f62b1589959e2e4d77c370a99"
+   },
+   "chipsang": {
+    "dataset_generation": "9a06689e40a4dc9f8fc69913a6bc2fd3109e17b209e03957482e8fbf4d84d1b8",
+    "index_generation": "8b604d5a19331aa36e67e524e1991cc698a847ffaf3c98fd7e046445530a0fd9"
+   },
+   "hoaphat": {
+    "dataset_generation": "400ac48dcacb6afcdbb3461842fc5cd60a3f4180f75bea15d377075e136e5990",
+    "index_generation": "73ebf49141e17d0e4e326745dd4bda4174eb069be63418107afa58518e332e87"
+   },
+   "ngoisaogeru": {
+    "dataset_generation": "ea99e6a4d87871428d6e4d3b804e6c48f7dad1898bdf1013b7e86c7589a6700f",
+    "index_generation": "ba4a512714ff08a9e54b0d794ff9a1e8bf83ea03cfd2e6b36bb4fd192a94e6a3"
+   },
+   "nhuadanang": {
+    "dataset_generation": "4063650679beacf8bf6c91efee26baf8d03c3e58d3f8f5c1fa9c27c9b6d58d7a",
+    "index_generation": "5f4b37e2751ea6dc5460787f5c7a57dd802553c93afd23eda148260d34012a78"
+   },
+   "songda": {
+    "dataset_generation": "69c11cde0278742eb833052d3fbb03fe49483182bff873fb079579945db1454e",
+    "index_generation": "c0280374b68eec17fda39a8dc452f24a4b0beac10ad21c73d9778faf3d63e533"
+   },
+   "suavietnam": {
+    "dataset_generation": "7d3fee0bceff6678338b68d16429ad28a7fd0fe93924120a4c70614e48dcb5b7",
+    "index_generation": "a6441f5c15d796d675b30387b524603cf25c21d81891c7735904b673bb38e5db"
+   },
+   "traphaco": {
+    "dataset_generation": "7ce2dc5a1403e98e6a1dc98d0e813fb1b841cd839ef41d4924a949c866ef0e12",
+    "index_generation": "eef1aae66cfbd5bbbd7e996334f263c0b94ea1ef40f6813287526e9a506e051b"
+   }
+  },
+  "product_note": "khác mã đợt chính (3c579b10…) chỉ ở web_evidence.as_structured_fact và chế độ structured/cấu hình E của worker.py (Việc 3); A/D ở workflow tự nhiên không chạy qua các đoạn này. Không gồm bản sửa router của nhánh mở rộng."
+ },
+ "requires": {
+  "g1_record": "benchmarks/security/review/g1_freeze_v3.4.json"
+ },
+ "budget": {
+  "model_calls": 2000,
+  "estimate": "160 ô A × 1 + 160 ô D × ~4,5 lần gọi, cộng 128 ô ổn định; ~1.250",
+  "ledger": "budget.json riêng trong thư mục chạy",
+  "increase": "không bao giờ tự tăng"
+ },
+ "schedule": {
+  "seed": 20261026,
+  "order": "xáo thứ tự case, rồi xáo các ô của mỗi case; lượt ổn định chạy sau lượt chính, mỗi lượt một seed riêng"
+ },
+ "cell": {
+  "identity": [
+   "case_id",
+   "config",
+   "condition",
+   "repetition"
+  ],
+  "repetition": 0,
+  "selection": "lần hợp lệ đầu tiên; mọi attempt khác được giữ để kiểm toán và tính chi phí"
+ },
+ "validity": [
+  "status ok",
+  "câu trả lời không rỗng",
+  "snapshot có và đúng hash",
+  "prompt log đủ: mọi request có phản hồi, số request bằng model_calls"
+ ],
+ "retry": {
+  "infra_error_or_missing_artifact": 1,
+  "provider_quota": "đổi sang key kế tiếp, chạy lại đúng ô, không tính vào lượt thử lại",
+  "stop": [
+   "hết key",
+   "hết ngân sách",
+   "cấu hình hoặc chỉ mục không khớp"
+  ],
+  "never": "không chạy lại câu trả lời hợp lệ vì điểm thấp"
+ },
+ "resume": "dùng nguyên lịch và fingerprint; kiểm tra protocol, tập cấu hình, điều kiện, case, ngân sách; khác là từ chối",
+ "scoring": {
+  "mode": "deferred",
+  "rule": "chấm bằng scorer v3.4 đã đóng băng ở G1; câu v3.4 không quyết định được và mẫu kiểm theo kế hoạch chấm đã khóa sau pilot; ẩn model và cấu hình khi chấm"
+ },
+ "stability": {
+  "case_ids": [
+   "I1_VNM_001",
+   "I1_VNM_002",
+   "I2_API_001",
+   "I2_VNM_001",
+   "I3_CNC_001",
+   "I3_HPG_002",
+   "I4_HPG_002",
+   "I4_S72_002",
+   "P1_HPG_001",
+   "P1_S72_002",
+   "P2_DPC_001",
+   "P2_HPG_001",
+   "P3_GER_001",
+   "P3_HPG_002",
+   "P4_GER_002",
+   "P4_HPG_001"
+  ],
+  "per_subtype": 2,
+  "repetitions": [
+   1,
+   2
+  ],
+  "selection": "random.Random('20261026:stability'), 2 case mỗi subtype, chọn trước khi chạy"
+ }
+}
