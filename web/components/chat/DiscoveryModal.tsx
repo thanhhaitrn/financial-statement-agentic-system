@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Select from "@/components/Select";
 import Modal from "@/components/Modal";
 import type { DiscoverySearch } from "@/lib/types";
 
@@ -66,7 +67,7 @@ export default function DiscoveryModal({
     >
       <form id="discovery-form" className="form-grid" onSubmit={submit} noValidate>
         <p className="muted small">
-          Hệ thống chỉ lấy danh sách báo cáo công khai; không tải hay xử lý báo cáo nào trước khi bạn xác nhận.
+          Hệ thống chỉ lấy danh sách báo cáo công khai. Không tải hay xử lý báo cáo nào trước khi bạn xác nhận.
         </p>
         <label className="fl">Mã CK hoặc tên công ty *
           <input className="field" autoFocus value={subject} maxLength={120} onChange={(e) => setSubject(e.target.value)}
@@ -77,47 +78,74 @@ export default function DiscoveryModal({
             <input className="field" inputMode="numeric" value={year} maxLength={4} onChange={(e) => setYear(e.target.value)} placeholder="Mọi năm" />
           </label>
           <label className="fl">Loại kỳ
-            <select className="field" value={period} onChange={(e) => changePeriod(e.target.value as Period)}>
-              <option value="any">Mọi kỳ</option>
-              <option value="annual">Báo cáo năm</option>
-              <option value="quarter">Báo cáo quý</option>
-              <option value="half_year">Bán niên</option>
-            </select>
+            <Select
+              label="Loại kỳ"
+              value={period}
+              onChange={(v) => changePeriod(v as Period)}
+              options={[
+                { value: "any", label: "Mọi kỳ" },
+                { value: "annual", label: "Báo cáo năm" },
+                { value: "quarter", label: "Báo cáo quý" },
+                { value: "half_year", label: "Bán niên" },
+              ]}
+            />
           </label>
         </div>
         <div className="form-row">
           <label className="fl">Quý
-            <select className="field" value={quarter} disabled={period !== "quarter"} onChange={(e) => setQuarter(e.target.value)}>
-              <option value="">Mọi quý</option>
-              <option value="1">Quý 1</option>
-              <option value="2">Quý 2</option>
-              <option value="3">Quý 3</option>
-              <option value="4">Quý 4</option>
-            </select>
+            <Select
+              label="Quý"
+              value={quarter}
+              disabled={period !== "quarter"}
+              onChange={(v) => setQuarter(v)}
+              options={[
+                { value: "", label: "Mọi quý" },
+                { value: "1", label: "Quý 1" },
+                { value: "2", label: "Quý 2" },
+                { value: "3", label: "Quý 3" },
+                { value: "4", label: "Quý 4" },
+              ]}
+            />
           </label>
           <label className="fl">Nửa năm
-            <select className="field" value={half} disabled={period !== "half_year"} onChange={(e) => setHalf(e.target.value)}>
-              <option value="">Cả hai</option>
-              <option value="1">6 tháng đầu</option>
-              <option value="2">6 tháng cuối</option>
-            </select>
+            <Select
+              label="Nửa năm"
+              value={half}
+              disabled={period !== "half_year"}
+              onChange={(v) => setHalf(v)}
+              options={[
+                { value: "", label: "Cả hai" },
+                { value: "1", label: "6 tháng đầu" },
+                { value: "2", label: "6 tháng cuối" },
+              ]}
+            />
           </label>
         </div>
         <div className="form-row">
           <label className="fl">Phạm vi
-            <select className="field" value={scope} onChange={(e) => setScope(e.target.value)}>
-              <option value="unknown">Mọi phạm vi</option>
-              <option value="consolidated">Hợp nhất</option>
-              <option value="separate">Riêng / công ty mẹ</option>
-            </select>
+            <Select
+              label="Phạm vi"
+              value={scope}
+              onChange={(v) => setScope(v)}
+              options={[
+                { value: "unknown", label: "Mọi phạm vi" },
+                { value: "consolidated", label: "Hợp nhất" },
+                { value: "separate", label: "Riêng / công ty mẹ" },
+              ]}
+            />
           </label>
           <label className="fl">Kiểm toán
-            <select className="field" value={audit} onChange={(e) => setAudit(e.target.value)}>
-              <option value="unknown">Mọi trạng thái</option>
-              <option value="audited">Đã kiểm toán</option>
-              <option value="reviewed">Đã soát xét</option>
-              <option value="unaudited">Chưa kiểm toán</option>
-            </select>
+            <Select
+              label="Kiểm toán"
+              value={audit}
+              onChange={(v) => setAudit(v)}
+              options={[
+                { value: "unknown", label: "Mọi trạng thái" },
+                { value: "audited", label: "Đã kiểm toán" },
+                { value: "reviewed", label: "Đã soát xét" },
+                { value: "unaudited", label: "Chưa kiểm toán" },
+              ]}
+            />
           </label>
         </div>
         {error && <p className="form-error" role="alert">{error}</p>}

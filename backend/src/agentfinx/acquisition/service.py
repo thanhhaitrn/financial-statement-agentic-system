@@ -676,10 +676,11 @@ class ReportAcquisitionService:
                         "credits_confirmed": converted.credits_confirmed,
                         "cache_hit": converted.cache_hit,
                         "targeted_retry_pages": converted.targeted_retry_pages,
+                        "quality_issues": list(converted.quality_issues),
                     },
                 },
             )
-            if not converted.markdown or converted.quality_issues:
+            if not converted.markdown.strip():
                 raise LlamaParseError(
                     "converted document failed quality validation",
                     code="conversion_quality_failed",

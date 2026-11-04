@@ -964,3 +964,20 @@ def test_invalid_typed_metadata_is_rejected_and_index_contract_is_versioned():
         _collection_metadata()["vector_index_schema_version"]
         == VECTOR_INDEX_SCHEMA_VERSION
     )
+
+
+def test_import_keeps_usable_facts_when_one_extracted_cell_has_no_column_label(monkeypatch):
+    from agentfinx.ingestion import pipeline
+    good = _facts("# BẢNG CÂN ĐỐI KẾ TOÁN\n\n| Chỉ tiêu | 31/12/2025 |\n|---|---|\n| Tiền | 100 |\n")[0]
+    bad = list(good)
+    bad[15] = ""
+    monkeypatch.setattr(pipeline, "build_fact_rows", lambda *a, **k: [good, tuple(bad)])
+    monkeypatch.setattr(pipeline, "build_frontmatter_rows", lambda *a, **k: [])
+    monkeypatch.setattr(pipeline, "build_note_rows", lambda *a, **k: [])
+    dataset = SimpleNamespace(file_path="fixture.md", dataset_id="import", managed_source=True)
+    metadata = {"company": "Công ty A", "fiscal_year": 2025}
+    _, rows = pipeline._parse_fact_rows(dataset, "", metadata)
+    assert rows == normalize_financial_fact_rows([good])
+    dataset.managed_source = False
+    with pytest.raises(ValueError, match="missing column_label"):
+        pipeline._parse_fact_rows(dataset, "", metadata)

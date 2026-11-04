@@ -11,16 +11,18 @@ from agentfinx.acquisition.download import PdfArtifactValidator
 from agentfinx.acquisition.llamaparse import LlamaParseDocumentConverter
 
 
-def test_real_sdk_upload_poll_and_usage_contract(tmp_path):
+@pytest.mark.parametrize("tier,credits", [("cost_effective", 3), ("agentic_plus", 45)])
+def test_real_sdk_upload_poll_and_usage_contract(tmp_path, tier, credits):
     requests = []
     def handle(request):
         requests.append(request)
         job = {"id": "job-sdk", "project_id": "project-sdk", "status": "COMPLETED",
-               "usage": {"credits": 3}}
+               "usage": {"credits": credits}}
         if request.method == "POST":
             body = request.read()
             assert b"%PDF-1.7" in body
-            assert b"cost_effective" in body
+            assert tier.encode() in body
+            assert b"target_pages" not in body
             assert b"disable_cache" in body
             return httpx.Response(200, json=job)
         return httpx.Response(200, json={"job": job,
@@ -34,12 +36,12 @@ def test_real_sdk_upload_poll_and_usage_contract(tmp_path):
                                    page_counter=lambda _: 1).validate(source, origin="upload", cache_namespace="owner")
     with httpx.Client(transport=httpx.MockTransport(handle)) as http_client:
         client = llama_cloud.LlamaCloud(api_key="non-secret-test-key", http_client=http_client)
-        converter = LlamaParseDocumentConverter(client=client, cache_dir=tmp_path / "cache",
+        converter = LlamaParseDocumentConverter(client=client, tier=tier, cache_dir=tmp_path / "cache",
                                                 allow_cloud_parse=True, local_extractor=None)
         first = converter.convert(artifact, private=True)
         second = converter.convert(artifact, private=True)
     assert sum(request.method == "POST" for request in requests) == 1
-    assert first.billed_credits == 3 and second.billed_credits == 0
+    assert first.billed_credits == credits and second.billed_credits == 0
     assert second.cache_hit
     assert "--- Page 0" in first.markdown
     references = list((tmp_path / "cache").rglob("*.job.json"))

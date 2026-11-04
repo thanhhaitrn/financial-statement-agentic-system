@@ -3,6 +3,27 @@
 
 from agentfinx.agents.agent_registry import ANALYSIS_AGENT_ORDER, analysis_aspect_headings
 from agentfinx.core.ablation import guard
+from agentfinx.core.config.agent_prompts import resolve
+
+
+_EVIDENCE_FIRST_ANSWER_GUIDANCE = """
+
+            ƯU TIÊN NHẬN ĐỊNH TỪ DỮ LIỆU ĐÃ CÓ
+            - Chọn nội dung phân tích theo dữ liệu thực tế đã truy xuất và câu hỏi chính. Danh mục chỉ tiêu là gợi ý lựa chọn, không phải checklist phải trình bày đủ.
+            - Tận dụng các số dư, cơ cấu, chênh lệch, dòng tiền và tỷ lệ có đủ đầu vào để viết nhận định cụ thể. Có một kỳ thì mô tả quy mô/cơ cấu; có hai kỳ tương thích thì định lượng biến động. Chỉ nêu nguyên nhân khi có bằng chứng.
+            - Bỏ qua chỉ tiêu phụ chưa đủ đầu vào; KHÔNG liệt kê hàng loạt ROA, ROE, DIO, DSO, DPO, CCC hoặc các tỷ lệ không tính được khi người dùng không hỏi trực tiếp chúng.
+            - Nhận xét phải giải thích ý nghĩa của số liệu đã nêu, không biến thành danh sách dữ liệu thiếu hoặc yêu cầu người dùng bổ sung báo cáo.
+            - Chỉ nêu hạn chế khi nó ngăn trả lời yêu cầu trực tiếp hoặc thực sự làm thay đổi kết luận chính. Toàn bộ answer có TỐI ĐA MỘT CÂU NGẮN về hạn chế, đặt tại phần bị ảnh hưởng; không nhắc lại ở tóm tắt hay các khía cạnh khác. Nếu người dùng yêu cầu kiểm kê dữ liệu thiếu thì mới liệt kê theo yêu cầu đó.
+            - requirements/followups là thông tin điều phối nội bộ; không chép danh sách này vào answer. Thiếu dữ liệu của một chỉ tiêu không có nghĩa là không thể phân tích các dữ liệu khác, và tự nó không phải rủi ro tài chính của doanh nghiệp.
+            - Không có trong kết quả truy xuất chưa có nghĩa là báo cáo không có. Kiểm tra facts và calculation context trước khi nêu hạn chế; dùng số liệu đã tìm thấy thay cho lời từ chối.
+            - Không bịa số, tự ước lượng đầu vào, thay PAT bằng PBT, lấy sai kỳ/đơn vị hay kết luận vượt quá bằng chứng để làm câu trả lời có vẻ đầy đủ.
+            """
+
+
+def get_agent_profile(agent_name: str) -> dict:
+    profile = dict(AGENT_PROFILES[agent_name])
+    profile["system_instruction"] = resolve(agent_name, profile["system_instruction"])
+    return profile
 
 
 def _analysis_answer_format_guidance() -> str:
@@ -20,8 +41,8 @@ def _analysis_answer_format_guidance() -> str:
             - Nếu có tính toán, nêu công thức và biến đầu vào ngay trong bullet tương ứng.
             - Sau phần số liệu phải có dòng "*Nhận xét*:" rồi các bullet nhận xét ngắn, giải thích ý nghĩa tài chính.
             - Không thêm mục "**Kết luận khía cạnh**"; các nhận định cuối cùng của agent này đặt trong phần "*Nhận xét*:" nếu cần.
-            - Nếu thiếu dữ liệu phụ nhưng vẫn trả lời được câu hỏi chính, vẫn giữ cấu trúc trên và nêu giới hạn dữ liệu trong nhận xét; requirements=[] nếu không cần follow-up.
-            - Nếu thiếu dữ liệu cốt lõi khiến chưa thể kết luận, answer vẫn giữ format trên, nói rõ "chưa đủ dữ liệu để kết luận", và requirements chỉ liệt kê các line-item cần truy xuất thêm.
+            - Nếu vẫn trả lời được câu hỏi chính, trình bày số liệu và nhận định có căn cứ; bỏ qua chỉ tiêu phụ chưa tính được, requirements=[] nếu không cần follow-up.
+            - Chỉ khi yêu cầu trực tiếp chưa thể trả lời, nêu một câu ngắn chỉ rõ phạm vi chưa thể kết luận; requirements chỉ chứa line-item cốt lõi cần truy xuất thêm, không chép chúng thành đoạn nhận xét.
             - Không dùng mục "**Kết luận tổng thể**"; mục đó dành cho agent_synth sau khi hợp nhất nhiều khía cạnh.
             """
 
@@ -55,7 +76,7 @@ def _analysis_common_guidance(example_queries: str) -> str:
             - Không ghép nhiều khoản mục vào cùng một query; nếu thiếu nhiều khoản mục, chọn khoản mục quan trọng nhất cho lần gọi hiện tại.
             - Nếu vẫn thiếu dữ liệu nhưng không gọi tool, requirements phải là 1-3 line-item ngắn, mỗi item chỉ mô tả 1 dữ liệu thiếu.
             - Output luôn là JSON AnalysisOutput với đúng 2 field: answer và requirements; nếu đủ dữ liệu, requirements=[].
-            - Nếu cần tính toán, nêu công thức và biến đầu vào; nếu chưa đủ dữ liệu cốt lõi, nói rõ "chưa đủ dữ liệu để kết luận".
+            - Nếu cần tính toán, nêu công thức và biến đầu vào; chỉ nêu giới hạn ngắn khi phép tính người dùng hỏi trực tiếp chưa thể thực hiện, đồng thời trả phần dữ liệu đã xác nhận.
             - Câu hỏi "TÍNH TOÁN TỔNG/cộng các khoản…" khi facts đã có các dòng thành phần: liệt kê TỪNG dòng thành phần kèm số, rồi CỘNG lại và ghi rõ phép tính (a + b + c = tổng); không bỏ sót dòng thành phần nào đã có trong facts và không thay bằng một số tổng khác nghĩa.
             """
 
@@ -109,7 +130,8 @@ def _build_profitability_system_instruction() -> str:
             - Trong BCTC RIÊNG, dòng "Lợi nhuận sau thuế TNDN" (PAT) chính là lãi ròng/net profit của công ty; KHÔNG gọi đây là proxy/ước lượng cho lãi ròng và KHÔNG tuyên bố còn thiếu một dòng "net profit" khác.
             - ROA/ROE cho một năm ưu tiên mẫu số BÌNH QUÂN đầu-cuối kỳ: ROA = LNST / tổng tài sản bình quân; ROE = LNST / vốn chủ sở hữu bình quân. Nếu thiếu số đầu kỳ và buộc dùng số cuối kỳ, phải ghi rõ đó là cách tính đơn giản hóa dùng số cuối kỳ; không trình bày như ROA/ROE bình quân chuẩn.
             - TỬ SỐ ROA/ROE chuẩn trong contract này là LNST/PAT (lãi ròng), KHÔNG phải "Lợi nhuận thuần từ hoạt động kinh doanh". Không được thay PAT bằng dòng lợi nhuận hoạt động chỉ vì PAT chưa xuất hiện trong output hiện tại; nếu fact PAT có thì phải dùng PAT.
-            - Khi objective yêu cầu biên lợi nhuận ròng, bắt buộc tính và nhận xét chỉ tiêu đó; dùng LNST / DOANH THU THUẦN, không dùng doanh thu trước giảm trừ.
+            - Khi objective yêu cầu biên lợi nhuận ròng và có đủ đầu vào, tính và nhận xét chỉ tiêu đó; dùng LNST / DOANH THU THUẦN, không dùng doanh thu trước giảm trừ.
+            - Khi PAT chưa được truy xuất, vẫn khai thác doanh thu, lợi nhuận gộp, lợi nhuận hoạt động và các biên tương ứng có đủ dữ liệu. Không thay PAT bằng lợi nhuận khác để tính ROA/ROE; không liệt kê các chỉ số chưa tính được trong đánh giá tổng hợp.
             - Khi có đủ PAT và doanh thu thuần của kỳ hiện tại lẫn kỳ trước trong một yêu cầu đánh giá tổng hợp, phải nêu ít nhất chiều biến động sinh lời; ưu tiên so sánh biên lợi nhuận ròng hai kỳ và mức thay đổi theo điểm phần trăm. Không chỉ dừng ở các tỷ lệ tại một thời điểm.
             - Nếu đủ lợi nhuận gộp, lợi nhuận thuần từ hoạt động kinh doanh, PAT và doanh thu thuần của hai kỳ, phải định lượng đủ biên gộp, biên hoạt động và biên ròng cho kỳ hiện tại + kỳ trước, kèm thay đổi theo điểm phần trăm; không thay các con số này bằng nhận xét chung "các biên giảm/tăng".
             - Dòng "Lợi nhuận thuần từ hoạt động kinh doanh" theo mẫu BCTC Việt Nam KHÔNG tự động là EBIT vì đã bao gồm doanh thu/chi phí tài chính và chi phí lãi vay. Giữ nguyên tên dòng báo cáo; chỉ gọi EBIT khi báo cáo trực tiếp định nghĩa hoặc đủ dữ liệu để tính EBIT riêng.
@@ -130,6 +152,7 @@ def _build_liquidity_solvency_system_instruction() -> str:
         """            - Tài sản ngắn hạn, tiền, phải thu, hàng tồn kho, nợ ngắn hạn, nợ dài hạn, vốn chủ sở hữu.
             - Current Ratio, Quick Ratio, Cash Ratio nếu có, vốn lưu động ròng, tổng nợ/tổng tài sản, tổng nợ/vốn chủ sở hữu, Interest Coverage, khả năng tạo dòng tiền trả nợ.""",
         """            - Phân biệt liquidity = thanh toán ngắn hạn và solvency = nghĩa vụ tài chính dài hạn.
+            - Chọn nhận định từ tiền, nợ, vốn, cơ cấu/kỳ hạn nợ và dòng tiền thực sự có. Chỉ tính tỷ lệ đủ đầu vào; khi chưa tính được current/quick ratio, vẫn phân tích biến động nghĩa vụ nợ hoặc tỷ lệ tiền/nợ nếu đủ dữ liệu. Không từ biến động nợ riêng lẻ kết luận thanh khoản đã xấu đi.
             - Dùng đúng dòng tổng của báo cáo chính và `canonical_financial_metrics` khi có: Current Ratio = tổng tài sản ngắn hạn / tổng nợ ngắn hạn; Quick Ratio = (tổng tài sản ngắn hạn - hàng tồn kho) / tổng nợ ngắn hạn; Cash Ratio = tiền và tương đương tiền / tổng nợ ngắn hạn. Không dựng Quick Ratio bằng cách cộng một số cấu phần được retrieve, và tuyệt đối không cộng chi tiết note vào tổng phải thu.
             - Không kết luận an toàn chỉ vì current ratio cao; kiểm tra chất lượng tài sản ngắn hạn.
             - Khi dùng thuyết minh phải thu, tồn kho hoặc vay, trình bày chi tiết theo "trong đó" để đánh giá tập trung/chất lượng/kỳ hạn; không cộng cấu phần thuyết minh vào số dư tổng trên Bảng cân đối kế toán.
@@ -167,11 +190,12 @@ def _build_efficiency_system_instruction() -> str:
         """            - Doanh thu, giá vốn, tổng tài sản, tài sản ngắn hạn, hàng tồn kho, phải thu, phải trả.
             - Asset Turnover, Fixed Asset Turnover nếu đủ dữ liệu, Inventory Turnover/DIO, Receivables Turnover/DSO, Payables Turnover/DPO, CCC.""",
         """            - Không chỉ nêu vòng quay; diễn giải nhanh/chậm ảnh hưởng thế nào đến vận hành và tiền.
+            - Khi không đủ đầu vào vòng quay hoặc CCC, tập trung vào quy mô, cơ cấu và biến động doanh thu, tài sản, tồn kho/công nợ thực sự có; không gọi biến động số dư là vòng quay và không liệt kê các phép tính chưa thực hiện được.
             - Asset Turnover năm = doanh thu thuần / tổng tài sản bình quân đầu-cuối kỳ. Khi yêu cầu đánh giá tổng hợp và đủ ba đầu vào này, phải tính kết quả; không được gọi thiếu doanh thu hoặc bỏ trống hiệu quả tài sản. Chỉ gọi vòng quay cao/thấp, nhanh/chậm khi có kỳ trước, mục tiêu hoặc benchmark đối chiếu.
             - Không kết luận vòng quay tài sản "cải thiện/suy giảm so với năm trước" chỉ từ doanh thu tăng và số dư tài sản cuối năm giảm. Phải có vòng quay kỳ trước đã tính trên tài sản bình quân tương ứng (hoặc fact trực tiếp); nếu thiếu mẫu số bình quân kỳ trước, chỉ nêu vòng quay kỳ hiện tại và các biến động đầu vào riêng rẽ.
             - DSO tăng hàm ý rủi ro thu hồi công nợ; DIO tăng hàm ý tồn kho chậm luân chuyển/giam vốn; CCC kéo dài là dấu hiệu suy giảm hiệu quả.
             - Efficiency không đồng nghĩa profitability; chỉ liên hệ lợi nhuận/nợ khi ảnh hưởng trực tiếp đến hiệu quả vận hành.""",
-        "Theo cấu trúc: hiệu quả tài sản tổng thể -> tồn kho -> phải thu -> phải trả -> chu kỳ chuyển đổi tiền.",
+        "Chọn phần có dữ liệu hữu ích trong hiệu quả tài sản, tồn kho, phải thu, phải trả và chu kỳ tiền; không bắt buộc trình bày đủ mọi phần.",
         '"doanh thu thuần về bán hàng và cung cấp dịch vụ", "giá vốn hàng bán", "hàng tồn kho", "các khoản phải thu ngắn hạn", "phải trả người bán ngắn hạn", "nợ ngắn hạn"',
     )
 
@@ -392,11 +416,11 @@ AGENT_PROFILES = {
 
             NHIỆM VỤ
             - Đọc user_query + plan_json.difficulty_level + worker_plan.analysis_plan + worker_results_json.
-            - Nếu có analysis agents, worker_results_json chỉ gồm analysis_outputs; không có raw facts, retrieval_facts hoặc note facts.
-            - Khi có analysis_outputs, phân tích và tổng hợp chỉ dựa trên answer/requirements của các analysis agents.
+            - Khi có analysis agents, worker_results_json có analysis_outputs và retrieval_facts. Dùng diễn giải của agents để tổng hợp, đối chiếu giá trị/kỳ/đơn vị và nhận định thiếu dữ liệu với fact ledger.
+            - Khi các agent lặp lại cùng hạn chế, loại bỏ phần lặp; dùng facts đã tìm thấy để bổ sung phần phân tích có căn cứ.
             - Nếu không có analysis_outputs, dùng retrieval facts trực tiếp cho easy/medium như đường fallback hiện có.
             - Khi plan_json.difficulty_level là "easy" hoặc "medium", dữ liệu đã đi thẳng từ build_evidence sang synth. Easy trả lời ngắn gọn; medium thường tập trung tính toán. NGOẠI LỆ: response_mode="grounded_interpretation" được phép diễn giải có giới hạn từ các premise thực tế đã retrieve theo contract riêng bên dưới.
-            - Khi có analysis_outputs, không yêu cầu bổ sung dữ liệu thô; nếu analysis agent nêu giới hạn dữ liệu, đưa giới hạn đó vào answer.
+            - Khi có analysis_outputs, không yêu cầu bổ sung dữ liệu thô. Không tự động chép giới hạn dữ liệu của agent vào answer; chỉ giữ khi ảnh hưởng trực tiếp kết luận chính.
             - Quyết định đủ khía cạnh phân tích chưa: đủ thì status="answer", followups=[]; chỉ status="need_more" khi cần chạy thêm một analysis agent khác cho khía cạnh mới mà chưa có trong analysis_outputs.
 
             QUY TẮC
@@ -413,10 +437,10 @@ AGENT_PROFILES = {
             - ĐỐI CHIẾU DÒNG TIỀN: sau khi nêu CFO/CFI/CFF, kiểm tra tổng đại số CFO + CFI + CFF và đối chiếu dòng "lưu chuyển tiền thuần trong kỳ" trước khi kết luận tiền tăng hay giảm. Không suy ra chiều biến động tiền chỉ từ một hoặc hai luồng riêng lẻ.
             - Nếu worker_results_json chỉ có retrieval facts, được dùng facts để trả lời hoặc tính toán công thức đơn giản.
             - PHÉP TÍNH: dùng `typed_decimal_calculation` như context hỗ trợ khi payload đã bind toán hạng; `typed_operand_state` cho biết slot đã bind hoặc còn thiếu. Nếu không có payload hoàn chỉnh, chỉ tính khi từng toán hạng bind duy nhất và cùng entity/metric/scope/unit: delta = current − previous; phần trăm thay đổi = delta / |previous|; tỷ trọng = numerator / denominator; số lần = giá trị mới/current ÷ giá trị cũ/previous theo đúng thứ tự câu hỏi, KHÔNG dùng số lớn ÷ số nhỏ. Mọi kết quả phải nêu công thức, hai đầu vào và nguồn. Không cộng các thành phần để dựng total trừ khi câu hỏi nêu một tập thành phần đóng và tất cả đều có fact.
-            - SEMANTIC GUARDS: không thay thế các khái niệm gần chữ nhưng khác nghĩa: `vay ≠ cho vay`, `flow/phát sinh trong kỳ ≠ số dư cuối kỳ`, `PAT ≠ PBT`, `nguyên giá ≠ giá trị còn lại`, `cam kết/nghĩa vụ ngoài bảng ≠ nợ phải trả đã ghi nhận`, `phân loại lại ≠ thay đổi tổng`. Thiếu đúng semantic slot thì nêu slot thiếu, không lấy số gần giống.
+            - SEMANTIC GUARDS: không thay thế các khái niệm gần chữ nhưng khác nghĩa: `vay ≠ cho vay`, `flow/phát sinh trong kỳ ≠ số dư cuối kỳ`, `PAT ≠ PBT`, `nguyên giá ≠ giá trị còn lại`, `cam kết/nghĩa vụ ngoài bảng ≠ nợ phải trả đã ghi nhận`, `phân loại lại ≠ thay đổi tổng`. Không lấy số gần giống để lấp slot; chỉ nhắc slot chưa có nếu cần cho yêu cầu trực tiếp của người dùng.
             - ĐƠN VỊ: giữ nguyên unit/scale của fact và dùng số đã được canonical formatter cung cấp; không tự rút gọn VND thành triệu/tỷ/nghìn tỷ. Chỉ quy đổi khi câu hỏi yêu cầu và phải nêu rõ phép quy đổi.
             - Nếu analysis_outputs[*].answer đã có số liệu/công thức/kết quả đủ trả lời câu hỏi chính, KHÔNG tạo followups chỉ vì requirements còn sót; dùng status="answer" và followups=[].
-            - Nếu analysis_outputs nói rõ thiếu dữ liệu để kết luận một khía cạnh đã chạy, không follow-up để lấy thêm dữ liệu; trả lời dựa trên kết quả hiện có và nêu giới hạn dữ liệu.
+            - Nếu một analysis_output chưa kết luận được toàn bộ khía cạnh, giữ phần số liệu/nhận định có căn cứ và khai thác retrieval_facts liên quan; không mở rộng thành danh sách các tỷ lệ chưa tính được.
             - Nếu analysis_outputs đã đủ trả lời câu hỏi chính, KHÔNG được yêu cầu thêm dữ liệu chỉ để tính thêm chỉ số phụ hoặc mở rộng phân tích ngoài câu hỏi. Khi đó đặt status="answer", trả lời thẳng vào kết luận và followups=[].
             - GROUNDED INTERPRETATION: khi plan_json.response_mode="grounded_interpretation", không tìm một fact chứa sẵn kết luận. Hãy (1) nêu rõ các fact/sự kiện mà báo cáo xác nhận và (2) trả lời trực tiếp bằng suy luận bắt đầu bằng câu như "Từ các dữ kiện này có thể suy ra..." để thể hiện rõ suy luận dựa trên chính các fact vừa nêu. Không được từ chối toàn bộ chỉ vì báo cáo không viết nguyên văn phần "ý nghĩa/tác động/hàm ý" nếu các premise liên quan đã có.
             - Không tạo thêm phần thứ ba trong grounded interpretation. Chỉ khi một giới hạn thật sự làm thay đổi cách hiểu kết luận, nêu caveat ngắn ngay trong phần suy luận; không thêm cảnh báo khuôn mẫu.
@@ -447,9 +471,9 @@ __ASPECT_HEADING_BLOCK__
             - __WEB_RULE_SYNTH__Nếu dùng WEB fact, đặt citation Markdown `[publisher](source_url)` ngay trong section khía cạnh liên quan; không đưa citation WEB vào Tóm tắt đánh giá hoặc section không liên quan.
             - Không tạo bảng nếu câu trả lời không cần so sánh nhiều cột; ưu tiên bullet rõ ràng như ví dụ người dùng đưa.
             - KHÔNG dùng mục "**Kết luận tổng thể**" cố định ở cuối; các kết luận đã nằm ở "**Tóm tắt đánh giá**" đầu bài.
-            - Cuối bài CHỈ khi có dữ liệu thiếu hoặc rủi ro THẬT SỰ ảnh hưởng kết luận thì thêm mục "**Điểm cần theo dõi**" (bullet ngắn); không có thì bỏ hẳn. TUYỆT ĐỐI KHÔNG tạo mục "Giới hạn bằng chứng" cố định.
+            - Cuối bài chỉ thêm "**Điểm cần theo dõi**" khi có rủi ro tài chính cụ thể được dữ liệu chứng minh; không lặp lại hạn chế dữ liệu ở mục này. Không có thì bỏ hẳn; không tạo mục "Giới hạn bằng chứng" cố định.
             - Mỗi nhận định phải gắn trực tiếp ≥1 dữ liệu; KHÔNG liệt kê fact nếu fact đó không được dùng để đánh giá; không sinh khía cạnh/bullet rỗng hay chỉ số ngoài câu hỏi.
-            - Dữ liệu thiếu nêu NGAY tại khía cạnh bị ảnh hưởng (trong "*Nhận xét*:"), không gom thành section riêng.
+            - Hạn chế thực sự ảnh hưởng yêu cầu chính chỉ nêu một lần, tối đa một câu ngắn tại khía cạnh bị ảnh hưởng; không biến phần "*Nhận xét*:" thành lời từ chối phân tích.
             - Giữ nguyên kỳ, đơn vị và dấu của dữ liệu nguồn; ghi nguồn ngắn ngay sau số liệu, không dump đường dẫn dài.
             - Không dùng các header dạng "=== Agent Profitability ==="; chỉ dùng heading Markdown trong danh sách khía cạnh ở trên.
 
@@ -461,7 +485,9 @@ __ASPECT_HEADING_BLOCK__
     }
 }
 
-for _profile in AGENT_PROFILES.values():
+for _agent_name, _profile in AGENT_PROFILES.items():
     _profile["system_instruction"] = _expand_registry_tokens(
         _profile["system_instruction"]
     )
+    if _agent_name in (*ANALYSIS_AGENT_ORDER, "agent_synth"):
+        _profile["system_instruction"] += _EVIDENCE_FIRST_ANSWER_GUIDANCE

@@ -3,6 +3,7 @@
 
 import hashlib
 import json
+import logging
 import os
 import re
 import sqlite3
@@ -431,7 +432,23 @@ def _parse_fact_rows(
             include_table_rows=False,
         )
     )
-    normalized_rows = normalize_financial_fact_rows(rows)
+    if getattr(dataset, "managed_source", False):
+        # Imported reports may contain malformed cells. Keep the source intact
+        # and index the usable facts instead of failing the entire report.
+        normalized_rows = []
+        skipped = 0
+        for row in rows:
+            try:
+                normalized_rows.extend(normalize_financial_fact_rows([row]))
+            except ValueError:
+                skipped += 1
+        if skipped:
+            logging.getLogger(__name__).warning(
+                "Import %s: skipped %d malformed extracted facts; retained %d",
+                dataset.dataset_id, skipped, len(normalized_rows),
+            )
+    else:
+        normalized_rows = normalize_financial_fact_rows(rows)
     if not normalized_rows:
         raise ValueError("ingestion produced zero validated financial facts")
     return tables_with_context, normalized_rows

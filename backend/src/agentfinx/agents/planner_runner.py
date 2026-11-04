@@ -14,10 +14,11 @@ from agentfinx.agents.line_item_matcher import (
     contains_intent,
     direct_line_item_match,
 )
-from agentfinx.agents.profiles import AGENT_PROFILES
+from agentfinx.agents.profiles import get_agent_profile
 from agentfinx.core.config.runtime_policy import planner_axis_expansion_enabled, shadow_routing
 from agentfinx.datasets.registry import get_dataset
 from agentfinx.core.schemas.agent_outputs import PlannerEvidencePlan
+from agentfinx.core.schemas.chat_context import ReportContext
 from agentfinx.core.llm.invoke import extract_usage_metadata, invoke_prompt
 from agentfinx.agents.prompts import PROMPT_TEMPLATE
 from agentfinx.workflow.logger import make_debug_log, make_log
@@ -146,10 +147,19 @@ def _extract_company_from_query(user_query: str) -> str:
         if not match:
             continue
         company = match.group(1).strip(" ,.?")
-        if company:
+        if company and not _is_report_reference(company):
             return company
 
     return ""
+
+
+def _is_report_reference(company: str) -> bool:
+    """A deictic reference is not an explicit company-name override."""
+    return " ".join(company.casefold().split()) in {
+        "này", "đó", "công ty", "doanh nghiệp", "tập đoàn",
+        "công ty này", "công ty đó", "doanh nghiệp này", "doanh nghiệp đó",
+        "tập đoàn này", "tập đoàn đó",
+    }
 
 
 def _extract_time_hint_from_query(user_query: str) -> str:
@@ -248,6 +258,8 @@ def _enrich_plan_fields(state: dict, planner_plan: dict) -> dict:
         dataset = get_dataset(dataset_id)
 
     query_company = _extract_company_from_query(user_query)
+    if _is_report_reference(str(enriched.get("company") or "")):
+        enriched["company"] = ""
     if not str(enriched.get("company", "") or "").strip():
         if query_company:
             enriched["company"] = query_company
@@ -255,7 +267,9 @@ def _enrich_plan_fields(state: dict, planner_plan: dict) -> dict:
             enriched["company"] = dataset.company
 
     planner_time_hint = str(enriched.get("time_hint", "") or "").strip()
-    enriched["time_hint"] = planner_time_hint or _extract_time_hint_from_query(user_query)
+    explicit_time_hint = _extract_time_hint_from_query(user_query)
+    report_period = ReportContext.from_dataset(dataset).period_label() if dataset is not None else ""
+    enriched["time_hint"] = planner_time_hint or explicit_time_hint or report_period
 
     return enriched
 
@@ -816,7 +830,7 @@ def _plan_query(
     schema: type = PlannerEvidencePlan,
     classify_task: bool = False,
 ) -> dict:
-    profile = AGENT_PROFILES["agent_planner"]
+    profile = get_agent_profile("agent_planner")
     trace = []
     started_at = time.perf_counter()
     llm_usage = {}
@@ -842,6 +856,18 @@ def _plan_query(
         "tool_observations": "",
         "tools_list": get_tools_list("agent_planner"),
     }
+    dataset_id = str(state.get("dataset_id") or "").strip()
+    dataset = get_dataset(dataset_id) if dataset_id else None
+    if dataset is not None:
+        payload["report_context_json"] = json.dumps(
+            ReportContext.from_dataset(dataset).model_dump(exclude_none=True), ensure_ascii=False,
+        )
+        payload["system_instruction"] += (
+            "\nBÁO CÁO ĐANG MỞ: selected_report cung cấp công ty, kỳ và phạm vi mặc định. "
+            "Khi người dùng nói 'công ty này' hoặc không nêu năm/kỳ, dùng metadata này; "
+            "không yêu cầu họ nhập lại. Kỳ/công ty được nêu rõ trong câu hỏi được ưu tiên. "
+            "Metadata không phải số liệu tài chính để trả lời; vẫn phải truy xuất bằng chứng."
+        )
 
     updates = {
         "last_agent": "agent_planner",

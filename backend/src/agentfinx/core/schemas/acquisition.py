@@ -176,7 +176,13 @@ class ConvertedDocument(BaseModel):
     quality_issues: list[str] = Field(default_factory=list)
 
 
+class ImportProgress(BaseModel):
+    status: ImportStatus
+    at: str = Field(max_length=64)
+
+
 class ImportJob(BaseModel):
+    progress: list[ImportProgress] = Field(default_factory=list, max_length=64)
     billing_pending: bool = False
     billing_status: BillingStatus = "not_submitted"
     # Pending billing that blocks the owner's next import: this job's own

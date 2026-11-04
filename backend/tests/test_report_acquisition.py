@@ -209,7 +209,7 @@ def test_llamaparse_uses_cost_effective_private_mode_and_local_cache(tmp_path: P
     parsing = _FakeParsing(
         [_parse_result([(1, "# Báo cáo\n\nNội dung tài chính đã được trích xuất đầy đủ.")])]
     )
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -240,7 +240,7 @@ def test_llamaparse_uses_cost_effective_private_mode_and_local_cache(tmp_path: P
 
 def test_good_local_text_layer_avoids_llamaparse_call(tmp_path: Path):
     parsing = _FakeParsing([])
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -273,7 +273,7 @@ def test_financial_table_like_local_text_is_sent_to_llamaparse(tmp_path: Path):
             )
         ]
     )
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -305,7 +305,7 @@ def test_llamaparse_retries_only_bad_pages_with_agentic(tmp_path: Path):
             ),
         ]
     )
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -343,7 +343,7 @@ def test_llamaparse_honors_429_retry_after(tmp_path: Path):
         ]
     )
     delays = []
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -364,7 +364,7 @@ def test_llamaparse_honors_429_retry_after(tmp_path: Path):
 
 def test_llamaparse_circuit_breaker_stops_new_provider_calls(tmp_path: Path):
     parsing = _FakeParsing([_ProviderError(503), _ProviderError(503)])
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -394,7 +394,7 @@ def test_failed_targeted_retry_reports_credits_already_consumed(tmp_path: Path):
             _ProviderError(503),
         ]
     )
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier="cost_effective",
         allow_cloud_parse=True,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
@@ -415,7 +415,7 @@ def test_failed_targeted_retry_reports_credits_already_consumed(tmp_path: Path):
 
 
 def _service(tmp_path: Path, *, now=None, discovery_payload=None, policy=None):
-    policy = policy or AcquisitionPolicy(
+    policy = policy or AcquisitionPolicy(llamaparse_tier="cost_effective",
         max_file_bytes=1024 * 1024,
         max_pdf_pages=200,
         monthly_parse_credit_budget=100_000,
@@ -478,10 +478,11 @@ def _service(tmp_path: Path, *, now=None, discovery_payload=None, policy=None):
     )
 
 
-def test_explicit_cloud_consent_is_required_even_with_api_key(tmp_path, monkeypatch):
+@pytest.mark.parametrize("tier", ["cost_effective", "agentic_plus"])
+def test_explicit_cloud_consent_is_required_even_with_api_key(tmp_path, monkeypatch, tier):
     monkeypatch.setenv("LLAMA_API_KEY", "not-a-real-key")
     parsing = _FakeParsing([])
-    converter = LlamaParseDocumentConverter(client=SimpleNamespace(parsing=parsing),
+    converter = LlamaParseDocumentConverter(tier=tier, client=SimpleNamespace(parsing=parsing),
                                            cache_dir=tmp_path / "cache", local_extractor=None)
     artifact = _validator(pages=1).validate(_pdf(tmp_path / "input.pdf"), origin="upload", cache_namespace="owner")
     with pytest.raises(LlamaParseError, match="allow-cloud-parse"):
@@ -513,7 +514,7 @@ def test_quality_gate_detects_negative_loss_and_individual_bad_table():
 
 def test_good_local_pages_are_not_sent_to_provider(tmp_path):
     parsing = _FakeParsing([_parse_result([(2, "# Trang hai\n\nNội dung trang scan đã trích xuất đầy đủ.")])])
-    converter = LlamaParseDocumentConverter(client=SimpleNamespace(parsing=parsing), allow_cloud_parse=True,
+    converter = LlamaParseDocumentConverter(tier="cost_effective", client=SimpleNamespace(parsing=parsing), allow_cloud_parse=True,
         cache_dir=tmp_path / "cache", local_extractor=lambda _: ["# Trang một\n\nNội dung giới thiệu doanh nghiệp đầy đủ.", ""])
     artifact = _validator(pages=2).validate(_pdf(tmp_path / "input.pdf"), origin="upload", cache_namespace="owner")
     result = converter.convert(artifact, private=True)
@@ -541,7 +542,7 @@ def test_concurrent_admission_cannot_overbook_owner_or_credits(tmp_path, same_ow
     from concurrent.futures import ThreadPoolExecutor
     from threading import Barrier
     barrier = Barrier(2)
-    policy = AcquisitionPolicy(monthly_parse_credit_budget=20 if not same_owner else 100)
+    policy = AcquisitionPolicy(llamaparse_tier="cost_effective", monthly_parse_credit_budget=20 if not same_owner else 100)
     services = [_service(tmp_path, policy=policy)[0] for _ in range(2)]
     for service in services:
         stage = service._stage_upload
@@ -629,7 +630,7 @@ def test_simultaneous_public_cache_misses_only_parse_once(tmp_path):
         assert release.wait(timeout=3)
         return original(**kwargs)
     parsing.parse = parse
-    converters = [LlamaParseDocumentConverter(client=SimpleNamespace(parsing=parsing), allow_cloud_parse=True,
+    converters = [LlamaParseDocumentConverter(tier="cost_effective", client=SimpleNamespace(parsing=parsing), allow_cloud_parse=True,
                   cache_dir=tmp_path / "cache", local_extractor=None) for _ in range(2)]
     artifact = _validator(pages=1).validate(_pdf(tmp_path / "input.pdf"), origin="cafef_discovery", public_source=True)
     with ThreadPoolExecutor(max_workers=2) as executor:
@@ -661,7 +662,7 @@ def test_poll_retry_reuses_submitted_job_and_provider_usage(tmp_path):
             result.job = SimpleNamespace(usage=SimpleNamespace(credits=0))
             return result
     parsing = Parsing()
-    converter = LlamaParseDocumentConverter(client=SimpleNamespace(parsing=parsing), allow_cloud_parse=True,
+    converter = LlamaParseDocumentConverter(tier="cost_effective", client=SimpleNamespace(parsing=parsing), allow_cloud_parse=True,
         cache_dir=tmp_path / "cache", local_extractor=None, sleeper=lambda _: None)
     artifact = _validator(pages=1).validate(_pdf(tmp_path / "input.pdf"), origin="upload", cache_namespace="a")
     result = converter.convert(artifact, private=True)
@@ -762,7 +763,7 @@ def test_dataset_is_attached_to_chat_only_after_ready(tmp_path: Path):
 def test_quota_blocks_before_import_can_reach_llamaparse(tmp_path: Path):
     service, _built = _service(
         tmp_path,
-        policy=AcquisitionPolicy(
+        policy=AcquisitionPolicy(llamaparse_tier="cost_effective",
             max_file_bytes=1024 * 1024,
             max_pdf_pages=200,
             monthly_parse_credit_budget=10,
@@ -928,7 +929,7 @@ def test_trial_clock_expires_after_fourteen_days(tmp_path: Path):
     store = AcquisitionStore(tmp_path / "acquisition.db")
     quota = AcquisitionQuota(
         store,
-        AcquisitionPolicy(monthly_parse_credit_budget=100_000),
+        AcquisitionPolicy(llamaparse_tier="cost_effective", monthly_parse_credit_budget=100_000),
         now=lambda: current[0],
     )
 
@@ -943,7 +944,7 @@ def test_trial_clock_expires_after_fourteen_days(tmp_path: Path):
 def test_budget_state_warns_and_locks_at_configured_thresholds(tmp_path: Path):
     quota = AcquisitionQuota(
         AcquisitionStore(tmp_path / "acquisition.db"),
-        AcquisitionPolicy(monthly_parse_credit_budget=100),
+        AcquisitionPolicy(llamaparse_tier="cost_effective", monthly_parse_credit_budget=100),
     )
 
     warning = quota.budget_state(additional_credits=80)
@@ -957,7 +958,7 @@ def test_budget_state_warns_and_locks_at_configured_thresholds(tmp_path: Path):
 def test_news_refresh_trial_quota_counts_only_three_admissions(tmp_path: Path):
     quota = AcquisitionQuota(
         AcquisitionStore(tmp_path / "acquisition.db"),
-        AcquisitionPolicy(monthly_parse_credit_budget=100_000),
+        AcquisitionPolicy(llamaparse_tier="cost_effective", monthly_parse_credit_budget=100_000),
     )
     for _ in range(3):
         quota.admit_news_refresh("owner-a")
@@ -966,3 +967,66 @@ def test_news_refresh_trial_quota_counts_only_three_admissions(tmp_path: Path):
         quota.admit_news_refresh("owner-a")
 
     assert error.value.code == "trial_news_refresh_daily"
+
+
+def test_full_plus_parses_all_pages_without_using_local_text_or_legacy_cache(tmp_path):
+    artifact = _validator(pages=2).validate(
+        _pdf(tmp_path / "full.pdf"), origin="cafef_discovery", public_source=True
+    )
+    local = ["Nội dung giới thiệu doanh nghiệp rõ ràng và đầy đủ." for _ in range(2)]
+    legacy = LlamaParseDocumentConverter(tier="cost_effective", cache_dir=tmp_path / "cache",
+        local_extractor=lambda _: local)
+    assert legacy.convert(artifact, private=False).provider == "local_text_layer"
+    parsing = _FakeParsing([_parse_result([
+        (1, "# Báo cáo\n\nNội dung được đọc bằng Agentic Plus đầy đủ."),
+        (2, "# Bảng số liệu\n\n| Chỉ tiêu | Giá trị |\n|---|---|\n| Tổng | 61.119.413.012 |"),
+    ], credits=90)])
+    def forbidden_local(_):
+        raise AssertionError("Full Plus must not read or compare the damaged local text layer")
+    converter = LlamaParseDocumentConverter(cache_dir=tmp_path / "cache",
+        client=SimpleNamespace(parsing=parsing), local_extractor=forbidden_local)
+    result = converter.convert(artifact, private=False, consent=True)
+    cached = converter.convert(artifact, private=False, consent=True)
+    assert converter.tier == result.tier == "agentic_plus"
+    assert converter.converter_identity != legacy.converter_identity
+    assert converter._cache_path(artifact, private=False) != legacy._cache_path(artifact, private=False)
+    assert len(parsing.calls) == 1
+    assert parsing.calls[0]["tier"] == "agentic_plus"
+    assert "page_ranges" not in parsing.calls[0]
+    assert all(page.tier == "agentic_plus" for page in result.pages)
+    assert [page.page_number for page in result.pages] == [1, 2]
+    assert result.targeted_retry_pages == []
+    assert result.billed_credits == result.estimated_credits == 90
+    assert cached.cache_hit and cached.billed_credits == 0
+
+
+def test_full_plus_accepts_partial_content_with_warnings_and_does_not_downgrade(tmp_path):
+    parsing = _FakeParsing([_parse_result([(1, "# Báo cáo\n\nNội dung trang đầu đầy đủ.")], credits=45)])
+    converter = LlamaParseDocumentConverter(cache_dir=tmp_path / "cache",
+        client=SimpleNamespace(parsing=parsing))
+    artifact = _validator(pages=2).validate(_pdf(tmp_path / "missing.pdf"),
+        origin="upload", cache_namespace="owner")
+    result = converter.convert(artifact, private=True, consent=True)
+    assert "page_2:missing_page" in result.quality_issues
+    assert result.billed_credits == 45
+    assert len(parsing.calls) == 1 and parsing.calls[0]["tier"] == "agentic_plus"
+    assert converter._cache_path(artifact, private=True).exists()
+
+
+@pytest.mark.parametrize("tier,rate", [("cost_effective", 13), ("agentic", 10), ("agentic_plus", 45)])
+def test_credit_reservation_matches_the_configured_parse_tier(tmp_path, tier, rate):
+    quota = AcquisitionQuota(AcquisitionStore(tmp_path / "quota.db"),
+        AcquisitionPolicy(llamaparse_tier=tier, monthly_parse_credit_budget=100_000))
+    assert quota.estimate_import_credits(36) == 36 * rate
+    assert quota.reserve_import("owner", page_count=36) == 36 * rate
+
+
+def test_full_plus_stops_only_when_provider_returns_no_readable_content(tmp_path):
+    parsing = _FakeParsing([_parse_result([(1, "")], credits=45)])
+    converter = LlamaParseDocumentConverter(cache_dir=tmp_path / "cache",
+        client=SimpleNamespace(parsing=parsing))
+    artifact = _validator(pages=1).validate(_pdf(tmp_path / "empty.pdf"),
+        origin="upload", cache_namespace="owner")
+    with pytest.raises(LlamaParseError, match="no readable content"):
+        converter.convert(artifact, private=True, consent=True)
+    assert len(parsing.calls) == 1

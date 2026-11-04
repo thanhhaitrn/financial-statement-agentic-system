@@ -82,3 +82,22 @@ def test_dry_run_and_live_permission_boundary(tmp_path, monkeypatch, capsys):
 def test_evaluator_rejects_first_turn_only_cases():
     with pytest.raises(ValueError, match="require history"):
         evaluate_cases([{"id": "bad", "history": [], "steps": [{"question": "q", "expected": "standalone"}]}])
+
+
+def test_expected_clarification_is_kept_for_the_next_short_reply():
+    case = {"id": "clarification-chain", "history": [{"run_id": "old", "effective_question": "Doanh thu?"}],
+            "steps": [{"question": "lợi nhuận?", "expected": "needs_clarification"},
+                      {"question": "sau thuế", "expected": "resolved", "must_include": ["lợi nhuận", "sau thuế"]}]}
+
+    def fake(question, history):
+        if question == "lợi nhuận?":
+            return {"status": "needs_clarification", "metric": {}, "period": {},
+                    "clarification_question": "Bạn muốn hỏi lợi nhuận nào?"}
+        assert history[-1].effective_question == "lợi nhuận?"
+        assert history[-1].clarification_question == "Bạn muốn hỏi lợi nhuận nào?"
+        return {"status": "resolved", "question": "lợi nhuận sau thuế là bao nhiêu?",
+                "metric": {"kept": [{"source_run_id": history[-1].run_id, "text": "lợi nhuận"}],
+                           "changed": ["sau thuế"]}, "period": {}}
+
+    report = evaluate_cases([case], rewrite=fake)
+    assert report["summary"]["passed"] and report["summary"]["blocked_steps"] == 0

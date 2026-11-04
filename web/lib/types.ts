@@ -44,6 +44,7 @@ export type MessageKind =
   | string;
 
 export type Message = {
+  report_sources?: ReportSource[];
   id: string;
   role: "user" | "assistant";
   content: string;
@@ -57,10 +58,36 @@ export type Message = {
   interpreted_question?: string;
 };
 
+export type ReportSource = {
+  id: string;
+  dataset_id: string;
+  generation: string;
+  label: string;
+  value: string;
+  period: string;
+  unit: string;
+  section: string;
+  page: number | null;
+};
+
 export type RunStatus = "queued" | "running" | "succeeded" | "failed" | "interrupted";
+
+/** One live step of a run (planner, an analysis agent, news, synthesis). */
+export type RunStep = {
+  key: string;
+  label: string;
+  detail: string;
+  status: "running" | "done" | "failed" | "skipped";
+  started_at: string;
+  finished_at: string | null;
+  /** What the finished step produced (plan, facts, an agent's analysis, news), as Markdown. */
+  output?: string;
+};
 
 export type Run = {
   run_id: string;
+  /** What the worker has done so far, in order. */
+  steps?: RunStep[];
   session_id: string;
   status: RunStatus;
   error_code: string;
@@ -81,6 +108,9 @@ export type ImportJob = {
   session_id: string;
   origin: string;
   status: "queued" | "downloading" | "parsing" | "validating" | "building" | "ready" | "failed";
+  progress?: { status: ImportJob["status"]; at: string }[];
+  created_at?: string;
+  updated_at?: string;
   billing_status: "not_submitted" | "pending" | "confirmed" | "estimated_legacy";
   billing_pending: boolean;
   billing_blocking: boolean;
@@ -135,5 +165,5 @@ export type DiscoveryResult = {
 
 export type Health = {
   api: string;
-  workers: Record<string, { status: string; seconds_since_heartbeat?: number }>;
+  workers: Record<string, { status: string; seconds_since_heartbeat?: number; config?: { web_analysis?: boolean } }>;
 };

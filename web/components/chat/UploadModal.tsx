@@ -1,6 +1,7 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import Select from "@/components/Select";
 import Modal from "@/components/Modal";
 
 const MAX_UPLOAD_BYTES = 25 * 1024 * 1024;
@@ -27,7 +28,6 @@ export default function UploadModal({
   const [quarter, setQuarter] = useState("");
   const [scope, setScope] = useState("unknown");
   const [audit, setAudit] = useState("unknown");
-  const [consent, setConsent] = useState(false);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -59,7 +59,8 @@ export default function UploadModal({
     setBusy(true);
     setError("");
     try {
-      await onSubmit({ file: file as File, metadata, consent });
+      // Uploads always allow cloud parsing when the PDF has no text layer.
+      await onSubmit({ file: file as File, metadata, consent: true });
     } catch (err) {
       setError(err instanceof Error ? err.message : "Không tải được báo cáo.");
       setBusy(false);
@@ -104,39 +105,47 @@ export default function UploadModal({
             <input className="field" inputMode="numeric" value={year} maxLength={4} onChange={(e) => setYear(e.target.value)} placeholder="2025" />
           </label>
           <label className="fl">Kỳ
-            <select className="field" value={quarter} onChange={(e) => setQuarter(e.target.value)}>
-              <option value="">Cả năm</option>
-              <option value="1">Quý 1</option>
-              <option value="2">Quý 2</option>
-              <option value="3">Quý 3</option>
-              <option value="4">Quý 4</option>
-            </select>
+            <Select
+              label="Kỳ"
+              value={quarter}
+              onChange={(v) => setQuarter(v)}
+              options={[
+                { value: "", label: "Cả năm" },
+                { value: "1", label: "Quý 1" },
+                { value: "2", label: "Quý 2" },
+                { value: "3", label: "Quý 3" },
+                { value: "4", label: "Quý 4" },
+              ]}
+            />
           </label>
         </div>
         <div className="form-row">
           <label className="fl">Phạm vi
-            <select className="field" value={scope} onChange={(e) => setScope(e.target.value)}>
-              <option value="unknown">Không rõ</option>
-              <option value="consolidated">Hợp nhất</option>
-              <option value="separate">Riêng / công ty mẹ</option>
-            </select>
+            <Select
+              label="Phạm vi"
+              value={scope}
+              onChange={(v) => setScope(v)}
+              options={[
+                { value: "unknown", label: "Không rõ" },
+                { value: "consolidated", label: "Hợp nhất" },
+                { value: "separate", label: "Riêng / công ty mẹ" },
+              ]}
+            />
           </label>
           <label className="fl">Kiểm toán
-            <select className="field" value={audit} onChange={(e) => setAudit(e.target.value)}>
-              <option value="unknown">Không rõ</option>
-              <option value="audited">Đã kiểm toán</option>
-              <option value="reviewed">Đã soát xét</option>
-              <option value="unaudited">Chưa kiểm toán</option>
-            </select>
+            <Select
+              label="Kiểm toán"
+              value={audit}
+              onChange={(v) => setAudit(v)}
+              options={[
+                { value: "unknown", label: "Không rõ" },
+                { value: "audited", label: "Đã kiểm toán" },
+                { value: "reviewed", label: "Đã soát xét" },
+                { value: "unaudited", label: "Chưa kiểm toán" },
+              ]}
+            />
           </label>
         </div>
-        <label className="consent">
-          <input type="checkbox" checked={consent} onChange={(e) => setConsent(e.target.checked)} />
-          <span>
-            Đồng ý gửi PDF tới dịch vụ trích xuất đám mây LlamaParse nếu không đọc được lớp văn bản của file. Việc
-            này phát sinh chi phí xử lý. Không đồng ý thì chỉ dùng trích xuất cục bộ.
-          </span>
-        </label>
         {error && <p className="form-error" role="alert">{error}</p>}
       </form>
     </Modal>

@@ -7,6 +7,7 @@ from typing import Callable
 from functools import wraps
 
 from agentfinx.acquisition.store import AcquisitionStore
+from agentfinx.acquisition.llamaparse import TIER_CREDITS_PER_PAGE
 from agentfinx.core.config.runtime_policy import AcquisitionPolicy
 
 
@@ -94,17 +95,19 @@ class AcquisitionQuota:
                 "parsing cost is still being confirmed",
             )
 
-    @staticmethod
-    def estimate_import_credits(page_count: int) -> int:
-        # Cost-effective parse (3) plus one targeted Agentic retry (10).
-        return max(0, int(page_count)) * (3 + 10)
+    def estimate_import_credits(self, page_count: int) -> int:
+        tier = self.policy.llamaparse_tier
+        per_page = TIER_CREDITS_PER_PAGE[tier]
+        if tier == "cost_effective":
+            per_page += TIER_CREDITS_PER_PAGE["agentic"]
+        return max(0, int(page_count)) * per_page
 
     def reserve_import(self, owner_id: str, *, page_count: int) -> int:
         self._check_trial_period(owner_id)
         if page_count > self.policy.max_pdf_pages:
             raise QuotaExceeded("too_many_pages", "PDF exceeds the trial page limit")
-        # Reserve the worst allowed path: cost_effective plus one Agentic retry
-        # for every page. Reconciliation releases the unused portion.
+        # Reserve the selected tier for every page, including the one allowed
+        # Agentic repair for Cost Effective. Release unused credits on settlement.
         reserved = self.estimate_import_credits(page_count)
         budget_state = self.budget_state(additional_credits=reserved)
         if budget_state["provider_locked"]:

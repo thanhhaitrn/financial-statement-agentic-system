@@ -25,9 +25,11 @@ from agentfinx.datasets.access import DatasetAccessError, get_accessible_dataset
 from agentfinx.datasets.activation import DatasetNotReady, activate_dataset_for_query
 from agentfinx.datasets.locks import dataset_lock
 from agentfinx.api import db as webdb
+from agentfinx.core import progress
 from agentfinx.api.clarify import Clarification, clarify_question
 from agentfinx.api.context_history import load_context_history
 from agentfinx.api.context_snapshot import build_context_snapshot
+from agentfinx.api.report_sources import build_answer_sources
 
 logger = logging.getLogger("agentfinx.web.chat")
 
@@ -140,7 +142,8 @@ def _fail(
 
 
 def _succeed(database: webdb.WebDB, run: Any, answer: str, *, task_kind: str = "",
-             snapshot: dict | None = None, news_context: dict | None = None) -> str:
+             snapshot: dict | None = None, news_context: dict | None = None,
+             report_sources: list[dict] | None = None) -> str:
     with database.transaction() as conn:
         if webdb.get_session(conn, run["session_id"]) is None:
             return "session_deleted"  # the run row was cascaded away with it
@@ -148,6 +151,7 @@ def _succeed(database: webdb.WebDB, run: Any, answer: str, *, task_kind: str = "
         if snapshot:
             webdb.set_context_snapshot(conn, run["id"], snapshot)
         context = {
+            "report_sources": report_sources or [],
             "context_status": current["context_status"],
             "context_reason": current["context_reason"],
             "interpreted_question": (
@@ -230,8 +234,20 @@ def _answer_discovery(database: webdb.WebDB, run: Any, deps: ChatDependencies, p
 def _effective_question(database: webdb.WebDB, run: Any, deps: ChatDependencies) -> Clarification:
     """One model call before the dataset lock; every outcome is persisted."""
     if deps.context_enabled:
+        from agentfinx.core.schemas.chat_context import ReportContext
+
         history = load_context_history(database, run)
-        result = clarify_question(run["question"], history, rewrite=deps.clarify)
+        report_context = None
+        if run["dataset_id"]:
+            try:
+                accessible = deps.resolve(run["dataset_id"], run["owner_id"], deps.shared_dataset_ids)
+                report_context = ReportContext.from_dataset(accessible.record)
+            except (DatasetAccessError, ValueError):
+                # Access/generation checks still decide QA admission below.
+                # Unavailable metadata must never be replaced with foreign data.
+                pass
+        result = clarify_question(run["question"], history, rewrite=deps.clarify,
+                                  report_context=report_context)
     else:
         result = Clarification(run["question"], "skipped", "disabled")
     with database.transaction() as conn:
@@ -241,8 +257,8 @@ def _effective_question(database: webdb.WebDB, run: Any, deps: ChatDependencies)
 
 
 CONTEXT_FAILURE_MESSAGE = (
-    "Không làm rõ được ngữ cảnh câu hỏi này. "
-    "Bạn có thể gửi lại câu hỏi đầy đủ, nêu rõ chỉ tiêu và kỳ cần hỏi."
+    "Bước xử lý ngữ cảnh gặp lỗi nên chưa thể trả lời câu hỏi này. "
+    "Vui lòng gửi lại câu hỏi; bạn không cần nhập lại công ty hoặc kỳ của báo cáo đang mở."
 )
 
 
@@ -270,8 +286,39 @@ def _finish_context(database: webdb.WebDB, run: Any, result: Clarification) -> s
     return status
 
 
+def _dataset_label(record: Any) -> str:
+    try:
+        from agentfinx.api.imports import dataset_label
+
+        return dataset_label(record)
+    except Exception:
+        return ""
+
+
 def process_chat_run(database: webdb.WebDB, run_id: str, deps: ChatDependencies) -> str:
-    """Execute one claimed (``running``) run and store its terminal state."""
+    """Execute one claimed (``running``) run and store its terminal state,
+    recording its live steps for the browser while it runs."""
+
+    def sink(event: dict) -> None:
+        with database.transaction() as conn:
+            webdb.record_run_step(conn, run_id, event)
+
+    from agentfinx.core.config.agent_prompts import activate
+
+    with database.read() as conn:
+        run = webdb.get_run(conn, run_id)
+        prompts = json.loads(run["agent_prompts_json"]) if run else {}
+    with progress.activate(sink), activate(prompts):
+        status = _process_chat_run(database, run_id, deps)
+    try:
+        with database.transaction() as conn:
+            webdb.close_run_steps(conn, run_id, "skipped" if status == "succeeded" else "failed")
+    except Exception:
+        logger.warning("chat run %s: could not close its steps", run_id, exc_info=True)
+    return status
+
+
+def _process_chat_run(database: webdb.WebDB, run_id: str, deps: ChatDependencies) -> str:
 
     with database.read() as conn:
         run = webdb.get_run(conn, run_id)
@@ -293,14 +340,19 @@ def process_chat_run(database: webdb.WebDB, run_id: str, deps: ChatDependencies)
         # Classify the task before any dataset is resolved or activated; the
         # planner reads registry metadata only and holds no lock.
         try:
-            plan = deps.planner()(_planner_state(run, question))
+            with progress.step("plan", "Hiểu câu hỏi và lập kế hoạch"):
+                plan = deps.planner()(_planner_state(run, question))
+            from agentfinx.workflow.live_steps import plan_output
+
+            progress.end("plan", output=plan_output(plan))
         except Exception:
             logger.exception("chat run %s: planner failed", run_id)
             return _fail(database, run, "internal_error")
         task_kind = "report_discovery" if plan.get("task_kind") == "report_discovery" else "report_qa"
         if task_kind == "report_discovery":
             try:
-                return _answer_discovery(database, run, deps, plan)
+                with progress.step("discovery", "Tìm báo cáo phù hợp"):
+                    return _answer_discovery(database, run, deps, plan)
             except Exception:
                 logger.exception("chat run %s: report discovery failed", run_id)
                 return _fail(database, run, "internal_error")
@@ -324,7 +376,8 @@ def process_chat_run(database: webdb.WebDB, run_id: str, deps: ChatDependencies)
     try:
         with dataset_lock(dataset.dataset_id):
             try:
-                activated = deps.activate(dataset)
+                with progress.step("dataset", "Mở báo cáo", _dataset_label(dataset)):
+                    activated = deps.activate(dataset)
             except DatasetNotReady as exc:
                 return _fail(
                     database,
@@ -361,5 +414,6 @@ def process_chat_run(database: webdb.WebDB, run_id: str, deps: ChatDependencies)
     from agentfinx.api.news_updates import needs_update
 
     return _succeed(database, run, answer, task_kind=task_kind,
+                    report_sources=build_answer_sources(final_state, dataset, activated.generation, answer),
                     snapshot=build_context_snapshot(final_state, run),
                     news_context=needs_update(final_state))

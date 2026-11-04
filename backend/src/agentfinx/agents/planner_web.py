@@ -7,7 +7,7 @@ classification the web entry needs.
 """
 # Code note: Agent modules coordinate LLM prompts, tool calls, and structured outputs; comments here call out control-flow constraints.
 
-from agentfinx.agents.profiles import AGENT_PROFILES
+from agentfinx.agents.profiles import get_agent_profile
 
 DISCOVERY_ADDENDUM = """
 
@@ -27,4 +27,4 @@ DISCOVERY_ADDENDUM = """
 
 
 def web_planner_instruction() -> str:
-    return AGENT_PROFILES["agent_planner"]["system_instruction"] + DISCOVERY_ADDENDUM
+    return get_agent_profile("agent_planner")["system_instruction"] + DISCOVERY_ADDENDUM

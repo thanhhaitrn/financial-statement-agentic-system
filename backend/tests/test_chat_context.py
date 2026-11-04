@@ -8,11 +8,11 @@ import pytest
 
 from agentfinx.core.config.time_references import time_reference_spans
 from agentfinx.datasets import registry
-from agentfinx.core.schemas.chat_context import CONTEXT_CONTRACT_VERSION, ContextResolution, ContextTurn
+from agentfinx.core.schemas.chat_context import CONTEXT_CONTRACT_VERSION, ContextResolution, ContextTurn, ReportContext
 from agentfinx.api import db as webdb
 from agentfinx.api.chat_runner import ChatDependencies, process_chat_run
 from agentfinx.api.clarify import (MAX_HISTORY_CHARS, MAX_TURNS, bounded_history,
-                            clarify_question, rewrite_violations)
+                            clarify_question, rewrite_violations, _default_rewriter, _provider_schema)
 from agentfinx.api.context_history import load_context_history
 from agentfinx.api.messages import message_out
 
@@ -43,6 +43,85 @@ def test_equity_opening_followup_is_resolved():
     assert result.can_continue and result.rewritten and result.question == EFFECTIVE
     assert result.status == result.reason == "resolved"
     assert result.history_run_ids == ("prior",)
+
+
+def test_provider_schema_requires_nested_fields_and_has_no_defaults():
+    schema = _provider_schema()
+    assert set(schema["required"]) == set(schema["properties"])
+    field = schema["properties"]["metric"]
+    assert set(field["required"]) == {"kept", "changed"}
+    assert "default" not in json.dumps(schema)
+    assert "$ref" not in json.dumps(schema)
+    assert field["properties"]["kept"]["items"]["required"] == ["source_run_id", "text"]
+
+
+def test_context_model_receives_report_metadata_without_paths_or_facts(monkeypatch):
+    from agentfinx.core.llm import client
+
+    captured = {}
+    question = "vốn của công ty này là bao nhiêu"
+
+    class Model:
+        def with_structured_output(self, schema, **kwargs):
+            captured["schema"] = schema
+            return self
+
+        def invoke(self, messages):
+            captured["data"] = json.loads(messages[-1].content)
+            return standalone(question)
+
+    monkeypatch.setattr(client, "get_llm", Model)
+    metadata = ReportContext.from_dataset(SimpleNamespace(
+        company="Công ty Mẫu", ticker="MAU", fiscal_year=2025, scope="separate",
+        file_path="PRIVATE_PATH", facts=[{"value": "999999 VND"}],
+    ))
+    result = _default_rewriter(question, HISTORY, report_context=metadata)
+    assert result["question"] == question
+    assert captured["data"]["selected_report"] == {
+        "company": "Công ty Mẫu", "ticker": "MAU", "fiscal_year": 2025, "scope": "separate",
+    }
+    assert "PRIVATE_PATH" not in json.dumps(captured["data"])
+    assert "999999 VND" not in json.dumps(captured["data"])
+
+
+def test_report_aware_standalone_does_not_inherit_unrelated_history(monkeypatch):
+    from agentfinx.api import clarify
+
+    question = "vốn của công ty này là bao nhiêu"
+    metadata = ReportContext(company="Công ty Mẫu", fiscal_year=2025)
+
+    def rewrite(current, history, *, report_context):
+        assert current == question and history == HISTORY
+        assert report_context == metadata
+        return standalone(current)
+
+    monkeypatch.setattr(clarify, "_default_rewriter", rewrite)
+    result = clarify_question(question, HISTORY, report_context=metadata)
+    assert result.status == "standalone" and result.question == question
+
+
+def test_old_repeated_yes_does_not_replace_the_pending_proposal(monkeypatch):
+    from agentfinx.core.llm import client
+
+    proposal = ContextTurn(run_id="proposal", effective_question="sau thuế",
+                           clarification_question="Bạn muốn hỏi lợi nhuận sau thuế năm 2025?")
+    repeated = ContextTurn(run_id="repeated", effective_question="đúng",
+                           clarification_question="Bạn muốn hỏi về chỉ tiêu, kỳ hoặc công ty nào?")
+    captured = {}
+
+    class Model:
+        def with_structured_output(self, *_args, **_kwargs):
+            return self
+
+        def invoke(self, messages):
+            captured.update(json.loads(messages[-1].content))
+            return {"status": "needs_clarification", "metric": {}, "period": {},
+                    "clarification_question": "fixture"}
+
+    monkeypatch.setattr(client, "get_llm", Model)
+    _default_rewriter("đúng", [proposal, repeated])
+    assert captured["question"] == "đúng"
+    assert [turn["run_id"] for turn in captured["history"]] == ["proposal"]
 
 
 @pytest.mark.parametrize("status", ["needs_clarification", "failed"])
@@ -274,7 +353,132 @@ def test_worker_does_not_call_planner_or_pipeline_on_non_qa_context(harness, mod
     assert answer["kind"] == run["result_kind"]
     assert "PRIVATE" not in answer["content"]
     current = harness.get(harness.enqueue("Doanh thu là bao nhiêu?"))
-    assert [t.run_id for t in load_context_history(harness.db, current)] == [first["id"]]
+    expected = [first["id"], run["id"]] if mode == "needs_clarification" else [first["id"]]
+    assert [t.run_id for t in load_context_history(harness.db, current)] == expected
+
+
+def test_short_answer_resolves_pending_profit_clarification(harness):
+    harness.execute(FIRST)
+    initial = "lợi nhuận của công ty là bao nhiêu"
+    pending = harness.execute(initial, fixed({
+        "status": "needs_clarification", "metric": {}, "period": {},
+        "clarification_question": "Bạn muốn hỏi lợi nhuận nào (sau thuế, trước thuế, gộp)?",
+    }))
+    effective = "lợi nhuận sau thuế của công ty là bao nhiêu?"
+
+    def resolve(question, history):
+        assert question == "sau thuế"
+        assert history[-1].run_id == pending["id"]
+        assert history[-1].effective_question == initial
+        assert "lợi nhuận nào" in history[-1].clarification_question
+        assert "Fixture answer" not in str(history)
+        return {"status": "resolved", "question": effective,
+                "metric": {"kept": [{"source_run_id": pending["id"], "text": "lợi nhuận"}],
+                           "changed": ["sau thuế"]}, "period": {}}
+
+    answer = harness.execute("sau thuế", resolve)
+    assert answer["status"] == "succeeded" and answer["context_status"] == "resolved"
+    assert harness.asked[-1] == effective
+    current = harness.get(harness.enqueue("Nợ phải trả là bao nhiêu?"))
+    history = load_context_history(harness.db, current)
+    assert all(not turn.clarification_question for turn in history)
+    assert history[-1].effective_question == effective
+
+
+def test_yes_confirms_pending_proposal_in_selected_report(harness):
+    harness.execute(FIRST)
+    harness.deps.resolve = lambda *_: SimpleNamespace(record=SimpleNamespace(
+        dataset_id="ds-1", company="Công ty Mẫu", fiscal_year=2025))
+    harness.execute("lợi nhuận của công ty là bao nhiêu", fixed({
+        "status": "needs_clarification", "metric": {}, "period": {},
+        "clarification_question": "Bạn muốn hỏi lợi nhuận sau thuế hay trước thuế?",
+    }))
+    proposal = harness.execute("sau thuế", fixed({
+        "status": "needs_clarification", "metric": {}, "period": {},
+        "clarification_question": "Bạn muốn hỏi lợi nhuận sau thuế của công ty trong năm 2025?",
+    }))
+    effective = "lợi nhuận sau thuế của công ty trong năm 2025 là bao nhiêu?"
+
+    def resolve(question, history):
+        assert question == "đúng"
+        assert history[-1].run_id == proposal["id"]
+        assert history[-1].effective_question == "sau thuế"
+        assert "lợi nhuận sau thuế" in history[-1].clarification_question
+        return {"status": "resolved", "question": effective,
+                "metric": {"kept": [{"source_run_id": proposal["id"], "text": "lợi nhuận sau thuế"}]},
+                "period": {"kept": [{"source_run_id": proposal["id"], "text": "năm 2025"}]}}
+
+    answer = harness.execute("đúng", resolve)
+    assert answer["status"] == "succeeded" and answer["context_status"] == "resolved"
+    assert harness.asked[-1] == effective
+
+
+def test_confirmation_never_inherits_assistant_financial_values():
+    pending = [ContextTurn(run_id="pending", effective_question="lợi nhuận?",
+                          clarification_question="Lợi nhuận sau thuế 999999 VND năm 2025?")]
+    response = {"status": "resolved", "question": "Lợi nhuận sau thuế 999999 VND năm 2025?",
+                "metric": {"kept": [{"source_run_id": "pending", "text": "Lợi nhuận sau thuế"}]},
+                "period": {"kept": [{"source_run_id": "pending", "text": "năm 2025"}]}}
+    result = clarify_question("đúng", pending, rewrite=fixed(response),
+                              report_context=ReportContext(fiscal_year=2025))
+    assert result.status == "failed"
+    assert "new_number_or_sign" in result.diagnostics and "new_unit" in result.diagnostics
+
+
+def test_confirmation_accepts_sentence_capitalization_without_changing_metric():
+    pending = [ContextTurn(run_id="pending", effective_question="sau thuế",
+                          clarification_question="Bạn muốn hỏi lợi nhuận sau thuế trong năm 2025?")]
+    response = {"status": "resolved", "question": "Lợi nhuận sau thuế trong năm 2025 là bao nhiêu?",
+                "metric": {"kept": [{"source_run_id": "pending", "text": "lợi nhuận sau thuế"}]},
+                "period": {"kept": [{"source_run_id": "pending", "text": "năm 2025"}]}}
+    result = clarify_question("đúng", pending, rewrite=fixed(response),
+                              report_context=ReportContext(fiscal_year=2025))
+    assert result.status == "resolved"
+
+
+def test_confirmation_passes_a_lookup_instead_of_asking_the_user_again():
+    pending = [ContextTurn(run_id="pending", effective_question="sau thuế",
+                          clarification_question="Bạn muốn hỏi lợi nhuận sau thuế trong năm 2025?")]
+    response = {"status": "resolved", "question": "Bạn muốn hỏi lợi nhuận sau thuế trong năm 2025?",
+                "metric": {"kept": [{"source_run_id": "pending", "text": "lợi nhuận sau thuế"}]},
+                "period": {"kept": [{"source_run_id": "pending", "text": "năm 2025"}]}}
+    result = clarify_question("đúng", pending, rewrite=fixed(response),
+                              report_context=ReportContext(fiscal_year=2025))
+    assert result.status == "resolved"
+    assert result.question == "lợi nhuận sau thuế trong năm 2025?"
+
+
+def test_confirmation_binds_report_year_mislabeled_as_a_new_user_change():
+    pending = [ContextTurn(run_id="pending", effective_question="sau thuế",
+                          clarification_question="Bạn muốn hỏi lợi nhuận sau thuế trong năm 2025?")]
+    response = {"status": "resolved", "question": "Lợi nhuận sau thuế trong năm 2025?",
+                "metric": {"kept": [{"source_run_id": "pending", "text": "lợi nhuận sau thuế"}]},
+                "period": {"changed": ["năm 2025"]}}
+    result = clarify_question("đúng", pending, rewrite=fixed(response),
+                              report_context=ReportContext(fiscal_year=2025))
+    assert result.status == "resolved"
+    assert result.resolution["period"] == {"changed": [], "kept": [{"source_run_id": "pending", "text": "năm 2025"}]}
+    response["question"] = response["question"].replace("2025", "2024")
+    response["period"] = {"changed": ["năm 2024"]}
+    invalid = clarify_question("đúng", pending, rewrite=fixed(response),
+                               report_context=ReportContext(fiscal_year=2025))
+    assert invalid.status == "failed" and "period_change_not_from_user" in invalid.diagnostics
+
+
+@pytest.mark.parametrize("field,value", [("owner_id", "foreign-owner"), ("dataset_id", "foreign-dataset"),
+                                         ("dataset_generation", "foreign-generation"), ("session_id", None)])
+def test_pending_clarifications_remain_owner_report_generation_session_scoped(harness, field, value):
+    harness.execute(FIRST)
+    pending = harness.execute("lợi nhuận?", fixed({"status": "needs_clarification", "metric": {}, "period": {},
+                              "clarification_question": "Bạn muốn lợi nhuận nào?"}))
+    with harness.db.transaction() as conn:
+        if field == "session_id":
+            value = webdb.create_session(conn, owner_id=harness.user["id"], title="another",
+                                         dataset_id="ds-1", dataset_generation="gen-1")["id"]
+        conn.execute(f"UPDATE chat_runs SET {field}=? WHERE id=?", (value, pending["id"]))
+    current = harness.get(harness.enqueue("sau thuế"))
+    history = load_context_history(harness.db, current)
+    assert pending["id"] not in [turn.run_id for turn in history]
 
 
 def test_context_disabled_preserves_execution_but_records_the_effective_question(harness):
@@ -283,6 +487,41 @@ def test_context_disabled_preserves_execution_but_records_the_effective_question
     run = harness.execute(FOLLOWUP, lambda *_a: pytest.fail("disabled"))
     assert run["context_status"] == "skipped" and run["context_reason"] == "disabled"
     assert run["effective_question"] == FOLLOWUP and harness.asked[-1] == FOLLOWUP
+
+
+def test_worker_passes_only_owner_scoped_selected_report_metadata(harness, monkeypatch):
+    from agentfinx.api import clarify
+
+    harness.execute(FIRST)
+    calls = []
+
+    def accessible(dataset_id, owner_id, shared):
+        calls.append((dataset_id, owner_id, shared))
+        return SimpleNamespace(record=SimpleNamespace(
+            dataset_id=dataset_id, company="Công ty Mẫu", fiscal_year=2025,
+            fiscal_quarter=2, scope="consolidated", file_path="PRIVATE_PATH",
+        ))
+
+    def rewrite(question, history, *, report_context):
+        assert report_context.company == "Công ty Mẫu"
+        assert report_context.period_label() == "quý 2/2025"
+        assert "PRIVATE_PATH" not in report_context.model_dump_json()
+        return standalone(question)
+
+    harness.deps.resolve = accessible
+    monkeypatch.setattr(clarify, "_default_rewriter", rewrite)
+    run = harness.execute("Tổng tài sản của công ty này là bao nhiêu?")
+    assert run["status"] == "succeeded" and run["context_status"] == "standalone"
+    assert all(call == ("ds-1", harness.user["id"], frozenset()) for call in calls)
+
+
+def test_context_failure_message_does_not_blame_missing_report_inputs(harness):
+    harness.execute(FIRST)
+    run = harness.execute(FOLLOWUP, fixed("invalid JSON"))
+    with harness.db.read() as conn:
+        message = webdb.get_message(conn, run["answer_message_id"])
+    assert "Bước xử lý ngữ cảnh gặp lỗi" in message["content"]
+    assert "không cần nhập lại công ty hoặc kỳ" in message["content"]
 
 
 def test_history_is_owner_session_dataset_generation_scoped_and_marks_legacy(harness):

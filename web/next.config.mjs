@@ -19,6 +19,8 @@ const api = (process.env.FINX_API_URL || "http://127.0.0.1:8000").replace(/\/+$/
 const nextConfig = {
   reactStrictMode: true,
   poweredByHeader: false,
+  devIndicators: false,
+  experimental: { agentUpgrade: "security" },
   env: { FINX_API_URL: api },
   async rewrites() {
     return [{ source: "/api/:path*", destination: `${api}/api/:path*` }];

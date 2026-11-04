@@ -2,9 +2,9 @@
 
 import { ReactNode, useEffect, useRef } from "react";
 
-type Props = { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean };
+type Props = { title: string; onClose: () => void; children: ReactNode; footer?: ReactNode; wide?: boolean; className?: string };
 
-export default function Modal({ title, onClose, children, footer, wide = false }: Props) {
+export default function Modal({ title, onClose, children, footer, wide = false, className = "" }: Props) {
   const dialog = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -29,7 +29,7 @@ export default function Modal({ title, onClose, children, footer, wide = false }
     <div className="overlay" onClick={onClose}>
       <div
         ref={dialog}
-        className={`modal${wide ? " wide" : ""}`}
+        className={`modal${wide ? " wide" : ""}${className ? ` ${className}` : ""}`}
         role="dialog"
         aria-modal="true"
         aria-label={title}

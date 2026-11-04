@@ -44,7 +44,7 @@ from agentfinx.core.schemas.acquisition import (TERMINAL_REMOTE_STATUSES, Conver
 
 LLAMAPARSE_CONTRACT_VERSION = "llamaparse-markdown-v2"
 DEFAULT_PARSE_VERSION = "2026-08-19"
-TIER_CREDITS_PER_PAGE = {"cost_effective": 3, "agentic": 10}
+TIER_CREDITS_PER_PAGE = {"cost_effective": 3, "agentic": 10, "agentic_plus": 45}
 
 
 class LlamaParseError(RuntimeError):
@@ -119,7 +119,7 @@ class LlamaParseDocumentConverter:
         *,
         client: Any = None,
         cache_dir: str | Path,
-        tier: str = "cost_effective",
+        tier: str = "agentic_plus",
         version: str = DEFAULT_PARSE_VERSION,
         allow_cloud_parse: bool = False,
         max_retries: int = 3,
@@ -130,7 +130,7 @@ class LlamaParseDocumentConverter:
         local_extractor: Callable[[PdfArtifact], list[str]] | None = extract_pdf_text_layer,
     ):
         if tier not in TIER_CREDITS_PER_PAGE:
-            raise ValueError("LlamaParse tier must be cost_effective or agentic")
+            raise ValueError("LlamaParse tier must be cost_effective, agentic or agentic_plus")
         if version in {"", "latest"}:
             raise ValueError("Pin LLAMAPARSE_VERSION to a dated provider version, not latest")
         self._client = client
@@ -153,6 +153,7 @@ class LlamaParseDocumentConverter:
         return (
             f"{LLAMAPARSE_CONTRACT_VERSION}:{LOCAL_TEXT_CONTRACT_VERSION}:"
             f"{self.tier}:{self.version}"
+            + (":full-cloud" if self.tier == "agentic_plus" else "")
         )
 
     @property
@@ -175,6 +176,8 @@ class LlamaParseDocumentConverter:
             raise ValueError("Private conversion requires an owner-scoped cache namespace")
         namespace = hashlib.sha256(artifact.cache_namespace.encode()).hexdigest() if private else "public"
         raw_contract = f"{LLAMAPARSE_CONTRACT_VERSION}-{LOCAL_TEXT_CONTRACT_VERSION}"
+        if self.tier == "agentic_plus":
+            raw_contract += "-full-cloud"
         contract = "".join(
             char for char in raw_contract if char.isalnum() or char in "-_"
         )
@@ -567,7 +570,9 @@ class LlamaParseDocumentConverter:
                 self._link_cached_payer(cache_path, recorder)
             return cached
 
-        local_pages = self._local_pages(artifact)
+        # Full Plus parses every page remotely. A damaged PDF text layer must
+        # neither bypass the provider nor become the numeric reference for OCR.
+        local_pages = [] if self.tier == "agentic_plus" else self._local_pages(artifact)
         if local_pages and not local_text_quality_issues(
             local_pages,
             expected_pages=artifact.page_count,
@@ -732,9 +737,11 @@ class LlamaParseDocumentConverter:
             targeted_retry_pages=retry_pages,
             quality_issues=issues,
         )
-        if not pages or issues:
+        # Keep imperfect extraction usable. Formatting/completeness diagnostics
+        # are warnings; only a result with no readable content stops the import.
+        if not any(page.markdown.strip() for page in pages):
             raise LlamaParseError(
-                "LlamaParse output failed deterministic quality validation",
+                "LlamaParse returned no readable content",
                 code="conversion_quality_failed",
                 retryable=False,
                 billed_pages=billed_pages,

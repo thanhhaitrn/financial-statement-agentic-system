@@ -8,7 +8,7 @@ from agentfinx.agents.tools.langchain_tools import get_langchain_tools_for_agent
 from agentfinx.agents.agent_registry import ANALYSIS_ALLOWED_KEYWORD_TABLES, is_analysis_agent
 from agentfinx.core.config.runtime_policy import DEFAULT_POLICY
 from agentfinx.agents.prompts import PROMPT_TEMPLATE
-from agentfinx.agents.profiles import AGENT_PROFILES
+from agentfinx.agents.profiles import get_agent_profile
 from agentfinx.core.config.allowed_keywords import build_allowed_keywords_payload
 from agentfinx.core.llm.client import llm
 from agentfinx.core.llm.invoke import extract_usage_metadata, invoke_prompt
@@ -1070,7 +1070,8 @@ def _force_analysis_answer_instruction(base_instruction: str) -> str:
         "- Không còn requirement phân tích khả dụng cần gọi tool trong round này, hoặc không còn lượt tool.\n"
         "- KHÔNG được gọi tool nữa.\n"
         "- PHẢI trả đúng schema AnalysisOutput ngay từ worker_results_json và tool_observations hiện có.\n"
-        "- Nếu còn thiếu dữ liệu, nêu rõ trong answer và điền requirements bằng các dữ liệu cần truy xuất thêm.\n"
+        "- Viết nhận định từ số liệu đã có; bỏ qua chỉ tiêu phụ chưa tính được. Chỉ nêu tối đa một câu giới hạn nếu yêu cầu trực tiếp chưa thể trả lời.\n"
+        "- Điền requirements bằng line-item cốt lõi cần truy xuất thêm; không chép danh sách requirements vào answer.\n"
     )
 
 
@@ -1411,7 +1412,7 @@ def _analysis_output_or_empty(parsed_output) -> dict:
 
 
 def call_analysis_agent(state: dict, agent_name: str) -> dict:
-    profile = AGENT_PROFILES[agent_name]
+    profile = get_agent_profile(agent_name)
     started_at = time.perf_counter()
 
     payload = {

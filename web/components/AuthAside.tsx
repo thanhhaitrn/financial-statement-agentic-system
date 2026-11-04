@@ -4,7 +4,7 @@ export default function AuthAside() {
     <aside className="auth-aside" aria-hidden="true">
       <div>
         <p className="aside-quote">
-          Mỗi con số đều có <em>nguồn gốc</em> rõ ràng.
+          Mỗi con số đều có nguồn gốc rõ ràng.
         </p>
         <div className="aside-bars">
           {bars.map((h, i) => (

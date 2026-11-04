@@ -28,6 +28,8 @@ web = [
   "llama-cloud>=2.15,<3.0",
   "pyjwt>=2.8,<3.0",
   "pypdf>=5.0,<7.0",
+  "pypdfium2>=5.14,<6.0",
+  "Pillow>=10.4,<13.0",
   "python-multipart>=0.0.18,<1.0",
   "uvicorn>=0.34,<1.0",
 ]

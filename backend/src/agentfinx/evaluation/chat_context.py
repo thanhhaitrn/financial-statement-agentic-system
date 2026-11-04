@@ -66,8 +66,13 @@ def evaluate_cases(cases: list[dict], *, rewrite: Callable | None = None) -> dic
                 **result.payload(),
             })
             if result.can_continue:
+                history = [turn for turn in history if not turn.clarification_question]
                 history.append(ContextTurn(run_id=f"{case['id']}-step-{index}",
                                            effective_question=result.question))
+            elif result.status == "needs_clarification" and ok:
+                history.append(ContextTurn(run_id=f"{case['id']}-step-{index}",
+                                           effective_question=step["question"],
+                                           clarification_question=result.resolution["clarification_question"]))
             else:
                 blocked = True
     statuses = Counter(r["status"] for r in records)

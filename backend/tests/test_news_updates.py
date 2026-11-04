@@ -97,6 +97,30 @@ def _ask(web, final_state):
     return run["run_id"]
 
 
+def test_late_news_uses_the_original_prompt_snapshot(web):
+    old = {"news_select": "Prompt chọn tin ban đầu", "news_score": "Prompt phân tích tin ban đầu"}
+    response = web.client.put("/api/me/agent-prompts", json={"prompts": old}, headers={"Origin": ORIGIN})
+    assert response.status_code == 200
+    _ask(web, {"web_analysis": PENDING})
+    web.client.put("/api/me/agent-prompts", json={"prompts": {"news_select": "Prompt mới"}},
+                   headers={"Origin": ORIGIN})
+    captured = []
+    reply = model(SELECT, EVIDENCE)
+
+    def invoke(system, user, timeout):
+        captured.append(system)
+        return reply(system, user, timeout)
+
+    assert run_news_update_once(web.db, "worker", provider_factory=Provider, invoke=invoke,
+                                now=lambda: datetime.now(timezone.utc) + RETRY_AFTER)
+    from agentfinx.news.analysis.prompts import SELECT_AND_GROUP_SYSTEM, SCORE_SYSTEM
+
+    assert captured[0].startswith(SELECT_AND_GROUP_SYSTEM)
+    assert old["news_select"] in captured[0]
+    assert captured[1].startswith(SCORE_SYSTEM)
+    assert old["news_score"] in captured[1]
+
+
 def test_only_incomplete_news_is_finished_later():
     assert needs_update({"web_analysis": PENDING}) == CONTEXT
     assert needs_update({"web_analysis": {**PENDING, "status": "ok", "diagnostics": {"unfinished": True}}})

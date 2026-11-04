@@ -20,9 +20,17 @@ def _v4_database(path, monkeypatch):
             session = webdb.create_session(conn, owner_id=user["id"], title="History",
                                            dataset_id="ds", dataset_generation="g1")
             question_id = webdb.add_message(conn, session_id=session["id"], role="user", content="Vốn chủ sở hữu?")
-            run = webdb.create_run(conn, session_id=session["id"], owner_id=user["id"],
-                                   idempotency_key="migration-key", question="Vốn chủ sở hữu?",
-                                   question_message_id=question_id, dataset_id="ds", dataset_generation="g1")
+            # Build the historical schema directly; current create_run also
+            # writes the account prompt snapshot introduced in v9.
+            run_id = webdb.new_id()
+            conn.execute(
+                "INSERT INTO chat_runs (id, session_id, owner_id, idempotency_key, question, "
+                "question_message_id, dataset_id, dataset_generation, status, created_at) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?)",
+                (run_id, session["id"], user["id"], "migration-key", "Vốn chủ sở hữu?",
+                 question_id, "ds", "g1", webdb.utc_now()),
+            )
+            run = webdb.get_run(conn, run_id)
             webdb.claim_next_run(conn, "old-worker")
             webdb.set_run_effective_question(conn, run["id"], "Vốn chủ sở hữu đầu năm?")
             answer_id = webdb.add_message(conn, session_id=session["id"], role="assistant", content="Old answer", run_id=run["id"])
@@ -43,6 +51,8 @@ def test_v5_is_additive_backed_up_and_does_not_rewrite_legacy(tmp_path, monkeypa
         run = webdb.get_run(conn, run_id)
         assert run["question"] == "Vốn chủ sở hữu?"
         assert run["effective_question"] == "Vốn chủ sở hữu đầu năm?"
+        assert json.loads(run["agent_prompts_json"]) == {}
+        assert webdb.get_agent_prompts(conn, run["owner_id"]) == {}
         assert [run[name] for name in ("context_status", "context_reason", "context_resolution", "context_snapshot")] == [""] * 4
         assert conn.execute("PRAGMA foreign_key_check").fetchall() == []
         assert len(webdb.list_messages(conn, session_id)) == 2
