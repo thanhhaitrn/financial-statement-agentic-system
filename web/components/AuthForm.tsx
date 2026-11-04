@@ -9,7 +9,7 @@ import { BRAND } from "@/lib/site";
 
 type Mode = "login" | "signup";
 type Registration = "invite" | "open" | "closed";
-type Errors = { name?: string; email?: string; password?: string; invite?: string; form?: string };
+type Errors = { name?: string; email?: string; password?: string; confirm?: string; invite?: string; form?: string };
 
 // Same limits as the FastAPI backend (backend/src/agentfinx/api: app.py, auth.py).
 const MIN_PASSWORD = 8;
@@ -24,7 +24,9 @@ function strength(p: string) {
   return s;
 }
 
-function validate(isLogin: boolean, name: string, email: string, password: string, invite: string | null): Errors {
+function validate(
+  isLogin: boolean, name: string, email: string, password: string, confirm: string | null, invite: string | null,
+): Errors {
   const errors: Errors = {};
   if (invite !== null && !invite.trim()) errors.invite = "Vui lòng nhập mã mời.";
   if (!isLogin && (!name.trim() || name.length > 120)) errors.name = "Vui lòng nhập họ tên (tối đa 120 ký tự).";
@@ -32,6 +34,8 @@ function validate(isLogin: boolean, name: string, email: string, password: strin
   if (isLogin ? !password : password.length < MIN_PASSWORD || password.length > MAX_PASSWORD) {
     errors.password = isLogin ? "Vui lòng nhập mật khẩu." : `Mật khẩu cần từ ${MIN_PASSWORD} đến ${MAX_PASSWORD} ký tự.`;
   }
+  // Checked here only; the confirmation is never sent to the server.
+  if (confirm !== null && confirm !== password) errors.confirm = "Mật khẩu nhập lại không khớp.";
   return errors;
 }
 
@@ -80,7 +84,8 @@ export default function AuthForm({ mode, registration = "invite", invite = "" }:
     const email = String(f.get("email") ?? "");
     const remember = f.get("remember") === "on";
     const inviteCode = needsInvite ? String(f.get("invite_code") ?? "") : null;
-    const local = validate(isLogin, name, email, password, inviteCode);
+    const confirm = isLogin ? null : String(f.get("password_confirm") ?? "");
+    const local = validate(isLogin, name, email, password, confirm, inviteCode);
     if (Object.keys(local).length) {
       fail(local);
       return;
@@ -113,7 +118,7 @@ export default function AuthForm({ mode, registration = "invite", invite = "" }:
         <div className="auth-top"><Logo /></div>
 
         <div className={`auth-box ${shake ? "shake" : ""}`}>
-          <h1 className="auth-title">{isLogin ? <>Chào mừng đến với <em>{BRAND}</em></> : <>Tạo tài khoản <em>{BRAND}</em></>}</h1>
+          <h1 className="auth-title">{isLogin ? `Chào mừng đến với ${BRAND}` : `Tạo tài khoản ${BRAND}`}</h1>
           {isLogin && <p className="muted auth-sub">Đăng nhập để tiếp tục phân tích báo cáo.</p>}
           {needsInvite && (
             <p className="muted auth-sub">Tài khoản mới cần mã mời. Hãy dùng đúng email được mời.</p>
@@ -161,6 +166,16 @@ export default function AuthForm({ mode, registration = "invite", invite = "" }:
                 </div>
               )}
             </div>
+            {!isLogin && (
+              <div className={`field-wrap ${errors.confirm ? "bad" : ""}`}>
+                <label htmlFor="password_confirm">Nhập lại mật khẩu</label>
+                <input
+                  id="password_confirm" name="password_confirm" type={show ? "text" : "password"} maxLength={MAX_PASSWORD}
+                  autoComplete="new-password" placeholder="Nhập lại mật khẩu"
+                />
+                {errors.confirm && <small>{errors.confirm}</small>}
+              </div>
+            )}
 
             <label className="remember">
               <input type="checkbox" name="remember" defaultChecked={!isLogin} />

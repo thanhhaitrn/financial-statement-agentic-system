@@ -86,6 +86,7 @@ def _pdf(path: Path, body: bytes = b"%PDF-1.7\nfixture") -> Path:
 
 def _service(tmp_path, parsing, *, attached=None, **policy_overrides):
     policy = AcquisitionPolicy(**{
+        "llamaparse_tier": "cost_effective",
         "max_file_bytes": 1024 * 1024,
         "max_pdf_pages": 200,
         "monthly_parse_credit_budget": 100_000,
@@ -96,7 +97,7 @@ def _service(tmp_path, parsing, *, attached=None, **policy_overrides):
         max_file_bytes=1024 * 1024, max_pdf_pages=200, page_counter=lambda _path: 1,
     )
     # The converter's own default is "no consent": consent must come from the job.
-    converter = LlamaParseDocumentConverter(
+    converter = LlamaParseDocumentConverter(tier=policy.llamaparse_tier,
         client=SimpleNamespace(parsing=parsing),
         cache_dir=tmp_path / "cache",
         local_extractor=None,
@@ -402,7 +403,7 @@ def test_legacy_jobs_migrate_to_explicit_billing_status(tmp_path):
 def test_cache_identity_is_unchanged_by_billing_changes():
     assert LLAMAPARSE_CONTRACT_VERSION == "llamaparse-markdown-v2"
     assert LOCAL_TEXT_CONTRACT_VERSION == "pdf-text-preflight-v1"
-    converter = LlamaParseDocumentConverter(client=object(), cache_dir=Path("/c"), local_extractor=None)
+    converter = LlamaParseDocumentConverter(tier="cost_effective", client=object(), cache_dir=Path("/c"), local_extractor=None)
     artifact = PdfArtifact(path="/x.pdf", source_sha256="a" * 64, size_bytes=1, page_count=1,
                            origin="upload", cache_namespace="owner")
     identity = "fe929d5ecedf9ba78c1962c0af24ef38c412da33946c253b7bb7f9d6afe9967b.json"
@@ -463,3 +464,29 @@ def test_private_uploads_never_link_to_another_owners_parse(tmp_path):
     assert first.billed_credits == second.billed_credits == 3
     assert len(parsing.created) == 2
     assert all(row["role"] == "payer" for row in service.store.attempts_for_job(other.job_id))
+
+
+def test_full_plus_attempt_and_billing_use_the_selected_tier(tmp_path):
+    parsing = _Lifecycle(credits=45)
+    service = _service(tmp_path, parsing, llamaparse_tier="agentic_plus")
+    queued = _import(service, tmp_path)
+    assert queued.reserved_credits == 45
+    ready = service.run_job(queued.job_id)
+    assert ready.status == "ready"
+    assert ready.confirmed_credits == "45" and ready.billed_credits == 45
+    assert ready.estimated_credits == 45
+    assert [call["tier"] for call in parsing.created] == ["agentic_plus"]
+    assert "page_ranges" not in parsing.created[0]
+    assert [row["tier"] for row in service.store.attempts_for_job(queued.job_id)] == ["agentic_plus"]
+
+
+def test_full_plus_import_accepts_bad_table_and_keeps_quality_warning(tmp_path):
+    malformed = "# Báo cáo\n\n| Chỉ tiêu | Giá trị |\n|---|---|\n| A | 100 | dư một ô |"
+    parsing = _Lifecycle(credits=45, outputs=[[(1, malformed)]])
+    service = _service(tmp_path, parsing, llamaparse_tier="agentic_plus")
+    queued = _import(service, tmp_path)
+    ready = service.run_job(queued.job_id)
+    assert ready.status == "ready" and ready.dataset_id
+    assert "page_1:inconsistent_table_columns" in ready.metadata["conversion"]["quality_issues"]
+    assert ready.confirmed_credits == "45"
+    assert len(parsing.created) == 1

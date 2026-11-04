@@ -2,9 +2,8 @@ import Footer from "@/components/Footer";
 import PageLink from "@/components/PageLink";
 import Navbar from "@/components/Navbar";
 import Reveal from "@/components/Reveal";
-import { CitedAnswer, PeriodComparison, VerifiedNews } from "@/components/landing/FeatureVisuals";
 import ProductDemo from "@/components/landing/ProductDemo";
-import { SAMPLE } from "@/components/landing/sample";
+import Showcase from "@/components/landing/Showcase";
 import { getUser } from "@/lib/server-user";
 
 // Figures are generated isometric line drawings in public/landing.
@@ -26,24 +25,6 @@ const HIGHLIGHTS = [
   },
 ];
 
-const FEATURES = [
-  {
-    title: "Trả lời kèm nguồn",
-    body: "Mỗi kết luận chỉ rõ bảng hoặc thuyết minh lấy số liệu, kèm số trang khi báo cáo có, để đối chiếu với bản gốc.",
-    visual: <CitedAnswer />,
-  },
-  {
-    title: "So sánh cùng kỳ",
-    body: "Chỉ tiêu được đặt cạnh kỳ trước với cùng đơn vị, nên biến động hiện ra ngay mà không phải tự cộng trừ.",
-    visual: <PeriodComparison />,
-  },
-  {
-    title: "Tin tức có mức xác nhận",
-    body: "Tin doanh nghiệp từ Vietstock, mỗi sự kiện kèm câu trích nguyên văn và mức xác nhận do hệ thống kiểm tra.",
-    visual: <VerifiedNews />,
-  },
-];
-
 export default async function HomePage() {
   const user = await getUser();
 
@@ -52,12 +33,12 @@ export default async function HomePage() {
       <Navbar loggedIn={!!user} />
       <main>
         <section className="hero container">
-          <h1 className="hero-title fade-up">
+          <h1 className="hero-title fade-up" style={{ ["--d" as string]: "120ms" }}>
             Phân tích báo cáo tài chính
             <br />
             cùng AI agent
           </h1>
-          <div className="hero-row fade-up" style={{ ["--d" as string]: "160ms" }}>
+          <div className="hero-row fade-up" style={{ ["--d" as string]: "320ms" }}>
             <p className="hero-sub">
               Tự động hóa quy trình phân tích tài chính doanh nghiệp bằng hệ thống trí tuệ nhân tạo.
             </p>
@@ -67,16 +48,15 @@ export default async function HomePage() {
           </div>
         </section>
 
-        <section className="demo-section fade-up" style={{ ["--d" as string]: "280ms" }}>
+        <section className="demo-section fade-up" style={{ ["--d" as string]: "520ms" }}>
           <ProductDemo />
         </section>
 
         <section className="section container" id="san-pham">
           <Reveal>
             <h2 className="statement">
-              <span>Một cách mới để đọc báo cáo tài chính.</span> Xây dựng riêng cho doanh nghiệp Việt Nam,
-              AgentFinX để các AI agent trích xuất số liệu, tính chỉ số và đối chiếu cùng kỳ — bạn chỉ việc đặt
-              câu hỏi.
+              <span>Một cách mới để hiểu báo cáo tài chính.</span> AgentFinX sử dụng các AI agent để đọc báo cáo,
+              phân tích chỉ số và đối chiếu dữ liệu qua từng kỳ.
             </h2>
           </Reveal>
           <div className="highlights">
@@ -94,19 +74,7 @@ export default async function HomePage() {
         </section>
 
         <section className="section container" id="tinh-nang">
-          <Reveal>
-            <h2 className="h2">Mỗi câu trả lời đều kiểm chứng được</h2>
-            <p className="section-note muted">Ví dụ dùng dữ liệu minh họa của {SAMPLE.company} ({SAMPLE.ticker}).</p>
-          </Reveal>
-          <div className="features">
-            {FEATURES.map((feature, i) => (
-              <Reveal key={feature.title} className="feature" delay={i * 90}>
-                {feature.visual}
-                <h3>{feature.title}</h3>
-                <p className="muted">{feature.body}</p>
-              </Reveal>
-            ))}
-          </div>
+          <Showcase />
         </section>
 
         <section className="cta container">

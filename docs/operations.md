@@ -95,13 +95,19 @@ cd web && npm run build && npm start   # giao diện, 127.0.0.1:3000
     worker trước;
   - lên schema v6 thì mọi người phải đăng nhập lại một lần;
   - không chạy code cũ trên database đã nâng.
-- **Đổi cờ:** sau khi đổi `WEB_EVIDENCE_ENABLED`, `WEB_ANALYSIS_ENABLED` hay `FINX_CHAT_CONTEXT`,
-  khởi động lại **cả** API lẫn worker.
+- **Đổi cờ:** sau khi đổi `WEB_EVIDENCE_ENABLED`, `WEB_ANALYSIS_ENABLED`, `FINX_CHAT_CONTEXT`
+  hay `FINX_REPORT_DISCOVERY_ENABLED`, khởi động lại API và cả hai worker.
 - **Giao diện:**
   - `FINX_API_URL` (trong `web/.env.local`) được biên dịch vào bản build, nên đổi thì phải build
     lại;
   - cuộc trò chuyện đang mở nằm trên URL (`/chat?session=<id>`);
   - API lỗi thì trang báo "Không kết nối được máy chủ", không đăng xuất người dùng.
+  - trong menu tài khoản (dấu `…`), chọn **Cá nhân hoá agents**, bấm một agent trên workflow và nhập yêu cầu riêng
+    cho planner, router, bốn agent phân tích, synth và hai bước phân tích tin tức;
+  - yêu cầu được bổ sung vào prompt gốc dưới một mục ưu tiên cao; prompt nội bộ không trả về trình duyệt;
+  - yêu cầu lưu riêng theo tài khoản. Mỗi câu hỏi giữ một bản cấu hình lúc gửi, kể cả phần
+    tin tức hoàn tất sau câu trả lời; thay đổi chỉ áp dụng cho câu hỏi gửi tiếp theo;
+  - **Xoá yêu cầu** rồi **Lưu thay đổi** để bỏ phần cá nhân hoá của agent đang chọn.
 
 ## Cấu hình
 
@@ -123,11 +129,18 @@ Mẫu đầy đủ: `.env.example`.
 | `QDRANT_URL`, `QDRANT_API_KEY` | | Qdrant server (web bắt buộc) |
 | `WEB_EVIDENCE_ENABLED`, `WEB_ANALYSIS_ENABLED` | `0` | Thu thập và phân tích tin doanh nghiệp |
 | `WEB_BRANCH_BUDGET_SECONDS`, `WEB_ANALYSIS_*`, `WEB_CACHE_TTL_SECONDS` | 75 s, … | Ngân sách và giới hạn của nhánh tin |
-| `LLAMA_CLOUD_API_KEY`, `LLAMAPARSE_TIER`, `LLAMAPARSE_VERSION` | | Trích xuất PDF trên đám mây; version phải cố định |
+| `LLAMA_CLOUD_API_KEY`, `LLAMAPARSE_TIER`, `LLAMAPARSE_VERSION` | `agentic_plus`, `2026-08-19` | Mặc định parse toàn bộ trang bằng Agentic Plus, không dùng text local; dự trù 45 credit/trang, chi phí xác nhận theo provider; version phải cố định |
 | `TRIAL_DAYS`, `TRIAL_QUESTIONS_PER_DAY`, `TRIAL_QUESTIONS_TOTAL` | 14, 20, 100 | Giới hạn câu hỏi mỗi tài khoản |
 
 Mọi thay đổi policy runtime làm đổi run fingerprint của đánh giá
 (`agentfinx/core/config/runtime_policy.py`).
+
+Import vẫn tiếp tục khi kết quả trích xuất có nội dung đọc được, kể cả lỗi
+định dạng bảng hoặc thiếu trang. Các vấn đề này được lưu ở
+`metadata.conversion.quality_issues` như cảnh báo; chỉ kết quả không có nội
+dung đọc được mới bị dừng ở bước kiểm tra đầu ra.
+Khi tạo dữ liệu tra cứu cho báo cáo nhập vào, từng ô có metadata lỗi được bỏ
+qua và ghi log; các ô hợp lệ còn lại vẫn được đưa vào.
 
 ## Người dùng
 

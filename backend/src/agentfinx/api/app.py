@@ -1,7 +1,8 @@
 """FastAPI app: the JSON API behind the Next.js UI (web/), which proxies /api.
 
-The API never runs the model, parses a document or builds an index; it only
-records work for the workers and reports state. Security boundaries:
+The API never runs the model, submits report parsing or builds an index; it
+records worker tasks and renders existing source PDF pages on demand.
+Security boundaries:
 
 * sessions live in an ``HttpOnly``/``SameSite=Lax`` cookie, never in page JS;
 * every state-changing ``/api`` request must come from an allowed ``Origin``
@@ -38,6 +39,7 @@ from agentfinx.api.discovery import register_discovery_routes
 from agentfinx.api.imports import (UPLOAD_SESSION_TITLE, dataset_label,
                             default_upload_dir, register_import_routes)
 from agentfinx.api.messages import message_out
+from agentfinx.api.report_sources import register_report_source_routes
 from agentfinx.api.settings import WebSettings
 
 logger = logging.getLogger("agentfinx.web.api")
@@ -52,6 +54,10 @@ READ_ONLY_TEXT = {
     "kb_invalid": "Dữ liệu của báo cáo cần build lại; cuộc trò chuyện này chỉ còn để xem lại.",
     "index_missing": "Chỉ mục của báo cáo cần build lại; cuộc trò chuyện này chỉ còn để xem lại.",
 }
+
+
+class AgentPromptsPayload(BaseModel):
+    prompts: dict[str, str] = Field(max_length=9)
 
 
 class RegisterPayload(BaseModel):
@@ -181,7 +187,12 @@ def _run_out(conn, run: Any) -> dict:
             "status": "pending" if news["status"] in {"pending", "running"} else news["status"],
             "message": message_out(news_message) if news_message is not None else None,
         }
+    steps = [
+        {key: step[key] for key in ("key", "label", "detail", "status", "started_at", "finished_at", "output")}
+        for step in webdb.list_run_steps(conn, run["id"])
+    ]
     return {
+        "steps": steps,
         "news_update": news_update,
         "task_kind": (run["task_kind"] if "task_kind" in keys else "") or "",
         "result_kind": (run["result_kind"] if "result_kind" in keys else "") or "",
@@ -442,6 +453,29 @@ def create_app(
                 "chat_context": settings.chat_context,
             },
         }
+
+    @app.get("/api/me/agent-prompts")
+    def agent_prompts(user=Depends(current_user)):
+        from agentfinx.core.config.agent_prompts import catalog, MAX_PROMPT_LENGTH
+
+        with database.read() as conn:
+            prompts = webdb.get_agent_prompts(conn, user["id"])
+        return {"agents": catalog(), "prompts": prompts, "max_prompt_length": MAX_PROMPT_LENGTH}
+
+    @app.put("/api/me/agent-prompts")
+    def update_agent_prompts(payload: AgentPromptsPayload, user=Depends(current_user)):
+        from agentfinx.core.config.agent_prompts import AGENT_LABELS, MAX_PROMPT_LENGTH
+
+        prompts = {}
+        for agent_id, prompt in payload.prompts.items():
+            if agent_id not in AGENT_LABELS:
+                raise _error(422, "invalid_agent", "Agent không hợp lệ.")
+            if not prompt.strip() or len(prompt) > MAX_PROMPT_LENGTH:
+                raise _error(422, "invalid_prompt", f"Yêu cầu cá nhân hoá cần từ 1 đến {MAX_PROMPT_LENGTH:,} ký tự.")
+            prompts[agent_id] = prompt
+        with database.transaction() as conn:
+            webdb.save_agent_prompts(conn, user["id"], prompts)
+        return {"prompts": prompts}
 
     # ---------------------------------------------------------------- health
 
@@ -705,6 +739,9 @@ def create_app(
             if run is None:
                 raise _error(404, "run_not_found", "Không tìm thấy yêu cầu.")
             return _run_out(conn, run)
+
+    register_report_source_routes(app, database=database, current_user=current_user,
+                                  shared_ids=settings.shared_dataset_ids, inspect_generation=inspect_generation)
 
     # --------------------------------------------------------------- imports
 

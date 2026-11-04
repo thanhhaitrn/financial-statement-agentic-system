@@ -31,6 +31,7 @@ from agentfinx.core.config import paths
 from agentfinx.core.schemas.acquisition import (
     TERMINAL_REMOTE_STATUSES,
     ImportJob,
+    ImportProgress,
     ReportCandidate,
     utc_now_iso,
 )
@@ -398,7 +399,6 @@ class AcquisitionStore:
         key = str(idempotency_key or "").strip()
         if not key:
             raise ValueError("idempotency_key is required")
-        payload = _job_payload(job)
         with self.transaction(), self._connect() as connection:
             existing = connection.execute(
                 "SELECT payload_json FROM import_jobs WHERE owner_id = ? AND idempotency_key = ?",
@@ -406,6 +406,8 @@ class AcquisitionStore:
             ).fetchone()
             if existing is not None:
                 return _job_from_payload(existing["payload_json"])
+            job = job.model_copy(update={"progress": [ImportProgress(status=job.status, at=job.created_at)]})
+            payload = _job_payload(job)
             connection.execute(
                 """
                 INSERT INTO import_jobs (
@@ -509,8 +511,15 @@ class AcquisitionStore:
 
     def update_job(self, job: ImportJob) -> ImportJob:
         updated = job.model_copy(update={"updated_at": utc_now_iso()})
-        payload = _job_payload(updated)
-        with self._connect() as connection:
+        with self.transaction(), self._connect() as connection:
+            current = self.get_job(job.job_id, owner_id=job.owner_id)
+            if current is None:
+                raise ValueError("import job not found or owner mismatch")
+            progress = list(current.progress) or [ImportProgress(status=current.status, at=current.updated_at)]
+            if updated.status != current.status:
+                progress = progress[-63:] + [ImportProgress(status=updated.status, at=updated.updated_at)]
+            updated = updated.model_copy(update={"progress": progress})
+            payload = _job_payload(updated)
             cursor = connection.execute(
                 """
                 UPDATE import_jobs

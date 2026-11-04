@@ -28,7 +28,7 @@ from agentfinx.agents.line_item_matcher import (
     contains_intent,
     direct_line_item_match,
 )
-from agentfinx.agents.profiles import AGENT_PROFILES
+from agentfinx.agents.profiles import get_agent_profile
 from agentfinx.core.config.allowed_keywords import (
     ALLOWED_KEYWORDS,
     TABLE_BS,
@@ -3125,7 +3125,7 @@ def _router_system_instruction(planner_plan: dict, default_instruction: str) -> 
 
 
 def run_router(state: dict) -> dict:
-    profile = AGENT_PROFILES["agent_router"]
+    profile = get_agent_profile("agent_router")
     planner_plan = state.get("planner_plan", {}) or {}
     trace = []
     started_at = time.perf_counter()

@@ -17,7 +17,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Iterator, Optional
 
-SCHEMA_VERSION = 7
+SCHEMA_VERSION = 10
 # A heartbeat this recent means a worker may still be running old code.
 MIGRATION_WORKER_GRACE_SECONDS = 45
 ACTIVE_RUN_STATUSES = ("queued", "running")
@@ -261,6 +261,36 @@ _MIGRATIONS: dict[int, tuple[str, ...]] = {
         "CREATE INDEX idx_news_updates_due ON news_updates(status, due_at)",
         "CREATE INDEX idx_news_updates_session ON news_updates(session_id, status)",
     ),
+    # Live steps of a run (planner, agents, news, synthesis) for the browser
+    # to show while it waits; operational text only, one row per step key.
+    8: (
+        """
+        CREATE TABLE chat_run_steps (
+            run_id TEXT NOT NULL REFERENCES chat_runs(id) ON DELETE CASCADE,
+            key TEXT NOT NULL,
+            seq INTEGER NOT NULL,
+            label TEXT NOT NULL,
+            detail TEXT NOT NULL DEFAULT '',
+            status TEXT NOT NULL CHECK (status IN ('running', 'done', 'failed', 'skipped')),
+            started_at TEXT NOT NULL,
+            finished_at TEXT,
+            PRIMARY KEY (run_id, key)
+        )
+        """,
+    ),
+    9: (
+        """
+        CREATE TABLE user_agent_prompts (
+            owner_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+            prompts_json TEXT NOT NULL DEFAULT '{}',
+            updated_at TEXT NOT NULL
+        )
+        """,
+        "ALTER TABLE chat_runs ADD COLUMN agent_prompts_json TEXT NOT NULL DEFAULT '{}'",
+    ),
+    # What a finished step produced (plan, facts found, an agent's analysis,
+    # news events), shown when the user opens the step. Never prompts.
+    10: ("ALTER TABLE chat_run_steps ADD COLUMN output TEXT NOT NULL DEFAULT ''",),
 }
 
 
@@ -404,6 +434,19 @@ def create_user(conn, *, name: str, email: str, password_hash: str) -> sqlite3.R
 
 def get_user(conn, user_id: str) -> Optional[sqlite3.Row]:
     return conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+
+
+def get_agent_prompts(conn, owner_id: str) -> dict[str, str]:
+    row = conn.execute("SELECT prompts_json FROM user_agent_prompts WHERE owner_id=?", (owner_id,)).fetchone()
+    return json.loads(row["prompts_json"]) if row else {}
+
+
+def save_agent_prompts(conn, owner_id: str, prompts: dict[str, str]) -> None:
+    conn.execute(
+        "INSERT INTO user_agent_prompts (owner_id, prompts_json, updated_at) VALUES (?, ?, ?) "
+        "ON CONFLICT(owner_id) DO UPDATE SET prompts_json=excluded.prompts_json, updated_at=excluded.updated_at",
+        (owner_id, json.dumps(prompts, ensure_ascii=False), utc_now()),
+    )
 
 
 def get_user_by_email(conn, email: str) -> Optional[sqlite3.Row]:
@@ -557,6 +600,63 @@ def finish_news_update(conn, update_id: str, *, status: str, message_id: Optiona
         "UPDATE news_updates SET status = ?, message_id = ?, updated_at = ? WHERE id = ?",
         (status, message_id, utc_now(), update_id),
     )
+
+
+# ------------------------------------------------------------------ run steps
+
+STEP_STATUSES = ("running", "done", "failed", "skipped")
+_STEP_TEXT_LIMIT = 300
+_STEP_OUTPUT_LIMIT = 6000
+
+
+def _now_ms() -> str:
+    return datetime.now(timezone.utc).isoformat(timespec="milliseconds")
+
+
+def record_run_step(conn, run_id: str, event: dict) -> None:
+    """Insert or update one step of a run from a :mod:`agentfinx.core.progress` event."""
+
+    key = str(event.get("key") or "")[:100]
+    status = str(event.get("status") or "running")
+    if not key or status not in STEP_STATUSES:
+        return
+    now = _now_ms()
+    detail = event.get("detail")
+    output = event.get("output")
+    if output is not None:
+        output = str(output)
+        if len(output) > _STEP_OUTPUT_LIMIT:
+            output = output[:_STEP_OUTPUT_LIMIT].rstrip() + "\n…"
+    row = conn.execute("SELECT label, detail, output FROM chat_run_steps WHERE run_id = ? AND key = ?", (run_id, key)).fetchone()
+    if row is None:
+        seq = conn.execute("SELECT COALESCE(MAX(seq), 0) + 1 FROM chat_run_steps WHERE run_id = ?", (run_id,)).fetchone()[0]
+        conn.execute(
+            "INSERT INTO chat_run_steps (run_id, key, seq, label, detail, status, started_at, finished_at, output) "
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+            (run_id, key, seq, str(event.get("label") or key)[:_STEP_TEXT_LIMIT], str(detail or "")[:_STEP_TEXT_LIMIT],
+             status, now, None if status == "running" else now, output or ""),
+        )
+        return
+    conn.execute(
+        "UPDATE chat_run_steps SET status = ?, label = ?, detail = ?, finished_at = ?, output = ? "
+        "WHERE run_id = ? AND key = ?",
+        (status, str(event.get("label") or row["label"])[:_STEP_TEXT_LIMIT],
+         str(row["detail"] if detail is None else detail)[:_STEP_TEXT_LIMIT],
+         None if status == "running" else now, row["output"] if output is None else output, run_id, key),
+    )
+
+
+def close_run_steps(conn, run_id: str, status: str = "skipped") -> None:
+    """A finished run leaves no step spinning: steps still running are closed."""
+
+    conn.execute(
+        "UPDATE chat_run_steps SET status = ?, finished_at = ? WHERE run_id = ? AND status = 'running'",
+        (status, _now_ms(), run_id),
+    )
+
+
+def list_run_steps(conn, run_id: str) -> list[sqlite3.Row]:
+    return conn.execute("SELECT * FROM chat_run_steps WHERE run_id = ? ORDER BY seq", (run_id,)).fetchall()
 
 
 def get_news_update_for_run(conn, run_id: str) -> Optional[sqlite3.Row]:
@@ -804,7 +904,7 @@ def create_run(
     conn.execute(
         "INSERT INTO chat_runs (id, session_id, owner_id, idempotency_key, question, "
         "question_message_id, dataset_id, dataset_generation, status, created_at, "
-        "override_of_run_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?)",
+        "override_of_run_id, agent_prompts_json) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'queued', ?, ?, ?)",
         (
             run_id,
             session_id,
@@ -816,6 +916,7 @@ def create_run(
             dataset_generation,
             utc_now(),
             override_of_run_id,
+            json.dumps(get_agent_prompts(conn, owner_id), ensure_ascii=False),
         ),
     )
     if link_question_message:
@@ -867,18 +968,19 @@ def set_run_context(conn, run_id: str, *, question: str, status: str, reason: st
 
 
 def list_context_runs(conn, run, *, limit: int = 10) -> list[sqlite3.Row]:
-    """Completed QA ancestors only; rowid breaks same-second timestamp ties.
+    """Completed QA and clarification ancestors; rowid breaks timestamp ties.
 
     Legacy successful text answers have empty task/result/context fields.
     A clarification can be a succeeded RUN without being a completed QA turn.
     """
     rows = conn.execute(
-        "SELECT id, question, effective_question, context_resolution, context_snapshot "
+        "SELECT id, question, effective_question, context_resolution, context_snapshot, context_status "
         "FROM chat_runs WHERE owner_id=? AND session_id=? AND dataset_id IS ? "
         "AND dataset_generation IS ? AND status='succeeded' "
-        "AND task_kind IN ('', 'report_qa') AND result_kind IN ('', 'answer') "
+        "AND ((task_kind IN ('', 'report_qa') AND result_kind IN ('', 'answer') "
+        "AND context_status NOT IN ('failed', 'needs_clarification')) "
+        "OR (context_status='needs_clarification' AND result_kind='context_clarification')) "
         "AND answer_message_id IS NOT NULL "
-        "AND context_status NOT IN ('failed', 'needs_clarification') "
         "AND rowid < (SELECT rowid FROM chat_runs WHERE id=?) "
         "ORDER BY created_at DESC, rowid DESC LIMIT ?",
         (run['owner_id'], run['session_id'], run['dataset_id'], run['dataset_generation'],

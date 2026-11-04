@@ -7,6 +7,7 @@ from functools import wraps
 from langgraph.graph import END, StateGraph
 
 from agentfinx.agents.agent_registry import ANALYSIS_AGENT_ORDER
+from agentfinx.workflow.live_steps import track, track_analysis
 from agentfinx.workflow.conditions import make_should_continue, should_synthesize_after_collect, synth_route
 from agentfinx.workflow.nodes import (
     agent_cashflow_analysis_node,
@@ -143,31 +144,37 @@ def build_workflow(services: WorkflowServices | None = None, *, entry: str = "ag
     if entry not in ENTRY_POINTS:
         raise ValueError(f"unknown graph entry point: {entry}")
     workflow = StateGraph(state_schema=GraphState)
-    workflow.add_node("agent_main", _bind_services(agent_planner, services))
-    workflow.add_node("agent_router", _bind_services(agent_router, services))
+    workflow.add_node("agent_main", track("agent_main", _bind_services(agent_planner, services)))
+    workflow.add_node("agent_router", track("agent_router", _bind_services(agent_router, services)))
     workflow.add_node(
         "build_evidence",
-        _bind_services(
+        track("build_evidence", _bind_services(
             evidence_pack_node,
             services,
             inject_web_provider=True,
-        ),
+        )),
     )
     # Context agent for company news; not one of the analysis aspects. It runs
     # beside the report branch (start_web … join_web) unless a report agent
     # needs its result first (agent_web, sequential).
-    workflow.add_node("agent_web", _bind_services(agent_web_node, services, inject_web_model=True))
-    workflow.add_node("start_web", _bind_services(start_web_node, services, inject_web_runner=True,
-                                                  inject_web_model=True))
-    workflow.add_node("join_web", _bind_services(join_web_node, services, inject_web_runner=True))
+    workflow.add_node("agent_web", track("agent_web", _bind_services(agent_web_node, services, inject_web_model=True)))
+    workflow.add_node("start_web", track("start_web", _bind_services(start_web_node, services, inject_web_runner=True,
+                                                                    inject_web_model=True)))
+    workflow.add_node("join_web", track("join_web", _bind_services(join_web_node, services, inject_web_runner=True)))
     workflow.add_node("collect_analysis", _bind_services(collect_analysis_results_node, services))
-    workflow.add_node("agent_synth", _bind_services(agent_synth_node, services))
+    workflow.add_node("agent_synth", track("agent_synth", _bind_services(agent_synth_node, services)))
 
     for agent_name in ANALYSIS_AGENT_ORDER:
         agent_node, tool_name, tool_node, finalize_name, finalize_node = ANALYSIS_NODES[agent_name]
-        workflow.add_node(agent_name, _bind_services(agent_node, services))
-        workflow.add_node(tool_name, _bind_services(tool_node, services))
-        workflow.add_node(finalize_name, _bind_services(finalize_node, services))
+        agent_step, tool_step, finalize_step = track_analysis(
+            agent_name,
+            _bind_services(agent_node, services),
+            _bind_services(tool_node, services),
+            _bind_services(finalize_node, services),
+        )
+        workflow.add_node(agent_name, agent_step)
+        workflow.add_node(tool_name, tool_step)
+        workflow.add_node(finalize_name, finalize_step)
 
     workflow.set_entry_point(entry)
     workflow.add_edge("agent_main", "agent_router")

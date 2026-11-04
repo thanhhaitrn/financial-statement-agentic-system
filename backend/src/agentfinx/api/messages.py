@@ -30,6 +30,7 @@ def message_out(row: Any) -> dict:
         "created_at": row["created_at"],
         "kind": kind,
         "payload": payload if kind != "text" else None,
+        "report_sources": context.get("report_sources", []) if row["role"] == "assistant" else [],
         "context_status": context.get("context_status", ""),
         "context_reason": context.get("context_reason", ""),
         "interpreted_question": context.get("interpreted_question", ""),

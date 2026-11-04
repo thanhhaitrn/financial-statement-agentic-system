@@ -1,12 +1,16 @@
 "use client";
 
 import { FormEvent, KeyboardEvent, useCallback, useEffect, useRef, useState } from "react";
-import PageLink from "@/components/PageLink";
 import Modal from "@/components/Modal";
+import AgentPromptsModal from "@/components/chat/AgentPromptsModal";
 import { LogoMark } from "@/components/Logo";
 import DiscoveryModal from "@/components/chat/DiscoveryModal";
+import { Icon } from "@/components/chat/Icons";
+import Library, { LibraryKind } from "@/components/chat/Library";
+import ReportPicker from "@/components/chat/ReportPicker";
 import ImportCard from "@/components/chat/ImportCard";
 import MessageItem, { MessageActions } from "@/components/chat/MessageItem";
+import { LiveSteps, PendingLine } from "@/components/chat/RunSteps";
 import UploadModal, { UploadRequest } from "@/components/chat/UploadModal";
 import { ApiError, api, newIdempotencyKey, postIdempotent, sleep } from "@/lib/api";
 import { BRAND } from "@/lib/site";
@@ -20,6 +24,7 @@ import type {
   ImportJob,
   Message,
   Run,
+  RunStep,
   Session,
   User,
 } from "@/lib/types";
@@ -37,17 +42,20 @@ const SEARCH_FIELDS = [
 
 // A conversation entry: a stored message, or a local notice (an error that
 // is shown once and never stored).
-type Item = { key: string; message?: Message; notice?: string; caption?: string };
+type Item = { key: string; message?: Message; notice?: string; caption?: string; steps?: RunStep[] };
 
 type ModalState =
+  | { type: "agent-prompts" }
   | { type: "upload" }
   | { type: "discovery"; prefill: DiscoverySearch }
   | { type: "search" }
+  | { type: "picker" }
   | { type: "rename"; session: Session }
   | { type: "delete"; session: Session }
   | null;
 
 type Connection = { online: boolean; label: string };
+const CHECKING = "Đang kiểm tra…";
 // How a view change is recorded in the address bar (?session=<id>).
 type HistoryMode = "push" | "replace" | "none";
 
@@ -97,6 +105,8 @@ export default function ChatPage() {
   const [active, setActiveState] = useState<Session | null>(null);
   const [items, setItems] = useState<Item[]>([]);
   const [pending, setPending] = useState<string | null>(null);
+  /** Steps of the run being answered, refreshed by each poll. */
+  const [liveSteps, setLiveSteps] = useState<RunStep[]>([]);
   // Company news still being finished for this conversation (not blocking).
   const [newsPending, setNewsPending] = useState(false);
   const [importJob, setImportJob] = useState<ImportJob | null>(null);
@@ -104,11 +114,14 @@ export default function ChatPage() {
   const [input, setInput] = useState("");
   const [datasetId, setDatasetId] = useState("");
   const [datasetHint, setDatasetHint] = useState("");
-  const [connection, setConnection] = useState<Connection>({ online: false, label: "Đang kiểm tra…" });
+  const [connection, setConnection] = useState<Connection>({ online: false, label: CHECKING });
   const [collapsed, setCollapsed] = useState(false);
   const [menuFor, setMenuFor] = useState<string | null>(null);
   const [userMenu, setUserMenu] = useState(false);
   const [modal, setModal] = useState<ModalState>(null);
+  const [newsEnabled, setNewsEnabled] = useState(false);
+  // The main panel shows the conversation, or a library to start one from.
+  const [view, setView] = useState<"chat" | LibraryKind>("chat");
   const [historyQuery, setHistoryQuery] = useState("");
   const [renameText, setRenameText] = useState("");
   const [modalError, setModalError] = useState("");
@@ -126,7 +139,7 @@ export default function ChatPage() {
   const activeRef = useRef<Session | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
-  const datasetRef = useRef<HTMLSelectElement>(null);
+  const datasetRef = useRef<HTMLButtonElement>(null);
 
   const live = (gen: number) => mounted.current && gen === viewGen.current;
 
@@ -185,6 +198,7 @@ export default function ChatPage() {
       setConnection(chat?.status === "alive"
         ? { online: true, label: "Sẵn sàng" }
         : { online: false, label: "Worker chat chưa chạy" });
+      setNewsEnabled(Boolean(chat?.config?.web_analysis));
     } catch {
       setConnection({ online: false, label: "Mất kết nối máy chủ" });
     }
@@ -263,6 +277,7 @@ export default function ChatPage() {
     newsPoll.current = null;
     setNewsPending(false);
     setActive(session);
+    setView("chat");
     setItems([]);
     setPending(null);
     setImportJob(null);
@@ -276,6 +291,19 @@ export default function ChatPage() {
     enterSession(null, how);
     setDatasetHint("");
     setTimeout(() => inputRef.current?.focus(), 0);
+  }
+
+  function showLibrary(kind: LibraryKind) {
+    setView(kind);
+    setMenuFor(null);
+    if (isNarrow()) setCollapsed(true);
+  }
+
+  /** A new conversation on this report, with an optional question ready to send. */
+  function startOnReport(dataset: Dataset, question = "") {
+    startNewChat();
+    setDatasetId(dataset.id);
+    if (question) setInput(question);
   }
 
   async function openSession(id: string, list: Session[] = sessionsRef.current, how: HistoryMode = "push") {
@@ -314,6 +342,7 @@ export default function ChatPage() {
     if (!live(gen) || activeRef.current?.id !== sessionId) return;
     runPoll.current = runId;
     setPending("Đang gửi…");
+    setLiveSteps([]);
     while (live(gen) && runPoll.current === runId) {
       let run: Run;
       try {
@@ -331,10 +360,11 @@ export default function ChatPage() {
       if (run.session_id !== sessionId || activeRef.current?.id !== sessionId) return;
       if (run.status === "succeeded") {
         setPending(null);
+        setLiveSteps([]);
         runPoll.current = null;
         const caption = run.context_status === "resolved" && run.interpreted_question
           ? `Đã hiểu câu hỏi là: ${run.interpreted_question}` : undefined;
-        if (run.answer) appendItem({ message: run.answer, caption });
+        if (run.answer) appendItem({ message: run.answer, caption, steps: run.steps });
         // The news may already be done by the time the answer is seen.
         if (run.news_update?.message) appendItem({ message: run.news_update.message });
         else if (run.news_update?.status === "pending") void followNewsUpdate(runId, gen, sessionId);
@@ -342,12 +372,14 @@ export default function ChatPage() {
       }
       if (run.status === "failed" || run.status === "interrupted") {
         setPending(null);
+        setLiveSteps([]);
         runPoll.current = null;
         if (run.answer?.kind === "context_error") appendItem({ message: run.answer });
         else appendNotice(run.error_message || "Không tạo được câu trả lời.");
         return;
       }
       setPending(run.status === "running" ? "Đang phân tích báo cáo…" : "Đang chờ tới lượt xử lý…");
+      setLiveSteps(run.steps ?? []);
       await sleep(RUN_POLL_MS);
     }
   }
@@ -604,15 +636,20 @@ export default function ChatPage() {
   // ---------------------------------------------------------------- derived
 
   const discovery = features.report_discovery;
+  const chosen = datasets.find((d) => d.id === datasetId && d.ready);
   const readOnly = Boolean(active?.read_only);
   // With discovery on, a conversation without a report still takes a request
   // to find one; a financial question there gets a "choose a report" card.
   const withoutReport = Boolean(active && !active.dataset_id);
-  const awaitingImport = withoutReport && !discovery;
+  const processingImport = Boolean(active?.import_job_id && !active.dataset_id
+    && importJob?.status !== "ready" && importJob?.status !== "failed");
+  const awaitingImport = processingImport || (withoutReport && !discovery);
   const needsDataset = !active && !datasetId && !discovery;
   const composerDisabled = readOnly || awaitingImport;
   const placeholder = readOnly
     ? "Cuộc trò chuyện chỉ còn để xem lại — hãy tạo cuộc trò chuyện mới."
+    : withoutReport && importJob?.status === "failed"
+      ? "Báo cáo chưa xử lý được — hãy chọn hoặc tải một báo cáo khác."
     : awaitingImport
       ? "Đang xử lý báo cáo — bạn có thể hỏi khi báo cáo sẵn sàng."
       : needsDataset
@@ -625,8 +662,6 @@ export default function ChatPage() {
   let banner: { text: string; tone: "info" | "readonly" } | null = null;
   if (active?.read_only) {
     banner = { text: active.read_only_message || "Cuộc trò chuyện này chỉ còn để xem lại.", tone: "readonly" };
-  } else if (active && !active.dataset_id && active.import_job_id) {
-    banner = { text: "Báo cáo đang được xử lý; bạn sẽ hỏi được khi báo cáo sẵn sàng.", tone: "info" };
   } else if (active?.dataset_label) {
     banner = { text: `Đang hỏi trên: ${active.dataset_label}`, tone: "info" };
   }
@@ -658,18 +693,49 @@ export default function ChatPage() {
 
   const firstName = (user?.name || "").trim().split(/\s+/).pop();
   const showStart = !active;
+  const importActive = Boolean(importJob && importJob.status !== "ready" && importJob.status !== "failed");
+  const chatRows = items.map((item) => item.message ? (
+    <MessageItem key={item.key} message={item.message} caption={item.caption} actions={actions} steps={item.steps} />
+  ) : (
+    <div key={item.key} className="row bot">
+      <span className="row-mark" aria-hidden="true"><LogoMark size={22} /></span>
+      <div className="row-body"><div className="bubble notice" role="alert">{item.notice}</div></div>
+    </div>
+  ));
+  if (importJob) {
+    const created = Date.parse(importJob.created_at || "");
+    const after = Number.isFinite(created) ? items.findIndex((item) => item.message
+      && Date.parse(item.message.created_at) > created) : -1;
+    chatRows.splice(after < 0 ? chatRows.length : after, 0,
+      <div key={`import-${importJob.job_id}`} className="row bot import-progress-row">
+        <span className="row-mark" aria-hidden="true"><LogoMark size={22} /></span>
+        <div className="row-body"><ImportCard job={importJob} /></div>
+      </div>);
+  }
 
   return (
     <div className={`chat ${collapsed ? "is-collapsed" : ""}`}>
       <aside className="chat-side" aria-label="Lịch sử trò chuyện">
         <div className="side-head">
-          <PageLink href="/" className="logo"><LogoMark /><span>{BRAND}</span></PageLink>
-          <button className="icon-btn" onClick={() => setCollapsed(true)} aria-label="Thu gọn thanh bên" title="Thu gọn">‹</button>
+          <span className="logo"><LogoMark size={22} /><span>{BRAND}</span></span>
+          <div className="side-tools">
+            <button className="icon-btn" onClick={() => openModal({ type: "search" })} aria-label="Tìm kiếm" title="Tìm kiếm">
+              <Icon name="search" />
+            </button>
+            <button className="icon-btn round" onClick={() => startNewChat()} aria-label="Cuộc trò chuyện mới" title="Cuộc trò chuyện mới">
+              <Icon name="compose" />
+            </button>
+            <button className="icon-btn" onClick={() => setCollapsed(true)} aria-label="Thu gọn thanh bên" title="Thu gọn">‹</button>
+          </div>
         </div>
-        <div className="side-actions">
-          <button className="btn btn-outline btn-block" onClick={() => startNewChat()}>+ Cuộc trò chuyện mới</button>
-          <button className="btn btn-ghost btn-block left" onClick={() => openModal({ type: "search" })}>Tìm kiếm</button>
-        </div>
+        <nav className="side-nav" aria-label="Lối tắt">
+          <button className={view === "reports" ? "on" : ""} aria-current={view === "reports" ? "page" : undefined} onClick={() => showLibrary("reports")}>
+            <Icon name="report" />Báo cáo
+          </button>
+          <button className={view === "news" ? "on" : ""} aria-current={view === "news" ? "page" : undefined} onClick={() => showLibrary("news")}>
+            <Icon name="news" />Tin doanh nghiệp
+          </button>
+        </nav>
         <p className="side-label">Gần đây</p>
         <div className="side-list">
           {sessions.length === 0 && <p className="side-empty">Chưa có cuộc trò chuyện nào.</p>}
@@ -716,6 +782,7 @@ export default function ChatPage() {
             >⋯</button>
             {userMenu && (
               <div className="dropdown up" role="menu" onClick={(e) => e.stopPropagation()}>
+                <button role="menuitem" onClick={() => { setUserMenu(false); setModal({ type: "agent-prompts" }); }}>Cá nhân hoá agents</button>
                 <button role="menuitem" onClick={logout}>Đăng xuất</button>
               </div>
             )}
@@ -725,102 +792,93 @@ export default function ChatPage() {
       {!collapsed && <div className="side-scrim" onClick={() => setCollapsed(true)} aria-hidden="true" />}
 
       <section className="chat-main">
-        <header className="chat-head">
-          <div className="head-left">
-            {collapsed && (
-              <button className="icon-btn" onClick={() => setCollapsed(false)} aria-label="Mở thanh bên">☰</button>
-            )}
-            <span className="head-title ellipsis">{active?.title || BRAND}</span>
-          </div>
-          <div className="head-right">
-            {discovery && (
-              <button className="btn btn-ghost" onClick={() => openModal({ type: "discovery", prefill: {} })}>
-                Tìm trên CafeF
-              </button>
-            )}
-            <span className={`pill ${connection.online ? "online" : "offline"}`} role="status">
-              <i aria-hidden="true" />{connection.label}
-            </span>
-          </div>
-        </header>
-        {banner && <div className={`session-banner ${banner.tone}`} role="status">{banner.text}</div>}
+        {view !== "chat" ? (
+          <Library
+            kind={view}
+            datasets={datasets}
+            loaded={datasetsLoaded}
+            discovery={discovery}
+            newsEnabled={newsEnabled}
+            collapsed={collapsed}
+            onOpenSidebar={() => setCollapsed(false)}
+            onPick={(d) => startOnReport(d, view === "news" ? `Gần đây có tin gì mới về ${d.company || d.label}?` : "")}
+            onUpload={() => { startNewChat(); openModal({ type: "upload" }); }}
+            onDiscover={() => { startNewChat(); openModal({ type: "discovery", prefill: {} }); }}
+          />
+        ) : (
+        <>
+          <header className="chat-head">
+            <div className="head-left">
+              {collapsed && (
+                <button className="icon-btn" onClick={() => setCollapsed(false)} aria-label="Mở thanh bên">☰</button>
+              )}
+              <span className="head-title ellipsis">{active?.title || BRAND}</span>
+            </div>
+            <div className="head-right">
+              {/* Only a problem is worth a badge: nothing while checking or when ready. */}
+              {!connection.online && connection.label !== CHECKING && (
+                <span className="pill offline" role="status">
+                  <i aria-hidden="true" />{connection.label}
+                </span>
+              )}
+            </div>
+          </header>
+          {banner && <div className={`session-banner ${banner.tone}`} role="status">{banner.text}</div>}
 
-        <div className="chat-scroll" ref={scrollRef}>
-          {showStart ? (
-            <div className="chat-empty">
-              <LogoMark size={44} />
-              <h2>Chào{firstName ? ` ${firstName}` : " bạn"}, bạn muốn hỏi báo cáo nào hôm nay?</h2>
-              <p className="muted">Chọn một báo cáo có sẵn, tải PDF lên{discovery ? " hoặc tìm báo cáo trên CafeF" : ""}.</p>
-              <div className="start-panel">
-                <label className="fl" htmlFor="dataset-select">Báo cáo để hỏi</label>
-                <select
-                  id="dataset-select"
-                  ref={datasetRef}
-                  className="field"
-                  value={datasetId}
-                  onChange={(e) => { setDatasetId(e.target.value); setDatasetHint(""); }}
-                >
-                  <option value="">{discovery ? "Chưa chọn — có thể yêu cầu tìm báo cáo" : "Chọn báo cáo để hỏi…"}</option>
-                  {datasets.map((d) => (
-                    <option key={d.id} value={d.id} disabled={!d.ready}>
-                      {d.ready ? d.label : `${d.label} — chưa sẵn sàng`}
-                    </option>
-                  ))}
-                </select>
-                {datasetsLoaded && datasets.length === 0 && (
-                  <p className="muted small">Chưa có báo cáo nào được cấp quyền cho tài khoản này.</p>
-                )}
-                {datasetHint && <p className="form-error" role="alert">{datasetHint}</p>}
-                <div className="start-actions">
-                  <button className="btn btn-outline" onClick={() => openModal({ type: "upload" })}>Tải PDF lên</button>
-                  {discovery && (
-                    <button className="btn btn-outline" onClick={() => openModal({ type: "discovery", prefill: {} })}>
-                      Tìm trên CafeF
+          <div className="chat-scroll" ref={scrollRef}>
+            {showStart ? (
+              <div className="chat-empty">
+                <LogoMark size={44} />
+                <h2>Chào{firstName ? ` ${firstName}` : " bạn"}, bạn muốn hỏi báo cáo nào hôm nay?</h2>
+                <p className="muted">Chọn báo cáo có sẵn hoặc tải PDF lên.</p>
+                <div className="start-panel">
+                  <div className="start-actions">
+                    <button
+                      id="dataset-picker"
+                      ref={datasetRef}
+                      type="button"
+                      className={`start-box${chosen ? " chosen" : ""}`}
+                      title={chosen?.label}
+                      onClick={() => openModal({ type: "picker" })}
+                    >
+                      <Icon name="report" size={18} />
+                      <span className="start-box-text">{chosen ? chosen.label : "Chọn báo cáo"}</span>
+                      {chosen && <span className="start-box-note">Đổi báo cáo</span>}
                     </button>
+                    <button type="button" className="start-box" onClick={() => openModal({ type: "upload" })}>
+                      <Icon name="upload" size={18} />
+                      <span className="start-box-text">Tải PDF lên</span>
+                    </button>
+                  </div>
+                  {datasetsLoaded && datasets.length === 0 && (
+                    <p className="muted small">Chưa có báo cáo nào được cấp quyền cho tài khoản này.</p>
                   )}
+                  {datasetHint && <p className="form-error" role="alert">{datasetHint}</p>}
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="chat-list" aria-live="polite">
-              {importJob && <ImportCard job={importJob} />}
-              {items.map((item) =>
-                item.message ? (
-                  <MessageItem key={item.key} message={item.message} caption={item.caption} actions={actions} />
-                ) : (
-                  <div key={item.key} className="row bot">
+            ) : (
+              <div className={`chat-list${importActive ? " has-active-import" : ""}`} aria-live="polite">
+                {chatRows}
+                {newsPending && !pending && (
+                  <div className="news-pending" role="status">
+                    Đang cập nhật tin tức; kết quả sẽ tự hiện ở đây.
+                  </div>
+                )}
+                {pending && (
+                  <div className="row bot">
                     <span className="row-mark" aria-hidden="true"><LogoMark size={22} /></span>
-                    <div className="row-body"><div className="bubble notice" role="alert">{item.notice}</div></div>
+                    <div className="row-body">
+                      {liveSteps.length > 0
+                        ? <LiveSteps steps={liveSteps} />
+                        : <PendingLine text={pending} />}
+                    </div>
                   </div>
-                ),
-              )}
-              {newsPending && !pending && (
-                <div className="news-pending" role="status">
-                  Đang cập nhật tin tức; kết quả sẽ tự hiện ở đây.
-                </div>
-              )}
-              {pending && (
-                <div className="row bot">
-                  <span className="row-mark" aria-hidden="true"><LogoMark size={22} /></span>
-                  <div className="row-body">
-                    <div className="bubble bot dots" role="status"><i /><i /><i /><span className="dots-text">{pending}</span></div>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
+                )}
+              </div>
+            )}
+          </div>
 
-        <form className="composer" onSubmit={submitQuestion}>
-          <div className="composer-row">
-            <button
-              type="button"
-              className="icon-btn"
-              title="Tải báo cáo PDF"
-              aria-label="Tải báo cáo PDF"
-              disabled={readOnly}
-              onClick={() => openModal({ type: "upload" })}
-            >＋</button>
+          <form className="composer" onSubmit={submitQuestion}>
             <textarea
               ref={inputRef}
               value={input}
@@ -837,12 +895,24 @@ export default function ChatPage() {
                 }
               }}
             />
-            <button type="submit" className="send" disabled={sendDisabled} aria-label="Gửi">↑</button>
-          </div>
-        </form>
-        <p className="composer-note muted small">Câu trả lời do AI tạo từ báo cáo; hãy đối chiếu số liệu quan trọng với nguồn.</p>
+            <div className="composer-tools">
+              <button
+                type="button"
+                className="icon-btn"
+                title="Tải báo cáo PDF"
+                aria-label="Tải báo cáo PDF"
+                disabled={readOnly}
+                onClick={() => openModal({ type: "upload" })}
+              ><Icon name="clip" /></button>
+              <button type="submit" className="send" disabled={sendDisabled} aria-label="Gửi"><Icon name="up" size={15} /></button>
+            </div>
+          </form>
+          <p className="composer-note muted small">Câu trả lời do AI tạo từ báo cáo. Hãy kiểm tra lại các số liệu quan trọng với báo cáo gốc.</p>
+        </>
+        )}
       </section>
 
+      {modal?.type === "agent-prompts" && <AgentPromptsModal onClose={() => setModal(null)} onSaved={() => setToast("Đã lưu cá nhân hoá agents. Áp dụng từ câu hỏi tiếp theo.")} />}
       {modal?.type === "upload" && <UploadModal onClose={() => setModal(null)} onSubmit={uploadReport} />}
 
       {modal?.type === "discovery" && (
@@ -886,6 +956,17 @@ export default function ChatPage() {
           </p>
           {modalError && <p className="form-error" role="alert">{modalError}</p>}
         </Modal>
+      )}
+
+      {modal?.type === "picker" && (
+        <ReportPicker
+          datasets={datasets}
+          selectedId={datasetId}
+          canClear={Boolean(datasetId) && discovery}
+          onPick={(d) => { setDatasetId(d.id); setDatasetHint(""); setModal(null); setTimeout(() => inputRef.current?.focus(), 0); }}
+          onClear={() => { setDatasetId(""); setModal(null); }}
+          onClose={() => setModal(null)}
+        />
       )}
 
       {modal?.type === "search" && (

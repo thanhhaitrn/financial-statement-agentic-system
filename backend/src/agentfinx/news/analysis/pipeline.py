@@ -27,6 +27,7 @@ from typing import Callable
 from pydantic import BaseModel, ConfigDict, Field, ValidationError
 
 from agentfinx.core import experiment
+from agentfinx.core.config.agent_prompts import resolve
 from agentfinx.core.schemas.web_analysis import (SENTIMENT_SCORES, Collection, NewsArticle,
                                   NewsEvent, Quote, SentimentLabel,
                                   WebAnalysis, WebContext)
@@ -313,7 +314,7 @@ def analyze_company_news(
     # 1) Which articles are about the company and the question, as events.
     try:
         selected = session.call(
-            "select", prompts.SELECT_AND_GROUP_SYSTEM,
+            "select", resolve("news_select", prompts.SELECT_AND_GROUP_SYSTEM),
             prompts.select_and_group_user(context, articles, prompt_article_chars), _SelectOut)
     except (RuntimeError, _BudgetExhausted):
         return finish("error", [], [
@@ -333,7 +334,7 @@ def analyze_company_news(
     evidence: dict[str, _EvidenceItem] = {}
     evidence_failed = False
     try:
-        result = session.call("evidence", prompts.SCORE_SYSTEM,
+        result = session.call("evidence", resolve("news_score", prompts.SCORE_SYSTEM),
                                prompts.score_user(context, grouped, known, prompt_article_chars), _EvidenceOut)
         evidence = {item.event_id: item for item in result.events}
     except (RuntimeError, _BudgetExhausted):

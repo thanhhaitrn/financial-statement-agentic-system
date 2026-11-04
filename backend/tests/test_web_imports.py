@@ -362,8 +362,9 @@ def test_import_worker_recovers_interrupted_jobs_and_reports_health(make_web):
     assert client.get("/api/health").json()["workers"]["import"]["status"] == "alive"
 
 
-def test_upload_form_is_pdf_only_with_consent_unticked():
+def test_upload_form_is_pdf_only_and_allows_cloud_parsing():
     form = (WEB / "components" / "chat" / "UploadModal.tsx").read_text(encoding="utf-8")
     assert 'accept="application/pdf,.pdf"' in form
-    assert "const [consent, setConsent] = useState(false);" in form
+    # Product decision: uploads go to cloud parsing when needed, without a checkbox.
+    assert "consent: true" in form and 'type="checkbox"' not in form
     assert "owner" not in form  # ownership comes from the session cookie, never from the form

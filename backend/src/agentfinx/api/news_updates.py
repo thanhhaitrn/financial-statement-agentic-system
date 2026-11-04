@@ -116,7 +116,13 @@ def run_news_update_once(
             if provider is None:
                 expired = True  # web evidence was switched off since
             else:
-                analysis = _analyze(context, provider, invoke)  # invoke=None: the configured model
+                from agentfinx.core.config.agent_prompts import activate
+
+                with database.read() as conn:
+                    run = webdb.get_run(conn, row["run_id"])
+                    prompts = json.loads(run["agent_prompts_json"]) if run else {}
+                with activate(prompts):
+                    analysis = _analyze(context, provider, invoke)
         except Exception:
             logger.exception("news update %s failed", row["id"])
             if row["attempts"] >= MAX_ATTEMPTS:

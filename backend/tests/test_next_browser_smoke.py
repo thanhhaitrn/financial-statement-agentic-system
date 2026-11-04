@@ -271,6 +271,7 @@ def _sign_up(page, stack, email, name="Người Thử"):
     page.fill("#name", name)
     page.fill("#email", email)
     page.fill("#password", PASSWORD)
+    page.fill("#password_confirm", PASSWORD)
     page.click("button[type=submit]")
     page.wait_for_url(f"{stack.origin}/chat")
 
@@ -282,6 +283,89 @@ def _ask(page, text):
 
 def _answer(page, question):
     return page.locator(".bubble.bot.rich", has_text=f"cho: {question}")
+
+
+def _choose_report(page, dataset_id):
+    """Pick the report to ask about through the start screen's report picker."""
+    page.click("#dataset-picker")
+    page.locator(f'.picker-results [data-dataset-id="{dataset_id}"]').click()
+    page.locator(".picker-results").wait_for(state="detached")
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_user_agent_prompts_save_reload_reset_and_discard(stack, width, tmp_path):
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 900})
+        errors = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, "prompts@example.com")
+
+            def open_personalization():
+                toggle = page.get_by_role("button", name="Mở thanh bên", exact=True)
+                if toggle.count() and toggle.is_visible():
+                    toggle.click()
+                page.get_by_role("button", name="Tài khoản", exact=True).click()
+                page.get_by_role("menuitem", name="Cá nhân hoá agents").click()
+                page.locator("#agent-preference-input").wait_for()
+
+            def select(agent_id):
+                back = page.get_by_role("button", name="← Chọn agent khác", exact=True)
+                if width < 700 and back.is_visible():
+                    back.click()
+                page.locator(f'[data-agent-id="{agent_id}"]').click()
+                if width < 700:
+                    page.wait_for_function("""() => {
+                        const input = document.querySelector('#agent-preference-input').getBoundingClientRect();
+                        const body = document.querySelector('.modal-body').getBoundingClientRect();
+                        return input.top >= body.top && input.bottom <= body.bottom;
+                    }""")
+
+            open_personalization()
+            editor = page.locator("#agent-preference-input")
+            assert editor.input_value() == ""
+            assert page.locator(".agent-node").count() == 9
+            data = page.request.get(f"{stack.origin}/api/me/agent-prompts").json()
+            assert all(set(agent) == {"id", "label", "description"} for agent in data["agents"])
+            assert page.get_by_text("Xem prompt mặc định", exact=True).count() == 0
+            planner = "Ưu tiên lập kế hoạch so sánh với kỳ trước."
+            editor.fill(planner)
+            select("agent_synth")
+            assert editor.input_value() == ""
+            custom = "Mở đầu bằng 3 nhận định chính, sau đó giải thích ngắn gọn."
+            editor.fill(custom)
+            select("agent_planner")
+            assert editor.input_value() == planner
+            page.get_by_role("button", name="Lưu thay đổi", exact=True).click()
+            page.get_by_role("dialog").wait_for(state="detached")
+            page.reload()
+            open_personalization()
+            assert editor.input_value() == planner
+            page.screenshot(path=str(tmp_path / f"personal-workflow-{width}.png"), full_page=True, animations="disabled")
+            select("agent_synth")
+            assert editor.input_value() == custom
+            page.screenshot(path=str(tmp_path / f"personal-input-{width}.png"), full_page=True, animations="disabled")
+            assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+            editor.fill("Thay đổi chưa lưu")
+            page.get_by_role("button", name="Đóng", exact=True).last.click()
+            page.get_by_text("Bạn có thay đổi chưa lưu.").wait_for()
+            page.get_by_role("button", name="Bỏ thay đổi và đóng").click()
+            open_personalization()
+            select("agent_synth")
+            assert editor.input_value() == custom
+            page.get_by_role("button", name="Xoá yêu cầu").click()
+            assert editor.input_value() == ""
+            page.get_by_role("button", name="Lưu thay đổi", exact=True).click()
+            page.get_by_role("dialog").wait_for(state="detached")
+            page.reload()
+            open_personalization()
+            assert editor.input_value() == planner
+            select("agent_synth")
+            assert editor.input_value() == ""
+            assert not errors
+        finally:
+            browser.close()
 
 
 def test_invite_sign_up_conversation_isolation_and_reload(stack):
@@ -298,18 +382,19 @@ def test_invite_sign_up_conversation_isolation_and_reload(stack):
             page.fill("#name", "Người Thử")
             page.fill("#email", "an@example.com")
             page.fill("#password", PASSWORD)
+            page.fill("#password_confirm", PASSWORD)
             page.click("button[type=submit]")
             page.wait_for_url(f"{stack.origin}/chat")
             assert page.evaluate("document.cookie") == ""
 
             # Two conversations, A and B, each with one answer.
-            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _choose_report(page, stack.shared.dataset_id)
             _ask(page, "Câu A1")
             _answer(page, "Câu A1").wait_for(timeout=15_000)
             assert "?session=" in page.url
             url_a = page.url
-            page.get_by_role("button", name="+ Cuộc trò chuyện mới").click()
-            page.select_option("#dataset-select", stack.shared.dataset_id)
+            page.get_by_role("button", name="Cuộc trò chuyện mới").click()
+            _choose_report(page, stack.shared.dataset_id)
             _ask(page, "Câu B1")
             _answer(page, "Câu B1").wait_for(timeout=15_000)
             url_b = page.url
@@ -353,7 +438,7 @@ def test_invite_sign_up_conversation_isolation_and_reload(stack):
 
             # A conversation id that is not this user's falls back to the start.
             page.goto(f"{stack.origin}/chat?session=not-mine")
-            page.locator("#dataset-select").wait_for(timeout=10_000)
+            page.locator("#dataset-picker").wait_for(timeout=10_000)
             page.wait_for_function("() => !location.search.includes('session=')", timeout=10_000)
             assert not errors, errors
         finally:
@@ -370,6 +455,7 @@ def test_backend_outage_is_not_shown_as_a_logout(stack):
             page.fill("#name", "Bình")
             page.fill("#email", "binh@example.com")
             page.fill("#password", PASSWORD)
+            page.fill("#password_confirm", PASSWORD)
             page.click("button[type=submit]")
             page.wait_for_url(f"{stack.origin}/chat")
 
@@ -387,7 +473,7 @@ def test_backend_outage_is_not_shown_as_a_logout(stack):
                 stack.db.path.with_suffix(".moved").rename(stack.db.path)
                 stack.worker_open.set()
             page.goto(f"{stack.origin}/chat")
-            page.locator("#dataset-select").wait_for(timeout=10_000)
+            page.locator("#dataset-picker").wait_for(timeout=10_000)
         finally:
             browser.close()
 
@@ -427,9 +513,10 @@ def test_news_section_shows_sources_and_limits_and_survives_reload(stack):
             page.fill("#name", "Tin Tức")
             page.fill("#email", "news@example.com")
             page.fill("#password", PASSWORD)
+            page.fill("#password_confirm", PASSWORD)
             page.click("button[type=submit]")
             page.wait_for_url(f"{stack.origin}/chat")
-            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _choose_report(page, stack.shared.dataset_id)
             _ask(page, "Lợi nhuận và tin gần đây?")
 
             for attempt in ("before reload", "after reload"):
@@ -502,9 +589,10 @@ def test_news_that_was_not_ready_arrives_by_itself(stack, monkeypatch):
             page.fill("#name", "Cập Nhật")
             page.fill("#email", "update@example.com")
             page.fill("#password", PASSWORD)
+            page.fill("#password_confirm", PASSWORD)
             page.click("button[type=submit]")
             page.wait_for_url(f"{stack.origin}/chat")
-            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _choose_report(page, stack.shared.dataset_id)
 
             for round_, question in enumerate(("Câu U1", "Câu U2")):
                 replies[:] = [
@@ -554,6 +642,67 @@ def _wait_for_import(page, stack, *, timeout):
                     f"card={cards.first.inner_text() if cards.count() else None!r}; jobs={jobs}")
 
 
+@pytest.mark.parametrize("width", [1280, 390])
+def test_import_progress_runs_below_messages_and_survives_reload(stack, width, tmp_path):
+    stack.worker_open.clear()
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 900})
+        errors = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, f"progress{width}@example.com")
+            owner = page.request.get(f"{stack.origin}/api/me").json()["user"]["id"]
+            session = page.request.post(f"{stack.origin}/api/sessions", data={},
+                                        headers={"Origin": stack.origin}).json()
+            with stack.db.transaction() as conn:
+                webdb.add_message(conn, session_id=session["id"], role="user", content="Xử lý báo cáo này giúp tôi.")
+            pdf = tmp_path / "progress.pdf"
+            pdf.write_bytes(PDF)
+            job = stack.service.create_upload_import(owner_id=owner, session_id=session["id"],
+                upload_path=pdf, idempotency_key="progress-browser-fixture", allow_cloud_parse=True,
+                metadata={"company": "Công ty Mẫu", "fiscal_year": 2025})
+            with stack.db.transaction() as conn:
+                webdb.set_session_import(conn, session["id"], owner, job.job_id)
+            page.goto(f"{stack.origin}/chat?session={session['id']}")
+            log = page.locator(".import-progress")
+            log.get_by_text("Tiếp nhận yêu cầu xử lý", exact=True).wait_for(timeout=10_000)
+            assert page.locator(".session-banner", has_text="đang được xử lý").count() == 0
+            assert page.locator(".chat-list > .row").last.locator(".import-progress").count() == 1
+            sync_api.expect(page.get_by_label("Câu hỏi", exact=True)).to_be_disabled()
+            job = stack.service.store.claim_job(job.job_id)
+            log.get_by_text("Trích xuất nội dung báo cáo", exact=True).wait_for(timeout=10_000)
+            assert log.locator(".step-running").count() == 1
+            assert log.locator(".step-done").count() == 1
+            page.screenshot(path=str(tmp_path / f"import-parsing-{width}.png"), animations="disabled")
+            for status in ("validating", "building"):
+                job = stack.service.store.update_job(job.model_copy(update={"status": status}))
+            log.get_by_text("Tạo dữ liệu tra cứu cho báo cáo", exact=True).wait_for(timeout=10_000)
+            page.reload()
+            log.get_by_text("Tạo dữ liệu tra cứu cho báo cáo", exact=True).wait_for(timeout=10_000)
+            assert log.locator(".step").count() == 4
+            assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+            page.screenshot(path=str(tmp_path / f"import-building-{width}.png"), animations="disabled")
+
+            dataset_id = _build_dataset(job, None, None)
+            stack.service.dataset_attacher(owner, session["id"], dataset_id)
+            job = stack.service.store.update_job(job.model_copy(update={"status": "ready", "dataset_id": dataset_id,
+                "session_attached": True, "billing_status": "confirmed", "confirmed_credits": "0"}))
+            _wait_for_import(page, stack, timeout=10_000)
+            assert log.locator(".step-spinner").count() == 0
+            assert log.locator(".steps-list").count() == 0
+            log.get_by_role("button", name="Xem nhật ký xử lý", exact=False).click()
+            assert log.locator(".step").count() == 5
+            sync_api.expect(page.get_by_label("Câu hỏi", exact=True)).to_be_enabled()
+            stack.worker_open.set()
+            _ask(page, "Doanh thu năm 2025?")
+            _answer(page, "Doanh thu năm 2025?").wait_for(timeout=15_000)
+            assert page.locator(".chat-list > .row").last.locator(".import-progress").count() == 0
+            assert not errors
+        finally:
+            browser.close()
+
+
 def test_answers_render_safely_and_an_uploaded_pdf_becomes_a_conversation(stack):
     stack.deps.format_answer = lambda _state: UNSAFE_ANSWER
     with sync_api.sync_playwright() as playwright:
@@ -563,13 +712,13 @@ def test_answers_render_safely_and_an_uploaded_pdf_becomes_a_conversation(stack)
         page.on("pageerror", lambda exc: errors.append(str(exc)))
         try:
             _sign_up(page, stack, "upload@example.com")
-            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _choose_report(page, stack.shared.dataset_id)
             _ask(page, "Tổng tài sản cuối kỳ?")
             page.locator(".bubble.bot.rich strong", has_text="Tổng tài sản").wait_for(timeout=15_000)
             assert page.locator(".bubble.bot.rich img, .bubble.bot.rich script").count() == 0
             assert page.evaluate("window.__xss") is None
 
-            page.get_by_role("button", name="+ Cuộc trò chuyện mới").click()
+            page.get_by_role("button", name="Cuộc trò chuyện mới").click()
             page.locator(".start-actions").get_by_role("button", name="Tải PDF lên").click()
             page.set_input_files("#upload-form input[type=file]",
                                  files=[{"name": "bctc.pdf", "mimeType": "application/pdf", "buffer": PDF}])
@@ -583,6 +732,90 @@ def test_answers_render_safely_and_an_uploaded_pdf_becomes_a_conversation(stack)
             page.reload()
             page.locator(".history-title", has_text="Công ty Tải Lên").wait_for(timeout=10_000)
             assert not errors, errors
+        finally:
+            browser.close()
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_many_report_candidates_collapse_filter_and_keep_selection(stack, width, tmp_path):
+    rows = []
+    for year in range(2025, 2021, -1):
+        for quarter in [5, 4, 3, 2, 1]:
+            for scope, suffix in [("hợp nhất", "consolidated"), ("công ty mẹ", "separate")]:
+                period = f"năm {year}" if quarter == 5 else f"quý {quarter} năm {year}"
+                rows.append({"Name": f"Báo cáo tài chính {scope} {period} (đã kiểm toán)",
+                             "Link": f"https://cafef1.mediacdn.vn/vnm-{year}-{quarter}-{suffix}.pdf",
+                             "Year": year, "Quarter": quarter,
+                             "Time": f"CN/{year}" if quarter == 5 else f"Q{quarter}/{year}"})
+    fetches = []
+
+    def fetch(url):
+        fetches.append(url)
+        return {"Success": True, "Data": rows}
+
+    stack.service.discovery_provider = CafeFReportDiscoveryProvider(fetch_json=fetch)
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 900})
+        errors = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, f"reports{width}@example.com")
+            # Seed a stored discovery result through the same authenticated API;
+            # this test exercises the result card independently of entry points.
+            response = page.request.post(f"{stack.origin}/api/report-discoveries",
+                data={"idempotency_key": "many-reports-fixture", "search": {"subject": "VNM", "period": "any"}},
+                headers={"Origin": stack.origin})
+            assert response.ok, response.text()
+            session_id = response.json()["session_id"]
+            page.goto(f"{stack.origin}/chat?session={session_id}")
+            toggle = page.get_by_role("button", name="Xem 30 báo cáo", exact=True)
+            toggle.wait_for(timeout=15_000)
+            card = page.locator(".report-results")
+            visible = card.locator(".cand-row:visible")
+            assert visible.count() == 0
+            assert card.bounding_box()["height"] < 340
+            page.screenshot(path=str(tmp_path / f"reports-collapsed-{width}.png"), animations="disabled")
+
+            toggle.click()
+            assert visible.count() == 30
+            assert card.locator(".cand-scroll").evaluate("el => el.scrollHeight > el.clientHeight")
+            search = page.get_by_label("Tìm trong danh sách báo cáo")
+            search.fill("2025 hop nhat")
+            sync_api.expect(visible).to_have_count(5)
+            search.fill("")
+            page.get_by_label("Lọc năm báo cáo").click()
+            page.get_by_role("option", name="2025", exact=True).click()
+            sync_api.expect(visible).to_have_count(10)
+            page.get_by_label("Lọc kỳ báo cáo").click()
+            page.get_by_role("option", name="Cả năm", exact=True).click()
+            sync_api.expect(visible).to_have_count(2)
+            page.get_by_label("Lọc phạm vi báo cáo").click()
+            page.get_by_role("option", name="Hợp nhất", exact=True).click()
+            sync_api.expect(visible).to_have_count(1)
+            assert "năm 2025" in visible.inner_text()
+            page.screenshot(path=str(tmp_path / f"reports-filtered-{width}.png"), animations="disabled")
+            visible.get_by_role("button", name="Chọn báo cáo này").click()
+            card.locator(".confirm-panel:visible").wait_for()
+            page.get_by_role("button", name="Thu gọn danh sách", exact=True).click()
+            toggle.click()
+            assert card.locator(".confirm-panel:visible").count() == 1
+            assert visible.count() == 1  # filters and confirmation survive collapse
+
+            search.fill("khong co bao cao nay")
+            sync_api.expect(visible).to_have_count(0)
+            card.get_by_text("Không có báo cáo khớp bộ lọc", exact=False).wait_for()
+            card.get_by_role("button", name="Xoá bộ lọc").click()
+            sync_api.expect(visible).to_have_count(30)
+            assert len(fetches) == 1
+            assert page.evaluate("document.documentElement.scrollWidth <= window.innerWidth")
+            card.get_by_role("button", name="Tìm lại theo năm hoặc kỳ").click()
+            assert page.get_by_label("Mã CK hoặc tên công ty").input_value() == "VNM"
+            page.get_by_role("button", name="Đóng", exact=True).click()
+            page.reload()
+            toggle.wait_for(timeout=15_000)
+            assert visible.count() == 0 and len(fetches) == 1
+            assert not errors
         finally:
             browser.close()
 
@@ -613,10 +846,10 @@ def test_find_confirm_import_ask_and_answer_on_the_open_report(stack):
             page.locator(".history-title", has_text="Tìm báo cáo VNM").click()
             rows.first.wait_for(timeout=10_000)
 
-            # Choose, confirm (cloud parsing consent is off by default), import, ask.
+            # Choose, confirm (cloud parsing is allowed without a checkbox), import, ask.
             annual = rows.filter(has_text="Báo cáo năm 2025")
             annual.get_by_role("button", name="Chọn báo cáo này").click()
-            assert not annual.locator(".confirm-panel input[type=checkbox]").is_checked()
+            assert annual.locator(".confirm-panel input[type=checkbox]").count() == 0
             annual.get_by_role("button", name="Xác nhận tải và xử lý").click()
             _wait_for_import(page, stack, timeout=20_000)
             page.locator("textarea:not([disabled])").wait_for(timeout=10_000)
@@ -632,6 +865,72 @@ def test_find_confirm_import_ask_and_answer_on_the_open_report(stack):
             _answer(page, "Tìm BCTC VNM năm 2025").wait_for(timeout=15_000)
             assert stack.asked[-1] == "Tìm BCTC VNM năm 2025"
             assert not errors, errors
+        finally:
+            browser.close()
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_profit_choice_and_confirmation_resume_after_reload(stack, width):
+    stack.deps.context_enabled = True
+    seed = "Doanh thu năm 2025 là bao nhiêu?"
+    initial = "lợi nhuận của công ty là bao nhiêu"
+    direct = "lợi nhuận sau thuế của công ty là bao nhiêu?"
+    confirmed = "lợi nhuận sau thuế của công ty trong năm 2025 là bao nhiêu?"
+    mode = {"confirm": False}
+
+    def resolve(question, history):
+        if question == initial:
+            return {"status": "needs_clarification", "metric": {}, "period": {},
+                    "clarification_question": "Bạn muốn hỏi lợi nhuận nào (sau thuế, trước thuế, gộp)?"}
+        if question == "sau thuế":
+            assert history[-1].effective_question == initial
+            assert "lợi nhuận nào" in history[-1].clarification_question
+            if mode["confirm"]:
+                return {"status": "needs_clarification", "metric": {}, "period": {},
+                        "clarification_question": "Bạn muốn hỏi lợi nhuận sau thuế của công ty trong năm 2025?"}
+            return {"status": "resolved", "question": direct,
+                    "metric": {"kept": [{"source_run_id": history[-1].run_id, "text": "lợi nhuận"}],
+                               "changed": ["sau thuế"]}, "period": {}}
+        if question == "đúng":
+            assert history[-1].effective_question == "sau thuế"
+            assert "lợi nhuận sau thuế" in history[-1].clarification_question
+            return {"status": "resolved", "question": confirmed,
+                    "metric": {"kept": [{"source_run_id": history[-1].run_id, "text": "lợi nhuận sau thuế"}]},
+                    "period": {"kept": [{"source_run_id": history[-1].run_id, "text": "năm 2025"}]}}
+        return {"status": "standalone", "question": question, "metric": {}, "period": {}}
+
+    stack.deps.clarify = resolve
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 900})
+        errors = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, f"profit{width}@example.com")
+            _choose_report(page, stack.shared.dataset_id)
+            _ask(page, seed)
+            _answer(page, seed).wait_for(timeout=15_000)
+            _ask(page, initial)
+            page.locator(".context-card", has_text="Bạn muốn hỏi lợi nhuận nào").wait_for(timeout=15_000)
+            page.reload()
+            page.locator(".context-card", has_text="Bạn muốn hỏi lợi nhuận nào").wait_for(timeout=15_000)
+            _ask(page, "sau thuế")
+            _answer(page, direct).wait_for(timeout=15_000)
+            assert stack.asked == [seed, direct]
+
+            # Older conversations may already be waiting for confirmation.
+            mode["confirm"] = True
+            _ask(page, initial)
+            sync_api.expect(page.locator(".context-card", has_text="Bạn muốn hỏi lợi nhuận nào")).to_have_count(2, timeout=15_000)
+            _ask(page, "sau thuế")
+            page.locator(".context-card", has_text="trong năm 2025").wait_for(timeout=15_000)
+            page.reload()
+            page.locator(".context-card", has_text="trong năm 2025").wait_for(timeout=15_000)
+            _ask(page, "đúng")
+            _answer(page, confirmed).wait_for(timeout=15_000)
+            assert stack.asked == [seed, direct, confirmed]
+            assert page.locator(".context-card", has_text="chỉ tiêu, kỳ hoặc công ty nào").count() == 0
+            assert not errors
         finally:
             browser.close()
 
@@ -660,7 +959,7 @@ def test_followup_context_clarification_and_failure_survive_reload(stack, width)
         page.on("pageerror", lambda exc: errors.append(str(exc)))
         try:
             _sign_up(page, stack, f"context{width}@example.com")
-            page.select_option("#dataset-select", stack.shared.dataset_id)
+            _choose_report(page, stack.shared.dataset_id)
             _ask(page, first)
             _answer(page, first).wait_for(timeout=15_000)
             _ask(page, "vào đầu năm thì sao")
@@ -674,15 +973,61 @@ def test_followup_context_clarification_and_failure_survive_reload(stack, width)
             assert stack.asked == [first, effective]
 
             _ask(page, "Lợi nhuận năm 2025 là bao nhiêu?")
-            page.locator(".context-card", has_text="Không làm rõ được ngữ cảnh").wait_for(timeout=15_000)
+            page.locator(".context-card", has_text="Bước xử lý ngữ cảnh gặp lỗi").wait_for(timeout=15_000)
             page.reload()
             if page.get_by_role("button", name="Mở thanh bên").is_visible():
                 page.get_by_role("button", name="Mở thanh bên").click()
             page.locator(".history-title", has_text=first).click()
             page.locator(".msg-caption", has_text=effective).wait_for(timeout=10_000)
             assert page.locator(".context-card", has_text="Bạn muốn hỏi chỉ tiêu nào?").count() == 1
-            assert page.locator(".context-card", has_text="Không làm rõ được ngữ cảnh").count() == 1
+            assert page.locator(".context-card", has_text="Bước xử lý ngữ cảnh gặp lỗi").count() == 1
             assert page.locator(".context-card img, .context-card script").count() == 0
             assert stack.asked == [first, effective] and not errors, errors
+        finally:
+            browser.close()
+
+
+@pytest.mark.parametrize("width", [1280, 390])
+def test_answer_source_opens_original_pdf_page_in_chat(stack, width, tmp_path):
+    from test_report_sources import make_source_pdf, seed_source
+
+    stack.worker_open.clear()
+    pdf = tmp_path / "source.pdf"
+    make_source_pdf(pdf)
+    record = registry.save_dataset(stack.shared.model_copy(update={"source_pdf_path": str(pdf)}))
+    source = {"id": "profit-fixture", "dataset_id": record.dataset_id, "generation": "gen-1",
+              "label": "Lợi nhuận sau thuế", "value": "123.456.789", "period": "Năm 2025",
+              "unit": "VND", "section": "Kết quả kinh doanh", "page": 2}
+    with sync_api.sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        page = browser.new_page(viewport={"width": width, "height": 900})
+        errors = []
+        page.on("pageerror", lambda exc: errors.append(str(exc)))
+        try:
+            _sign_up(page, stack, f"source{width}@example.com")
+            owner = page.request.get(f"{stack.origin}/api/me").json()["user"]["id"]
+            session_id, message = seed_source(stack.db, owner, record, source)
+            page.goto(f"{stack.origin}/chat?session={session_id}")
+            chip = page.get_by_role("button", name="Đối chiếu Lợi nhuận sau thuế: 123.456.789, trang PDF 2", exact=True)
+            chip.wait_for(timeout=10_000)
+            chip.click()
+            dialog = page.get_by_role("dialog", name="Đối chiếu báo cáo")
+            image = dialog.get_by_alt_text("Trang 2 của báo cáo gốc", exact=True)
+            sync_api.expect(image).to_be_visible(timeout=10_000)
+            assert image.evaluate("img => img.naturalWidth > 0")
+            assert dialog.get_by_role("link", name="Mở PDF gốc").get_attribute("href").endswith("#page=2")
+            page.screenshot(path=str(tmp_path / f"report-source-{width}.png"), animations="disabled")
+            dialog.get_by_role("button", name="Phóng to", exact=True).click()
+            assert dialog.locator(".source-page-scroll").evaluate("el => el.scrollWidth > el.clientWidth")
+            assert page.evaluate("document.documentElement.scrollWidth <= innerWidth")
+            dialog.get_by_role("button", name="Trang trước", exact=True).click()
+            sync_api.expect(dialog.get_by_alt_text("Trang 1 của báo cáo gốc", exact=True)).to_be_visible()
+            page.keyboard.press("Escape")
+            sync_api.expect(dialog).to_have_count(0)
+            page.reload()
+            chip.wait_for(timeout=10_000)
+            chip.click()
+            sync_api.expect(page.get_by_alt_text("Trang 2 của báo cáo gốc", exact=True)).to_be_visible()
+            assert not errors
         finally:
             browser.close()

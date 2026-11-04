@@ -192,7 +192,7 @@ class AcquisitionPolicy:
     provider_circuit_failure_threshold: int = 3
     provider_circuit_cooldown_seconds: int = 60
     download_timeout_seconds: int = 30
-    llamaparse_tier: str = "cost_effective"
+    llamaparse_tier: str = "agentic_plus"
     llamaparse_version: str = "2026-08-19"
     monthly_parse_credit_budget: int = 10_000
     budget_warning_percent: float = 0.80
@@ -413,8 +413,8 @@ class RuntimePolicy:
                 llamaparse_tier=_choice_env(
                     source,
                     "LLAMAPARSE_TIER",
-                    "cost_effective",
-                    ("cost_effective", "agentic"),
+                    "agentic_plus",
+                    ("cost_effective", "agentic", "agentic_plus"),
                 ),
                 llamaparse_version=(
                     str(source.get("LLAMAPARSE_VERSION", "") or "").strip()

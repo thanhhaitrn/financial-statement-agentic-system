@@ -166,6 +166,7 @@ def import_job_out(job: Any) -> dict:
         "session_id": job.session_id,
         "origin": job.origin,
         "status": job.status,
+        "progress": [event.model_dump() for event in job.progress],
         "billing_status": job.billing_status,
         "billing_pending": job.billing_pending,
         "billing_blocking": job.billing_pending and job.billing_blocking,

@@ -73,6 +73,36 @@ def test_run_planner_uses_default_plan_when_output_is_invalid(monkeypatch):
     assert any(log["event"] == "planner:error" for log in updates["trace"])
 
 
+def test_planner_receives_selected_report_and_defaults_its_period(monkeypatch):
+    import json
+
+    record = SimpleNamespace(company="Công ty Mẫu", fiscal_year=2025,
+                             fiscal_quarter=2, scope="separate", file_path="PRIVATE_PATH")
+    monkeypatch.setattr(planner_runner, "get_dataset", lambda _id: record)
+    captured = {}
+
+    def invoke(_template, payload, **kwargs):
+        captured.update(payload)
+        return {"parsed": planner_runner.DEFAULT_PLANNER_PLAN, "raw": None, "mode": "structured"}
+
+    monkeypatch.setattr(planner_runner, "invoke_prompt", invoke)
+    updates = planner_runner.run_planner({"user_query": "Tổng tài sản của công ty này là bao nhiêu?", "dataset_id": "sample"})
+    metadata = json.loads(captured["report_context_json"])
+    assert metadata["company"] == "Công ty Mẫu" and metadata["fiscal_year"] == 2025
+    assert "PRIVATE_PATH" not in captured["report_context_json"]
+    assert updates["planner_plan"]["company"] == "Công ty Mẫu"
+    assert updates["planner_plan"]["time_hint"] == "quý 2/2025"
+
+
+def test_report_period_default_preserves_explicit_and_relative_query_periods(monkeypatch):
+    record = SimpleNamespace(company="Công ty Mẫu", fiscal_year=2025)
+    monkeypatch.setattr(planner_runner, "get_dataset", lambda _id: record)
+    for question, expected in [("Vốn chủ sở hữu năm 2024?", "năm 2024"),
+                               ("Vốn chủ sở hữu đầu năm?", "đầu năm")]:
+        plan = planner_runner._enrich_plan_fields({"user_query": question, "dataset_id": "sample"}, {})
+        assert plan["time_hint"] == expected
+
+
 def test_run_planner_downgrades_direct_balance_sheet_line_item(monkeypatch):
     monkeypatch.setattr(
         planner_runner,

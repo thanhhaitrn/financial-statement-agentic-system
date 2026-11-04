@@ -389,6 +389,7 @@ def test_waiting_on_another_owners_payer_does_not_block_imports(harness):
 # ---------------------------------------------------------------- migration
 
 def _v3_database(path, monkeypatch):
+    current_version = webdb.SCHEMA_VERSION
     monkeypatch.setattr(webdb, "SCHEMA_VERSION", 3)
     database = webdb.WebDB(path)
     database.migrate()
@@ -403,7 +404,7 @@ def _v3_database(path, monkeypatch):
                      "question_message_id, dataset_id, dataset_generation, status, created_at) "
                      "VALUES ('r1', 's1', 'u1', 'key-1', 'Doanh thu?', 'm1', 'ds', 'gen-1', 'queued', ?)",
                      (stamp,))
-    monkeypatch.setattr(webdb, "SCHEMA_VERSION", 4)
+    monkeypatch.setattr(webdb, "SCHEMA_VERSION", current_version)
     return database
 
 

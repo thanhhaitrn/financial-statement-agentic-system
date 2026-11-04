@@ -147,3 +147,12 @@ def test_followup_edge_uses_the_same_ceiling_as_synth():
         )
     )
     assert conditions.synth_route({**state, "followup_rounds": 2}) == "end"
+
+
+def test_full_agentic_plus_is_the_default_and_other_tiers_remain_explicit_options():
+    assert RuntimePolicy.from_env({}).acquisition.llamaparse_tier == "agentic_plus"
+    assert DEFAULT_POLICY.acquisition.llamaparse_tier == "agentic_plus"
+    for tier in ("cost_effective", "agentic", "agentic_plus"):
+        assert RuntimePolicy.from_env({"LLAMAPARSE_TIER": tier}).acquisition.llamaparse_tier == tier
+    with pytest.raises(RuntimePolicyError):
+        RuntimePolicy.from_env({"LLAMAPARSE_TIER": "agentic-plus"})

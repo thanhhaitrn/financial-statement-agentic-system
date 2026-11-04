@@ -53,6 +53,15 @@ Planner → Router → build_evidence ─┤                                    
 - **Planner** phân loại câu hỏi (`task_kind`: hỏi báo cáo hay tìm báo cáo; `need_web`,
   `web_intent`) và lập kế hoạch. Trong chat có bật tìm báo cáo, planner web gọi một lần; hỏi đáp
   dùng lại đúng kế hoạch đó (graph bắt đầu từ router).
+- **Ngữ cảnh báo cáo trong chat:** bộ làm rõ câu tiếp nối và planner nhận metadata công ty,
+  mã chứng khoán, năm/quý và phạm vi của báo cáo đang chọn. Khi câu hỏi không nêu kỳ khác,
+  dùng kỳ báo cáo làm mặc định (số dư tại cuối kỳ, kết quả/dòng tiền trong kỳ); không bắt
+  người dùng nhập lại metadata này. Chỉ hỏi thêm chỉ tiêu còn mơ hồ. Metadata không chứa
+  số liệu tài chính hay đường dẫn file; số liệu trả lời vẫn phải truy xuất từ bằng chứng.
+  Lỗi JSON/provider ở bước làm rõ được báo là lỗi xử lý, không mô tả thành thiếu đầu vào.
+  Lịch sử giữ cả câu hỏi của người dùng và câu hỏi làm rõ đang chờ để hiểu các câu đáp
+  ngắn như "sau thuế" hoặc "đúng". Trả lời xong thì đóng chuỗi làm rõ; không đưa câu trả
+  lời tài chính của assistant vào lịch sử resolver hay dùng nó làm bằng chứng.
 - **Router** chọn agent phân tích và yêu cầu truy xuất; **build_evidence** dựng gói bằng chứng từ
   SQLite (fact có kiểu) và Qdrant.
 - **Agent phân tích** gọi tool truy xuất; **Synth** tổng hợp đúng một câu trả lời Markdown, không

@@ -17,7 +17,7 @@ from agentfinx.core.config.domain_catalog import CURRENT_PERIOD_MARKERS, PREVIOU
 from agentfinx.core import experiment
 from agentfinx.core.ablation import guard
 from agentfinx.core.config.runtime_policy import DEFAULT_POLICY, active_policy
-from agentfinx.agents.profiles import AGENT_PROFILES
+from agentfinx.agents.profiles import AGENT_PROFILES, get_agent_profile
 from agentfinx.agents.prompts import PROMPT_TEMPLATE
 from agentfinx.workflow.dispatch_nodes import prepare_followup_dispatch_state
 from agentfinx.workflow.logger import debug_enabled, make_debug_log, make_log
@@ -4043,7 +4043,7 @@ def _count_requirements_in_results(worker_results: Dict[str, Any]) -> int:
 
 
 def run_synth(state: dict) -> dict:
-    profile = AGENT_PROFILES["agent_synth"]
+    profile = get_agent_profile("agent_synth")
     trace = []
     started_at = time.perf_counter()
 

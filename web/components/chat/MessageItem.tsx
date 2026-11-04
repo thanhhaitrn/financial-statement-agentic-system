@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useId, useState } from "react";
+import Select from "@/components/Select";
 import { LogoMark } from "@/components/Logo";
 import { newIdempotencyKey } from "@/lib/api";
 import {
@@ -11,8 +12,11 @@ import {
   clarificationText,
   formatTime,
 } from "@/lib/labels";
-import type { Candidate, DiscoverySearch, Message } from "@/lib/types";
-import Markdown from "./Markdown";
+import type { Candidate, DiscoverySearch, Message, RunStep } from "@/lib/types";
+import { StepTrace } from "./RunSteps";
+import AnswerContent from "./AnswerContent";
+import { Icon } from "./Icons";
+import ReportSources from "./ReportSources";
 
 // Report sources are untrusted CafeF data: only these hosts become links.
 const SAFE_SOURCE_URL = /^https:\/\/([a-z0-9-]+\.)*(cafef\.vn|mediacdn\.vn)\//i;
@@ -97,13 +101,12 @@ function isExpired(c: Candidate) {
 }
 
 function CandidateRow({
-  candidate: c, payload, actions,
-}: { candidate: Candidate; payload: Record<string, any>; actions: MessageActions }) {
+  candidate: c, payload, actions, visible = true,
+}: { candidate: Candidate; payload: Record<string, any>; actions: MessageActions; visible?: boolean }) {
   const [open, setOpen] = useState(false);
-  const [consent, setConsent] = useState(false);
-  // One key per confirmation, renewed when consent changes: a network retry
-  // replays the same import and never starts a second one.
-  const [key, setKey] = useState(newIdempotencyKey);
+  // One key per confirmation: a network retry replays the same import and
+  // never starts a second one.
+  const [key] = useState(newIdempotencyKey);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const expired = isExpired(c);
@@ -112,7 +115,8 @@ function CandidateRow({
     setBusy(true);
     setError("");
     try {
-      await actions.onConfirmCandidate(c, String(payload.source_session_id || ""), consent, key);
+      // Imports always allow cloud parsing when the PDF has no text layer.
+      await actions.onConfirmCandidate(c, String(payload.source_session_id || ""), true, key);
     } catch (err) {
       setError(errorText(err));
       setBusy(false);
@@ -120,7 +124,7 @@ function CandidateRow({
   }
 
   return (
-    <li className={`cand-row${c.period_verified ? "" : " unverified"}`}>
+    <li className={`cand-row${c.period_verified ? "" : " unverified"}`} hidden={!visible}>
       <p className="cand-title">{c.title}</p>
       <p className="cand-facts">
         {[candidatePeriod(c), SCOPE_TEXT[c.scope] || c.scope, AUDIT_TEXT[c.audit_status] || c.audit_status].join(" · ")}
@@ -157,20 +161,6 @@ function CandidateRow({
           {!c.period_verified && (
             <p className="rc-warn">Kỳ của báo cáo này chưa được xác minh; hãy kiểm tra tiêu đề trước khi xác nhận.</p>
           )}
-          <label className="consent">
-            <input
-              type="checkbox"
-              checked={consent}
-              onChange={(e) => {
-                setConsent(e.target.checked);
-                setKey(newIdempotencyKey());
-              }}
-            />
-            <span>
-              Đồng ý gửi PDF tới LlamaParse nếu không đọc được lớp văn bản (phát sinh chi phí). Không đồng ý thì chỉ
-              dùng trích xuất cục bộ.
-            </span>
-          </label>
           {error && <p className="form-error" role="alert">{error}</p>}
           <div className="confirm-actions">
             <button type="button" className="btn btn-outline" onClick={() => setOpen(false)} disabled={busy}>Hủy</button>
@@ -189,22 +179,81 @@ function CandidatesCard({ payload, actions }: { payload: Record<string, any>; ac
   const who = search.ticker || search.subject || "";
   const candidates: Candidate[] = payload.candidates || [];
   const meta = [search.company, search.exchange].filter(Boolean).join(" · ");
+  const listId = useId();
+  const [expanded, setExpanded] = useState(candidates.length <= 3);
+  const [query, setQuery] = useState("");
+  const [year, setYear] = useState("");
+  const [period, setPeriod] = useState("");
+  const [scope, setScope] = useState("");
+  const fold = (value: string) => value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/Đ/g, "D").toLowerCase();
+  const terms = fold(query).trim().split(/\s+/).filter(Boolean);
+  const yearOf = (c: Candidate) => c.period_verified && c.fiscal_year ? String(c.fiscal_year) : "unverified";
+  const periodOf = (c: Candidate) => c.period_verified ? c.period_type : "unverified";
+  const periodLabels: Record<string, string> = { annual: "Cả năm", quarter: "Theo quý", half_year: "Bán niên", unknown: "Chưa rõ kỳ", unverified: "Chưa xác minh kỳ" };
+  const years = [...new Set(candidates.map(yearOf))].sort((a, b) => b.localeCompare(a));
+  const periods = [...new Set(candidates.map(periodOf))];
+  const scopes = [...new Set(candidates.map((c) => c.scope || "unknown"))];
+  const matching = candidates.filter((c) => {
+    const text = fold([c.title, c.ticker, c.company, candidatePeriod(c), c.period_label, SCOPE_TEXT[c.scope], AUDIT_TEXT[c.audit_status]].filter(Boolean).join(" "));
+    return (!year || yearOf(c) === year) && (!period || periodOf(c) === period)
+      && (!scope || (c.scope || "unknown") === scope) && terms.every((term) => text.includes(term));
+  });
+  const visibleIds = new Set(matching.map((c) => c.candidate_id));
+  const filtered = Boolean(query.trim() || year || period || scope);
+  const truncated = payload.truncated || (payload.warnings || []).includes("results_truncated");
+
+  function clearFilters() {
+    setQuery(""); setYear(""); setPeriod(""); setScope("");
+  }
+
   return (
-    <div className="report-card">
+    <div className="report-card report-results">
       <p className="rc-title">{candidates.length ? `Báo cáo tìm thấy cho ${who}` : `Không có báo cáo nào khớp cho ${who}`}</p>
       {meta && <p className="rc-meta">{meta}</p>}
       {(payload.warnings || []).map((code: string) =>
-        WARNING_TEXT[code] ? <p key={code} className="rc-warn">{WARNING_TEXT[code]}</p> : null,
+        code !== "results_truncated" && WARNING_TEXT[code] ? <p key={code} className="rc-warn">{WARNING_TEXT[code]}</p> : null,
       )}
       {!candidates.length && (
         <p className="rc-note">CafeF trả lời bình thường nhưng không có báo cáo khớp bộ lọc. Hãy nới bộ lọc hoặc tải PDF lên.</p>
       )}
-      <ul className="cand-list">
-        {candidates.map((c) => (
-          <CandidateRow key={c.candidate_id} candidate={c} payload={payload} actions={actions} />
-        ))}
-      </ul>
-      <div className="choice-list"><OverrideButton payload={payload} actions={actions} /></div>
+      {candidates.length > 0 && <>
+        <button type="button" className="cand-toggle" aria-expanded={expanded} aria-controls={listId}
+          onClick={() => setExpanded(!expanded)}>
+          <span>{expanded ? "Thu gọn danh sách" : `Xem ${candidates.length} báo cáo`}</span>
+          <Icon name="chevron" size={15} />
+        </button>
+        {truncated && <p className="rc-note">{candidates.length} kết quả mới nhất. Có thể tìm lại theo năm hoặc kỳ để xem báo cáo khác.</p>}
+        <div id={listId} className="cand-browser" hidden={!expanded}>
+          <label className="cand-search">
+            <Icon name="search" size={16} />
+            <input type="search" aria-label="Tìm trong danh sách báo cáo" placeholder={`Tìm trong ${candidates.length} báo cáo…`}
+              maxLength={160} value={query} onChange={(event) => setQuery(event.target.value)} />
+          </label>
+          <div className="cand-filters">
+            <Select label="Lọc năm báo cáo" value={year} onChange={setYear}
+              options={[{ value: "", label: "Tất cả năm" }, ...years.map((value) => ({ value, label: value === "unverified" ? "Chưa xác minh năm" : value }))]} />
+            <Select label="Lọc kỳ báo cáo" value={period} onChange={setPeriod}
+              options={[{ value: "", label: "Tất cả kỳ" }, ...periods.map((value) => ({ value, label: periodLabels[value] || value }))]} />
+            <Select label="Lọc phạm vi báo cáo" value={scope} onChange={setScope}
+              options={[{ value: "", label: "Mọi phạm vi" }, ...scopes.map((value) => ({ value, label: SCOPE_TEXT[value] || value }))]} />
+          </div>
+          <div className="cand-filter-summary">
+            <span className="rc-note" role="status">Hiển thị {matching.length} / {candidates.length} báo cáo</span>
+            {filtered && <button type="button" className="cand-clear" onClick={clearFilters}>Xoá bộ lọc</button>}
+          </div>
+          {!matching.length && <p className="cand-empty">Không có báo cáo khớp bộ lọc trong danh sách này. Thử xoá bộ lọc hoặc tìm lại trên CafeF.</p>}
+          <ul className="cand-list cand-scroll" aria-label="Danh sách báo cáo tìm thấy" tabIndex={0}>
+            {candidates.map((c) => (
+              <CandidateRow key={c.candidate_id} candidate={c} payload={payload} actions={actions} visible={visibleIds.has(c.candidate_id)} />
+            ))}
+          </ul>
+        </div>
+      </>}
+      <div className="choice-list">
+        <button type="button" className="chip-btn secondary"
+          onClick={() => actions.onEditSearch(payload.search_request || { subject: who })}>Tìm lại theo năm hoặc kỳ</button>
+        <OverrideButton payload={payload} actions={actions} />
+      </div>
     </div>
   );
 }
@@ -262,11 +311,14 @@ function DatasetRequiredCard({ actions }: { actions: MessageActions }) {
   );
 }
 
-function BotRow({ children, time, caption }: { children: React.ReactNode; time?: string; caption?: string }) {
+function BotRow({ children, time, caption, steps }: {
+  children: React.ReactNode; time?: string; caption?: string; steps?: RunStep[];
+}) {
   return (
     <div className="row bot">
       <span className="row-mark" aria-hidden="true"><LogoMark size={22} /></span>
       <div className="row-body">
+        {steps && steps.length > 0 && <StepTrace steps={steps} />}
         {children}
         {caption && <span className="msg-caption">{caption}</span>}
         <span className="msg-time">{formatTime(time)}</span>
@@ -277,8 +329,8 @@ function BotRow({ children, time, caption }: { children: React.ReactNode; time?:
 
 /** One stored message. Structured payloads are rendered as text, never HTML. */
 export default function MessageItem({
-  message: m, caption, actions,
-}: { message: Message; caption?: string; actions: MessageActions }) {
+  message: m, caption, actions, steps,
+}: { message: Message; caption?: string; actions: MessageActions; steps?: RunStep[] }) {
   const kind = m.kind || "text";
   const payload = m.payload;
   const interpreted =
@@ -312,8 +364,9 @@ export default function MessageItem({
     return <BotRow time={m.created_at}><DatasetRequiredCard actions={actions} /></BotRow>;
   }
   return (
-    <BotRow time={m.created_at} caption={interpreted}>
-      <div className="bubble bot rich"><Markdown text={m.content || ""} /></div>
+    <BotRow time={m.created_at} caption={interpreted} steps={steps}>
+      <div className="bubble bot rich"><AnswerContent text={m.content || ""} /></div>
+      <ReportSources sources={m.report_sources || []} messageId={m.id} />
     </BotRow>
   );
 }
